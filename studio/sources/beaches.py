@@ -1,5 +1,4 @@
 """Visit South Walton harita noktaları. Sayfanın JavaScript'i çalıştırılmaz."""
-import hashlib
 import json
 import math
 import re
@@ -12,6 +11,7 @@ import httpx
 from .base import CollectionResult, SourceError, CollectionCanceled
 
 SOURCE_URL = "https://www.visitsouthwalton.com/beach-bay-access-locations/"
+ALLOWED_HOSTS = frozenset({"visitsouthwalton.com", "www.visitsouthwalton.com"})
 PARSER_VERSION = "south-walton-beaches/2"
 MAX_BYTES = 5_000_000
 COASTAL_CITIES = frozenset({"Santa Rosa Beach", "Grayton Beach", "Seacrest", "Inlet Beach"})
@@ -94,8 +94,7 @@ def parse_page(content: bytes) -> BeachBatch:
         raise SourceError("Seçilen 30A kıyı kapsamına uyan kayıt bulunamadı. Önceki kayıtlar korundu.")
     updated_match = re.search(r"Latest map update:\s*(?:<[^>]+>\s*)*([^<\r\n]+)", text)
     source_updated = unescape(updated_match.group(1)).strip() if updated_match else None
-    return BeachBatch(records, len(raw_records), len(raw_records)-len(records), source_updated,
-                      hashlib.sha256(content).hexdigest())
+    return BeachBatch(records, len(raw_records), len(raw_records)-len(records), source_updated)
 
 
 def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
@@ -122,7 +121,7 @@ def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
                                 target_port = parts.port
                             except ValueError as exc:
                                 raise SourceError("Kaynak geçersiz bir yönlendirme adresi döndürdü.") from exc
-                            if (parts.hostname != urlsplit(SOURCE_URL).hostname or parts.scheme != "https"
+                            if (parts.hostname not in ALLOWED_HOSTS or parts.scheme != "https"
                                     or parts.username is not None or parts.password is not None or target_port not in (None, 443)):
                                 raise SourceError("Kaynak başka bir alan adına veya güvenli olmayan adrese yönlendirdi. Yönlendirme izlenmedi.")
                             if not response.headers.get("location") or redirect_count == 3:

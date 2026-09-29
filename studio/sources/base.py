@@ -17,7 +17,6 @@ class CollectionResult:
     total_count: int
     excluded_count: int
     source_updated: str | None
-    raw_sha256: str
     metadata: dict = field(default_factory=dict)
 
 

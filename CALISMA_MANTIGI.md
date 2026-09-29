@@ -42,7 +42,7 @@ Düzenleme `expected_version` taşır. Başka pencere kaydı değiştirmişse es
 
 ## Connector sözleşmesi
 
-`studio/sources/base.py`, sonuç sözleşmesini ve küçük bir Python Protocol tanımlar. CollectionResult; normalize edilmiş kayıtları, toplam/kapsam dışı sayısını, kaynak güncelleme metnini, ham dosya özetini ve ek metadata'yı taşır.
+`studio/sources/base.py`, sonuç sözleşmesini ve küçük bir Python Protocol tanımlar. CollectionResult; normalize edilmiş kayıtları, toplam/kapsam dışı sayısını, kaynak güncelleme metnini ve ek metadata'yı taşır.
 
 | Sorumluluk | Metot / alan |
 |---|---|
@@ -61,7 +61,7 @@ Yeni toplama türü `source_collection`'dır. Kaynak etkin ve destekleniyor olma
 
 Her kabul edilmiş çekim queued/running/done/failed/canceled/interrupted durumuyla source_runs içinde izlenir. Alanları: id, source_id, job_id, status, started_at, fetched_at, finished_at, source_url, connector_name, connector_version, raw_path, raw_sha256, source_updated, record_count, excluded_count, error_message, metadata JSON.
 
-Başlangıç metadata'sı kaynak adı ve sürüm numarasını içerir. started_at iş çalışınca yazılır. İndirme oluşmadıysa raw/fetched_at alanları NULL'dır. Ham dosya oluşursa SHA-256 dosyadan hesaplanır; fetched_at dosyanın yazım zamanıdır. Başarısız ayrıştırmada da ham dosya bilgisi korunur. Doğrulanmamış kayıtlar yayımlanmaz; başarısız çekimin record_count değeri sıfırdır.
+Başlangıç metadata'sı kaynak adı ve sürüm numarasını içerir. started_at iş çalışınca yazılır. İndirme oluşmadıysa raw/fetched_at alanları NULL'dır. Ham dosya oluşursa SHA-256 yalnızca Database.record_raw_artifact() tarafından diskteki gerçek baytlardan hesaplanır; CollectionResult hash taşımaz; fetched_at dosyanın yazım zamanıdır. Başarısız ayrıştırmada da ham dosya bilgisi korunur. Doğrulanmamış kayıtlar yayımlanmaz; başarısız çekimin record_count değeri sıfırdır.
 
 Tek çalışanlı ThreadPoolExecutor kullanılır. Aynı kaynakta ikinci aktif toplama engellenir, farklı kaynaklar sıraya girebilir. Yürütücü kuyruğu bellekte, iş ve run bilgileri SQLite'tadır. Yeniden açılışta etkin kalan işler/run'lar interrupted yapılır; otomatik yeniden çalıştırılmaz.
 
@@ -71,7 +71,7 @@ Tek çalışanlı ThreadPoolExecutor kullanılır. Aynı kaynakta ikinci aktif t
 
 Kaynak: [Visit South Walton plaj erişimleri](https://www.visitsouthwalton.com/beach-bay-access-locations/). HTTPX ile HTML alınır; initMarkers veri dizisinin JSON nesneleri ayrıştırılır. Kaynak JavaScript çalıştırılmaz.
 
-TLS kontrolü açıktır. En fazla üç yönlendirme izlenir; yalnızca başlangıç adresiyle aynı hostname, HTTPS ve varsayılan/443 port kabul edilir. `www` kaldıran veya başka alt alana giden adresler de farklı host sayılır. Kullanıcı bilgisi içeren adresler izlenmez. Ağ/5xx hatasında bir kez yeniden deneme vardır; 429 ve kalıcı hatalar kullanıcıya bildirilir. Yanıt sınırı 5 MB, bağlantı zaman aşımı 10 saniye, diğer HTTP işlemleri için 20 saniyedir.
+TLS kontrolü açıktır. En fazla üç yönlendirme izlenir; yalnızca açık izin listesindeki `visitsouthwalton.com` ve `www.visitsouthwalton.com`, HTTPS ve varsayılan/443 port kabul edilir. www/apex geçişleri iki yönde desteklenir; diğer alt alanlar ve yanıltıcı alan adı son ekleri reddedilir. Kullanıcı bilgisi içeren adresler izlenmez. Ağ/5xx hatasında bir kez yeniden deneme vardır; 429 ve kalıcı hatalar kullanıcıya bildirilir. Yanıt sınırı 5 MB, bağlantı zaman aşımı 10 saniye, diğer HTTP işlemleri için 20 saniyedir.
 
 Kimlik, ad, adres, city, tür, koordinatlar ve olanak listesi doğrulanır. Bozuk/boş veri, yinelenen kimlik veya beklenmeyen tür bütün çekimi başarısız yapar. Kayıtlar beach_records içinde kalır ve run_id artık source_runs'a bağlıdır.
 
@@ -89,7 +89,7 @@ Tablolar boş oluşturulur. Entity düzenleme arayüzü/API'si, otomatik eşleş
 
 ## Sürüm farkı
 
-Seçili başarılı run; aynı source_id ve connector_name için önceki başarılı run ile karşılaştırılır. Başarısız/iptal edilmiş çekimler atlanır. Önceki sürüm yoksa bu açıkça yazılır. Sıralama run kayıt sırasıdır; tek çalışan ve kaynak başına tek aktif iş bu düzeni korur.
+Seçili başarılı run; aynı source_id ve connector_name için önceki başarılı run ile karşılaştırılır. Başarısız/iptal edilmiş çekimler atlanır. Önceki sürüm yoksa bu açıkça yazılır. Diff çıktısında previous_connector_version, connector_version ve connector_version_changed bulunur. Toplayıcı sürümleri farklıysa karşılaştırma korunur; ekranda ayrıştırma değişikliğinin farkları etkileyebileceği uyarısı gösterilir. Bu kural migration sonrası eski v0.2 ile ilk yeni çekim için de geçerlidir. Sıralama run kayıt sırasıdır; tek çalışan ve kaynak başına tek aktif iş bu düzeni korur.
 
 External_id kümelerinden added/removed; ortak kimliklerden changed/unchanged hesaplanır. Plajlarda ad, adres, city/source_region_text, koordinatlar, erişim türü ve olanaklar karşılaştırılır. Olanak sırası/tekrarı değişiklik sayılmaz. İş kimliği ve zaman karşılaştırılmaz. Rapor okunurken hesaplanır ve eski kayıtları değiştirmez.
 
@@ -101,7 +101,7 @@ collections fiziksel tablosu, başarılı plaj sürümlerini sunan salt okunur u
 
 ## Teşhis ve canlı ilerleme
 
-Beklenmeyen hata türü ve traceback konumları jobs.diagnostic JSON alanında tutulur. Exception mesajı, kaynak satırı, tam yerel yol ve locals kaydedilmez; bu alanlardaki parola/token günlüğe taşınmaz. Kullanıcıya anlaşılır sabit mesaj gösterilir. Diagnostic normal job API/SSE yanıtına dahil edilmez. Yerel veritabanından geliştirici tarafından incelenebilir.
+Beklenmeyen hata türü ve traceback konumları jobs.diagnostic JSON alanında tutulur. Teknik mesaj str(exc) üzerinden alınır; password/token/api_key, Authorization/Bearer, ghp_/sk- ve URL kimlik bilgileri gibi yaygın kalıplar [REDACTED] ile gizlendikten sonra en fazla 500 karakter saklanır. Traceback yalnızca dosya adı, satır ve fonksiyon içerir; kaynak satırı ve locals saklanmaz. Kullanıcıya anlaşılır sabit mesaj gösterilir. Diagnostic normal job API/SSE yanıtına dahil edilmez. Yerel veritabanından geliştirici tarafından incelenebilir.
 
 Ön yüz `/api/events` SSE bağlantısıyla iş listesini alır. Sunucu saniyede bir değişikliği kontrol eder. İşler paneli kaynak adını, ilerlemeyi ve günlüğü gösterir; başarılı plaj çekimi sürüm listesini yeniler.
 
@@ -125,3 +125,5 @@ Kurulum: `python -m pip install -e ".[test]"`. Test: `python -m pytest -q`. GitH
 Yedek için uygulama kapalıyken data klasörünün tamamı kopyalanır. GitHub'a kod, testler ve belgeler gönderilir; data, yedekler, ham çekimler, .venv, .env ve önbellekler gönderilmez. Yeni connector'lar ve veri kalite kontrolleri sonraki adımlardır. İçerik onayları, verisi değişen içeriği eskimiş işaretleme, AI ve medya akışı henüz uygulanmadı.
 
 İlgili belgeler: [mimari](docs/MIMARI.md), [aşamalar](docs/ASAMALAR.md), [v0.2 plaj kaynağı çalışması](docs/M2-VERI-TOPLAMA.md).
+
+Kaynak kütüphanesindeki hazır durumu ve bağlı yöntem, beach adına değil genel `source.connector` bilgisine dayanır. Ayrıntıda toplayıcı adı ve sürümü görünür. İşler panelindeki plaj ekranı bağlantısı yalnızca sonuçta plaj connector adını taşıyan işlere verilir; diğer genel toplama işleri bu ekrana yönlendirilmez.

@@ -235,7 +235,7 @@ class Database:
                 return None
             if run["status"] != "done":
                 return {"available": False, "reason": "Başarılı bir sürüm seçin."}
-            previous = con.execute("""SELECT id FROM source_runs WHERE source_id=? AND connector_name=?
+            previous = con.execute("""SELECT id,connector_version FROM source_runs WHERE source_id=? AND connector_name=?
                 AND status='done' AND rowid<? ORDER BY rowid DESC LIMIT 1""",
                 (run["source_id"], run["connector_name"], run["sequence"])).fetchone()
             if not previous:
@@ -250,6 +250,9 @@ class Database:
             shared = before.keys() & after.keys()
             changed = sum(before[key] != after[key] for key in shared)
             return {"available": True, "previous_run_id": previous["id"],
+                    "previous_connector_version": previous["connector_version"],
+                    "connector_version": run["connector_version"],
+                    "connector_version_changed": previous["connector_version"] != run["connector_version"],
                     "added": len(after.keys() - before.keys()), "removed": len(before.keys() - after.keys()),
                     "changed": changed, "unchanged": len(shared) - changed}
 

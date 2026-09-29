@@ -41,3 +41,13 @@ v0.1/v0.2 veritabanı açılırken önce `data/backups/` içine SQLite yedeği a
 Python 3.12 veya sonrası gerekir. Yeni sanal ortamda `python -m pip install -e ".[test]"` ile kurulur. Testler `python -m pytest -q` ile, uygulama `python -m studio` ile çalışır. Tarayıcı açmadan çalıştırmak için `python -m studio --no-browser`; ayrı deneme verileri için `--data-dir` kullanın. Testler canlı ağ veya Claude çağrısı yapmaz.
 
 GitHub Actions, Python 3.12 üzerinde editable test kurulumu ve pytest çalıştırır: [iş akışları](https://github.com/bemonths/tatilya/actions). Testler gerçek HTTP bağlantısını engeller.
+
+### v0.3 düzeltmeleri
+
+Kaynak kütüphanesi registry'den gelen her connector için **Toplayıcı hazır** durumunu, adını ve sürümünü gösterir. Arşivdeki kaynaklar arşiv durumunu korur. Genel toplama işlerinde plaj ekranına bağlantı yalnızca plaj connector sonucunda gösterilir.
+
+Sürüm karşılaştırması aynı kaynak ve connector için devam eder; connector sürümü değişmişse ayrıştırma değişikliğinin farkları etkileyebileceği uyarısı görünür. Eski v0.2 çekimleriyle karşılaştırma korunur.
+
+Ham SHA-256 için tek kaynak, `Database.record_raw_artifact()` tarafından diskteki gerçek dosyadan hesaplanan değerdir; `CollectionResult` hash taşımaz. Visit South Walton yönlendirmeleri yalnızca `visitsouthwalton.com` ve `www.visitsouthwalton.com` arasında, HTTPS ve varsayılan/443 port ile izlenir; en fazla üç yönlendirme kabul edilir.
+
+Beklenmeyen hataların teknik mesajları yaygın parola/token/API anahtarı ve URL kimlik bilgileri gizlendikten sonra 500 karakterle sınırlanarak yalnızca dahili veritabanı diagnostic alanında tutulur. Normal API/SSE yanıtlarında yayımlanmaz.

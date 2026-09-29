@@ -1,5 +1,4 @@
 import csv
-import hashlib
 import io
 import json
 import threading
@@ -60,7 +59,7 @@ def test_scope_missing_amenities_trailing_comma_and_provenance():
     assert batch.records[0]["features"] == []
     assert batch.records[0]["city"] == "Santa Rosa Beach"
     assert batch.records[1]["features"] == ["Parking", "Restrooms"]
-    assert batch.raw_sha256 == hashlib.sha256(content).hexdigest()
+    assert not hasattr(batch, "raw_sha256")
     assert batch.source_updated == "Sep 21, 2026 6:56:10 pm"
 
 

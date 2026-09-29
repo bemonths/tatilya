@@ -1,5 +1,6 @@
 import {api, esc, host, date} from "./api.js";
 import {roadmap} from "./roadmap.js";
+import {connectorState, jobResultTarget} from "./connectors.js";
 import {BeachScreen} from "./collection.js";
 
 const $ = selector => document.querySelector(selector);
@@ -85,13 +86,13 @@ function renderRows() {
   if (!sources.some(source=>source.id===state.selected)) state.selected=sources[0]?.id || null;
   $("#filter-count").textContent = `${sources.length} kaynak`;
   $("#source-rows").innerHTML = sources.length ? sources.map(source=>
-    `<tr class="${source.id===state.selected?"selected":""}"><td><button class="source-name" data-action="select" data-id="${source.id}" aria-pressed="${source.id===state.selected}">${esc(source.name)}</button><div class="source-host">${esc(host(source.url))}</div></td><td><span class="tag">${esc(source.category)}</span></td><td class="method">${source.connector?.name===state.data.beach_connector.name?"JSON · bağlı":esc(source.method)}</td><td class="method">${esc(source.cadence)}</td><td><span class="tag ${source.connector?.name===state.data.beach_connector.name && source.enabled?"green":"warm"}">${!source.enabled?"Arşivde":source.connector?.name===state.data.beach_connector.name?"Toplayıcı hazır":"Bağlantı bekliyor"}</span></td></tr>`).join("") :
+    `<tr class="${source.id===state.selected?"selected":""}"><td><button class="source-name" data-action="select" data-id="${source.id}" aria-pressed="${source.id===state.selected}">${esc(source.name)}</button><div class="source-host">${esc(host(source.url))}</div></td><td><span class="tag">${esc(source.category)}</span></td><td class="method">${esc(connectorState(source).method)}</td><td class="method">${esc(source.cadence)}</td><td><span class="tag ${source.connector != null && source.enabled?"green":"warm"}">${connectorState(source).label}</span></td></tr>`).join("") :
     `<tr class="empty-row"><td colspan="5">${state.archived?"Bu filtrelerde arşivlenmiş kaynak yok.":"Bu filtrelerde kaynak bulunamadı."}<br><button data-action="clear" class="quiet" style="margin-top:15px;font-size:11px">Filtreleri temizle</button></td></tr>`;
   const source = sources.find(source=>source.id===state.selected);
   $("#source-detail").innerHTML = source ? `<div class="detail-icon" aria-hidden="true">↗</div><span class="eyebrow">KAYNAK AYRINTISI</span><h2>${esc(source.name)}</h2><p>${esc(source.notes || "Bu kaynak için henüz açıklama eklenmedi.")}</p>
-    <dl><div><dt>Kategori</dt><dd>${esc(source.category)}</dd></div><div><dt>Bölge</dt><dd>${esc(source.region)}</dd></div><div><dt>Yöntem</dt><dd>${source.connector?.name===state.data.beach_connector.name?"JSON · bağlı":esc(source.method)}</dd></div><div><dt>Planlanan sıklık</dt><dd>${esc(source.cadence)}</dd></div><div><dt>Son düzenleme</dt><dd>${esc(date(source.updated_at))}</dd></div></dl>
+    <dl><div><dt>Kategori</dt><dd>${esc(source.category)}</dd></div><div><dt>Bölge</dt><dd>${esc(source.region)}</dd></div><div><dt>Yöntem</dt><dd>${esc(connectorState(source).method)}</dd></div>${source.connector?`<div><dt>Toplayıcı</dt><dd>${esc(source.connector.name)}</dd></div><div><dt>Toplayıcı sürümü</dt><dd>${esc(source.connector.version || "Belirtilmemiş")}</dd></div>`:""}<div><dt>Planlanan sıklık</dt><dd>${esc(source.cadence)}</dd></div><div><dt>Son düzenleme</dt><dd>${esc(date(source.updated_at))}</dd></div></dl>
     <a class="source-link" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">Kaynağın sitesini aç ↗</a>
-    <div class="detail-actions"><button data-action="edit" data-id="${source.id}">Düzenle</button><button class="quiet" data-action="archive" data-id="${source.id}">${source.enabled?"Arşivle":"Geri al"}</button></div><div class="detail-foot">${source.connector?.name===state.data.beach_connector.name?'<a href="#collect">Plaj veri toplayıcısını aç →</a><br>Bağlı yöntem: sayfa içindeki JSON.':'Bu kaynak için veri toplayıcısı henüz bağlı değil.'}</div>` :
+    <div class="detail-actions"><button data-action="edit" data-id="${source.id}">Düzenle</button><button class="quiet" data-action="archive" data-id="${source.id}">${source.enabled?"Arşivle":"Geri al"}</button></div><div class="detail-foot">${source.connector?.name===state.data.beach_connector.name?'<a href="#collect">Plaj veri toplayıcısını aç →</a>':source.connector?'Toplayıcı hazır.':'Bu kaynak için veri toplayıcısı henüz bağlı değil.'}</div>` :
     `<div class="empty"><span class="empty-icon">▤</span><h3>Kaynak ayrıntıları</h3><p>Listedeki bir kaynağı seçerek açıklamasını ve toplama planını görebilirsin.</p></div>`;
 }
 
@@ -124,10 +125,15 @@ function renderSettings() {
     <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj verisi toplama hazır</h2><p>Kaynak kütüphanesi, gerçek plaj verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
 }
 
+function renderJobResultLink(job) {
+  const target=jobResultTarget(job,state.data.beach_connector.name);
+  return target?`<a href="${target.href}" class="return-link" data-view-report>${target.label} →</a>`:"";
+}
+
 function renderJobs() {
   const jobs = state.data.jobs;
   $("#jobs-count").textContent = jobs.filter(active).length;
-  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress><p>${esc(job.message)}</p>${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${job.result?(job.kind==="source_collection"?'<a href="#collect" class="return-link" data-view-report>Toplanan verileri aç →</a>':'<a href="#quality" class="return-link" data-view-report>Kontrol raporunu aç →</a>'):""}</article>`).join("") :
+  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress><p>${esc(job.message)}</p>${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${renderJobResultLink(job)}</article>`).join("") :
     '<div class="empty"><div class="empty-icon">⌁</div><h3>Henüz iş yok</h3><p>Kaynak ekranında “Kayıtları kontrol et” düğmesine bastığında işin durumu ve sonucu burada görünür.</p></div>';
   updateAuditButtons();
 }

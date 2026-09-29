@@ -72,9 +72,9 @@ Yeni connector eklenirken kaynak desteği, okuma/doğrulama, domain saklama/okum
 
 Fark raporu aynı source ve connector'ın önceki başarılı run'ını seçer. External_id esas alınır; başarısız ve iptal edilmiş çekimler atlanır. Olanakların sırası fark sayılmaz; eski satırlar değişmez. Ayrıntılı alan sözleşmesi CALISMA_MANTIGI.md içindedir.
 
-HTTP bağlayıcısı en fazla üç yönlendirmeyi yalnızca aynı hostname, HTTPS ve varsayılan/443 port koşuluyla takip eder. Farklı host, alt alan veya güvenli olmayan adres için istek yapılmaz. Ham HTML çalıştırılmaz. Boyut/zaman sınırları, sınırlı yeniden deneme ve iptal korunmuştur.
+HTTP bağlayıcısı en fazla üç yönlendirmeyi yalnızca açık izin listesindeki visitsouthwalton.com veya www.visitsouthwalton.com, HTTPS ve varsayılan/443 port koşuluyla takip eder. İzin listesi dışındaki host, alt alan veya güvenli olmayan adres için istek yapılmaz. Ham HTML çalıştırılmaz. Boyut/zaman sınırları, sınırlı yeniden deneme ve iptal korunmuştur.
 
-Beklenmeyen hata türü ve dosya adı/satır/fonksiyon konumları jobs.diagnostic içinde saklanır. Ham exception mesajı, tam yerel yol, kaynak satırı ve locals saklanmaz. Diagnostic normal API/SSE yanıtına katılmaz. Uygulama localhost içindir; uzaktan erişim için hesap/yetki sistemi eklenmemiştir.
+Beklenmeyen hata türü ve dosya adı/satır/fonksiyon konumları jobs.diagnostic içinde saklanır. Exception mesajındaki yaygın sır kalıpları gizlenir ve technical_message en fazla 500 karakter saklanır. Traceback yalnızca dosya adı/satır/fonksiyon içerir; kaynak satırı ve locals saklanmaz. Diagnostic normal API/SSE yanıtına katılmaz. Uygulama localhost içindir; uzaktan erişim için hesap/yetki sistemi eklenmemiştir.
 
 ## Kapsam sınırı ve doğrulama
 
@@ -85,3 +85,5 @@ Testler migration, rollback, kalıcılık, genel connector/job, başarısız run
 Kullanıcı veritabanının kopyasında 7 kaynak, 1 kaynak geçmişi, 1 eski başarılı run ve 53 plaj satırının korunduğu doğrulandı. Yeni sürümle yapılan canlı çekim yine 53 kayıt verdi; eski sürümle farkı 0 eklenen, 0 kaldırılan, 0 değişen ve 53 aynı kayıttı. Bu sayılar yalnızca o doğrulama anına aittir.
 
 Tam çalışma akışı: [CALISMA_MANTIGI.md](../CALISMA_MANTIGI.md). Geliştirme planı: [ASAMALAR.md](ASAMALAR.md).
+
+Kaynak UI durumu genel connector metadata bilgisini kullanır; özel plaj bağlantıları yalnızca plaj connector sonuçlarına aittir. Diff, connector sürümleri farklı olsa da çalışır ve sürüm değişimini üç ek alanla bildirir. Ham SHA-256 yalnızca Database.record_raw_artifact() tarafından diskteki dosyadan hesaplanır; CollectionResult içinde ikinci hash alanı yoktur.

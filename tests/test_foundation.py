@@ -153,7 +153,9 @@ def test_diff_is_scoped_immutable_and_ignores_feature_order(tmp_path, monkeypatc
         monkeypatch.setattr(beaches, "collect", fake_collector(updated))
         second, _ = collect(client)
         result = client.get(f"/api/source-runs/{second['id']}/diff").json()
-        assert result == {"available": True, "previous_run_id": first["id"], "added": 1, "removed": 1, "changed": 1, "unchanged": 1}
+        assert result == {"available": True, "previous_run_id": first["id"], "added": 1, "removed": 1, "changed": 1, "unchanged": 1,
+                          "previous_connector_version": beaches.PARSER_VERSION,
+                          "connector_version": beaches.PARSER_VERSION, "connector_version_changed": False}
         third, _ = collect(client)
         assert client.get(f"/api/source-runs/{third['id']}/diff").json()["unchanged"] == 3
         assert client.get(f"/api/source-runs/{second['id']}/diff").json() == result
@@ -174,7 +176,7 @@ class TestConnector:
     def collect(self, source, raw_path, progress, canceled):
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         raw_path.write_text("Synthetic test response", encoding="utf-8")
-        return CollectionResult([{"external_id": "test-id", "value": 12}], 1, 0, None, "unused")
+        return CollectionResult([{"external_id": "test-id", "value": 12}], 1, 0, None)
 
     def store_records(self, con, run_id, records):
         con.execute("CREATE TABLE IF NOT EXISTS test_domain(run_id TEXT,external_id TEXT,value INTEGER)")
@@ -256,7 +258,7 @@ def test_redirect_same_host_accepted(tmp_path):
     assert len(result.records) == 1 and seen == [beaches.SOURCE_URL, "https://www.visitsouthwalton.com/new-beach-map/"]
 
 
-@pytest.mark.parametrize("destination", ["https://other.example/map", "https://visitsouthwalton.com/map",
+@pytest.mark.parametrize("destination", ["https://other.example/map", "https://other.visitsouthwalton.com/map",
     "//www.visitsouthwalton.com.evil.example/map", "http://www.visitsouthwalton.com/map",
     "https://user:password@www.visitsouthwalton.com/map", "https://www.visitsouthwalton.com:8443/map"])
 def test_redirect_cross_host_or_unsafe_rejected_without_request(tmp_path, destination):
