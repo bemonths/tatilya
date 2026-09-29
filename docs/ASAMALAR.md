@@ -14,9 +14,11 @@
 
 Visit South Walton plaj erişimleri bağlandı. Sayfadaki harita noktaları tek HTTP isteğiyle okunur; JavaScript çalıştırılmadan JSON nesneleri ayrıştırılır. Kıyı kapsamı açık kuralla seçilir. Ham kaynak, tarih, ayrıştırıcı sürümü ve kayıtlar her iş için ayrı saklanır. Hata, sınırlı yeniden deneme, iptal, filtreleme, kayıt ayrıntısı, sürüm seçimi ve CSV dışa aktarma eklendi. Diğer kaynak bağlayıcıları sonraki aşamalardadır. [Ayrıntılı kapsam](M2-VERI-TOPLAMA.md).
 
-## Aşama 3 — Veri kontrolü ve karşılaştırma
+## Aşama 3 — Genel veri temeli · v0.3.0 tamamlandı; veri kalite kapsamı kısmi
 
-Kaynak zamanı, para/birim alanları, mükerrer kayıtlar ve değişim geçmişi. Konaklama, restoran, plaj ve etkinlikleri ayrı veri sözleşmeleriyle işle. Veri görünümü ve dışa aktarma. Belirsiz veya eksik bilgileri görünür tut.
+Genel source_runs, jobs.source_id, connector registry, source_collection işi, atomik v2 migration ve yükseltme öncesi yedek tamamlandı. Başarılı/başarısız/iptal run takibi ve temel plaj sürüm farkı çalışır. 13 canonical bölge kimliği ve entity/entity_sources şemaları hazırdır; henüz otomatik entity matching veya polygon mapping yapılmaz. Aynı host içi sınırlı HTTP yönlendirme, kontrollü teşhis ve Python 3.12 GitHub Actions eklendi.
+
+Sonraki veri işleri: gerçek yeni connector'lar, domain bazında kalite raporları, birim/tarih/fiyat karşılaştırmaları ve kaynaklar arası veri eşleme tasarımı. Konaklama/restoran/hava connector'ları henüz yoktur. Entity yönetim ekranı ve otomatik eşleme ileride değerlendirilecektir. Scheduler henüz yoktur.
 
 ## Aşama 4 — Konu, rakip ve brief
 

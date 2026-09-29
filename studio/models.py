@@ -45,5 +45,5 @@ class SourceUpdate(SourceInput):
 
 class JobInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["catalog_audit", "beach_collection"] = "catalog_audit"
+    kind: Literal["catalog_audit", "source_collection", "beach_collection"] = "catalog_audit"
     source_id: str | None = Field(default=None, min_length=1, max_length=64)

@@ -2,7 +2,8 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 
 from .database import Conflict, Database
-from .sources import beaches
+from .sources.base import SourceError, CollectionCanceled
+from .diagnostics import diagnostic
 
 
 class JobQueue:
@@ -13,6 +14,7 @@ class JobQueue:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="30a-job")
         self.lock = threading.Lock()
         self.closing = False
+        self.registry = db.registry
 
     def submit_audit(self):
         with self.lock:
@@ -32,7 +34,7 @@ class JobQueue:
             findings = []
             for index, source in enumerate(records):
                 issues = []
-                if source["method"] == "Belirlenecek" and source["url"] != beaches.SOURCE_URL:
+                if source["method"] == "Belirlenecek" and not self.registry.for_source(source):
                     issues.append("Veri toplama yöntemi belirlenmemiş.")
                 if not source["notes"]:
                     issues.append("Toplanacak alanlar için açıklama eklenmemiş.")
@@ -46,45 +48,59 @@ class JobQueue:
                       "scope": "Yalnızca kayıt bilgileri kontrol edildi. Sitelere bağlanılmadı ve içerik doğrulanmadı."}
             self.db.update_job(identifier, status="done", progress=100, result=report,
                                message=f"{len(records)} kaynak kaydı kontrol edildi.")
-        except Exception:
-            self.db.update_job(identifier, status="failed", message="Katalog kontrolü tamamlanamadı. Yeniden deneyin.")
+        except Exception as exc:
+            self.db.update_job(identifier, status="failed", message="Katalog kontrolü tamamlanamadı. Yeniden deneyin.", diagnostic=diagnostic(exc))
 
     def cancel(self, identifier):
         self.db.update_job(identifier, status="canceled", message="İş iptal edildi.")
         return self.db.job(identifier)
 
-    def submit_beaches(self, source_id):
+    def submit_collection(self, source_id):
         with self.lock:
             if self.closing:
                 raise Conflict("Uygulama kapanıyor.")
             source = self.db.source(source_id)
             if not source or not source["enabled"]:
-                raise Conflict("Plaj erişim kaynağı bulunamadı veya arşivlenmiş.")
-            if source["url"] != beaches.SOURCE_URL:
+                raise Conflict("Kaynak bulunamadı veya arşivlenmiş.")
+            connector = self.registry.for_source(source)
+            if connector is None:
                 raise Conflict("Bu kaynak için henüz veri toplayıcı bağlanmadı.")
-            identifier = self.db.add_job("beach_collection", "South Walton · Plaj erişimlerini topla")
-            self.executor.submit(self._collect_beaches, identifier, source_id)
+            identifier = self.db.add_job("source_collection", f"{source['name']} · Verileri topla", source_id, connector, source["version"])
+            try:
+                self.executor.submit(self._collect, identifier, source, connector)
+            except Exception as exc:
+                self.db.update_job(identifier, status="failed", message="İş başlatılamadı. Yeniden deneyin.", diagnostic=diagnostic(exc))
             return self.db.job(identifier)
 
-    def _collect_beaches(self, identifier, source_id):
+    def _collect(self, identifier, source, connector):
+        raw_path = self.db.path.parent / "raw" / identifier / connector.raw_filename
+        def capture_raw():
+            try:
+                self.db.record_raw_artifact(identifier, raw_path)
+            except Exception as exc:
+                return diagnostic(exc)
         try:
-            if not self.db.update_job(identifier, status="running", message="Plaj verisi toplama başladı."):
+            if not self.db.update_job(identifier, status="running", message="Kaynak verisi toplama başladı."):
                 return
             def canceled():
                 return self.db.job(identifier)["status"] not in ("queued", "running")
             def progress(percent, message):
                 if not self.db.update_job(identifier, progress=percent, message=message):
-                    raise beaches.CollectionCanceled()
-            relative = f"raw/{identifier}/source.html"
-            batch = beaches.collect(self.db.path.parent / relative, progress, canceled)
-            self.db.store_collection(identifier, source_id, batch, source_url=beaches.SOURCE_URL,
-                                     parser_version=beaches.PARSER_VERSION, raw_path=relative, scope=beaches.SCOPE)
-        except beaches.CollectionCanceled:
+                    raise CollectionCanceled()
+            batch = connector.collect(source, raw_path, progress, canceled)
+            self.db.record_raw_artifact(identifier, raw_path)
+            self.db.complete_source_run(identifier, batch, connector)
+        except CollectionCanceled:
+            capture_raw()
             self.db.update_job(identifier, status="canceled", message="Veri toplama iptal edildi.")
-        except beaches.SourceError as exc:
-            self.db.update_job(identifier, status="failed", message=str(exc))
-        except Exception:
-            self.db.update_job(identifier, status="failed", message="Veri toplama tamamlanamadı. Önceki başarılı sürümler korundu.")
+        except SourceError as exc:
+            info = diagnostic(exc)
+            info["raw_artifact_error"] = capture_raw()
+            self.db.update_job(identifier, status="failed", message=str(exc), diagnostic=info)
+        except Exception as exc:
+            info = diagnostic(exc)
+            info["raw_artifact_error"] = capture_raw()
+            self.db.update_job(identifier, status="failed", message="Veri toplama tamamlanamadı. Önceki başarılı sürümler korundu.", diagnostic=info)
 
     def shutdown(self):
         with self.lock:

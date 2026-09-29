@@ -1,6 +1,6 @@
 # 30A Studio — inceleme ve bağımsız proje mimarisi
 
-29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.2.0 güncellemesi
+29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.3.0 güncellemesi
 
 ## Housing Atlas incelemesi
 
@@ -25,74 +25,63 @@
 
 Bu tespitler mimari incelemedir; Housing Atlas için çalıştırma, entegrasyon testi veya genel kod denetimi yapılmadı. Özellikle canlı Claude ve Playwright davranışları bu çalışmada denenmedi.
 
-## 30A için karar
+## 30A v0.3 mimarisi
 
-Yeni proje sıfırdan yazıldı. Housing Atlas'ın pencere düzeni ve aşamalı çalışma yaklaşımı tasarım referansı olarak kullanıldı. Emlak hesapları, mevcut veri, tarayıcı profili, ayarlar, Claude talimatları ve kod dosyaları taşınmadı.
+Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullanılır. Node derlemesi yoktur. Lacivert/turuncu görünüm ve sol üretim akışı korunmuştur. Bu sürümün amacı veri katmanını yeni kaynaklara hazırlamaktır.
 
-Önerilen temel: **Python + FastAPI + bağımsız HTML/CSS/JavaScript arayüzü + SQLite.** Bu yerel ve tek kullanıcılı ilk sürümde ayrıca Node derlemesi veya veritabanı sunucusu gerekmiyor. SQLite seçimi; kaynak, bölge, zaman, iş ve içerik ilişkilerini sorgulamak, işlem bütünlüğü sağlamak ve iş geçmişini yeniden açılışta korumak için yapıldı. Python'un [SQLite desteği](https://docs.python.org/3.12/library/sqlite3.html) ve [FastAPI veritabanı belgeleri](https://fastapi.tiangolo.com/tutorial/sql-databases/) incelendi. İleride çok kullanıcılı uzak kurulum gerekirse veritabanı ve iş yürütücüsü ayrı servislere taşınabilir.
+| Katman | Gerçek davranış |
+|---|---|
+| app.py | Kaynak/job API, genel source-runs API, mevcut plaj ekranı/CSV uyumluluğu, SSE |
+| database.py | Kaynaklar, source_runs, işler, transaction, sürüm farkı ve ham dosya izi |
+| migrations.py | Atomik v2→v3 migration, bölge/entity şemaları, collections uyumluluk görünümü |
+| jobs.py | Registry'den bulunan connector'ı tek çalışanlı kuyrukta çalıştırır; plaj import'u yok |
+| sources/base.py | Connector Protocol, CollectionResult ve kontrollü hata türleri |
+| sources/registry.py | Kaynak→connector eşleştirme; yalnızca BeachesConnector kayıtlı |
+| sources/beaches.py | HTTP, parse/validate, plaj kayıtlarını yazma/okuma ve karşılaştırma alanları |
+| regions.py | 13 sabit bölge kimliği/adı; polygon veya koordinat sınırı yok |
+| diagnostics.py | Hata türü ve traceback konumları; exception metni ve locals kaydedilmez |
+| web/collection.js | Aynı plaj ekranı; eklenen/kaldırılan/değişen/aynı kayıt özeti |
 
-### Şimdi uygulanan düzen
+## Veri ilişkileri
 
-```text
-30a-studio/
-  baslat.bat               Kullanıcı için başlatma
-  pyproject.toml           Bağımlılıklar
-  studio/
-    __main__.py            Yerel sunucu ve tarayıcı açılışı
-    app.py                 API, uygulama yaşam döngüsü, canlı iş akışı
-    models.py              Kaynak alanlarının doğrulanması
-    catalog.py             Kategoriler, bölgeler ve kaynak adayları
-    database.py            SQLite, değişiklik geçmişi ve iş kayıtları
-    jobs.py                Katalog kontrolü, veri toplama ve iş yaşam döngüsü
-    sources/beaches.py     South Walton plaj haritası bağlayıcısı
-    web/                   Yeni arayüz, stiller, ekranlar, API istemcisi
-  tests/                   Veri kaybı, çakışma, iptal ve API kontrolleri
-  docs/                    Mimari ve aşama planı
-  data/                    SQLite ve raw/<iş-kimliği>/source.html
+```mermaid
+erDiagram
+    sources ||--o{ jobs : source_id
+    sources ||--o{ source_runs : source_id
+    jobs ||--o| source_runs : job_id
+    source_runs ||--o{ beach_records : run_id
+    regions o|--o{ beach_records : canonical_region_id
+    regions o|--o{ entities : canonical_region_id
+    entities ||--o{ entity_sources : entity_id
+    sources ||--o{ entity_sources : source_id
 ```
 
-Kaynak güncellemeleri sürüm numarasıyla denetlenir; eski bir penceredeki düzenleme yeni kaydı ezemez. Arşivleme kaydı silmez. Geçmiş kayıtlar veritabanında korunur; bu ilk sürümde geçmişi görüntüleyen ayrı ekran henüz yoktur. İşler tek çalışanlı kuyruktadır. Kuyruk durumu ve sonuçlar SQLite'ta tutulur; yeniden açılışta yarım kalan işler “yarıda kaldı” olarak işaretlenir, otomatik yeniden çalıştırılmaz. Arayüze SSE üzerinden değişen iş listesi aktarılır; ilk sürümde sunucu bunu saniyede bir sorgular.
+jobs.source_id katalog kontrollerinde NULL'dır. Eski başarısız plaj işlerinin kaynak kimliği bilinmediği için migration sırasında source_runs.source_id de NULL olabilir; yeni kabul edilen çekimler kaynaklarını saklar. Başlangıç/bitiş, kaynak/connector sürümü, hata, ham dosya özeti ve sayılar run'da tutulur. İş ve queued run aynı transaction içinde başlar; domain kayıtları ve başarılı bitiş birlikte commit edilir.
 
-### Modüllerin gelişimi
+beach_records, eski domain alanlarını korur; source_region_text ve nullable canonical_region_id eklenmiştir. city kaynak metnidir; canonical bölge olarak yorumlanmaz. entities ve entity_sources yalnızca şema temelidir. Otomatik entity matching, entity yönetim API/UI'si veya polygon mapping yoktur. Bu tablolar başlangıçta boştur.
 
-| Modül | Sorumluluk |
-|---|---|
-| `sources/` | Plaj erişimi bağlayıcısı mevcut; diğer siteler için alan eşleme ve sayfalama eklenecek |
-| `collection/` | HTTP/JSON/HTML/PDF okuma; gerektiğinde Playwright oturumları |
-| `quality/` | Zorunlu alan, birim, zaman, mükerrer kayıt ve kaynak kontrolü |
-| `workflow/` | Önkoşullar, onaylar, girdi sürümleri ve sonraki çıktıların eskime takibi |
-| `ai/` | Claude CLI sağlayıcısı; ileride başka sağlayıcı eklenebilen arayüz |
-| `content/` | Konu, rakip analizi, brief, makale ve sürümleri |
-| `media/` | Görsel plan, varlık kayıtları, sahneler ve render |
+## Migration ve veri koruma
 
-Plaj kaynağı dışındaki bağlayıcılar ve içerik üretim modülleri henüz bağlı değildir. İlgili içerik ekranları kapsamı gösteren plan ekranlarıdır.
+Mevcut veritabanının SQLite backup API ile tutarlı kopyası data/backups içine alınır. DDL ve taşıma işlemleri tek transaction içindedir; executescript'in örtük commit davranışı kullanılmaz. Sonunda foreign_key_check denetlenir ve şema 3 olur. Hata eski şemayı/veriyi korur. Yükseltme yeniden çalıştırıldığında tekrarlı kayıt oluşmaz.
 
-### Veri sözleşmesi
+Eski collections kayıtları aynı kimliklerle source_runs'a aktarılır. Beach satırlarının dış anahtarı değiştirilir. collections adı salt okunur bir uyumluluk görünümü olarak kalır; eski /api/collections, CSV ve ham kaynak uçları korunur. beach_collection istek değeri alias olarak kabul edilse de tüm yeni toplama işleri source_collection olarak kaydedilir. Eksik tarihsel bilgiler tahmin edilmez.
 
-Toplanan her olgu; kaynak kimliği ve adresi, bölge, çekim zamanı, geçerlilik tarihi/aralığı, özgün değer ve birim, ayrıştırıcı sürümü ve ham veri dosyasıyla ilişkilendirilecek. Konaklama fiyatlarında tarih, kişi sayısı, gece sayısı, para birimi ve dahil ücretler birlikte tutulacak; koşulları farklı fiyatlar doğrudan karşılaştırılmayacak. İşletmeler ve aynı işletmenin farklı kaynaklardaki kayıtları ayrı kimliklerle eşlenecek. Sayısal hesaplar Python fonksiyonlarında yapılacak; yapay zekâya hesap sonucu ve dayanak kayıtlar verilecek.
+Yeni connector eklenirken kaynak desteği, okuma/doğrulama, domain saklama/okuma ve karşılaştırma metotları uygulanıp registry'ye eklenir. Yeni domain için migration/ekran gerekebilir; jobs.py veya genel API yönlendirmesine kaynak başına özel blok gerekmez. Uygulamanın özel plaj ekranı hâlâ plaj domain'ine aittir.
 
-Ham veri, iş başına tarihli dosyalarda; sorgulanacak kayıtlar SQLite'ta tutulacak. Brief ve makaleler, kullandıkları veri sürümüne bağlanacak. Veri güncellendiğinde eski içerik kaybolmayacak; yenilenmesi gereken aşamalar işaretlenecek.
+## Fark, yönlendirme ve teşhis
 
-### Playwright ve Claude bağlantısı
+Fark raporu aynı source ve connector'ın önceki başarılı run'ını seçer. External_id esas alınır; başarısız ve iptal edilmiş çekimler atlanır. Olanakların sırası fark sayılmaz; eski satırlar değişmez. Ayrıntılı alan sözleşmesi CALISMA_MANTIGI.md içindedir.
 
-Playwright, yalnızca ilgili kaynak gerektirdiğinde kullanılacak. Yeni uygulamanın kendine ait profili olacak; Housing Atlas profiline bağlanılmayacak. Kullanıcının açık Chrome'una bağlanma seçeneği ayrı ayar olarak değerlendirilecek. Bağlayıcılar hata, süre aşımı ve iptal sonucunu ortak iş sözleşmesine döndürecek.
+HTTP bağlayıcısı en fazla üç yönlendirmeyi yalnızca aynı hostname, HTTPS ve varsayılan/443 port koşuluyla takip eder. Farklı host, alt alan veya güvenli olmayan adres için istek yapılmaz. Ham HTML çalıştırılmaz. Boyut/zaman sınırları, sınırlı yeniden deneme ve iptal korunmuştur.
 
-Claude için görev başına ayrı çalışma alanı, izinli araç listesi, süre/tur sınırı, model ayarı ve yapılandırılmış çıktı denetimi planlanıyor. Kaynak metinleri görev talimatı değil, veri olarak işlenecek. Brief ve makale üretimi, kontrol edilmiş veri paketi üzerinden ilerleyecek; eksik bilgiler açıkça belirtilecek. Bu ilk sürüm Claude'u çağırmaz, mevcut hesabı veya ayarları okumaz.
+Beklenmeyen hata türü ve dosya adı/satır/fonksiyon konumları jobs.diagnostic içinde saklanır. Ham exception mesajı, tam yerel yol, kaynak satırı ve locals saklanmaz. Diagnostic normal API/SSE yanıtına katılmaz. Uygulama localhost içindir; uzaktan erişim için hesap/yetki sistemi eklenmemiştir.
 
-## İlk aşamanın kapsamı
+## Kapsam sınırı ve doğrulama
 
-Çalışan özellikler: kaynak ekleme/düzenleme, kategori ve bölge seçimi, arama, filtre, ayrıntı paneli, arşivleme/geri alma, kayıt bilgilerinin yerel kontrolü, kalıcı iş sonucu ve günlük, on aşamalı gezinme, yerel başlatma.
+Gerçek connector yalnızca BeachesConnector'dır. Claude/OpenAI, Playwright, scheduler, konu/makale/görsel/video üretimi bu sürümde yoktur. Sol içerik aşamaları plan ekranıdır. İçerik onayları ve veri değişince içerik eskime takibi ileride uygulanacaktır.
 
-Katalog kontrolü yalnızca yöntem ve açıklama alanlarındaki eksikleri listeler. Sitenin çalıştığını veya sayfadaki bilginin doğru olduğunu kanıtlamaz. Bağlı plaj toplayıcısının yöntemini tanır. Yöntem ve sıklık alanları bir zamanlayıcı çalıştırmaz.
+Testler migration, rollback, kalıcılık, genel connector/job, başarısız run, iptal, domain yazımının transaction bütünlüğü, diff, bölge/entity ilişkileri ve yönlendirmeleri kapsar. Test kodundaki ikinci sentetik connector, jobs.py/app.py özel kodu olmadan genel yolu doğrular; uygulama registry'sinde bulunmaz. Gerçek HTTP testlerde engellenir. GitHub Actions Python 3.12 üzerinde çalışır.
 
-Başlangıçtaki yedi kaynak, 29 Eylül 2026'da açılan sayfalara dayanarak eklenen adaylardır: [Visit South Walton](https://www.visitsouthwalton.com/), [restoranlar](https://www.visitsouthwalton.com/listings/culinary-experiences/), [plaj erişimleri](https://www.visitsouthwalton.com/beach-bay-access-locations/), [etkinlikler](https://www.visitsouthwalton.com/events/), [ulaşım](https://www.visitsouthwalton.com/listings/transportation/), [National Weather Service](https://www.weather.gov/) ve [30A](https://30a.com/). Bu katalog eksiksiz kaynak araştırması değildir. v0.2.0'da plaj erişimleri bağlandı; diğer altı adayın veri çekme yöntemi henüz sınanmadı.
+Kullanıcı veritabanının kopyasında 7 kaynak, 1 kaynak geçmişi, 1 eski başarılı run ve 53 plaj satırının korunduğu doğrulandı. Yeni sürümle yapılan canlı çekim yine 53 kayıt verdi; eski sürümle farkı 0 eklenen, 0 kaldırılan, 0 değişen ve 53 aynı kayıttı. Bu sayılar yalnızca o doğrulama anına aittir.
 
-## İkinci aşama: gerçek plaj verisi
-
-South Walton sayfasının içindeki harita JSON nesneleri HTTP ile alınır; kaynak JavaScript'i çalıştırılmaz. Kayıt kimliği, zorunlu alanlar, koordinatlar ve türler topluca denetlenir. Bozuk veya boş yanıt başarılı sürümün yerini almaz. Her iş için kaynak sayfası, SHA-256 özeti, çekim zamanı, kaynak güncelleme metni, kapsam kuralı ve ayrıştırıcı sürümü saklanır. Kaynak zamanı metin olarak korunur; belirtilmeyen zaman dilimi tahmin edilmez.
-
-SQLite şeması 1'den 2'ye yükseltilir; mevcut kaynak ve işler korunur. `collections` tablosu çekimleri, `beach_records` bunların kayıtlarını tutar. Kayıtlar ve işin başarılı bitişi tek işlemde kaydedilir; iptal önce gerçekleşirse sonuç yayımlanmaz. Ham dosyalar `data/raw/<iş-kimliği>/source.html` altında tutulur. Başarısız ayrıştırmanın ham yanıtı da teşhis için kalabilir.
-
-Veri ekranı; arama, yerleşim/olanak filtreleri, ayrıntı, sürüm seçimi ve CSV indirme içerir. CSV UTF-8 BOM ve noktalı virgül kullanır; kaynak metnindeki formül başlangıçları etkisizleştirilir. Ham HTML, indirirken metin eki olarak sunulur. 30 Eylül 2026 ilk canlı işinde 70 noktadan 53 kıyı kaydı seçildi, 17 nokta kapsam dışında kaldı. Bu sayı kaynak güncellendiğinde değişebilir. [Kaynak kapsamı ve kontroller](M2-VERI-TOPLAMA.md).
-
-İlk başlatıcı standart tarayıcı sekmesini kullanır. Housing Atlas'taki çerçevesiz pencere, görünmez başlatma, masaüstü kısayolu ve pencere kapanınca otomatik sunucu kapatma, sonraki paketleme aşamasında eklenebilir. Şimdilik sunucu başlatma penceresindeki Ctrl+C ile durdurulur. Adres yalnızca `127.0.0.1` üzerinde dinlenir; internete yayın yapılmaz.
+Tam çalışma akışı: [CALISMA_MANTIGI.md](../CALISMA_MANTIGI.md). Geliştirme planı: [ASAMALAR.md](ASAMALAR.md).

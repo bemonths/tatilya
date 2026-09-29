@@ -10,17 +10,17 @@ export class BeachScreen {
     const sequence=++this.sequence;
     this.data=data;
     const runs=data.collections;
-    const source=data.sources.find(source=>source.url===data.beach_connector.source_url && source.enabled);
+    const source=data.sources.find(source=>source.connector?.name===data.beach_connector.name && source.enabled);
     if(!runs.some(run=>run.id===this.selectedRun)) this.selectedRun=runs[0]?.id || null;
     const run=runs.find(run=>run.id===this.selectedRun);
-    const busy=data.jobs.some(job=>job.kind==="beach_collection" && ["queued","running"].includes(job.status));
+    const busy=data.jobs.some(job=>job.kind==="source_collection" && job.source_id===source?.id && ["queued","running"].includes(job.status));
     main.innerHTML=heading("Veri toplama", "Plaj erişimlerini kaynağından al. Adresleri, olanakları ve her çekimin önceki sürümlerini birlikte incele.",
       `<button class="primary" data-action="collect-beaches" ${!source || busy?"disabled":""}>${busy?"Toplama sürüyor…":"↓ Plaj verilerini topla"}</button>`) +
-      `<section class="connector-strip"><div><span class="eyebrow">BAĞLI KAYNAK</span><h2>South Walton · Plaj erişimleri</h2><p>Resmî turizm kaynağının harita noktaları · Sayfa içindeki JSON</p></div><span class="tag ${source?"green":"warm"}">${source?"Veri toplayıcı hazır":"Kaynak etkin değil"}</span></section>` +
+      `<section class="connector-strip"><div><span class="eyebrow">BAĞLI KAYNAK</span><h2>${esc(source?.name || "South Walton · Plaj erişimleri")}</h2><p>Resmî turizm kaynağının harita noktaları · Sayfa içindeki JSON</p></div><span class="tag ${source?"green":"warm"}">${source?"Veri toplayıcı hazır":"Kaynak etkin değil"}</span></section>` +
       (!source?'<div class="stage-note"><p>Plaj erişim kaynağı arşivlenmiş veya adresi değişmiş. Kaynak kütüphanesinden doğru adresli kaydı etkinleştir.</p></div>':"") +
       (run ? `<section class="overview collection-overview"><div class="metric"><div><div class="metric-number"><strong>${run.included_count}</strong><span class="metric-label">kıyı erişim noktası</span></div><small>Seçili veri sürümünde</small></div></div><div class="metric"><div><div class="metric-number"><strong>${run.total_count}</strong><span class="metric-label">kaynakta harita noktası</span></div><small>${run.excluded_count} kayıt kapsam dışında</small></div></div><div class="metric"><div><div class="metric-number"><strong>${runs.length}</strong><span class="metric-label">saklanan veri sürümü</span></div><small>Çekim: ${esc(date(run.fetched_at))}</small></div></div></section>
       <div class="collection-version"><label>Sürüm <select id="collection-version" aria-label="Veri sürümü">${runs.map((entry,index)=>`<option value="${entry.id}" ${entry.id===run.id?"selected":""}>${index===0?"Son çekim · ":""}${esc(date(entry.fetched_at))} · ${entry.included_count} kayıt · ${entry.id.slice(0,6)}</option>`).join("")}</select></label><div><a class="download-link" href="/api/collections/${run.id}/export.csv" download>↓ CSV indir</a><a class="download-link muted" href="/api/collections/${run.id}/raw" download>Ham kaynağı indir</a></div></div>
-      <div class="workspace-grid"><section class="library" aria-label="Toplanan plaj verileri"><div class="library-title"><h2>Plaj erişim noktaları</h2><small id="beach-count">Yükleniyor…</small></div>
+      <div class="stage-note" id="run-diff" role="status" style="margin:0 0 20px"><p>Sürüm farkı yükleniyor…</p></div><div class="workspace-grid"><section class="library" aria-label="Toplanan plaj verileri"><div class="library-title"><h2>Plaj erişim noktaları</h2><small id="beach-count">Yükleniyor…</small></div>
       <div class="toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><input type="search" id="beach-search" aria-label="Plaj kaydı ara" placeholder="Erişim noktası veya adres ara…" value="${esc(this.search)}"></div><select id="beach-city" aria-label="Kaynak yerleşimi filtresi"><option value="">Tüm yerleşimler</option></select><select id="beach-feature" aria-label="Olanak filtresi"><option value="">Tüm olanaklar</option></select></div>
       <div class="table-scroll"><table class="beach-table"><thead><tr><th>ERİŞİM NOKTASI</th><th>KAYNAKTA YERLEŞİM</th><th>TÜR</th><th>LİSTELENEN OLANAK</th></tr></thead><tbody id="beach-rows"><tr><td colspan="4">Kayıtlar yükleniyor…</td></tr></tbody></table></div></section><section class="detail" id="beach-detail" aria-label="Plaj kaydı ayrıntıları"></section></div>
       <div class="stage-note"><span class="note-mark">ⓘ</span><p>${esc(data.beach_connector.scope)}<br>Olanaklar kaynakta listelendiği haliyle gösterilir; bir olanağın listede bulunmaması olmadığı anlamına gelmez.</p></div><p class="source-stamp">Kaynağın güncelleme metni: ${esc(run.source_updated || "Belirtilmemiş")} · Zaman dilimi kaynakta belirtilmiyor.</p>` :
@@ -30,6 +30,10 @@ export class BeachScreen {
     api(`collections/${run.id}`).then(snapshot=>{
       if(sequence!==this.sequence) return;
       this.snapshot=snapshot;
+      const diff=snapshot.diff;
+      main.querySelector('#run-diff').textContent=diff?.available
+        ? `Önceki başarılı sürüme göre: ${diff.added} eklendi · ${diff.removed} kaldırıldı · ${diff.changed} değişti · ${diff.unchanged} aynı`
+        : (diff?.reason || "Önceki başarılı sürüm yok.");
       const cities=[...new Set(snapshot.records.map(record=>record.city))].sort();
       const features=[...new Set(snapshot.records.flatMap(record=>record.features))].sort((a,b)=>this.label(a).localeCompare(this.label(b),'tr'));
       if(!cities.includes(this.city)) this.city="";

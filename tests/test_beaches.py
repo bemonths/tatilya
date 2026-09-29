@@ -190,16 +190,11 @@ def test_unsupported_source_is_never_fetched(tmp_path, monkeypatch):
 
 
 def test_migration_keeps_existing_sources_and_jobs(tmp_path):
+    from tests.legacy import make_legacy_db
     db = Database(tmp_path / "studio.sqlite3")
-    db.initialize()
+    make_legacy_db(db.path, version=1)
     original = db.sources()
-    identifier = db.add_job()
-    db.update_job(identifier, status="done", result={"checked": 7})
-    with db.connect() as con:
-        con.execute("DROP TABLE beach_records")
-        con.execute("DROP TABLE collections")
-        con.execute("PRAGMA user_version=1")
     db.initialize()
     assert db.sources() == original
-    assert db.job(identifier)["result"] == {"checked": 7}
+    assert db.job("old-success")["result"] == {"included": 1}
     assert db.collections() == []

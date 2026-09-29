@@ -4,14 +4,15 @@ import json
 import math
 import re
 import time
-from dataclasses import dataclass
 from html import unescape
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
 import httpx
+from .base import CollectionResult, SourceError, CollectionCanceled
 
 SOURCE_URL = "https://www.visitsouthwalton.com/beach-bay-access-locations/"
-PARSER_VERSION = "south-walton-beaches/1"
+PARSER_VERSION = "south-walton-beaches/2"
 MAX_BYTES = 5_000_000
 COASTAL_CITIES = frozenset({"Santa Rosa Beach", "Grayton Beach", "Seacrest", "Inlet Beach"})
 COASTAL_TYPES = frozenset({"regional", "neighborhood"})
@@ -28,21 +29,7 @@ FEATURE_LABELS = {
 }
 
 
-class SourceError(Exception):
-    pass
-
-
-class CollectionCanceled(Exception):
-    pass
-
-
-@dataclass
-class BeachBatch:
-    records: list[dict]
-    total_count: int
-    excluded_count: int
-    source_updated: str | None
-    raw_sha256: str
+BeachBatch = CollectionResult
 
 
 def parse_page(content: bytes) -> BeachBatch:
@@ -115,7 +102,7 @@ def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
     """Tek sayfa, en fazla iki deneme. Testlerde HTTP istemcisi enjekte edilebilir."""
     owns_client = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(20, connect=10), follow_redirects=False,
-                                    headers={"User-Agent": "30AStudio/0.2 (local source collection)", "Accept": "text/html"})
+                                    headers={"User-Agent": "30AStudio/0.3 (local source collection)", "Accept": "text/html"})
     try:
         content = None
         for attempt in range(2):
@@ -123,27 +110,48 @@ def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
                 raise CollectionCanceled()
             progress(10, "South Walton plaj erişim sayfası okunuyor.")
             try:
-                with client.stream("GET", SOURCE_URL) as response:
-                    if response.status_code == 429:
-                        raise SourceError("Kaynak istekleri sınırlandırdı. Daha sonra yeniden deneyin.")
-                    response.raise_for_status()
-                    if "html" not in response.headers.get("content-type", "").lower():
-                        raise SourceError("Kaynak beklenen HTML sayfasını döndürmedi.")
-                    chunks, size = [], 0
-                    for chunk in response.iter_bytes():
-                        if canceled():
-                            raise CollectionCanceled()
-                        size += len(chunk)
-                        if size > MAX_BYTES:
-                            raise SourceError("Kaynak sayfası boyut sınırını aştı.")
-                        chunks.append(chunk)
-                    content = b"".join(chunks)
+                url = SOURCE_URL
+                for redirect_count in range(4):
+                    if canceled():
+                        raise CollectionCanceled()
+                    with client.stream("GET", url, follow_redirects=False) as response:
+                        if response.status_code in (301, 302, 303, 307, 308):
+                            try:
+                                target = urljoin(url, response.headers.get("location", ""))
+                                parts = urlsplit(target)
+                                target_port = parts.port
+                            except ValueError as exc:
+                                raise SourceError("Kaynak geçersiz bir yönlendirme adresi döndürdü.") from exc
+                            if (parts.hostname != urlsplit(SOURCE_URL).hostname or parts.scheme != "https"
+                                    or parts.username is not None or parts.password is not None or target_port not in (None, 443)):
+                                raise SourceError("Kaynak başka bir alan adına veya güvenli olmayan adrese yönlendirdi. Yönlendirme izlenmedi.")
+                            if not response.headers.get("location") or redirect_count == 3:
+                                raise SourceError("Kaynağın yönlendirmesi eksik veya yönlendirme sınırı aşıldı.")
+                            url = target
+                            continue
+                        if response.status_code == 429:
+                            raise SourceError("Kaynak istekleri sınırlandırdı. Daha sonra yeniden deneyin.")
+                        response.raise_for_status()
+                        if "html" not in response.headers.get("content-type", "").lower():
+                            raise SourceError("Kaynak beklenen HTML sayfasını döndürmedi.")
+                        chunks, size = [], 0
+                        for chunk in response.iter_bytes():
+                            if canceled():
+                                raise CollectionCanceled()
+                            size += len(chunk)
+                            if size > MAX_BYTES:
+                                raise SourceError("Kaynak sayfası boyut sınırını aştı.")
+                            chunks.append(chunk)
+                        content = b"".join(chunks)
+                        break
                 break
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code >= 500 and attempt == 0:
                     progress(12, "Kaynak geçici hata verdi. Bir kez yeniden deneniyor.")
                 else:
                     raise SourceError(f"Kaynak HTTP {exc.response.status_code} döndürdü. Önceki kayıtlar korundu.") from exc
+            except httpx.RemoteProtocolError as exc:
+                raise SourceError("Kaynak geçersiz bir HTTP veya yönlendirme yanıtı döndürdü.") from exc
             except httpx.RequestError as exc:
                 if attempt == 1:
                     raise SourceError("Kaynağa bağlanılamadı. İnternet bağlantısını kontrol edip yeniden deneyin.") from exc
@@ -167,3 +175,38 @@ def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
     finally:
         if owns_client:
             client.close()
+
+
+class BeachesConnector:
+    name = "south-walton-beaches"
+    version = PARSER_VERSION
+    raw_filename = "source.html"
+
+    def supports(self, source):
+        return source["url"] == SOURCE_URL
+
+    def collect(self, source, raw_path, progress, canceled):
+        result = collect(raw_path, progress, canceled)
+        result.metadata.update(scope=SCOPE)
+        return result
+
+    def store_records(self, con, run_id, records):
+        for record in records:
+            con.execute("""INSERT INTO beach_records
+                (run_id,external_id,name,city,address,latitude,longitude,access_type,features,source_region_text,canonical_region_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,NULL)""", (
+                    run_id, record["external_id"], record["name"], record["city"], record["address"],
+                    record["latitude"], record["longitude"], record["access_type"],
+                    json.dumps(record["features"], ensure_ascii=False), record["city"]))
+
+    def read_records(self, con, run_id):
+        records = []
+        for row in con.execute("SELECT * FROM beach_records WHERE run_id=? ORDER BY longitude,name", (run_id,)):
+            record = dict(row)
+            record["features"] = json.loads(record["features"])
+            records.append(record)
+        return records
+
+    def comparison_value(self, record):
+        return {**{key: record[key] for key in ("name", "address", "city", "source_region_text", "latitude", "longitude", "access_type")},
+                "features": sorted(set(record["features"]))}

@@ -1,9 +1,9 @@
 """Başlangıç kaynak adayları; işletme veya fiyat verisi içermez."""
 
 CATEGORIES = ["Genel", "Konaklama", "Yeme içme", "Plaj", "Ulaşım", "Aktivite", "Hava", "Etkinlik"]
-REGIONS = ["Tüm 30A", "Dune Allen", "Gulf Place", "Santa Rosa Beach", "Blue Mountain Beach",
-           "Grayton Beach", "WaterColor", "Seaside", "Seagrove", "WaterSound", "Seacrest",
-           "Alys Beach", "Rosemary Beach", "Inlet Beach"]
+from .regions import REGIONS as CANONICAL_REGIONS
+
+REGIONS = ["Tüm 30A", *(name for _, name in CANONICAL_REGIONS)]
 METHODS = ["Belirlenecek", "HTML", "JSON", "API", "PDF", "Playwright"]
 CADENCES = ["Günlük", "Haftalık", "Aylık", "Gerektiğinde"]
 

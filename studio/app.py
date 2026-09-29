@@ -17,13 +17,16 @@ from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
 from .sources import beaches
+from .sources.registry import DEFAULT_REGISTRY
+from .regions import REGIONS as CANONICAL_REGIONS
 
 WEB = Path(__file__).parent / "web"
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "data"
 
 
-def create_app(data_dir: Path | None = None):
-    db = Database((data_dir or DEFAULT_DATA) / "studio.sqlite3")
+def create_app(data_dir: Path | None = None, registry=None):
+    registry = registry or DEFAULT_REGISTRY
+    db = Database((data_dir or DEFAULT_DATA) / "studio.sqlite3", registry)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -69,14 +72,19 @@ def create_app(data_dir: Path | None = None):
         return {"version": __version__, "categories": CATEGORIES, "regions": REGIONS, "methods": METHODS,
                 "cadences": CADENCES, "steps": [dict(id=id_, title=title, subtitle=subtitle, state=state)
                                                for id_, title, subtitle, state in STEPS],
-                "sources": db.sources(), "jobs": db.jobs(), "data_path": str(db.path.parent),
+                "sources": sources(), "jobs": db.jobs(), "data_path": str(db.path.parent),
+                "canonical_regions": [{"id": id_, "name": name} for id_, name in CANONICAL_REGIONS],
                 "collections": db.collections(),
-                "beach_connector": {"source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
+                "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
                                     "feature_labels": beaches.FEATURE_LABELS}}
 
     @app.get("/api/sources")
     def sources():
-        return db.sources()
+        result = []
+        for source in db.sources():
+            connector = registry.for_source(source)
+            result.append({**source, "connector": {"name": connector.name, "version": connector.version} if connector else None})
+        return result
 
     @app.post("/api/sources", status_code=201)
     def add_source(body: SourceInput):
@@ -95,10 +103,10 @@ def create_app(data_dir: Path | None = None):
 
     @app.post("/api/jobs", status_code=202)
     def start_job(body: JobInput, request: Request):
-        if body.kind == "beach_collection":
+        if body.kind in ("source_collection", "beach_collection"):
             if not body.source_id:
                 raise HTTPException(422, "Veri toplamak için bir kaynak seçin.")
-            return request.app.state.jobs.submit_beaches(body.source_id)
+            return request.app.state.jobs.submit_collection(body.source_id)
         return request.app.state.jobs.submit_audit()
 
     @app.post("/api/jobs/{identifier}/cancel")
@@ -111,6 +119,24 @@ def create_app(data_dir: Path | None = None):
     @app.get("/api/collections")
     def collections():
         return db.collections()
+
+    @app.get("/api/source-runs")
+    def source_runs(source_id: str | None = None):
+        return db.source_runs(source_id)
+
+    @app.get("/api/source-runs/{identifier}")
+    def source_run(identifier: str):
+        run = db.source_run(identifier)
+        if not run:
+            raise HTTPException(404, "Kaynak çekimi bulunamadı.")
+        return {"run": run, "records": db.run_records(identifier), "diff": db.run_diff(identifier)}
+
+    @app.get("/api/source-runs/{identifier}/diff")
+    def source_run_diff(identifier: str):
+        result = db.run_diff(identifier)
+        if result is None:
+            raise HTTPException(404, "Kaynak çekimi bulunamadı.")
+        return result
 
     def find_collection(identifier):
         result = db.collection(identifier)
