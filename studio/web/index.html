@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>30A Studio · Veri kaynakları</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23f5965e'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='Arial' font-size='29' font-weight='bold' fill='%230d1924'%3E30A%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/collection.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">İçeriğe geç</a>
+  <header class="topbar">
+    <a class="brand" href="#sources" aria-label="30A Studio ana ekran">
+      <span class="brand-symbol">30A<span class="brand-wave">≈</span></span>
+      <span>studio<span class="brand-sub">VERİ & İÇERİK</span></span>
+    </a>
+    <div class="workspace-label"><span class="location-dot"></span> Florida <span class="divider">/</span> Scenic Highway 30A</div>
+    <div class="top-actions"><span class="connection" id="connection">Bağlanıyor</span><button id="jobs-toggle" class="quiet" aria-controls="jobs-panel" aria-expanded="false">İşler <span class="count" id="jobs-count">0</span></button></div>
+  </header>
+  <aside class="sidebar">
+    <div class="project-label"><span class="eyebrow">ÇALIŞMA ALANI</span><strong>30A İçerik Stüdyosu</strong><span class="muted">Bölge bilgisi, tek bir akışta.</span></div>
+    <nav id="navigation" aria-label="Üretim aşamaları"></nav>
+    <div class="sidebar-bottom"><a href="#settings" class="settings-link"><span aria-hidden="true">⚙</span> Çalışma alanı bilgisi</a><div class="version"><span class="live-dot"></span> Veri toplama <span id="app-version">v0.2.0</span></div></div>
+  </aside>
+  <main id="main" tabindex="-1"><div class="loading">Çalışma alanı açılıyor…</div></main>
+  <aside id="jobs-panel" class="jobs-panel" aria-label="İşler" hidden>
+    <div class="panel-heading"><div><span class="eyebrow">ARKA PLAN</span><h2>İşler</h2></div><button id="jobs-close" class="icon-button" aria-label="İş panelini kapat">×</button></div>
+    <div id="jobs-content"></div>
+  </aside>
+  <dialog id="source-dialog" aria-labelledby="dialog-title">
+    <form id="source-form">
+      <div class="dialog-heading"><div><span class="eyebrow">KAYNAK KÜTÜPHANESİ</span><h2 id="dialog-title">Kaynak ekle</h2></div><button type="button" id="dialog-close" class="icon-button" aria-label="Pencereyi kapat">×</button></div>
+      <label>Kaynak adı<input name="name" required minlength="2" maxlength="160" placeholder="Örn. Rosemary Beach restoranları"></label>
+      <label>Web adresi<input name="url" type="url" required maxlength="2000" placeholder="https://..."></label>
+      <div class="form-grid"><label>Kategori<select name="category"></select></label><label>Bölge<select name="region"></select></label><label>Toplama yöntemi<select name="method"></select></label><label>Planlanan sıklık<select name="cadence"></select></label></div>
+      <label>Toplanacak bilgiler<textarea name="notes" rows="3" maxlength="3000" placeholder="Bu kaynaktan hangi bilgileri alacağız?"></textarea></label>
+      <p class="muted form-note">Bu alanlar toplama planıdır. Hazır veri toplayıcıları “Veri toplama” ekranından çalıştırabilirsin. Zamanlanmış otomatik çekim henüz yok.</p>
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-footer"><button type="button" class="quiet" id="dialog-cancel">Vazgeç</button><button class="primary" type="submit" id="save-source">Kaynağı kaydet</button></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>
