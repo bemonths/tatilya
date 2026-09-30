@@ -92,7 +92,7 @@ Kaynak UI durumu genel connector metadata bilgisini kullanır; özel plaj bağla
 
 `sources/weather.py` NWS HTTP, parse/doğrulama ve domain saklamayı; `sources/weather_anchors.py` sabit örnek noktaları ve provenance'ı taşır. HTML içindeki JSON kullanan plajın yanına resmî API kullanan ikinci connector eklenmiştir. `jobs.py` değişmeden generic source_collection yolu kullanılır. CollectionResult.related, kayıt sayısından ayrı lokasyon/alert ilişkilerinin records ile aynı transaction'da saklanmasını sağlar. Connector metadata'sında method ve diff_enabled vardır.
 
-v3→v4 migration dört hava tablosunu ekler; mevcut tabloların satırlarına dokunmaz. weather_forecast_periods ve weather_alert_anchors composite foreign key ile run+anchor'a bağlıdır; uyarı ilişkisi ayrıca run+alert'e bağlıdır. Bütün dönem/saatlik kayıtlar saklanır, aktif uyarılar run bazında kimlikle tekilleştirilir. Null ölçümler korunur.
+v3→v4 migration dört hava tablosunu ekler; mevcut domain kayıtlarını korur. Kaynaklarda yalnızca tam URL ve eski varsayılan alan değeri eşleştiğinde NWS notu ile NWS/plaj yöntemi güncellenir; kullanıcı değerleri korunur. weather_forecast_periods ve weather_alert_anchors composite foreign key ile run+anchor'a bağlıdır; uyarı ilişkisi ayrıca run+alert'e bağlıdır. Bütün dönem/saatlik kayıtlar saklanır, aktif uyarılar run bazında kimlikle tekilleştirilir. Null ölçümler korunur.
 
 API `/points` üzerinden grid/forecast adreslerini çözümler; takip edilen URL ve yönlendirmeler HTTPS api.weather.gov ve varsayılan/443 ile sınırlandırılır. Retry, timeout, response size ve iptal sınırları vardır. `source.json` paketindeki yanıtlar atomik yazılır; ana artifact hash'i DB katmanında hesaplanır. Gerekli bir anchor verisi eksikse başarı/domain commit olmaz.
 

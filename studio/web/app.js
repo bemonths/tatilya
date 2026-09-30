@@ -108,7 +108,7 @@ function renderRows() {
 function renderPlanned() {
   const step = state.data.steps.find(step=>step.id===state.page);
   const plan = roadmap[state.page];
-  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ve plaj verisi toplama kullanılabilir.")}
+  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ile plaj ve hava verisi toplama kullanılabilir.")}
     <section class="planned-hero"><span class="tag warm">Planlanan aşama · Henüz bağlı değil</span><h2>${esc(plan.headline)}</h2><p>${esc(plan.description)}</p><a class="return-link" href="#sources">← Kaynak kütüphanesine dön</a></section>
     <div class="planned-grid">${plan.cards.map(([label,title,description])=>`<section class="planned-card"><span class="eyebrow">${esc(label)}</span><h3>${esc(title)}</h3><p>${esc(description)}</p></section>`).join("")}</div></div>`;
 }
@@ -121,7 +121,7 @@ function reportStale(report) {
 function renderQuality() {
   const completed = state.data.jobs.find(job=>job.kind==="catalog_audit" && job.status==="done" && job.result);
   const report = completed?.result;
-  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Plaj verilerinin zorunlu alan, kimlik ve koordinat kontrolleri toplama sırasında yapılır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
+  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
     (report ? `<section class="quality-result">${reportStale(report)?'<div class="stale-notice">Kaynak kayıtları bu kontrolden sonra değişti. Güncel sonuç için kontrolü yeniden çalıştır.</div>':""}
       <div class="quality-summary"><span class="eyebrow">SON KATALOG KONTROLÜ · ${esc(date(completed.finished_at))}</span><h2 style="margin-top:10px">${report.checked} kayıt incelendi · ${report.needs_attention} kayıtta eksik bilgi</h2><p>${esc(report.scope)}</p></div>
       ${report.findings.map(finding=>`<div class="quality-row"><strong>${esc(finding.name)}</strong><span>${finding.issues.length?finding.issues.map(esc).join(" "):"Kayıt bilgileri tamam."}</span></div>`).join("")}</section>` :

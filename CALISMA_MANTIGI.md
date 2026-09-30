@@ -130,11 +130,11 @@ Kaynak kütüphanesindeki hazır durumu ve bağlı yöntem, beach adına değil 
 
 ## Hava domain'i · v0.4
 
-WeatherConnector `nws-weather/1`, `method=API`, `diff_enabled=False` metadata'sı taşır; BeachesConnector `method=JSON`, `diff_enabled=True` kullanır. Source API metadata'sı name/version/method döndürür. Yöntem alanı kaynak formundaki plan yerine bağlı connector yöntemini gösterir; kaynak satırı değiştirilmez.
+WeatherConnector `nws-weather/1`, `method=API`, `diff_enabled=False` metadata'sı taşır; BeachesConnector `method=JSON`, `diff_enabled=True` kullanır. Source API metadata'sı name/version/method döndürür. Yöntem alanı kaynak formundaki plan yerine bağlı connector yöntemini gösterir; kaynak satırındaki kullanıcı seçimi korunur; varsayılanlar aşağıdaki migration koşullarıyla güncellenir.
 
 Her çekim `/points/{lat},{lon}` → yanıttaki forecast ve forecastHourly adresleri → `/alerts/active?point={lat},{lon}` sırasını üç sabit örnek noktada yürütür. Adresler yalnızca HTTPS api.weather.gov, credentials olmadan ve varsayılan/443 port ile izlenir. Noktalar ve provenance `weather_anchors.py` içindedir. Canonical mahalle merkezleri değildir.
 
-`weather_locations`, `weather_forecast_periods`, `weather_alerts`, `weather_alert_anchors` tabloları v3→v4 migration'ında yalnızca eklenir. Eski tabloların satırları değiştirilmez. Fresh DB ve v1/v2 yükseltme zinciri de v4 ile biter. Kaynak/run/iş, hava lokasyonu ve alert ilişkileri foreign key ile korunur.
+`weather_locations`, `weather_forecast_periods`, `weather_alerts`, `weather_alert_anchors` tabloları v3→v4 migration'ında yalnızca eklenir. Eski domain kayıtları korunur; yalnızca aşağıda belirtilen kaynak varsayılanları koşullu güncellenir. Fresh DB ve v1/v2 yükseltme zinciri de v4 ile biter. Kaynak/run/iş, hava lokasyonu ve alert ilişkileri foreign key ile korunur.
 
 CollectionResult.records tüm normal ve saatlik forecast dönemlerini içerir; record_count bunların toplamıdır. İlişkili noktalar/uyarılar related içindedir. Metadata anchors/forecast_period_count/hourly_period_count/alert_count ve nokta başına generatedAt/updateTime içerir. source_updated her normal forecast'in updateTime (yoksa generatedAt) değerlerinin en yenisidir; bizim çekim zamanımız değildir. API'nin dönem sayıları sabit kabul edilmez. Null, sıfır ve kaynak ISO offset'i korunur; dewpoint birimi ayrıca saklanır.
 
@@ -147,3 +147,5 @@ Ek uçlar: GET /api/weather-runs, GET /api/weather-runs/{id}, GET /api/weather-r
 NWS HTTP: TLS açık, bağlantı 10 s/diğer işlemler 20 s timeout, yanıt başına 5 MB, en çok 3 yönlendirme. Ağ/timeout/5xx için bir kez ve 0.5 s iptal edilebilir beklemeyle retry; 429 doğrudan anlaşılır hata. Uyarı sayfalaması en fazla 5 sayfa; eksik veri başarı sayılmaz. İstekler sırayla yapılır. NWS alanları ve schema açıklaması: [M3-HAVA-VERISI](docs/M3-HAVA-VERISI.md).
 
 Tarihsel NOAA iklimi, observation station/current conditions, scheduler, Claude/OpenAI bu sürümde yoktur. Nokta yanıtındaki istasyon URL'si yalnızca provenance olarak saklanır, çağrılmaz.
+
+Varsayılan kaynak düzeltmesi: temiz kurulumda NWS yöntemi API, South Walton plaj yöntemi JSON olarak seed tanımından alınır. v3→v4 migration yalnızca tam kaynak URL'si eşleşen ve yöntemi hâlâ `Belirlenecek` olan bu iki kaydı günceller. NWS notu yalnızca eski varsayılan açıklamayla birebir aynıysa yeni tahmin/uyarı açıklamasına çevrilir. Not ve yöntem koşulları bağımsızdır; kullanıcı notu veya seçtiği yöntem korunur. Diğer kaynak alanları ve source_history değiştirilmez. Yükseltme öncesi yedek eski değerleri içerir. Zaten şema v4 olan veritabanlarında bu migration yeniden çalıştırılmaz.

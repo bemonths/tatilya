@@ -89,10 +89,10 @@ class Database:
                 PRAGMA user_version=2;
             """)
             if not con.execute("SELECT 1 FROM metadata WHERE key='seeded'").fetchone():
-                for name, url, category, notes in SEEDS:
+                for name, url, category, notes, method in SEEDS:
                     stamp, identifier = now(), uuid.uuid4().hex
                     con.execute("INSERT INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (
-                        identifier, name, url, category, "Tüm 30A", "Belirlenecek", "Haftalık", notes,
+                        identifier, name, url, category, "Tüm 30A", method, "Haftalık", notes,
                         1, 1, stamp, stamp))
                 con.execute("INSERT INTO metadata VALUES ('seeded', ?)", (now(),))
             upgrade_v3(con)

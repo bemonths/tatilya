@@ -65,3 +65,5 @@ Hava kayan/geçici bir tahmin penceresidir; eklenen/silinen kayıt farkı göste
 Ön yüz yardımcı testleri: Node 22+ ile `node --test tests/frontend.test.mjs`. Node yalnızca test aracıdır; uygulamanın çalışması/kurulumu için gerekmez.
 
 ![NWS hava ekranı](docs/HAVA-ONIZLEME.png)
+
+Varsayılan kaynak düzeltmesi: temiz kurulumda NWS yöntemi API, South Walton plaj yöntemi JSON olarak seed tanımından alınır. v3→v4 migration yalnızca tam kaynak URL'si eşleşen ve yöntemi hâlâ `Belirlenecek` olan bu iki kaydı günceller. NWS notu yalnızca eski varsayılan açıklamayla birebir aynıysa yeni tahmin/uyarı açıklamasına çevrilir. Not ve yöntem koşulları bağımsızdır; kullanıcı notu veya seçtiği yöntem korunur. Diğer kaynak alanları ve source_history değiştirilmez. Yükseltme öncesi yedek eski değerleri içerir. Zaten şema v4 olan veritabanlarında bu migration yeniden çalıştırılmaz.

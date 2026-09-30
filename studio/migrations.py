@@ -94,7 +94,7 @@ def upgrade_v3(con):
 
 
 def upgrade_v4(con):
-    """Add weather tables without rewriting any v3 rows; caller owns transaction/backup."""
+    """Add weather tables and refresh untouched seed defaults; caller owns transaction/backup."""
     execute_schema(con, """
         CREATE TABLE weather_locations (
             run_id TEXT NOT NULL REFERENCES source_runs(id), anchor_key TEXT NOT NULL,
@@ -132,5 +132,13 @@ def upgrade_v4(con):
         );
         PRAGMA user_version=4;
     """)
+    # Frozen v3 defaults: exact matches only, independent notes/method conditions.
+    con.execute("UPDATE sources SET notes=? WHERE url=? AND notes=?", (
+        "30A koridorundaki batı, orta ve doğu örnek noktaları için NWS tahminleri ve aktif hava uyarıları. Forecast, saatlik forecast ve aktif alert verileri api.weather.gov üzerinden toplanır.",
+        "https://www.weather.gov/",
+        "Hava verisi için başlangıç kaynağı. Bölge koordinatları ve veri uçları sonraki aşamada belirlenecek."))
+    con.executemany("UPDATE sources SET method=? WHERE url=? AND method='Belirlenecek'", (
+        ("API", "https://www.weather.gov/"),
+        ("JSON", "https://www.visitsouthwalton.com/beach-bay-access-locations/")))
     if con.execute("PRAGMA foreign_key_check").fetchone():
         raise RuntimeError("Hava migration ilişki bütünlüğü kontrolü başarısız oldu.")

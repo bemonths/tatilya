@@ -9,19 +9,19 @@ CADENCES = ["Günlük", "Haftalık", "Aylık", "Gerektiğinde"]
 
 SEEDS = [
     ("Visit South Walton", "https://www.visitsouthwalton.com/", "Genel",
-     "Bölge rehberi ve kaynak keşfi. South Walton kapsamındaki kayıtlar 30A için ayrıca filtrelenecek."),
+     "Bölge rehberi ve kaynak keşfi. South Walton kapsamındaki kayıtlar 30A için ayrıca filtrelenecek.", "Belirlenecek"),
     ("South Walton · Restoranlar", "https://www.visitsouthwalton.com/listings/culinary-experiences/", "Yeme içme",
-     "Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek."),
+     "Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek.", "Belirlenecek"),
     ("South Walton · Plaj erişimleri", "https://www.visitsouthwalton.com/beach-bay-access-locations/", "Plaj",
-     "Plaj erişim noktalarının adresi, koordinatları, erişim türü ve kaynakta listelenen olanakları. Veri toplama ekranında belirtilen kıyı kapsamı kullanılır."),
+     "Plaj erişim noktalarının adresi, koordinatları, erişim türü ve kaynakta listelenen olanakları. Veri toplama ekranında belirtilen kıyı kapsamı kullanılır.", "JSON"),
     ("South Walton · Etkinlikler", "https://www.visitsouthwalton.com/events/", "Etkinlik",
-     "Etkinlik takvimi. Tarih, konum ve iptal değişikliklerinin takibi planlanıyor."),
+     "Etkinlik takvimi. Tarih, konum ve iptal değişikliklerinin takibi planlanıyor.", "Belirlenecek"),
     ("South Walton · Ulaşım", "https://www.visitsouthwalton.com/listings/transportation/", "Ulaşım",
-     "Ulaşım işletmeleri. Fiyat ve hizmet kapsamı henüz toplanmadı."),
+     "Ulaşım işletmeleri. Fiyat ve hizmet kapsamı henüz toplanmadı.", "Belirlenecek"),
     ("National Weather Service", "https://www.weather.gov/", "Hava",
-     "Hava verisi için başlangıç kaynağı. Bölge koordinatları ve veri uçları sonraki aşamada belirlenecek."),
+     "30A koridorundaki batı, orta ve doğu örnek noktaları için NWS tahminleri ve aktif hava uyarıları. Forecast, saatlik forecast ve aktif alert verileri api.weather.gov üzerinden toplanır.", "API"),
     ("30A · Bölge rehberi", "https://30a.com/", "Genel",
-     "Yerel içerik ve konu keşfi. Otomatik veri toplama henüz bağlı değil."),
+     "Yerel içerik ve konu keşfi. Otomatik veri toplama henüz bağlı değil.", "Belirlenecek"),
 ]
 
 STEPS = [
