@@ -18,9 +18,15 @@ Visit South Walton plaj erişimleri bağlandı. Sayfadaki harita noktaları tek 
 
 Genel source_runs, jobs.source_id, connector registry, source_collection işi, atomik v2 migration ve yükseltme öncesi yedek tamamlandı. Başarılı/başarısız/iptal run takibi ve temel plaj sürüm farkı çalışır. 13 canonical bölge kimliği ve entity/entity_sources şemaları hazırdır; henüz otomatik entity matching veya polygon mapping yapılmaz. Aynı host içi sınırlı HTTP yönlendirme, kontrollü teşhis ve Python 3.12 GitHub Actions eklendi.
 
-Sonraki veri işleri: gerçek yeni connector'lar, domain bazında kalite raporları, birim/tarih/fiyat karşılaştırmaları ve kaynaklar arası veri eşleme tasarımı. Konaklama/restoran/hava connector'ları henüz yoktur. Entity yönetim ekranı ve otomatik eşleme ileride değerlendirilecektir. Scheduler henüz yoktur.
+Sonraki veri işleri: gerçek yeni connector'lar, domain bazında kalite raporları, birim/tarih/fiyat karşılaştırmaları ve kaynaklar arası veri eşleme tasarımı. Konaklama/restoran connector'ları henüz yoktur; NWS hava connector'ı v0.4 kapsamında eklendi. Entity yönetim ekranı ve otomatik eşleme ileride değerlendirilecektir. Scheduler henüz yoktur.
 
-## Aşama 4 — Konu, rakip ve brief
+## Veri toplama genişlemesi — NWS hava · v0.4.0
+
+İkinci gerçek connector NWS resmî API'sidir. Üç provenance'ı açık plaj örnek noktası için points, dönem/saatlik forecast ve aktif alerts toplanır. Canonical mahalle merkezi/polygon üretilmez. V4 şema, ham yanıt paketi, sürüm geçmişi, Plaj/Hava sekmeleri ve timezone gösterimi hazırdır. Kayan hava penceresine kayıt diff'i uygulanmaz. [Kapsam ve sınırlar](M3-HAVA-VERISI.md).
+
+Tarihsel iklim, current conditions/observation station, scheduler ve Claude/OpenAI henüz yoktur. Sonraki aşamalar aşağıda plan olarak kalır.
+
+## Aşama 4 — Konu, rakip ve brief · Plan
 
 Claude CLI bağlantısını bağımsız sağlayıcı olarak ekle. Önce sınırlı bir test görevi, ardından doğrulanmış veri paketiyle konu önerisi. Rakip kayıtları, konu seçimi, kaynaklı brief ve kullanıcı onayı. Hesapları test edilmiş fonksiyonlarla yap.
 

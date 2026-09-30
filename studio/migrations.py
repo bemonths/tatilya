@@ -91,3 +91,46 @@ def upgrade_v3(con):
     """)
     if con.execute("PRAGMA foreign_key_check").fetchone():
         raise RuntimeError("Migration sırasında ilişki bütünlüğü kontrolü başarısız oldu.")
+
+
+def upgrade_v4(con):
+    """Add weather tables without rewriting any v3 rows; caller owns transaction/backup."""
+    execute_schema(con, """
+        CREATE TABLE weather_locations (
+            run_id TEXT NOT NULL REFERENCES source_runs(id), anchor_key TEXT NOT NULL,
+            label TEXT NOT NULL, source_beach_external_id TEXT NOT NULL, source_beach_name TEXT NOT NULL,
+            latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),
+            longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),
+            cwa TEXT NOT NULL, grid_x INTEGER NOT NULL, grid_y INTEGER NOT NULL, time_zone TEXT NOT NULL,
+            forecast_url TEXT NOT NULL, forecast_hourly_url TEXT NOT NULL, forecast_grid_data_url TEXT,
+            forecast_zone_url TEXT, county_url TEXT, observation_stations_url TEXT,
+            PRIMARY KEY(run_id,anchor_key)
+        );
+        CREATE TABLE weather_forecast_periods (
+            run_id TEXT NOT NULL, anchor_key TEXT NOT NULL,
+            forecast_kind TEXT NOT NULL CHECK(forecast_kind IN ('period','hourly')),
+            external_id TEXT NOT NULL, number INTEGER, name TEXT,
+            start_time TEXT NOT NULL, end_time TEXT NOT NULL, is_daytime INTEGER CHECK(is_daytime IN (0,1)),
+            temperature REAL, temperature_unit TEXT, temperature_trend TEXT,
+            precipitation_probability REAL CHECK(precipitation_probability BETWEEN 0 AND 100),
+            relative_humidity REAL CHECK(relative_humidity BETWEEN 0 AND 100), dewpoint REAL, dewpoint_unit TEXT,
+            wind_speed TEXT, wind_direction TEXT, icon_url TEXT, short_forecast TEXT NOT NULL, detailed_forecast TEXT,
+            PRIMARY KEY(run_id,external_id), UNIQUE(run_id,anchor_key,forecast_kind,start_time),
+            FOREIGN KEY(run_id,anchor_key) REFERENCES weather_locations(run_id,anchor_key)
+        );
+        CREATE TABLE weather_alerts (
+            run_id TEXT NOT NULL REFERENCES source_runs(id), alert_id TEXT NOT NULL,
+            event TEXT NOT NULL, headline TEXT, area_desc TEXT, severity TEXT, certainty TEXT, urgency TEXT,
+            effective TEXT, onset TEXT, expires TEXT, ends TEXT, status TEXT, message_type TEXT,
+            description TEXT, instruction TEXT, PRIMARY KEY(run_id,alert_id)
+        );
+        CREATE TABLE weather_alert_anchors (
+            run_id TEXT NOT NULL, alert_id TEXT NOT NULL, anchor_key TEXT NOT NULL,
+            PRIMARY KEY(run_id,alert_id,anchor_key),
+            FOREIGN KEY(run_id,alert_id) REFERENCES weather_alerts(run_id,alert_id),
+            FOREIGN KEY(run_id,anchor_key) REFERENCES weather_locations(run_id,anchor_key)
+        );
+        PRAGMA user_version=4;
+    """)
+    if con.execute("PRAGMA foreign_key_check").fetchone():
+        raise RuntimeError("Hava migration ilişki bütünlüğü kontrolü başarısız oldu.")

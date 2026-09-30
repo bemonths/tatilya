@@ -26,7 +26,7 @@ SEEDS = [
 
 STEPS = [
     ("sources", "Veri kaynakları", "Kaynak kütüphanesi", "active"),
-    ("collect", "Veri toplama", "Plaj erişimleri hazır", "active"),
+    ("collect", "Veri toplama", "Plaj ve hava hazır", "active"),
     ("quality", "Veri kontrolü", "Katalog kontrolü hazır", "partial"),
     ("research", "Konu araştırması", "Veriden konuya", "planned"),
     ("competitors", "Rakip analizi", "İçerik fırsatları", "planned"),

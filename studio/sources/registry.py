@@ -1,4 +1,5 @@
 from .beaches import BeachesConnector
+from .weather import WeatherConnector
 
 
 class ConnectorRegistry:
@@ -17,4 +18,4 @@ class ConnectorRegistry:
         return next((connector for connector in self.connectors if connector.name == name), None)
 
 
-DEFAULT_REGISTRY = ConnectorRegistry([BeachesConnector()])
+DEFAULT_REGISTRY = ConnectorRegistry([BeachesConnector(), WeatherConnector()])

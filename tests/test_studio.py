@@ -96,7 +96,7 @@ def test_audit_is_persistent_and_does_not_change_source_records(tmp_path):
         job = wait_job(client, response.json()["id"])
         assert job["status"] == "done"
         assert job["result"]["checked"] == 7
-        assert job["result"]["needs_attention"] == 6
+        assert job["result"]["needs_attention"] == 5
         assert client.get("/api/sources").json() == before
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         assert client.get("/api/jobs").json()[0]["result"] == job["result"]

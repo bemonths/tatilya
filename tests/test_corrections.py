@@ -22,7 +22,7 @@ def test_generic_metadata_and_disk_hash(tmp_path):
         source = client.post('/api/sources', json=payload()).json()
         for sources in (client.get('/api/sources').json(), client.get('/api/bootstrap').json()['sources']):
             connected = next(row for row in sources if row['id'] == source['id'])
-            assert connected['connector'] == {'name': 'test-connector', 'version': '1'}
+            assert connected['connector'] == {'name': 'test-connector', 'version': '1', 'method': None}
             assert any(row['connector'] is None for row in sources)
         job, run = collect(client, source['id'])
         assert job['result']['connector_name'] == 'test-connector'
@@ -100,7 +100,7 @@ def test_diagnostic_preserves_plain_message_and_only_trace_locations():
 
 def test_safe_diagnostic_is_internal_db_only(tmp_path):
     class LockedConnector(TestConnector):
-        def store_records(self, con, run_id, records):
+        def store_records(self, con, run_id, records, related=None):
             raise RuntimeError('database is locked')
     with TestClient(create_app(tmp_path, ConnectorRegistry([LockedConnector()])), headers=HEADERS) as client:
         source = client.post('/api/sources', json=payload()).json()

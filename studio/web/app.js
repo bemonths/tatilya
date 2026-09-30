@@ -1,6 +1,7 @@
 import {api, esc, host, date} from "./api.js";
 import {roadmap} from "./roadmap.js";
-import {connectorState, jobResultTarget} from "./connectors.js";
+import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
+import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 
 const $ = selector => document.querySelector(selector);
@@ -10,6 +11,8 @@ const active = job => ["queued", "running"].includes(job.status);
 let toastTimer;
 let lastCollectionId=null;
 const beachScreen=new BeachScreen();
+const weatherScreen=new WeatherScreen();
+let lastWeatherId=null;
 
 function toast(text) {
   clearTimeout(toastTimer);
@@ -37,14 +40,15 @@ function pageHeading(title, description, actions="") {
 
 function render() {
   if (!state.data) return;
-  state.page = location.hash.slice(1) || "sources";
+  state.page = location.hash.slice(1).split("/")[0] || "sources";
   if (![...state.data.steps.map(step=>step.id),"settings"].includes(state.page)) state.page="sources";
   navigation();
   beachScreen.invalidate();
+  weatherScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
-  else if (state.page === "collect") beachScreen.render($("#main"),state.data,pageHeading);
+  else if (state.page === "collect") (location.hash==="#collect/weather"?weatherScreen:beachScreen).render($("#main"),state.data,pageHeading);
   else if (state.page === "quality") renderQuality();
   else if (state.page === "settings") renderSettings();
   else renderPlanned();
@@ -70,11 +74,16 @@ function renderSources() {
       <div class="table-scroll"><table><thead><tr><th scope="col">KAYNAK</th><th scope="col">KATEGORİ</th><th scope="col">YÖNTEM</th><th scope="col">SIKLIK</th><th scope="col">DURUM</th></tr></thead><tbody id="source-rows"></tbody></table></div>
       <div class="table-note"><span aria-hidden="true">ⓘ</span> Kaynak kaydı eklemek veri çekme işlemini başlatmaz.</div>
     </section><section id="source-detail" class="detail" aria-label="Seçili kaynak ayrıntıları"></section></div>
-    <div class="stage-note"><span class="note-mark" aria-hidden="true">↳</span><p><strong>İlk veri toplayıcısı hazır.</strong> <a href="#collect">Veri toplama</a> ekranından South Walton plaj erişimlerini çekebilir, kayıtları ve önceki sürümleri inceleyebilirsin.</p></div>`;
+    <div class="stage-note"><span class="note-mark" aria-hidden="true">↳</span><p><strong>İki veri toplayıcısı hazır.</strong> <a href="#collect">Veri toplama</a> ekranından South Walton plaj erişimlerini ve NWS hava tahminlerini çekebilir, kayıtları ve önceki sürümleri inceleyebilirsin.</p></div>`;
   $("#source-search").addEventListener("input", event=>{state.search=event.target.value; renderRows();});
   $("#category-filter").addEventListener("change", event=>{state.category=event.target.value; renderRows();});
   $("#region-filter").addEventListener("change", event=>{state.region=event.target.value; renderRows();});
   renderRows();
+}
+
+function sourceDomainLink(source) {
+  const target=domainTarget(source.connector?.name);
+  return target?`<a href="${target.href}">${target.label} →</a>`:source.connector?"Toplayıcı hazır.":"Bu kaynak için veri toplayıcısı henüz bağlı değil.";
 }
 
 function renderRows() {
@@ -92,7 +101,7 @@ function renderRows() {
   $("#source-detail").innerHTML = source ? `<div class="detail-icon" aria-hidden="true">↗</div><span class="eyebrow">KAYNAK AYRINTISI</span><h2>${esc(source.name)}</h2><p>${esc(source.notes || "Bu kaynak için henüz açıklama eklenmedi.")}</p>
     <dl><div><dt>Kategori</dt><dd>${esc(source.category)}</dd></div><div><dt>Bölge</dt><dd>${esc(source.region)}</dd></div><div><dt>Yöntem</dt><dd>${esc(connectorState(source).method)}</dd></div>${source.connector?`<div><dt>Toplayıcı</dt><dd>${esc(source.connector.name)}</dd></div><div><dt>Toplayıcı sürümü</dt><dd>${esc(source.connector.version || "Belirtilmemiş")}</dd></div>`:""}<div><dt>Planlanan sıklık</dt><dd>${esc(source.cadence)}</dd></div><div><dt>Son düzenleme</dt><dd>${esc(date(source.updated_at))}</dd></div></dl>
     <a class="source-link" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">Kaynağın sitesini aç ↗</a>
-    <div class="detail-actions"><button data-action="edit" data-id="${source.id}">Düzenle</button><button class="quiet" data-action="archive" data-id="${source.id}">${source.enabled?"Arşivle":"Geri al"}</button></div><div class="detail-foot">${source.connector?.name===state.data.beach_connector.name?'<a href="#collect">Plaj veri toplayıcısını aç →</a>':source.connector?'Toplayıcı hazır.':'Bu kaynak için veri toplayıcısı henüz bağlı değil.'}</div>` :
+    <div class="detail-actions"><button data-action="edit" data-id="${source.id}">Düzenle</button><button class="quiet" data-action="archive" data-id="${source.id}">${source.enabled?"Arşivle":"Geri al"}</button></div><div class="detail-foot">${sourceDomainLink(source)}</div>` :
     `<div class="empty"><span class="empty-icon">▤</span><h3>Kaynak ayrıntıları</h3><p>Listedeki bir kaynağı seçerek açıklamasını ve toplama planını görebilirsin.</p></div>`;
 }
 
@@ -122,7 +131,7 @@ function renderQuality() {
 function renderSettings() {
   $("#main").innerHTML = pageHeading("Çalışma alanı bilgisi", "30A Studio’nun sürümü ve kayıt konumu.") +
     `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">30A’ya ait kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
-    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj verisi toplama hazır</h2><p>Kaynak kütüphanesi, gerçek plaj verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
+    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj ve hava verisi toplama hazır</h2><p>Kaynak kütüphanesi, gerçek plaj ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
 }
 
 function renderJobResultLink(job) {
@@ -139,6 +148,7 @@ function renderJobs() {
 }
 
 function updateAuditButtons() {
+  updateWeatherButton();
   const busy = state.data.jobs.some(job=>job.kind==="catalog_audit" && active(job));
   document.querySelectorAll('[data-action="audit"]').forEach(button=>{
     button.disabled=busy || !state.data.sources.some(source=>source.enabled);
@@ -148,6 +158,15 @@ function updateAuditButtons() {
   document.querySelectorAll('[data-action="collect-beaches"]').forEach(button=>{
     button.disabled=collecting || !state.data.sources.some(source=>source.enabled && source.connector?.name===state.data.beach_connector.name);
     button.textContent=collecting?"Toplama sürüyor…":"↓ Plaj verilerini topla";
+  });
+}
+
+function updateWeatherButton() {
+  const source=state.data.sources.find(source=>source.enabled && source.connector?.name===state.data.weather_connector.name);
+  const busy=state.data.jobs.some(job=>job.source_id===source?.id && active(job));
+  document.querySelectorAll('[data-action="collect-weather"]').forEach(button=>{
+    button.disabled=!source || busy;
+    button.textContent=busy?"Toplama sürüyor…":"↓ Hava verilerini topla";
   });
 }
 
@@ -223,10 +242,12 @@ $("#main").addEventListener("click", async event=>{
         if(state.page==="quality") renderQuality();
         break;
       }
+      case "collect-weather":
       case "collect-beaches": {
         button.disabled=true;
-        const source=state.data.sources.find(source=>source.enabled && source.connector?.name===state.data.beach_connector.name);
-        if(!source) throw new Error("Plaj veri kaynağı etkin değil.");
+        const connectorName=button.dataset.action==="collect-weather"?state.data.weather_connector.name:state.data.beach_connector.name;
+        const source=state.data.sources.find(source=>source.enabled && source.connector?.name===connectorName);
+        if(!source) throw new Error("Veri kaynağı etkin değil.");
         await api("jobs",{method:"POST",body:JSON.stringify({kind:"source_collection",source_id:source.id})});
         state.data.jobs=await api("jobs");renderJobs();toggleJobs(true);break;
       }
@@ -255,6 +276,7 @@ async function start() {
   try {
     state.data=await api("bootstrap");
     lastCollectionId=state.data.collections[0]?.id || null;
+    lastWeatherId=state.data.weather_runs[0]?.id || null;
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
     const events=new EventSource("/api/events");
@@ -265,6 +287,15 @@ async function start() {
     events.addEventListener("jobs",async event=>{
       state.data.jobs=JSON.parse(event.data);renderJobs();
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
+      const weatherLatest=state.data.jobs.find(job=>job.kind==="source_collection" && job.status==="done" && job.result?.connector_name===state.data.weather_connector.name);
+      if(weatherLatest && weatherLatest.id!==lastWeatherId) {
+        try {
+          state.data.weather_runs=await api("weather-runs");
+          lastWeatherId=weatherLatest.id; weatherScreen.selectedRun=null;
+          if(state.page==="collect" && location.hash==="#collect/weather") render();
+          toast("Hava verileri kaydedildi. Hava sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
       const latest=state.data.jobs.find(job=>job.kind==="source_collection" && job.status==="done" && (job.result?.connector_name===state.data.beach_connector.name || state.data.sources.some(source=>source.id===job.source_id && source.connector?.name===state.data.beach_connector.name)));
       if(latest && latest.id!==lastCollectionId) {
         try {

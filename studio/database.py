@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .catalog import SEEDS
-from .migrations import execute_schema, upgrade_v3
+from .migrations import execute_schema, upgrade_v3, upgrade_v4
 
 
 def now():
@@ -40,16 +40,19 @@ class Database:
         with self.connect() as con:
             con.execute("PRAGMA journal_mode=WAL")
             version = con.execute("PRAGMA user_version").fetchone()[0]
-            if version > 3:
+            if version > 4:
                 raise RuntimeError("Bu veri dosyası daha yeni bir uygulama sürümüne ait.")
-            if version == 3:
+            if version == 4:
                 return
-            if version in (1, 2):
+            if version in (1, 2, 3):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("BEGIN IMMEDIATE")
+            if version == 3:
+                upgrade_v4(con)
+                return
             execute_schema(con, """
                 CREATE TABLE IF NOT EXISTS sources (
                     id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL UNIQUE,
@@ -93,6 +96,7 @@ class Database:
                         1, 1, stamp, stamp))
                 con.execute("INSERT INTO metadata VALUES ('seeded', ?)", (now(),))
             upgrade_v3(con)
+            upgrade_v4(con)
 
     def sources(self):
         with self.connect() as con:
@@ -235,6 +239,9 @@ class Database:
                 return None
             if run["status"] != "done":
                 return {"available": False, "reason": "Başarılı bir sürüm seçin."}
+            connector = self.registry.by_name(run["connector_name"])
+            if connector and not getattr(connector, "diff_enabled", True):
+                return {"available": False, "reason": "Bu veri türünde kayan tahmin penceresi kullanıldığı için kayıt farkı özeti gösterilmiyor."}
             previous = con.execute("""SELECT id,connector_version FROM source_runs WHERE source_id=? AND connector_name=?
                 AND status='done' AND rowid<? ORDER BY rowid DESC LIMIT 1""",
                 (run["source_id"], run["connector_name"], run["sequence"])).fetchone()
@@ -274,7 +281,7 @@ class Database:
             run = con.execute("SELECT * FROM source_runs WHERE job_id=?", (identifier,)).fetchone()
             if not job or not run or job["status"] not in ("queued", "running") or run["status"] not in ("queued", "running"):
                 return False
-            connector.store_records(con, run["id"], batch.records)
+            connector.store_records(con, run["id"], batch.records, batch.related)
             stamp = now()
             metadata = {**json.loads(run["metadata"]), **batch.metadata, "total_count": batch.total_count}
             con.execute("""UPDATE source_runs SET status='done',finished_at=?,source_updated=?,

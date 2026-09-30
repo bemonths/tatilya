@@ -1,6 +1,6 @@
 # 30A Studio — inceleme ve bağımsız proje mimarisi
 
-29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.3.0 güncellemesi
+29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.4.0 güncellemesi
 
 ## Housing Atlas incelemesi
 
@@ -25,7 +25,7 @@
 
 Bu tespitler mimari incelemedir; Housing Atlas için çalıştırma, entegrasyon testi veya genel kod denetimi yapılmadı. Özellikle canlı Claude ve Playwright davranışları bu çalışmada denenmedi.
 
-## 30A v0.3 mimarisi
+## 30A v0.4 mimarisi
 
 Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullanılır. Node derlemesi yoktur. Lacivert/turuncu görünüm ve sol üretim akışı korunmuştur. Bu sürümün amacı veri katmanını yeni kaynaklara hazırlamaktır.
 
@@ -36,7 +36,7 @@ Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullan�
 | migrations.py | Atomik v2→v3 migration, bölge/entity şemaları, collections uyumluluk görünümü |
 | jobs.py | Registry'den bulunan connector'ı tek çalışanlı kuyrukta çalıştırır; plaj import'u yok |
 | sources/base.py | Connector Protocol, CollectionResult ve kontrollü hata türleri |
-| sources/registry.py | Kaynak→connector eşleştirme; yalnızca BeachesConnector kayıtlı |
+| sources/registry.py | Kaynak→connector eşleştirme; BeachesConnector ve WeatherConnector kayıtlı |
 | sources/beaches.py | HTTP, parse/validate, plaj kayıtlarını yazma/okuma ve karşılaştırma alanları |
 | regions.py | 13 sabit bölge kimliği/adı; polygon veya koordinat sınırı yok |
 | diagnostics.py | Hata türü ve traceback konumları; exception metni ve locals kaydedilmez |
@@ -62,7 +62,7 @@ beach_records, eski domain alanlarını korur; source_region_text ve nullable ca
 
 ## Migration ve veri koruma
 
-Mevcut veritabanının SQLite backup API ile tutarlı kopyası data/backups içine alınır. DDL ve taşıma işlemleri tek transaction içindedir; executescript'in örtük commit davranışı kullanılmaz. Sonunda foreign_key_check denetlenir ve şema 3 olur. Hata eski şemayı/veriyi korur. Yükseltme yeniden çalıştırıldığında tekrarlı kayıt oluşmaz.
+Mevcut veritabanının SQLite backup API ile tutarlı kopyası data/backups içine alınır. DDL ve taşıma işlemleri tek transaction içindedir; executescript'in örtük commit davranışı kullanılmaz. Sonunda foreign_key_check denetlenir; v3→v4 hava tabloları adımı sonrası şema 4 olur. Hata eski şemayı/veriyi korur. Yükseltme yeniden çalıştırıldığında tekrarlı kayıt oluşmaz.
 
 Eski collections kayıtları aynı kimliklerle source_runs'a aktarılır. Beach satırlarının dış anahtarı değiştirilir. collections adı salt okunur bir uyumluluk görünümü olarak kalır; eski /api/collections, CSV ve ham kaynak uçları korunur. beach_collection istek değeri alias olarak kabul edilse de tüm yeni toplama işleri source_collection olarak kaydedilir. Eksik tarihsel bilgiler tahmin edilmez.
 
@@ -78,7 +78,7 @@ Beklenmeyen hata türü ve dosya adı/satır/fonksiyon konumları jobs.diagnosti
 
 ## Kapsam sınırı ve doğrulama
 
-Gerçek connector yalnızca BeachesConnector'dır. Claude/OpenAI, Playwright, scheduler, konu/makale/görsel/video üretimi bu sürümde yoktur. Sol içerik aşamaları plan ekranıdır. İçerik onayları ve veri değişince içerik eskime takibi ileride uygulanacaktır.
+İki gerçek connector vardır: BeachesConnector ve WeatherConnector. Claude/OpenAI, Playwright, scheduler, konu/makale/görsel/video üretimi bu sürümde yoktur. Sol içerik aşamaları plan ekranıdır. İçerik onayları ve veri değişince içerik eskime takibi ileride uygulanacaktır.
 
 Testler migration, rollback, kalıcılık, genel connector/job, başarısız run, iptal, domain yazımının transaction bütünlüğü, diff, bölge/entity ilişkileri ve yönlendirmeleri kapsar. Test kodundaki ikinci sentetik connector, jobs.py/app.py özel kodu olmadan genel yolu doğrular; uygulama registry'sinde bulunmaz. Gerçek HTTP testlerde engellenir. GitHub Actions Python 3.12 üzerinde çalışır.
 
@@ -87,3 +87,15 @@ Kullanıcı veritabanının kopyasında 7 kaynak, 1 kaynak geçmişi, 1 eski ba�
 Tam çalışma akışı: [CALISMA_MANTIGI.md](../CALISMA_MANTIGI.md). Geliştirme planı: [ASAMALAR.md](ASAMALAR.md).
 
 Kaynak UI durumu genel connector metadata bilgisini kullanır; özel plaj bağlantıları yalnızca plaj connector sonuçlarına aittir. Diff, connector sürümleri farklı olsa da çalışır ve sürüm değişimini üç ek alanla bildirir. Ham SHA-256 yalnızca Database.record_raw_artifact() tarafından diskteki dosyadan hesaplanır; CollectionResult içinde ikinci hash alanı yoktur.
+
+## v0.4 hava domain'i
+
+`sources/weather.py` NWS HTTP, parse/doğrulama ve domain saklamayı; `sources/weather_anchors.py` sabit örnek noktaları ve provenance'ı taşır. HTML içindeki JSON kullanan plajın yanına resmî API kullanan ikinci connector eklenmiştir. `jobs.py` değişmeden generic source_collection yolu kullanılır. CollectionResult.related, kayıt sayısından ayrı lokasyon/alert ilişkilerinin records ile aynı transaction'da saklanmasını sağlar. Connector metadata'sında method ve diff_enabled vardır.
+
+v3→v4 migration dört hava tablosunu ekler; mevcut tabloların satırlarına dokunmaz. weather_forecast_periods ve weather_alert_anchors composite foreign key ile run+anchor'a bağlıdır; uyarı ilişkisi ayrıca run+alert'e bağlıdır. Bütün dönem/saatlik kayıtlar saklanır, aktif uyarılar run bazında kimlikle tekilleştirilir. Null ölçümler korunur.
+
+API `/points` üzerinden grid/forecast adreslerini çözümler; takip edilen URL ve yönlendirmeler HTTPS api.weather.gov ve varsayılan/443 ile sınırlandırılır. Retry, timeout, response size ve iptal sınırları vardır. `source.json` paketindeki yanıtlar atomik yazılır; ana artifact hash'i DB katmanında hesaplanır. Gerekli bir anchor verisi eksikse başarı/domain commit olmaz.
+
+`web/weather.js` mevcut Veri toplama aşamasındaki Hava sekmesidir; tarayıcı yerel saatinden bağımsız points.timeZone kullanır. `web/connectors.js` domain hedeflerini seçer. Weather diff_enabled=False olduğu için generic kayıt diff'i kapalıdır. UI bütün dönemleri ve ilk 24 saatlik kaydı gösterir; veri tabanında tümü bulunur.
+
+Batı/orta/doğu noktaları 53 Visit South Walton plaj kaydının boylam sıralamasından seçilmiş örneklerdir; canonical mahalle merkezi değildir. Ayrıntılar [M3-HAVA-VERISI](M3-HAVA-VERISI.md). Tarihsel iklim, istasyon gözlemi/current conditions, zamanlayıcı veya AI bağlantısı eklenmedi.

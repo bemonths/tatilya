@@ -16,7 +16,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, REGIONS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import beaches
+from .sources import beaches, weather
 from .sources.registry import DEFAULT_REGISTRY
 from .regions import REGIONS as CANONICAL_REGIONS
 
@@ -74,7 +74,8 @@ def create_app(data_dir: Path | None = None, registry=None):
                                                for id_, title, subtitle, state in STEPS],
                 "sources": sources(), "jobs": db.jobs(), "data_path": str(db.path.parent),
                 "canonical_regions": [{"id": id_, "name": name} for id_, name in CANONICAL_REGIONS],
-                "collections": db.collections(),
+                "collections": db.collections(), "weather_runs": weather_runs(),
+                "weather_connector": {"name": "nws-weather", "method": "API", "anchors": weather.ANCHORS, "provenance": weather.ANCHOR_PROVENANCE},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
                                     "feature_labels": beaches.FEATURE_LABELS}}
 
@@ -83,7 +84,7 @@ def create_app(data_dir: Path | None = None, registry=None):
         result = []
         for source in db.sources():
             connector = registry.for_source(source)
-            result.append({**source, "connector": {"name": connector.name, "version": connector.version} if connector else None})
+            result.append({**source, "connector": {"name": connector.name, "version": connector.version, "method": getattr(connector, "method", None)} if connector else None})
         return result
 
     @app.post("/api/sources", status_code=201)
@@ -173,6 +174,31 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(db.path.parent.resolve()) or not path.is_file():
             raise HTTPException(404, "Ham kaynak dosyası bulunamadı.")
         return FileResponse(path, media_type="text/plain", filename=f"30a-ham-kaynak-{identifier[:8]}.html.txt")
+
+    @app.get("/api/weather-runs")
+    def weather_runs():
+        return [run for run in db.source_runs() if run["connector_name"] == "nws-weather" and run["status"] == "done"]
+
+    def find_weather_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != "nws-weather" or run["status"] != "done":
+            raise HTTPException(404, "Bu hava veri sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/weather-runs/{identifier}")
+    def weather_run(identifier: str):
+        run = find_weather_run(identifier)
+        with db.connect() as con:
+            snapshot = weather.WeatherConnector().read_snapshot(con, identifier)
+        return {"run": run, **snapshot, "diff": db.run_diff(identifier)}
+
+    @app.get("/api/weather-runs/{identifier}/raw")
+    def raw_weather_run(identifier: str):
+        run = find_weather_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        if not path.is_relative_to((db.path.parent / "raw").resolve()) or not path.is_file():
+            raise HTTPException(404, "Ham hava kaynağı bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"30a-hava-{identifier[:8]}.json")
 
     @app.get("/api/events")
     async def events(request: Request):

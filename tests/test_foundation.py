@@ -49,7 +49,7 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
     assert db.source_run("old-failed")["metadata"]["source_identity_unknown"]
     assert db.source_run("old-canceled")["status"] == "canceled"
     with db.connect() as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 4
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert [tuple(row) for row in con.execute("SELECT * FROM source_history")] == history_before
         assert tuple(con.execute("SELECT * FROM beach_records").fetchone()) == (*record_before, "Santa Rosa Beach", None)
@@ -178,7 +178,7 @@ class TestConnector:
         raw_path.write_text("Synthetic test response", encoding="utf-8")
         return CollectionResult([{"external_id": "test-id", "value": 12}], 1, 0, None)
 
-    def store_records(self, con, run_id, records):
+    def store_records(self, con, run_id, records, related=None):
         con.execute("CREATE TABLE IF NOT EXISTS test_domain(run_id TEXT,external_id TEXT,value INTEGER)")
         con.executemany("INSERT INTO test_domain VALUES (?,?,?)", [(run_id, record["external_id"], record["value"]) for record in records])
 
@@ -207,7 +207,7 @@ def test_second_connector_needs_no_job_or_app_special_case(tmp_path):
 
 def test_domain_failure_rolls_back_and_diagnostic_excludes_secret(tmp_path):
     class FailingConnector(TestConnector):
-        def store_records(self, con, run_id, records):
+        def store_records(self, con, run_id, records, related=None):
             super().store_records(con, run_id, records)
             raise RuntimeError("password=private-test-password token=ghp_private_test_token")
     with TestClient(create_app(tmp_path, ConnectorRegistry([FailingConnector()])), headers=HEADERS) as client:
@@ -302,7 +302,7 @@ def test_source_job_dedup_is_per_source_and_source_snapshot_is_checked(tmp_path)
 
 
 def test_generic_unsupported_source_and_registry_constraints(tmp_path):
-    assert len(DEFAULT_REGISTRY.connectors) == 1
+    assert len(DEFAULT_REGISTRY.connectors) == 2
     with pytest.raises(ValueError, match="benzersiz"):
         ConnectorRegistry([TestConnector(), TestConnector()])
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:

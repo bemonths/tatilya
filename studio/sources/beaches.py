@@ -180,6 +180,8 @@ class BeachesConnector:
     name = "south-walton-beaches"
     version = PARSER_VERSION
     raw_filename = "source.html"
+    method = "JSON"
+    diff_enabled = True
 
     def supports(self, source):
         return source["url"] == SOURCE_URL
@@ -189,7 +191,7 @@ class BeachesConnector:
         result.metadata.update(scope=SCOPE)
         return result
 
-    def store_records(self, con, run_id, records):
+    def store_records(self, con, run_id, records, related=None):
         for record in records:
             con.execute("""INSERT INTO beach_records
                 (run_id,external_id,name,city,address,latitude,longitude,access_type,features,source_region_text,canonical_region_id)
