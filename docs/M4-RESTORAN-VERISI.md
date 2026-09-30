@@ -36,7 +36,7 @@ HTTPS, yalnızca visitsouthwalton.com/www.visitsouthwalton.com, credentials olma
 
 Fresh DB şema 5'tir. v4→v5 DDL nullable açıklamayla oluşturulur; v6 eklenmez. Bu düzeltme, eski deneysel v5 veritabanlarını yeniden yazmaz; canlı doğrulama yeni geçici veritabanında yapılır. v1/v2/v3/v4 zinciri mevcut backup API ile başlangıç şemasının yedeğini alıp tek transaction içinde 5'e ulaşır. Source/history/jobs/runs, plaj/hava verileri, regions/entities/entity_sources ve raw dosyalar korunur. Migration hatasında şema ve tablo değişiklikleri geri alınır.
 
-Restoran seed URL'si tam eşleştiğinde method yalnızca hâlâ `Belirlenecek` ise `HTML` olur. Notes yalnızca eski varsayılan “Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek.” metniyle birebir eşleşirse yeni dizin/kapsam açıklamasına çevrilir. İki koşul bağımsızdır; kullanıcı yöntemi/notu ve diğer alanları korunur. Yeni veritabanının seed tanımı doğrudan HTML ve güncel açıklama kullanır.
+Restoran kaynak kimliği güvenli biçimde eşleştiğinde method yalnızca hâlâ `Belirlenecek` ise `HTML` olur. Migration sonrası ve zaten şema 5 olan veritabanlarında `Database.initialize()` aynı idempotent connector default reconciliation adımını çalıştırır. Notes yalnızca eski varsayılan “Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek.” metniyle birebir eşleşirse yeni dizin/kapsam açıklamasına çevrilir. İki koşul bağımsızdır; kullanıcı yöntemi/notu ve diğer alanları korunur. Yeni veritabanının seed tanımı doğrudan HTML ve güncel açıklama kullanır.
 
 ## API, diff ve ekran
 
@@ -82,3 +82,13 @@ Mahalle sayılarının toplamı, bir restoran birden fazla filtrede bulunduğu i
 Tarayıcıda **ayrı sentetik veri dizini** ile arama, mahalle/cuisine/meals filtrelerinin birleşimi, nullable iletişim alanları, iki sürüm arasında geçiş, diff ve iş sonucundan restoran sekmesine dönüş doğrulandı. Aşağıdaki önizleme yalnızca sentetik fixture kayıtlarını gösterir; canlı toplama başarısı anlamına gelmez.
 
 ![Restoran ekranı — sentetik test verileri](RESTORAN-ONIZLEME.png)
+
+## Mevcut şema 5 kaynak eşleşmesi ve varsayılan onarımı
+
+`https_source_identity` küçük, yeniden kullanılabilir bir yardımcıdır; izin verilen host alias'ları çağıran connector tarafından açıkça verilir. Restoran kaynağında HTTPS, www/apex host ve tek son slash farkı aynı kimliği üretir; varsayılan/443 port kabul edilir. Query veya fragment (boş ayraçları dahil), credentials, farklı port/host, whitespace/backslash, encoded path, dot segment ve tekrarlı slash reddedilir. Path büyük/küçük harfleri korunur. Loose startswith kullanılmaz. Plaj ve hava connector eşleşmesi değiştirilmedi; multi-destination mimarisi eklenmedi.
+
+Kaynak kaydının URL'si yeniden yazılmaz. Aynı kimlik kontrolü connector binding ve açılış onarımında kullanılır. Yalnızca hâlâ Belirlenecek olan method HTML'e, yalnızca eski varsayılanla birebir aynı notes güncel varsayılana çevrilir. Koşullar bağımsızdır. Kullanıcı API/JSON/HTML seçimi ve kendi notu korunur. Name/category/region/cadence/enabled/version, created_at/updated_at ve source_history değiştirilmez. Doğru alanlar için UPDATE üretilmez; ikinci initialize ek değişiklik yapmaz.
+
+Uygulama yeniden başladığında `/api/sources` ve bootstrap mevcut kayda `south-walton-restaurants/1`, method HTML metadata'sı bağlar. Etkin kaynak HTML · bağlı / Toplayıcı hazır görünür; restoran toplama düğmesi kullanılabilir. Arşivdeki kaydın enabled değeri değiştirilmez. Şema sürümü 5 kalır; bu onarım tablo şemasını yeniden yazmaz.
+
+Doğrulama: 264 pytest + 10 frontend testi geçti. Şema 5 kayıtta dört URL varyantı, koşullu alan onarımı, gerçek genel job yolu (sentetik HTTP yanıtıyla), API binding ve etkin UI düğmesi test edildi. Testteki UPDATE izleme trigger'ı ikinci açılışta ve zaten doğru kayıtta sıfır ek yazım olduğunu doğrular. Kullanıcı alanları ile source_history bütünüyle karşılaştırıldı. Unit testler canlı HTTP kullanmaz.

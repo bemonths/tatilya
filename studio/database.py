@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .catalog import SEEDS
+from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
 
@@ -43,6 +44,8 @@ class Database:
             if version > 5:
                 raise RuntimeError("Bu veri dosyası daha yeni bir uygulama sürümüne ait.")
             if version == 5:
+                con.execute("BEGIN IMMEDIATE")
+                reconcile_connector_defaults(con)
                 return
             if version in (1, 2, 3, 4):
                 backup_dir = self.path.parent / "backups"
@@ -54,6 +57,7 @@ class Database:
                 if version == 3:
                     upgrade_v4(con)
                 upgrade_v5(con)
+                reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
                 CREATE TABLE IF NOT EXISTS sources (
@@ -100,6 +104,7 @@ class Database:
             upgrade_v3(con)
             upgrade_v4(con)
             upgrade_v5(con)
+            reconcile_connector_defaults(con)
 
     def sources(self):
         with self.connect() as con:

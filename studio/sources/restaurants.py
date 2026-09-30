@@ -10,10 +10,13 @@ import httpx
 
 from .base import CollectionResult, SourceError, CollectionCanceled
 from .html_tree import Tree, Node
+from .url_identity import https_source_identity
 from ..regions import REGIONS
 
 SOURCE_URL = 'https://www.visitsouthwalton.com/listings/culinary-experiences/'
 HOSTS = {'www.visitsouthwalton.com', 'visitsouthwalton.com'}
+SOURCE_HOST_ALIASES = {host: 'visitsouthwalton.com' for host in HOSTS}
+SOURCE_IDENTITY = https_source_identity(SOURCE_URL, host_aliases=SOURCE_HOST_ALIASES)
 REGION_MAP = {name: identifier for identifier, name in REGIONS}
 EXCLUDED = {'Miramar Beach', 'Seascape', 'Sandestin'}
 MAX_BYTES, MAX_PAGES, MAX_DETAILS = 5_000_000, 100, 500
@@ -282,7 +285,8 @@ def collect(raw_path,progress,canceled,*,client=None):
 class RestaurantsConnector:
     name='south-walton-restaurants';version='south-walton-restaurants/1';method='HTML';diff_enabled=True
     raw_filename='manifest.json'
-    def supports(self,source):return source['url']==SOURCE_URL
+    def supports(self,source):
+        return https_source_identity(source['url'], host_aliases=SOURCE_HOST_ALIASES) == SOURCE_IDENTITY
     def collect(self,source,raw_path,progress,canceled):return collect(raw_path,progress,canceled)
     def store_records(self,con,run_id,records,related=None):
         for record in records:

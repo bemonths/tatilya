@@ -69,3 +69,15 @@ test('restaurant detail renders missing description and keeps null-safe search',
   assert.equal(filterRestaurants([record],{search:'null'}).length,0);
   assert.equal(filterRestaurants([record],{search:'fresh seafood'}).length,0);
 });
+
+test('bound existing restaurant source enables collection regardless of display name or URL spelling',()=>{
+  const source={id:'legacy-food',name:'My source',url:'https://visitsouthwalton.com/listings/culinary-experiences',enabled:1,method:'HTML',connector:{name:'south-walton-restaurants',version:'south-walton-restaurants/1',method:'HTML'}};
+  assert.equal(connectorState(source).method,'HTML · bağlı');
+  assert.equal(connectorState(source).label,'Toplayıcı hazır');
+  const main={innerHTML:''};
+  new RestaurantScreen().render(main,{restaurant_runs:[],sources:[source],jobs:[]},(title,description,actions)=>actions);
+  assert.match(main.innerHTML,/HTML · bağlı/);
+  assert.doesNotMatch(main.innerHTML,/Kaynak etkin değil/);
+  assert.match(main.innerHTML,/<button[^>]*data-action="collect-restaurants"[^>]*>↓ Restoran verilerini topla<\/button>/);
+  assert.doesNotMatch(main.innerHTML.match(/<button[^>]*data-action="collect-restaurants"[^>]*>/)[0],/disabled/);
+});
