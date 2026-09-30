@@ -53,3 +53,19 @@ test('restaurant external links escape text, isolate tabs and reject unsafe sche
   assert.match(link,/&lt;unsafe&gt;/);assert.match(link,/&quot;/);
   for(const url of [null,'javascript:alert(1)','data:text/html,bad','bad']) assert.equal(restaurantLink(url,'test'),'Belirtilmemiş');
 });
+
+import {RestaurantScreen} from '../studio/web/restaurants.js';
+
+test('restaurant detail renders missing description and keeps null-safe search',()=>{
+  const record={...restaurant,description:null,external_id:'/listing/coast-table/',listing_url:'https://www.visitsouthwalton.com/listing/coast-table/',regions:[],amenities:[]};
+  const elements=Object.fromEntries(['#restaurant-count','#restaurant-rows','#restaurant-detail'].map(id=>[id,{innerHTML:'',textContent:''}]));
+  const screen=new RestaurantScreen();
+  screen.snapshot={records:[record],run:{fetched_at:'2026-09-30T12:00:00Z'}};
+  screen.rows({querySelector:id=>elements[id]});
+  const html=elements['#restaurant-detail'].innerHTML;
+  assert.match(html,/<p>Belirtilmemiş<\/p>/);
+  assert.doesNotMatch(html,/<p>(?:null|None|undefined)?<\/p>/);
+  assert.equal(filterRestaurants([record],{search:'coast',neighborhood:'Gulf Place'}).length,1);
+  assert.equal(filterRestaurants([record],{search:'null'}).length,0);
+  assert.equal(filterRestaurants([record],{search:'fresh seafood'}).length,0);
+});

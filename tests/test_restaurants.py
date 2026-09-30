@@ -215,7 +215,7 @@ def test_filter_structure_changes_fail(html):
     with pytest.raises(SourceError):r.parse_filters(html)
 
 
-@pytest.mark.parametrize('html', [DETAIL.replace('id="listing-hero"','id="changed"'),DETAIL.replace('class="description"','class="changed"'),DETAIL.replace('<h1>Coast &amp; Table</h1>','<h1></h1>')])
+@pytest.mark.parametrize('html', [DETAIL.replace('id="listing-hero"','id="changed"'),DETAIL.replace('class="details"','class="changed"'),DETAIL.replace('<h1>Coast &amp; Table</h1>','<h1></h1>')])
 def test_detail_structure_changes_fail(html):
     with pytest.raises(SourceError):r.parse_detail(html,'/listing/coast-table/',['Seaside'])
 
@@ -448,3 +448,80 @@ def test_multiple_selected_filters_and_missing_card_structure_fail():
         r.parse_listing(content.replace('value="catering"','value="catering" selected'),r.SOURCE_URL,filters,'Dune Allen')
     with pytest.raises(SourceError,match='yapısı değişti'):
         r.parse_listing(listing('Dune Allen',empty=True).replace('card-deck','changed'),r.SOURCE_URL,filters,'Dune Allen')
+
+DESCRIPTION_BLOCK = '<div class="description"><h5>Description</h5>Fresh &amp; local. <p>Lunch by the coast.</p></div>'
+
+@pytest.mark.parametrize('replacement', ['', '<div class="description"><h5>Description</h5> \n &nbsp; <p> </p></div>'])
+def test_missing_or_blank_description_is_none(replacement):
+    html = DETAIL.replace(DESCRIPTION_BLOCK, replacement)
+    html = '<meta name="description" content="Generic tourism text">' + html
+    record = r.parse_detail(html, '/listing/coast-table/', ['Dune Allen'])
+    assert record['description'] is None
+    assert record['name'] == 'Coast & Table'
+    assert record['phone'] == '(850) 555-0100'
+
+
+def test_ambiguous_description_fails():
+    with pytest.raises(SourceError, match='birden fazla'):
+        r.parse_detail(DETAIL.replace(DESCRIPTION_BLOCK, DESCRIPTION_BLOCK * 2), '/listing/coast-table/', ['Dune Allen'])
+
+
+@pytest.mark.parametrize('broken', ['hero', 'name', 'details'])
+def test_missing_description_does_not_relax_required_structure(broken):
+    html = DETAIL.replace(DESCRIPTION_BLOCK, '')
+    if broken == 'hero': html = html.replace('id="listing-hero"', 'id="changed"')
+    elif broken == 'name': html = html.replace('<h1>Coast &amp; Table</h1>', '<h1> </h1>')
+    else: html = html.replace('class="details"', 'class="changed"')
+    with pytest.raises(SourceError): r.parse_detail(html, '/listing/coast-table/', ['Dune Allen'])
+
+
+@pytest.mark.parametrize('initial_schema', [0, 4])
+def test_nullable_description_published_to_db_api_and_metadata(tmp_path, monkeypatch, initial_schema):
+    path = tmp_path / 'studio.sqlite3'
+    if initial_schema:
+        make_v4(path)
+        with sqlite3.connect(path) as con:
+            con.execute('INSERT INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', (
+                'food', 'South Walton · Restoranlar', r.SOURCE_URL, 'Yeme içme', 'Tüm 30A',
+                'Belirlenecek', 'Haftalık', OLD_NOTE, 1, 1, 'before', 'before'))
+    base = DirectoryMock()
+    def handler(req):
+        result = base(req)
+        return response(result.text.replace(DESCRIPTION_BLOCK, ''))
+    install_mock(monkeypatch, handler)
+    with TestClient(create_app(tmp_path)) as client:
+        job = start(client)
+        assert job['status'] == 'done'
+        snapshot = client.get('/api/restaurant-runs/' + job['id']).json()
+        records = {rec['external_id']: rec for rec in snapshot['records']}
+        assert records['/listing/coast-table/']['description'] is None
+        assert records['/listing/minimal/']['description'] == 'A small cafe.'
+        assert snapshot['run']['metadata']['description_missing_count'] == 1
+        assert snapshot['run']['record_count'] == 2
+        with client.app.state.db.connect() as con:
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+            description_column = next(row for row in con.execute('PRAGMA table_info(restaurant_records)') if row['name'] == 'description')
+            assert description_column['notnull'] == 0
+            assert con.execute('SELECT COUNT(*) FROM restaurant_records WHERE run_id=? AND description IS NULL', (job['id'],)).fetchone()[0] == 1
+            assert con.execute("SELECT COUNT(*) FROM restaurant_records WHERE description='' ").fetchone()[0] == 0
+
+
+def test_description_missing_count_zero_when_complete(tmp_path):
+    assert run_mock(tmp_path).metadata['description_missing_count'] == 0
+
+
+def test_description_null_transitions_are_diff_changes(tmp_path):
+    db = Database(tmp_path / 'studio.sqlite3'); db.initialize()
+    connector = r.RestaurantsConnector()
+    source = next(s for s in db.sources() if s['url'] == r.SOURCE_URL)
+    record = r.parse_detail(DETAIL, '/listing/coast-table/', ['Dune Allen'])
+    def save(description):
+        identifier = db.add_job('source_collection', 'Restaurants', source_id=source['id'], connector=connector)
+        db.complete_source_run(identifier, CollectionResult([{**record, 'description': description}], 1, 0, None, {}), connector)
+        return identifier
+    save(None)
+    for description in ('New source description', None):
+        diff = db.run_diff(save(description))
+        assert diff['changed'] == 1 and diff['unchanged'] == 0
+        assert diff['added'] == diff['removed'] == 0
+    assert db.run_diff(save(None))['unchanged'] == 1

@@ -18,9 +18,11 @@ Opaque mahalle/business ID'leri kodda sabit değildir. Ana sayfanın formundan o
 4. Her benzersiz detay sayfasını bir kez oku. Yönlendirme kimliği değiştiremez; kart ve detay adları eşleşmelidir. Bulunduğu bütün mahalleleri koru.
 5. Tüm detaylar doğrulanınca kayıtları, mahalle ilişkilerini ve job/run başarı durumunu mevcut generic transaction içinde birlikte kaydet.
 
-Alanlar: external_id, name, listing_url, description; nullable address_line_1/address_line_2/city/state/postal_code/phone/email/website_url; cuisines, meals_served, amenities dizileri. Whitespace ve HTML entity'ler normalize edilir. Telefonun kaynak metni korunur. Cuisine ve Meals Served ayrı listeler; kalan amenity satırları ayrı liste olur. Güvenilir kaynak güncelleme alanı bulunmadığından **source_updated NULL** kalır; fetched_at bunun yerine geçmez.
+Alanlar: external_id, name, listing_url; nullable description/address_line_1/address_line_2/city/state/postal_code/phone/email/website_url; cuisines, meals_served, amenities dizileri. Whitespace ve HTML entity'ler normalize edilir. Telefonun kaynak metni korunur. Cuisine ve Meals Served ayrı listeler; kalan amenity satırları ayrı liste olur. Güvenilir kaynak güncelleme alanı bulunmadığından **source_updated NULL** kalır; fetched_at bunun yerine geçmez.
 
-Menü, fiyat, rezervasyon uygunluğu, ratings/reviews, başka sitelerdeki saatler, sosyal medya, restoranın kendi sitesini tarama, scheduler ve AI yoktur. İşletme sitesi yalnızca bağlantı alanıdır; bağlantıdaki domaine HTTP isteği yapılmaz. Description için açıklama üretme veya başka kaynakla tamamlama yapılmaz.
+Menü, fiyat, rezervasyon uygunluğu, ratings/reviews, başka sitelerdeki saatler, sosyal medya, restoranın kendi sitesini tarama, scheduler ve AI yoktur. İşletme sitesi yalnızca bağlantı alanıdır; bağlantıdaki domaine HTTP isteği yapılmaz. Description kaynakta bulunmayabilir. Blok yoksa veya başlık dışındaki içerik whitespace normalizasyonundan sonra boşsa `NULL` saklanır; boş string veya uydurma metin yazılmaz. Generic meta description fallback ve başka kaynaktan tamamlama yapılmaz. Birden fazla description bloğu belirsiz yapı sayılarak reddedilir. Listing hero, restoran adı ve detail/contact yapısı kontrolleri korunur.
+
+Run metadata içindeki `description_missing_count`, benzersiz kayıtlardan açıklaması bulunmayanların sayısıdır; gözlem/audit içindir ve başarı koşulunu etkilemez. UI eksik açıklamayı “Belirtilmemiş” gösterir; arama null açıklamayla çalışır. Diff açıklama alanını karşılaştırmaya devam eder: NULL → metin ve metin → NULL değişiklik sayılır.
 
 ## HTTP ve ham kayıtlar
 
@@ -30,9 +32,9 @@ HTTPS, yalnızca visitsouthwalton.com/www.visitsouthwalton.com, credentials olma
 
 ## Şema ve migration
 
-`restaurant_records`: PK(run_id, external_id), run_id → source_runs. Cuisine/meal/amenity alanlarında json_valid ve array tür kontrolü vardır. `restaurant_regions`: PK(run_id, external_id, source_neighborhood), composite FK → restaurant_records; nullable canonical_region_id → regions. Run/name ve canonical region/run index'leri eklenir.
+`restaurant_records`: PK(run_id, external_id), run_id → source_runs; `description TEXT` nullable alanıdır. Cuisine/meal/amenity alanlarında json_valid ve array tür kontrolü vardır. `restaurant_regions`: PK(run_id, external_id, source_neighborhood), composite FK → restaurant_records; nullable canonical_region_id → regions. Run/name ve canonical region/run index'leri eklenir.
 
-Fresh DB şema 5'tir. v1/v2/v3/v4 zinciri mevcut backup API ile başlangıç şemasının yedeğini alıp tek transaction içinde 5'e ulaşır. Source/history/jobs/runs, plaj/hava verileri, regions/entities/entity_sources ve raw dosyalar korunur. Migration hatasında şema ve tablo değişiklikleri geri alınır.
+Fresh DB şema 5'tir. v4→v5 DDL nullable açıklamayla oluşturulur; v6 eklenmez. Bu düzeltme, eski deneysel v5 veritabanlarını yeniden yazmaz; canlı doğrulama yeni geçici veritabanında yapılır. v1/v2/v3/v4 zinciri mevcut backup API ile başlangıç şemasının yedeğini alıp tek transaction içinde 5'e ulaşır. Source/history/jobs/runs, plaj/hava verileri, regions/entities/entity_sources ve raw dosyalar korunur. Migration hatasında şema ve tablo değişiklikleri geri alınır.
 
 Restoran seed URL'si tam eşleştiğinde method yalnızca hâlâ `Belirlenecek` ise `HTML` olur. Notes yalnızca eski varsayılan “Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek.” metniyle birebir eşleşirse yeni dizin/kapsam açıklamasına çevrilir. İki koşul bağımsızdır; kullanıcı yöntemi/notu ve diğer alanları korunur. Yeni veritabanının seed tanımı doğrudan HTML ve güncel açıklama kullanır.
 
@@ -53,9 +55,11 @@ Sentetik, küçük HTML fixture'ları `tests/fixtures/restaurants/` içindedir. 
 Canlı smoke yalnızca ayrı geçici veri dizininde yapılır. Kullanıcının mevcut gerçek veritabanı bu denemede kullanılmaz. Canlı sayılar test beklentisi veya uygulama sabiti değildir.
 ## Canlı kaynak incelemesi · 30 Eylül 2026
 
-Kullanıcı DB'sinden ayrı geçici dizinde gerçek generic job çalıştırıldı. 13 mahalle filtresi ve bütün pagination sayfaları okundu: **22 listing sayfası, 138 benzersiz restoran, 3 tekrar**. İlk job, 31. detay olan Beignets & Brew sayfasındaki zorunlu açıklama eksikliği nedeniyle failed oldu; sıfır restaurant_records/restaurant_regions yayımlandı. Ham manifest korundu.
+Nullable description düzeltmesiyle yeni ve ayrı bir TEMP veri dizininde gerçek generic source_collection tam run'ı yeniden çalıştırıldı. Kullanıcının gerçek DB'si kullanılmadı. **Run status: done**; 13 hedef mahallenin tamamı tarandı, **22 listing sayfası ve 138 benzersiz detay** okundu. **138 restoran başarıyla snapshot olarak kaydedildi**, 3 tekrar tekilleştirildi. API snapshot kayıt sayısı ile SQL kayıt sayısı eşleşti.
 
-Bağımsız teşhis taraması mevcut yanıtları tekrar kullanıp kalan detayları da okudu: **138 detayın 136'sı doğrulandı**. Beignets & Brew ile Cajun Corner Sports Bar and Grill sayfalarında açıklama bloğu yoktur. Sayfa meta açıklaması genel turizm metnidir; restoran açıklaması diye kullanılmadı. Bu sürüm, talimattaki zorunlu description kuralını korur; kaynak bu eksikleri gidermedikçe veya nullable açıklama için veri sözleşmesi değiştirilmedikçe tam canlı run başarıya geçmez. Eksik kayıtları atlama, metin uydurma veya kısmi snapshot yayımlama yapılmaz.
+**description_missing_count = 2**. Beignets & Brew ile Cajun Corner Sports Bar and Grill kayıtlarının description alanı SQL'de NULL, API'de null olarak saklandı. Eksik açıklama artık run'ı başarısız kılmaz. Generic meta description kullanılmadı ve metin üretilmedi. Önceki başarısız smoke'un nedeni bu düzeltmeyle giderildi.
+
+Run kimliği: `223cd07af0394384b50b637cc189c597`. Raw manifest SHA-256: `9daea51a9760760f0590730ba09f7fcec18903f292153a25ab3c932c5d3d9264`. Diskteki manifest, source_runs.raw_sha256 ve API'den indirilen manifest hash'i eşleşti; **161 ham yanıt dosyasının alt hash'i de doğrulandı**. Ana filtre sayfası listing_page_count dışında sayılır. Test sonucu: **191 pytest + 9 frontend testi başarılı**. Description yok/boş, NULL DB/API, sıfır/pozitif missing count, NULL↔metin diff ve ekranda Belirtilmemiş davranışları kapsanır; hero/ad/details yapısal kontrolleri korunur.
 
 | Mahalle | Benzersiz kayıt |
 |---|---:|

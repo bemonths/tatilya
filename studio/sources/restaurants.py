@@ -124,9 +124,13 @@ def parse_detail(content,url,neighborhoods):
     tree=Tree(content).root
     hero=one(tree.find(id='listing-hero'),'Restoran detay sayfasının yapısı değişti.')
     name=clean(one(hero.find('h1'),'Restoran adı bulunamadı.').text())
-    description_node=one(hero.find(cls='description'),f'{name}: zorunlu restoran açıklaması bulunamadı.')
-    description=clean(' '.join(c.text() if isinstance(c,Node) else c for c in description_node.children if not isinstance(c,Node) or c.tag not in ('h5','script','style')))
-    if not name or not description:raise SourceError('Restoran adı veya açıklaması boş.')
+    if not name:raise SourceError('Restoran adı boş.')
+    description_nodes=hero.find(cls='description')
+    if len(description_nodes)>1:
+        raise SourceError('Restoran açıklama alanının yapısı belirsiz; birden fazla blok bulundu.')
+    description=None
+    if description_nodes:
+        description=clean(' '.join(c.text() if isinstance(c,Node) else c for c in description_nodes[0].children if not isinstance(c,Node) or c.tag not in ('h5','script','style'))) or None
     regions=[]
     for region in sorted(set(neighborhoods)):
         if region not in REGION_MAP:raise SourceError('Restoran mahallesi kapsam dışında veya eşlenemiyor.')
@@ -268,7 +272,8 @@ def collect(raw_path,progress,canceled,*,client=None):
                   'unique_restaurant_count':len(records),'detail_page_count':len(records),'duplicate_count':duplicates,
                   'neighborhood_counts':counts,'business_type':'Restaurants','excluded_neighborhoods':sorted(EXCLUDED),
                   'filters':filters,'represented_neighborhood_count':sum(bool(c) for c in counts.values()),
-                  'cuisine_count':len({c for r in records for c in r['cuisines']})}
+                  'cuisine_count':len({c for r in records for c in r['cuisines']}),
+                  'description_missing_count':sum(record['description'] is None for record in records)}
         return CollectionResult(records,len(records),0,None,metadata)
     finally:
         if own:client.close()

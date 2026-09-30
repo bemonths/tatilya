@@ -149,7 +149,7 @@ def upgrade_v5(con):
     execute_schema(con, """
         CREATE TABLE restaurant_records (
             run_id TEXT NOT NULL REFERENCES source_runs(id), external_id TEXT NOT NULL,
-            name TEXT NOT NULL, listing_url TEXT NOT NULL, description TEXT NOT NULL,
+            name TEXT NOT NULL, listing_url TEXT NOT NULL, description TEXT,
             address_line_1 TEXT, address_line_2 TEXT, city TEXT, state TEXT, postal_code TEXT,
             phone TEXT, email TEXT, website_url TEXT,
             cuisines TEXT NOT NULL CHECK(json_valid(cuisines) AND json_type(cuisines)='array'),
