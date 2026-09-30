@@ -34,7 +34,7 @@ def test_migration_updates_only_exact_nws_defaults(tmp_path, notes, method, url,
         expected = list(before); expected[5] = expected_method; expected[7] = expected_notes
         assert list(after) == expected
         assert con.execute('SELECT * FROM source_history').fetchall() == history
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 4
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 5
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con:
         assert con.execute("SELECT * FROM sources WHERE id='nws'").fetchone() == before
@@ -56,7 +56,7 @@ def test_fresh_seed_methods_and_nws_description(tmp_path):
     sources = {s['url']: s for s in db.sources()}
     assert sources[NWS]['method'] == 'API' and sources[NWS]['notes'] == NEW_NOTE
     assert sources[BEACH]['method'] == 'JSON'
-    assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH))
+    assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH, "https://www.visitsouthwalton.com/listings/culinary-experiences/"))
 
 
 def test_v2_chain_also_refreshes_default_beach_method(tmp_path):

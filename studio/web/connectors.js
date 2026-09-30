@@ -18,11 +18,13 @@ export function jobResultTarget(job, beachConnectorName="south-walton-beaches") 
 }
 
 export function domainTarget(name, beachName="south-walton-beaches") {
-  if(name === beachName) return {href:"#collect",label:"Plaj verilerini aç"};
-  if(name === "nws-weather") return {href:"#collect/weather",label:"Hava verilerini aç"};
-  return null;
+  const targets={[beachName]:{href:"#collect",label:"Plaj verilerini aç"},
+    "nws-weather":{href:"#collect/weather",label:"Hava verilerini aç"},
+    "south-walton-restaurants":{href:"#collect/restaurants",label:"Restoran verilerini aç"}};
+  return Object.hasOwn(targets,name)?targets[name]:null;
 }
 
-export function collectionTabs(weather=false) {
-  return `<nav class="filter-row" aria-label="Veri türü"><a class="tab ${!weather?"active":""}" href="#collect" ${!weather?'aria-current="page"':""}>Plaj erişimleri</a><a class="tab ${weather?"active":""}" href="#collect/weather" ${weather?'aria-current="page"':""}>Hava</a></nav>`;
+export function collectionTabs(selected="beaches") {
+  if(typeof selected==="boolean") selected=selected?"weather":"beaches";
+  return `<nav class="filter-row" aria-label="Veri türü">${[["beaches","#collect","Plaj erişimleri"],["weather","#collect/weather","Hava"],["restaurants","#collect/restaurants","Restoranlar"]].map(([id,href,label])=>`<a class="tab ${selected===id?"active":""}" href="${href}" ${selected===id?'aria-current="page"':""}>${label}</a>`).join("")}</nav>`;
 }

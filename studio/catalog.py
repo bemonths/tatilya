@@ -11,7 +11,7 @@ SEEDS = [
     ("Visit South Walton", "https://www.visitsouthwalton.com/", "Genel",
      "Bölge rehberi ve kaynak keşfi. South Walton kapsamındaki kayıtlar 30A için ayrıca filtrelenecek.", "Belirlenecek"),
     ("South Walton · Restoranlar", "https://www.visitsouthwalton.com/listings/culinary-experiences/", "Yeme içme",
-     "Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek.", "Belirlenecek"),
+     "Visit South Walton Dining dizinindeki 30A kapsamındaki restoranlar. Ad, mahalle, açıklama, adres, iletişim, cuisine, meals served ve kaynakta listelenen amenities toplanır. Menü ve fiyat verisi bu connector’ın kapsamında değildir.", "HTML"),
     ("South Walton · Plaj erişimleri", "https://www.visitsouthwalton.com/beach-bay-access-locations/", "Plaj",
      "Plaj erişim noktalarının adresi, koordinatları, erişim türü ve kaynakta listelenen olanakları. Veri toplama ekranında belirtilen kıyı kapsamı kullanılır.", "JSON"),
     ("South Walton · Etkinlikler", "https://www.visitsouthwalton.com/events/", "Etkinlik",
@@ -26,7 +26,7 @@ SEEDS = [
 
 STEPS = [
     ("sources", "Veri kaynakları", "Kaynak kütüphanesi", "active"),
-    ("collect", "Veri toplama", "Plaj ve hava hazır", "active"),
+    ("collect", "Veri toplama", "Üç kaynak hazır", "active"),
     ("quality", "Veri kontrolü", "Katalog kontrolü hazır", "partial"),
     ("research", "Konu araştırması", "Veriden konuya", "planned"),
     ("competitors", "Rakip analizi", "İçerik fırsatları", "planned"),

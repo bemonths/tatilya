@@ -1,6 +1,7 @@
 import {api, esc, host, date} from "./api.js";
 import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
+import {RestaurantScreen} from "./restaurants.js";
 import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 
@@ -13,6 +14,10 @@ let lastCollectionId=null;
 const beachScreen=new BeachScreen();
 const weatherScreen=new WeatherScreen();
 let lastWeatherId=null;
+let lastRestaurantId=null;
+const restaurantScreen=new RestaurantScreen();
+const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen};
+const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants"};
 
 function toast(text) {
   clearTimeout(toastTimer);
@@ -45,10 +50,11 @@ function render() {
   navigation();
   beachScreen.invalidate();
   weatherScreen.invalidate();
+  restaurantScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
-  else if (state.page === "collect") (location.hash==="#collect/weather"?weatherScreen:beachScreen).render($("#main"),state.data,pageHeading);
+  else if (state.page === "collect") (collectionScreens[location.hash] || beachScreen).render($("#main"),state.data,pageHeading);
   else if (state.page === "quality") renderQuality();
   else if (state.page === "settings") renderSettings();
   else renderPlanned();
@@ -74,7 +80,7 @@ function renderSources() {
       <div class="table-scroll"><table><thead><tr><th scope="col">KAYNAK</th><th scope="col">KATEGORİ</th><th scope="col">YÖNTEM</th><th scope="col">SIKLIK</th><th scope="col">DURUM</th></tr></thead><tbody id="source-rows"></tbody></table></div>
       <div class="table-note"><span aria-hidden="true">ⓘ</span> Kaynak kaydı eklemek veri çekme işlemini başlatmaz.</div>
     </section><section id="source-detail" class="detail" aria-label="Seçili kaynak ayrıntıları"></section></div>
-    <div class="stage-note"><span class="note-mark" aria-hidden="true">↳</span><p><strong>İki veri toplayıcısı hazır.</strong> <a href="#collect">Veri toplama</a> ekranından South Walton plaj erişimlerini ve NWS hava tahminlerini çekebilir, kayıtları ve önceki sürümleri inceleyebilirsin.</p></div>`;
+    <div class="stage-note"><span class="note-mark" aria-hidden="true">↳</span><p><strong>Üç veri toplayıcısı hazır.</strong> <a href="#collect">Veri toplama</a> ekranından South Walton plaj erişimlerini, restoran dizinini ve NWS hava tahminlerini çekebilir, kayıtları ve önceki sürümleri inceleyebilirsin.</p></div>`;
   $("#source-search").addEventListener("input", event=>{state.search=event.target.value; renderRows();});
   $("#category-filter").addEventListener("change", event=>{state.category=event.target.value; renderRows();});
   $("#region-filter").addEventListener("change", event=>{state.region=event.target.value; renderRows();});
@@ -108,7 +114,7 @@ function renderRows() {
 function renderPlanned() {
   const step = state.data.steps.find(step=>step.id===state.page);
   const plan = roadmap[state.page];
-  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ile plaj ve hava verisi toplama kullanılabilir.")}
+  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ile plaj, hava ve restoran verisi toplama kullanılabilir.")}
     <section class="planned-hero"><span class="tag warm">Planlanan aşama · Henüz bağlı değil</span><h2>${esc(plan.headline)}</h2><p>${esc(plan.description)}</p><a class="return-link" href="#sources">← Kaynak kütüphanesine dön</a></section>
     <div class="planned-grid">${plan.cards.map(([label,title,description])=>`<section class="planned-card"><span class="eyebrow">${esc(label)}</span><h3>${esc(title)}</h3><p>${esc(description)}</p></section>`).join("")}</div></div>`;
 }
@@ -121,7 +127,7 @@ function reportStale(report) {
 function renderQuality() {
   const completed = state.data.jobs.find(job=>job.kind==="catalog_audit" && job.status==="done" && job.result);
   const report = completed?.result;
-  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
+  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları ve restoranların kimlik, mahalle ve detay alanları doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
     (report ? `<section class="quality-result">${reportStale(report)?'<div class="stale-notice">Kaynak kayıtları bu kontrolden sonra değişti. Güncel sonuç için kontrolü yeniden çalıştır.</div>':""}
       <div class="quality-summary"><span class="eyebrow">SON KATALOG KONTROLÜ · ${esc(date(completed.finished_at))}</span><h2 style="margin-top:10px">${report.checked} kayıt incelendi · ${report.needs_attention} kayıtta eksik bilgi</h2><p>${esc(report.scope)}</p></div>
       ${report.findings.map(finding=>`<div class="quality-row"><strong>${esc(finding.name)}</strong><span>${finding.issues.length?finding.issues.map(esc).join(" "):"Kayıt bilgileri tamam."}</span></div>`).join("")}</section>` :
@@ -131,7 +137,7 @@ function renderQuality() {
 function renderSettings() {
   $("#main").innerHTML = pageHeading("Çalışma alanı bilgisi", "30A Studio’nun sürümü ve kayıt konumu.") +
     `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">30A’ya ait kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
-    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj ve hava verisi toplama hazır</h2><p>Kaynak kütüphanesi, gerçek plaj ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
+    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj, hava ve restoran verisi hazır</h2><p>Kaynak kütüphanesi, gerçek plaj, restoran ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
 }
 
 function renderJobResultLink(job) {
@@ -149,6 +155,9 @@ function renderJobs() {
 
 function updateAuditButtons() {
   updateWeatherButton();
+  const restaurantSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-restaurants");
+  const restaurantBusy=state.data.jobs.some(j=>j.source_id===restaurantSource?.id && active(j));
+  document.querySelectorAll('[data-action="collect-restaurants"]').forEach(button=>{button.disabled=!restaurantSource || restaurantBusy;button.textContent=restaurantBusy?"Toplama sürüyor…":"↓ Restoran verilerini topla";});
   const busy = state.data.jobs.some(job=>job.kind==="catalog_audit" && active(job));
   document.querySelectorAll('[data-action="audit"]').forEach(button=>{
     button.disabled=busy || !state.data.sources.some(source=>source.enabled);
@@ -242,10 +251,11 @@ $("#main").addEventListener("click", async event=>{
         if(state.page==="quality") renderQuality();
         break;
       }
+      case "collect-restaurants":
       case "collect-weather":
       case "collect-beaches": {
         button.disabled=true;
-        const connectorName=button.dataset.action==="collect-weather"?state.data.weather_connector.name:state.data.beach_connector.name;
+        const connectorName=collectionActions[button.dataset.action];
         const source=state.data.sources.find(source=>source.enabled && source.connector?.name===connectorName);
         if(!source) throw new Error("Veri kaynağı etkin değil.");
         await api("jobs",{method:"POST",body:JSON.stringify({kind:"source_collection",source_id:source.id})});
@@ -277,6 +287,7 @@ async function start() {
     state.data=await api("bootstrap");
     lastCollectionId=state.data.collections[0]?.id || null;
     lastWeatherId=state.data.weather_runs[0]?.id || null;
+    lastRestaurantId=state.data.restaurant_runs?.[0]?.id || null;
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
     const events=new EventSource("/api/events");
@@ -287,6 +298,14 @@ async function start() {
     events.addEventListener("jobs",async event=>{
       state.data.jobs=JSON.parse(event.data);renderJobs();
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
+      const restaurantLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-restaurants");
+      if(restaurantLatest && restaurantLatest.id!==lastRestaurantId) {
+        try {
+          state.data.restaurant_runs=await api("restaurant-runs");lastRestaurantId=restaurantLatest.id;restaurantScreen.selectedRun=null;
+          if(location.hash==="#collect/restaurants") render();
+          toast("Restoran verileri kaydedildi. Restoranlar sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
       const weatherLatest=state.data.jobs.find(job=>job.kind==="source_collection" && job.status==="done" && job.result?.connector_name===state.data.weather_connector.name);
       if(weatherLatest && weatherLatest.id!==lastWeatherId) {
         try {

@@ -1,6 +1,6 @@
 # 30A Studio — inceleme ve bağımsız proje mimarisi
 
-29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.4.0 güncellemesi
+29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.5.0 güncellemesi
 
 ## Housing Atlas incelemesi
 
@@ -25,7 +25,7 @@
 
 Bu tespitler mimari incelemedir; Housing Atlas için çalıştırma, entegrasyon testi veya genel kod denetimi yapılmadı. Özellikle canlı Claude ve Playwright davranışları bu çalışmada denenmedi.
 
-## 30A v0.4 mimarisi
+## 30A v0.5 mimarisi
 
 Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullanılır. Node derlemesi yoktur. Lacivert/turuncu görünüm ve sol üretim akışı korunmuştur. Bu sürümün amacı veri katmanını yeni kaynaklara hazırlamaktır.
 
@@ -36,7 +36,7 @@ Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullan�
 | migrations.py | Atomik v2→v3 migration, bölge/entity şemaları, collections uyumluluk görünümü |
 | jobs.py | Registry'den bulunan connector'ı tek çalışanlı kuyrukta çalıştırır; plaj import'u yok |
 | sources/base.py | Connector Protocol, CollectionResult ve kontrollü hata türleri |
-| sources/registry.py | Kaynak→connector eşleştirme; BeachesConnector ve WeatherConnector kayıtlı |
+| sources/registry.py | Kaynak→connector eşleştirme; BeachesConnector, WeatherConnector ve RestaurantsConnector kayıtlı |
 | sources/beaches.py | HTTP, parse/validate, plaj kayıtlarını yazma/okuma ve karşılaştırma alanları |
 | regions.py | 13 sabit bölge kimliği/adı; polygon veya koordinat sınırı yok |
 | diagnostics.py | Hata türü ve traceback konumları; exception metni ve locals kaydedilmez |
@@ -62,7 +62,7 @@ beach_records, eski domain alanlarını korur; source_region_text ve nullable ca
 
 ## Migration ve veri koruma
 
-Mevcut veritabanının SQLite backup API ile tutarlı kopyası data/backups içine alınır. DDL ve taşıma işlemleri tek transaction içindedir; executescript'in örtük commit davranışı kullanılmaz. Sonunda foreign_key_check denetlenir; v3→v4 hava tabloları adımı sonrası şema 4 olur. Hata eski şemayı/veriyi korur. Yükseltme yeniden çalıştırıldığında tekrarlı kayıt oluşmaz.
+Mevcut veritabanının SQLite backup API ile tutarlı kopyası data/backups içine alınır. DDL ve taşıma işlemleri tek transaction içindedir; executescript'in örtük commit davranışı kullanılmaz. Sonunda foreign_key_check denetlenir; v3→v4 hava tabloları ve v4→v5 restoran tabloları adımları sonrası şema 5 olur. Hata eski şemayı/veriyi korur. Yükseltme yeniden çalıştırıldığında tekrarlı kayıt oluşmaz.
 
 Eski collections kayıtları aynı kimliklerle source_runs'a aktarılır. Beach satırlarının dış anahtarı değiştirilir. collections adı salt okunur bir uyumluluk görünümü olarak kalır; eski /api/collections, CSV ve ham kaynak uçları korunur. beach_collection istek değeri alias olarak kabul edilse de tüm yeni toplama işleri source_collection olarak kaydedilir. Eksik tarihsel bilgiler tahmin edilmez.
 
@@ -78,7 +78,7 @@ Beklenmeyen hata türü ve dosya adı/satır/fonksiyon konumları jobs.diagnosti
 
 ## Kapsam sınırı ve doğrulama
 
-İki gerçek connector vardır: BeachesConnector ve WeatherConnector. Claude/OpenAI, Playwright, scheduler, konu/makale/görsel/video üretimi bu sürümde yoktur. Sol içerik aşamaları plan ekranıdır. İçerik onayları ve veri değişince içerik eskime takibi ileride uygulanacaktır.
+Üç gerçek connector vardır: BeachesConnector (HTML içi JSON), WeatherConnector (NWS API) ve RestaurantsConnector (HTML dizin/detay). Claude/OpenAI, Playwright, scheduler, konu/makale/görsel/video üretimi bu sürümde yoktur. Sol içerik aşamaları plan ekranıdır. İçerik onayları ve veri değişince içerik eskime takibi ileride uygulanacaktır.
 
 Testler migration, rollback, kalıcılık, genel connector/job, başarısız run, iptal, domain yazımının transaction bütünlüğü, diff, bölge/entity ilişkileri ve yönlendirmeleri kapsar. Test kodundaki ikinci sentetik connector, jobs.py/app.py özel kodu olmadan genel yolu doğrular; uygulama registry'sinde bulunmaz. Gerçek HTTP testlerde engellenir. GitHub Actions Python 3.12 üzerinde çalışır.
 
@@ -99,3 +99,11 @@ API `/points` üzerinden grid/forecast adreslerini çözümler; takip edilen URL
 `web/weather.js` mevcut Veri toplama aşamasındaki Hava sekmesidir; tarayıcı yerel saatinden bağımsız points.timeZone kullanır. `web/connectors.js` domain hedeflerini seçer. Weather diff_enabled=False olduğu için generic kayıt diff'i kapalıdır. UI bütün dönemleri ve ilk 24 saatlik kaydı gösterir; veri tabanında tümü bulunur.
 
 Batı/orta/doğu noktaları 53 Visit South Walton plaj kaydının boylam sıralamasından seçilmiş örneklerdir; canonical mahalle merkezi değildir. Ayrıntılar [M3-HAVA-VERISI](M3-HAVA-VERISI.md). Tarihsel iklim, istasyon gözlemi/current conditions, zamanlayıcı veya AI bağlantısı eklenmedi.
+
+## v0.5 restoran domain'i
+
+`studio/sources/restaurants.py` filtre keşfi, sayfalama, detay ayrıştırma, HTTP sınırları, manifest ve domain saklama/karşılaştırmayı içerir. `html_tree.py`, standart kütüphane HTMLParser üzerinde küçük bir ağaç sağlar; JavaScript/Playwright çalışmaz. `web/restaurants.js` mevcut görsel düzen içinde üçüncü toplama sekmesi, sürüm, diff, filtre ve ayrıntıları sunar. URL yönlendirmeleri `domainTarget` üzerinden seçilir.
+
+`upgrade_v5` yalnızca restaurant_records/restaurant_regions ve gerekli index'leri ekler; varsayılan seed yöntemi/notunu tam eşleşme koşullarıyla düzeltir. Kayıtlar source_runs'a, mahalle ilişkileri restoran kaydına ve mevcut regions tablosuna bağlıdır. Opaque mahalle ID'leri sabitlenmez; 13 canonical isim doğrudan mevcut region ID'lerine eşlenir. Miramar Beach/Seascape/Sandestin ve Restaurants dışı türler alınmaz. Entity matching uygulanmaz.
+
+Raw depolama ana manifest + ayrı HTML response dosyalarından oluşur. Snapshot yalnızca generic transaction başarıyla bittiğinde görünür. Liste/detay API'leri read-only'dir; raw endpoint yalnızca seçili run'ın manifestini indirir. Menü/fiyat, ratings/reviews, own-site crawling, scheduler ve AI kapsam dışında kalır. Güvenilir kaynak tarihi bulunmadığında source_updated NULL'dır. [Veri sözleşmesi ve testler](M4-RESTORAN-VERISI.md).

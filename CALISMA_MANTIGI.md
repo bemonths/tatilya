@@ -1,10 +1,10 @@
 # 30A Studio — Çalışma mantığı
 
-Bu belge **v0.4.0** davranışını açıklar. Uygulama, 30A kaynak verilerini yerel olarak toplar ve sürümlerini saklar. Housing Atlas bağımsız bir projedir; kodu, verisi, ayarları veya tarayıcı profili kullanılmaz.
+Bu belge **v0.5.0** davranışını açıklar. Uygulama, 30A kaynak verilerini yerel olarak toplar ve sürümlerini saklar. Housing Atlas bağımsız bir projedir; kodu, verisi, ayarları veya tarayıcı profili kullanılmaz.
 
 ## Çalışan kapsam
 
-Kaynak kütüphanesi, katalog kontrolü, genel connector seçimi ve toplama kuyruğu, çekim geçmişi, plaj verisi ekranı, filtreler, sürüm farkı ve CSV indirme çalışır. Gerçek ağa bağlanan iki connector vardır: **BeachesConnector / south-walton-beaches** (HTML içindeki JSON) ve **WeatherConnector / nws-weather** (resmî API).
+Kaynak kütüphanesi, katalog kontrolü, genel connector seçimi ve toplama kuyruğu, çekim geçmişi, plaj verisi ekranı, filtreler, sürüm farkı ve CSV indirme çalışır. Gerçek ağa bağlanan üç connector vardır: **BeachesConnector / south-walton-beaches** (HTML içindeki JSON) , **WeatherConnector / nws-weather** (resmî API) ve **RestaurantsConnector / south-walton-restaurants** (HTML dizin/detay).
 
 Canonical bölge ve entity tabloları yalnızca veri modelinin temelidir. Otomatik entity matching, region polygon mapping, mahalle tahmini, haftalık scheduler, Claude/OpenAI, Playwright, konu araştırması, makale, görsel, video ve yayın üretimi uygulanmadı. İleri içerik ekranları plan gösterir.
 
@@ -14,7 +14,7 @@ Canonical bölge ve entity tabloları yalnızca veri modelinin temelidir. Otomat
 
 Varsayılan veri alanı `data/`, veritabanı `data/studio.sqlite3` dosyasıdır. `--data-dir` ayrı alan seçer. Tarayıcı sekmesini kapatmak sunucuyu durdurmaz; standart başlatma penceresinde Ctrl+C kullanılır.
 
-Şema sürümü 4'tür. v0.1/v0.2/v0.3 açılırken SQLite backup API ile `data/backups/` altında yükseltme öncesi kopya alınır. Şema değişiklikleri ve veri aktarımı tek transaction içindedir; hata olursa geri alınır. Daha yeni bir şema bu uygulama sürümüyle açılmaz.
+Şema sürümü 5'tir. v0.1/v0.2/v0.3/v0.4 açılırken SQLite backup API ile `data/backups/` altında yükseltme öncesi kopya alınır. Şema değişiklikleri ve veri aktarımı tek transaction içindedir; hata olursa geri alınır. Daha yeni bir şema bu uygulama sürümüyle açılmaz.
 
 ## Ana akış
 
@@ -134,13 +134,13 @@ WeatherConnector `nws-weather/1`, `method=API`, `diff_enabled=False` metadata's�
 
 Her çekim `/points/{lat},{lon}` → yanıttaki forecast ve forecastHourly adresleri → `/alerts/active?point={lat},{lon}` sırasını üç sabit örnek noktada yürütür. Adresler yalnızca HTTPS api.weather.gov, credentials olmadan ve varsayılan/443 port ile izlenir. Noktalar ve provenance `weather_anchors.py` içindedir. Canonical mahalle merkezleri değildir.
 
-`weather_locations`, `weather_forecast_periods`, `weather_alerts`, `weather_alert_anchors` tabloları v3→v4 migration'ında yalnızca eklenir. Eski domain kayıtları korunur; yalnızca aşağıda belirtilen kaynak varsayılanları koşullu güncellenir. Fresh DB ve v1/v2 yükseltme zinciri de v4 ile biter. Kaynak/run/iş, hava lokasyonu ve alert ilişkileri foreign key ile korunur.
+`weather_locations`, `weather_forecast_periods`, `weather_alerts`, `weather_alert_anchors` tabloları v3→v4 migration'ında yalnızca eklenir. Eski domain kayıtları korunur; yalnızca aşağıda belirtilen kaynak varsayılanları koşullu güncellenir. v0.4 döneminde bu adım v4 ile biter; v0.5 artık devamında upgrade_v5 çalıştırır. Kaynak/run/iş, hava lokasyonu ve alert ilişkileri foreign key ile korunur.
 
 CollectionResult.records tüm normal ve saatlik forecast dönemlerini içerir; record_count bunların toplamıdır. İlişkili noktalar/uyarılar related içindedir. Metadata anchors/forecast_period_count/hourly_period_count/alert_count ve nokta başına generatedAt/updateTime içerir. source_updated her normal forecast'in updateTime (yoksa generatedAt) değerlerinin en yenisidir; bizim çekim zamanımız değildir. API'nin dönem sayıları sabit kabul edilmez. Null, sıfır ve kaynak ISO offset'i korunur; dewpoint birimi ayrıca saklanır.
 
 Her yanıtın endpoint'i, anchor'ı, türü, çekim sırası, durumu, çekim zamanı ve ham body metni `data/raw/<run-id>/source.json` paketine yazılır. Ana dosyanın SHA-256'sı sadece Database.record_raw_artifact() tarafından hesaplanır. Yanıt tamamlandıkça paket atomik değiştirilir. Başarısız/kesilmiş istekte önceki tamamlanmış yanıtlar korunur; boyut sınırını aşan veya ortasında iptal edilen yanıtın tamamı saklanmaz. Başarısız/iptal çekimde domain kaydı yayımlanmaz.
 
-Hava sekmesi üç nokta arasında geçiş, başarılı sürüm seçimi, bütün normal dönemler, ilk 24 saatlik kayıt ve seçili noktanın uyarılarını gösterir. Zamanlar points.timeZone ile biçimlenir; çekim listesi UTC etiketi taşır. Hava için generic run_diff, connector.diff_enabled üzerinden açıklamalı available=false döndürür. Job sonuç hedefleri domain helper ile #collect veya #collect/weather seçer.
+Hava sekmesi üç nokta arasında geçiş, başarılı sürüm seçimi, bütün normal dönemler, ilk 24 saatlik kayıt ve seçili noktanın uyarılarını gösterir. Zamanlar points.timeZone ile biçimlenir; çekim listesi UTC etiketi taşır. Hava için generic run_diff, connector.diff_enabled üzerinden açıklamalı available=false döndürür. Job sonuç hedefleri ortak domainTarget helper ile #collect, #collect/weather veya #collect/restaurants seçer.
 
 Ek uçlar: GET /api/weather-runs, GET /api/weather-runs/{id}, GET /api/weather-runs/{id}/raw. Ayrıntı run/locations/forecast_periods/hourly_periods/alerts/diff döndürür. Sadece başarılı hava run'ları sunulur. Ham indirme raw dizini dışına çıkamaz. Genel /api/source-runs korunur.
 
@@ -149,3 +149,15 @@ NWS HTTP: TLS açık, bağlantı 10 s/diğer işlemler 20 s timeout, yanıt baş
 Tarihsel NOAA iklimi, observation station/current conditions, scheduler, Claude/OpenAI bu sürümde yoktur. Nokta yanıtındaki istasyon URL'si yalnızca provenance olarak saklanır, çağrılmaz.
 
 Varsayılan kaynak düzeltmesi: temiz kurulumda NWS yöntemi API, South Walton plaj yöntemi JSON olarak seed tanımından alınır. v3→v4 migration yalnızca tam kaynak URL'si eşleşen ve yöntemi hâlâ `Belirlenecek` olan bu iki kaydı günceller. NWS notu yalnızca eski varsayılan açıklamayla birebir aynıysa yeni tahmin/uyarı açıklamasına çevrilir. Not ve yöntem koşulları bağımsızdır; kullanıcı notu veya seçtiği yöntem korunur. Diğer kaynak alanları ve source_history değiştirilmez. Yükseltme öncesi yedek eski değerleri içerir. Zaten şema v4 olan veritabanlarında bu migration yeniden çalıştırılmaz.
+
+## Restoran domain'i · v0.5
+
+RestaurantsConnector (`south-walton-restaurants/1`, HTML, diff_enabled=True) mevcut `source_collection` kuyruğunu ve atomik kaydetme işlemini kullanır. jobs.py için özel restoran yolu eklenmez. Ana HTML formundaki etiket/değer/parametre adları okunur; 13 hedef mahalle ve Restaurants filtresi her sonuç sayfasında doğrulanır. Sayfalama filtreleri korur. Aynı detay path'i bir kez çekilir; bulunduğu tüm mahalleler source provenance olarak saklanır. Adresten mahalle çıkarılmaz ve entities sisteminde eşleme yapılmaz.
+
+`restaurant_records` run+external_id anahtarı ve JSON array kontrolü; `restaurant_regions` kayıtla bileşik FK ve mevcut canonical regions ile FK kullanır. Kimlik, `/listing/slug/` yoludur. Açıklama, adres, iletişim, site, sıralanmış mutfak/öğün/olanak listeleri ve mahalle ilişkileri generic diff'e dahildir. Kısmi HTTP/parse/yazım hatasında kayıtlar ve ilişkiler yayımlanmaz; önceki başarılı sürüm kalır.
+
+Ham dosyalar `raw/<run-id>/listing/0001.html` ve `detail/NNNN.html` gibi sayısal adlarla yazılır; ana dosya manifest.json'dur. Response sırası, türü, mahallesi, istenen/son URL, durum, content-type, çekim zamanı, bağıl dosya ve alt dosya SHA-256 manifestte bulunur. Manifestin DB hash'ini yalnızca `Database.record_raw_artifact()` hesaplar. Yalnızca tamamlanmış, boyut sınırındaki yanıtlar saklanır. Çekim zamanı, source_updated yerine kullanılmaz.
+
+Yeni API: `/api/restaurant-runs`, `/api/restaurant-runs/{id}`, `/api/restaurant-runs/{id}/raw`. Domain API yalnızca başarılı restoran sürümlerini sunar; generic source-runs başarısız/iptal çekimleri de korur. Ham indirme yalnızca o run'ın raw dizinindeki manifest.json dosyasına izin verir. UI Plaj/Hava/Restoranlar sekmeleri, tarihli sürümler, fark sayıları, arama ve üç filtre içerir; iş sonucundan restoran sekmesi açılır. Dış bağlantılar noopener/noreferrer kullanır.
+
+v4→v5 migration yedek aldıktan sonra restoran tablolarını ekler. Diğer domain kayıtlarını, geçmişi ve raw dosyaları değiştirmez. Tam restoran seed URL'si için method yalnızca Belirlenecek ise HTML olur; notes yalnızca eski varsayılan metne eşitse güncellenir. Koşullar bağımsızdır; kullanıcı notu/yöntemi korunur. Fresh DB ve v1/v2/v3/v4 zinciri şema 5'e ulaşır. Kapsam, HTTP sınırları ve testler: [M4-RESTORAN-VERISI](docs/M4-RESTORAN-VERISI.md).

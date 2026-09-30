@@ -75,6 +75,8 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "sources": sources(), "jobs": db.jobs(), "data_path": str(db.path.parent),
                 "canonical_regions": [{"id": id_, "name": name} for id_, name in CANONICAL_REGIONS],
                 "collections": db.collections(), "weather_runs": weather_runs(),
+                "restaurant_runs": restaurant_runs(),
+                "restaurant_connector": {"name": "south-walton-restaurants", "method": "HTML"},
                 "weather_connector": {"name": "nws-weather", "method": "API", "anchors": weather.ANCHORS, "provenance": weather.ANCHOR_PROVENANCE},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
                                     "feature_labels": beaches.FEATURE_LABELS}}
@@ -199,6 +201,30 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to((db.path.parent / "raw").resolve()) or not path.is_file():
             raise HTTPException(404, "Ham hava kaynağı bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-hava-{identifier[:8]}.json")
+
+    @app.get("/api/restaurant-runs")
+    def restaurant_runs():
+        return [run for run in db.source_runs() if run["connector_name"] == "south-walton-restaurants" and run["status"] == "done"]
+
+    def find_restaurant_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != "south-walton-restaurants" or run["status"] != "done":
+            raise HTTPException(404, "Bu restoran veri sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/restaurant-runs/{identifier}")
+    def restaurant_run(identifier: str):
+        run = find_restaurant_run(identifier)
+        return {"run": run, "records": db.run_records(identifier), "diff": db.run_diff(identifier)}
+
+    @app.get("/api/restaurant-runs/{identifier}/raw")
+    def raw_restaurant_run(identifier: str):
+        run = find_restaurant_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham restoran manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"30a-restoran-{identifier[:8]}.json")
 
     @app.get("/api/events")
     async def events(request: Request):

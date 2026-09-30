@@ -7,3 +7,7 @@
 @media(max-width:1330px){#beach-detail{position:static}.features-detail{grid-column:2/4}.collection-version{flex-wrap:wrap}}
 @media(max-width:700px){.connector-strip{align-items:flex-start;padding:18px;flex-direction:column;gap:12px}.collection-version label{width:100%}.collection-version select{width:100%;min-width:0}.collection-version>div{width:100%;flex-wrap:wrap}.collection-version .download-link{flex:1;justify-content:center}.library:has(.beach-table) .table-scroll{max-height:460px}}
 .weather-block{margin-top:20px}.weather-block table{min-width:690px}.weather-block td{white-space:normal;max-width:290px;vertical-align:top}.weather-block td:first-child{min-width:155px}.weather-block details p,.weather-alert details p{white-space:pre-wrap}.weather-alert{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.weather-location{margin-top:16px}.weather-location p{margin:8px 0}
+
+.restaurant-toolbar {flex-wrap:wrap;}
+.restaurant-toolbar .search-wrap {flex-basis:100%;}
+#restaurant-detail {overflow-wrap:anywhere;}

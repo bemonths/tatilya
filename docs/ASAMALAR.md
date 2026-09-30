@@ -18,13 +18,19 @@ Visit South Walton plaj erişimleri bağlandı. Sayfadaki harita noktaları tek 
 
 Genel source_runs, jobs.source_id, connector registry, source_collection işi, atomik v2 migration ve yükseltme öncesi yedek tamamlandı. Başarılı/başarısız/iptal run takibi ve temel plaj sürüm farkı çalışır. 13 canonical bölge kimliği ve entity/entity_sources şemaları hazırdır; henüz otomatik entity matching veya polygon mapping yapılmaz. Aynı host içi sınırlı HTTP yönlendirme, kontrollü teşhis ve Python 3.12 GitHub Actions eklendi.
 
-Sonraki veri işleri: gerçek yeni connector'lar, domain bazında kalite raporları, birim/tarih/fiyat karşılaştırmaları ve kaynaklar arası veri eşleme tasarımı. Konaklama/restoran connector'ları henüz yoktur; NWS hava connector'ı v0.4 kapsamında eklendi. Entity yönetim ekranı ve otomatik eşleme ileride değerlendirilecektir. Scheduler henüz yoktur.
+Sonraki veri işleri: gerçek yeni connector'lar, domain bazında kalite raporları, birim/tarih/fiyat karşılaştırmaları ve kaynaklar arası veri eşleme tasarımı. Konaklama connector'ı henüz yoktur; NWS hava v0.4, restoran dizini v0.5 kapsamında eklendi. Entity yönetim ekranı ve otomatik eşleme ileride değerlendirilecektir. Scheduler henüz yoktur.
 
 ## Veri toplama genişlemesi — NWS hava · v0.4.0
 
 İkinci gerçek connector NWS resmî API'sidir. Üç provenance'ı açık plaj örnek noktası için points, dönem/saatlik forecast ve aktif alerts toplanır. Canonical mahalle merkezi/polygon üretilmez. V4 şema, ham yanıt paketi, sürüm geçmişi, Plaj/Hava sekmeleri ve timezone gösterimi hazırdır. Kayan hava penceresine kayıt diff'i uygulanmaz. [Kapsam ve sınırlar](M3-HAVA-VERISI.md).
 
 Tarihsel iklim, current conditions/observation station, scheduler ve Claude/OpenAI henüz yoktur. Sonraki aşamalar aşağıda plan olarak kalır.
+
+## Veri toplama genişlemesi — Restoran dizini · v0.5.0
+
+Üçüncü connector Visit South Walton HTML dizin/detay sayfalarıdır. Ana formdan keşfedilen Restaurants filtresiyle 13 canonical mahalle taranır; Miramar Beach, Seascape ve Sandestin alınmaz. Detaylar URL path'i ile tekilleştirilir, çoklu mahalle ilişkileri korunur. V5 şema, yedekli yükseltme, raw manifest, generic transaction/diff, Restoranlar sekmesi ve arama/filtre/ayrıntı eklendi. [Kapsam ve sınırlar](M4-RESTORAN-VERISI.md).
+
+Çalışan bağlantılar: Beaches = HTML içi JSON, Weather = NWS API, Restaurants = HTML dizin/detay. Menü/fiyat enrichment, ratings/reviews, own-site crawling, scheduler ve AI henüz yoktur. Güvenilir kaynak tarihi olmayan restoranlarda source_updated null kalır.
 
 ## Aşama 4 — Konu, rakip ve brief · Plan
 

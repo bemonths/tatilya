@@ -1,0 +1,7 @@
+<!doctype html><html><body>
+<form method="get" action="/listings/culinary-experiences/">
+<label>Neighborhood<select name="Neighborhood"><option value="">All Neighborhoods</option>{{NEIGHBORHOODS}}</select></label>
+<label>Business type<select name="businessType"><option value="catering">Catering</option><option value="beer">Craft Beer &amp; Spirits</option><option value="grocery">Grocery/Meal Delivery</option><option value="restaurants" {{BUSINESS_SELECTED}}>Restaurants</option></select></label>
+</form>
+<div class="card-deck">{{CARDS}}</div>{{EMPTY}}{{PAGER}}
+</body></html>

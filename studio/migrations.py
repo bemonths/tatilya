@@ -142,3 +142,35 @@ def upgrade_v4(con):
         ("JSON", "https://www.visitsouthwalton.com/beach-bay-access-locations/")))
     if con.execute("PRAGMA foreign_key_check").fetchone():
         raise RuntimeError("Hava migration ilişki bütünlüğü kontrolü başarısız oldu.")
+
+
+def upgrade_v5(con):
+    """Add restaurant snapshots; refresh only exact v4 seed defaults."""
+    execute_schema(con, """
+        CREATE TABLE restaurant_records (
+            run_id TEXT NOT NULL REFERENCES source_runs(id), external_id TEXT NOT NULL,
+            name TEXT NOT NULL, listing_url TEXT NOT NULL, description TEXT NOT NULL,
+            address_line_1 TEXT, address_line_2 TEXT, city TEXT, state TEXT, postal_code TEXT,
+            phone TEXT, email TEXT, website_url TEXT,
+            cuisines TEXT NOT NULL CHECK(json_valid(cuisines) AND json_type(cuisines)='array'),
+            meals_served TEXT NOT NULL CHECK(json_valid(meals_served) AND json_type(meals_served)='array'),
+            amenities TEXT NOT NULL CHECK(json_valid(amenities) AND json_type(amenities)='array'),
+            PRIMARY KEY(run_id,external_id)
+        );
+        CREATE TABLE restaurant_regions (
+            run_id TEXT NOT NULL, external_id TEXT NOT NULL, source_neighborhood TEXT NOT NULL,
+            canonical_region_id TEXT REFERENCES regions(id),
+            PRIMARY KEY(run_id,external_id,source_neighborhood),
+            FOREIGN KEY(run_id,external_id) REFERENCES restaurant_records(run_id,external_id)
+        );
+        CREATE INDEX restaurant_region_lookup ON restaurant_regions(canonical_region_id,run_id);
+        CREATE INDEX restaurant_name_lookup ON restaurant_records(run_id,name);
+        PRAGMA user_version=5;
+    """)
+    url = "https://www.visitsouthwalton.com/listings/culinary-experiences/"
+    con.execute("UPDATE sources SET method='HTML' WHERE url=? AND method='Belirlenecek'", (url,))
+    con.execute("UPDATE sources SET notes=? WHERE url=? AND notes=?", (
+        "Visit South Walton Dining dizinindeki 30A kapsamındaki restoranlar. Ad, mahalle, açıklama, adres, iletişim, cuisine, meals served ve kaynakta listelenen amenities toplanır. Menü ve fiyat verisi bu connector’ın kapsamında değildir.",
+        url, "Restoran dizini. Menü ve fiyatlar için işletmelerin kendi sayfaları ayrıca incelenecek."))
+    if con.execute("PRAGMA foreign_key_check").fetchone():
+        raise RuntimeError("Restoran migration ilişki bütünlüğü kontrolü başarısız oldu.")

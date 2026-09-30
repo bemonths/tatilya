@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .catalog import SEEDS
-from .migrations import execute_schema, upgrade_v3, upgrade_v4
+from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
 
 def now():
@@ -40,18 +40,20 @@ class Database:
         with self.connect() as con:
             con.execute("PRAGMA journal_mode=WAL")
             version = con.execute("PRAGMA user_version").fetchone()[0]
-            if version > 4:
+            if version > 5:
                 raise RuntimeError("Bu veri dosyası daha yeni bir uygulama sürümüne ait.")
-            if version == 4:
+            if version == 5:
                 return
-            if version in (1, 2, 3):
+            if version in (1, 2, 3, 4):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("BEGIN IMMEDIATE")
-            if version == 3:
-                upgrade_v4(con)
+            if version in (3, 4):
+                if version == 3:
+                    upgrade_v4(con)
+                upgrade_v5(con)
                 return
             execute_schema(con, """
                 CREATE TABLE IF NOT EXISTS sources (
@@ -97,6 +99,7 @@ class Database:
                 con.execute("INSERT INTO metadata VALUES ('seeded', ?)", (now(),))
             upgrade_v3(con)
             upgrade_v4(con)
+            upgrade_v5(con)
 
     def sources(self):
         with self.connect() as con:
