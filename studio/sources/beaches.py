@@ -184,9 +184,9 @@ class BeachesConnector:
     diff_enabled = True
 
     def supports(self, source):
-        return source["url"] == SOURCE_URL
+        return source.get("destination_id") == "30a" and source["url"] == SOURCE_URL
 
-    def collect(self, source, raw_path, progress, canceled):
+    def collect(self, source, raw_path, progress, canceled, *, context):
         result = collect(raw_path, progress, canceled)
         result.metadata.update(scope=SCOPE)
         return result

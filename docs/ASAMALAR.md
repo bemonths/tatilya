@@ -47,3 +47,7 @@ Sahne listesi, görsel varlıklar, harita/grafik ihtiyaçları; sonra önizleme 
 ## Aşama 7 — Yayın paketi ve masaüstü paketleme
 
 Başlık, açıklama, makale, video ve görselleri dışa aktar. Çerçevesiz uygulama penceresi, masaüstü kısayolu ve kapanma davranışı. Otomatik yayın bağlantıları ayrı kapsam olarak ele alınır.
+
+## Destinasyon temeli — v0.6.0
+
+Şema 6, ilk production destinasyonu 30A, destinasyon kapsamlı sources/regions/jobs/runs/entities, DB hava noktaları, ConnectorContext ve global seçici tamamlandı. Gerçek kullanıcı DB’si önce kopyada doğrulandı; eski veriler korundu. Sentetik ikinci/üçüncü destinasyonlar sadece testlerde kullanıldı. NWS generic kaldı; South Walton connector’ları 30A kapsamına bağlandı. v0.6 kendi dalında kod incelemesine sunulur; main’e merge edilmez. [M5 kapsam ve testler](M5-DESTINASYON-KATMANI.md).

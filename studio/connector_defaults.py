@@ -10,10 +10,10 @@ def reconcile_connector_defaults(con):
     """Caller owns transaction. Only untouched defaults on matching sources change."""
     connector = RestaurantsConnector()
     candidates = con.execute(
-        "SELECT id,url,method,notes FROM sources WHERE method=? OR notes=?",
+        "SELECT * FROM sources WHERE method=? OR notes=?",
         ('Belirlenecek', OLD_RESTAURANT_NOTE)).fetchall()
     for source in candidates:
-        if not connector.supports(source):
+        if not connector.supports(dict(source)):
             continue
         changes = {}
         if source['method'] == 'Belirlenecek':

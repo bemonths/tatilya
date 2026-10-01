@@ -12,13 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
-from .catalog import CADENCES, CATEGORIES, METHODS, REGIONS, STEPS
+from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
 from .sources import beaches, weather
 from .sources.registry import DEFAULT_REGISTRY
-from .regions import REGIONS as CANONICAL_REGIONS
+from .destinations import DEFAULT_DESTINATION_ID
 
 WEB = Path(__file__).parent / "web"
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "data"
@@ -67,50 +67,81 @@ def create_app(data_dir: Path | None = None, registry=None):
     def health():
         return {"app": "thirtya-studio", "version": __version__}
 
+    def selected(identifier):
+        try: return db.destination(identifier)
+        except KeyError: raise HTTPException(404, "Destinasyon bulunamadı veya etkin değil.") from None
+
+    @app.get("/api/destinations")
+    def destinations():
+        return db.destinations()
+
     @app.get("/api/bootstrap")
-    def bootstrap():
-        return {"version": __version__, "categories": CATEGORIES, "regions": REGIONS, "methods": METHODS,
-                "cadences": CADENCES, "steps": [dict(id=id_, title=title, subtitle=subtitle, state=state)
+    def bootstrap(destination_id: str = DEFAULT_DESTINATION_ID):
+        destination=selected(destination_id)
+        context=db.context(destination_id)
+        source_list=sources(destination_id)
+        ready_count=sum(bool(source["enabled"] and source["connector"]) for source in source_list)
+        return {"version": __version__, "destinations":db.destinations(), "selected_destination":destination,
+                "categories": CATEGORIES, "regions": [f"Tüm {destination['name']}",*[r['name'] for r in context.canonical_regions]], "methods": METHODS,
+                "cadences": CADENCES, "steps": [dict(id=id_, title=title, subtitle=f"{ready_count} kaynak hazır" if id_=="collect" else subtitle, state=state)
                                                for id_, title, subtitle, state in STEPS],
-                "sources": sources(), "jobs": db.jobs(), "data_path": str(db.path.parent),
-                "canonical_regions": [{"id": id_, "name": name} for id_, name in CANONICAL_REGIONS],
-                "collections": db.collections(), "weather_runs": weather_runs(),
-                "restaurant_runs": restaurant_runs(),
+                "sources": source_list, "jobs": db.jobs(destination_id), "data_path": str(db.path.parent),
+                "canonical_regions": context.canonical_regions,
+                "collections": db.collections(destination_id), "weather_runs": weather_runs(destination_id),
+                "restaurant_runs": restaurant_runs(destination_id),
                 "restaurant_connector": {"name": "south-walton-restaurants", "method": "HTML"},
-                "weather_connector": {"name": "nws-weather", "method": "API", "anchors": weather.ANCHORS, "provenance": weather.ANCHOR_PROVENANCE},
+                "weather_connector": {"name": "nws-weather", "method": "API", "anchors": context.weather_anchors,
+                                      "provenance": {"scope":"Destinasyonda yapılandırılmış hava örnek noktaları."}},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
                                     "feature_labels": beaches.FEATURE_LABELS}}
 
     @app.get("/api/sources")
-    def sources():
+    def sources(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
         result = []
-        for source in db.sources():
+        for source in db.sources(destination_id):
             connector = registry.for_source(source)
             result.append({**source, "connector": {"name": connector.name, "version": connector.version, "method": getattr(connector, "method", None)} if connector else None})
         return result
 
     @app.post("/api/sources", status_code=201)
     def add_source(body: SourceInput):
-        return db.save_source(body.record())
+        destination=selected(body.destination_id)
+        record=body.record()
+        if not record["region"]: record["region"]=f"Tüm {destination['name']}"
+        return db.save_source(record)
 
     @app.put("/api/sources/{identifier}")
     def update_source(identifier: str, body: SourceUpdate):
         try:
-            return db.save_source(body.record(), identifier, body.expected_version)
+            existing=db.source(identifier)
+            if not existing: raise KeyError(identifier)
+            record=body.record()
+            record["destination_id"]=body.destination_id or existing["destination_id"]
+            selected(record["destination_id"])
+            return db.save_source(record, identifier, body.expected_version)
         except KeyError:
             raise HTTPException(404, "Kaynak bulunamadı.") from None
 
     @app.get("/api/jobs")
-    def jobs():
-        return db.jobs()
+    def jobs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return db.jobs(destination_id)
 
     @app.post("/api/jobs", status_code=202)
     def start_job(body: JobInput, request: Request):
         if body.kind in ("source_collection", "beach_collection"):
             if not body.source_id:
                 raise HTTPException(422, "Veri toplamak için bir kaynak seçin.")
+            source=db.source(body.source_id)
+            if not source: raise HTTPException(409,"Kaynak bulunamadı.")
+            selected(source["destination_id"])
+            if body.destination_id and body.destination_id != source["destination_id"]:
+                raise HTTPException(409,"Kaynak seçili destinasyona ait değil.")
             return request.app.state.jobs.submit_collection(body.source_id)
-        return request.app.state.jobs.submit_audit()
+        destination_id=body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return request.app.state.jobs.submit_audit(destination_id)
 
     @app.post("/api/jobs/{identifier}/cancel")
     def cancel_job(identifier: str, request: Request):
@@ -120,12 +151,14 @@ def create_app(data_dir: Path | None = None, registry=None):
         return result
 
     @app.get("/api/collections")
-    def collections():
-        return db.collections()
+    def collections(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return db.collections(destination_id)
 
     @app.get("/api/source-runs")
-    def source_runs(source_id: str | None = None):
-        return db.source_runs(source_id)
+    def source_runs(source_id: str | None = None, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return db.source_runs(source_id,destination_id)
 
     @app.get("/api/source-runs/{identifier}")
     def source_run(identifier: str):
@@ -178,8 +211,9 @@ def create_app(data_dir: Path | None = None, registry=None):
         return FileResponse(path, media_type="text/plain", filename=f"30a-ham-kaynak-{identifier[:8]}.html.txt")
 
     @app.get("/api/weather-runs")
-    def weather_runs():
-        return [run for run in db.source_runs() if run["connector_name"] == "nws-weather" and run["status"] == "done"]
+    def weather_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] == "nws-weather" and run["status"] == "done"]
 
     def find_weather_run(identifier):
         run = db.source_run(identifier)
@@ -203,8 +237,9 @@ def create_app(data_dir: Path | None = None, registry=None):
         return FileResponse(path, media_type="application/json", filename=f"30a-hava-{identifier[:8]}.json")
 
     @app.get("/api/restaurant-runs")
-    def restaurant_runs():
-        return [run for run in db.source_runs() if run["connector_name"] == "south-walton-restaurants" and run["status"] == "done"]
+    def restaurant_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] == "south-walton-restaurants" and run["status"] == "done"]
 
     def find_restaurant_run(identifier):
         run = db.source_run(identifier)
@@ -227,11 +262,12 @@ def create_app(data_dir: Path | None = None, registry=None):
         return FileResponse(path, media_type="application/json", filename=f"30a-restoran-{identifier[:8]}.json")
 
     @app.get("/api/events")
-    async def events(request: Request):
+    async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
         async def stream():
             previous = None
             while not await request.is_disconnected():
-                data = json.dumps(await asyncio.to_thread(db.jobs), ensure_ascii=False)
+                data = json.dumps(await asyncio.to_thread(db.jobs,destination_id), ensure_ascii=False)
                 if data != previous:
                     yield f"event: jobs\ndata: {data}\n\n"
                     previous = data

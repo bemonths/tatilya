@@ -1,3 +1,4 @@
+import {destinationRows} from "./destinations.js";
 import {collectionTabs} from "./connectors.js";
 import {api, esc, date} from "./api.js";
 
@@ -8,6 +9,7 @@ export class BeachScreen {
   }
   invalidate() {this.sequence++;}
   render(main, data, heading) {
+    data={...data,sources:destinationRows(data.sources,data.selected_destination),jobs:destinationRows(data.jobs,data.selected_destination),collections:destinationRows(data.collections,data.selected_destination)};
     const sequence=++this.sequence;
     this.data=data;
     const runs=data.collections;
@@ -15,6 +17,9 @@ export class BeachScreen {
     if(!runs.some(run=>run.id===this.selectedRun)) this.selectedRun=runs[0]?.id || null;
     const run=runs.find(run=>run.id===this.selectedRun);
     const busy=data.jobs.some(job=>job.kind==="source_collection" && job.source_id===source?.id && ["queued","running"].includes(job.status));
+    if(!source && !runs.length) {
+      main.innerHTML=collectionTabs()+heading("Veri toplama", "Bu destinasyon için plaj kaynağı bağlı değil.");return;
+    }
     main.innerHTML=collectionTabs()+heading("Veri toplama", "Plaj erişimlerini kaynağından al. Adresleri, olanakları ve her çekimin önceki sürümlerini birlikte incele.",
       `<button class="primary" data-action="collect-beaches" ${!source || busy?"disabled":""}>${busy?"Toplama sürüyor…":"↓ Plaj verilerini topla"}</button>`) +
       `<section class="connector-strip"><div><span class="eyebrow">BAĞLI KAYNAK</span><h2>${esc(source?.name || "South Walton · Plaj erişimleri")}</h2><p>Resmî turizm kaynağının harita noktaları · Sayfa içindeki JSON</p></div><span class="tag ${source?"green":"warm"}">${source?"Veri toplayıcı hazır":"Kaynak etkin değil"}</span></section>` +

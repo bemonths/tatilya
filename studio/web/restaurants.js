@@ -1,3 +1,4 @@
+import {destinationRows} from "./destinations.js";
 import {api, esc, date} from "./api.js";
 import {collectionTabs} from "./connectors.js";
 
@@ -22,23 +23,27 @@ export class RestaurantScreen {
   constructor() {this.selectedRun=null;this.selectedRecord=null;this.filters={search:"",neighborhood:"",cuisine:"",meal:""};this.sequence=0;}
   invalidate() {this.sequence++;}
   render(main,data,heading) {
+    data={...data,sources:destinationRows(data.sources,data.selected_destination),jobs:destinationRows(data.jobs,data.selected_destination),restaurant_runs:destinationRows(data.restaurant_runs,data.selected_destination)};
     const sequence=++this.sequence;
     const runs=data.restaurant_runs || [];
     if(!runs.some(r=>r.id===this.selectedRun)) this.selectedRun=runs[0]?.id || null;
     const run=runs.find(r=>r.id===this.selectedRun);
     const source=data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-restaurants");
     const busy=data.jobs.some(j=>j.source_id===source?.id && ["queued","running"].includes(j.status));
-    main.innerHTML=collectionTabs("restaurants")+heading("Veri toplama","30A boyunca restoranları, kaynakta listelenen mutfak türlerini ve iletişim bilgilerini incele.",
+    if(!source && !runs.length) {
+      main.innerHTML=collectionTabs()+heading("Veri toplama", "Bu destinasyon için restoran kaynağı bağlı değil.");return;
+    }
+    main.innerHTML=collectionTabs("restaurants")+heading("Veri toplama",`${data.selected_destination?.name || "Seçili destinasyon"} boyunca restoranları, kaynakta listelenen mutfak türlerini ve iletişim bilgilerini incele.`,
       `<button class="primary" data-action="collect-restaurants" ${!source || busy?"disabled":""}>${busy?"Toplama sürüyor…":"↓ Restoran verilerini topla"}</button>`)+
-      `<section class="connector-strip"><div><span class="eyebrow">BAĞLI KAYNAK</span><h2>${esc(source?.name || "South Walton · Restoranlar")}</h2><p>Visit South Walton · 13 mahalle · Yalnızca Restaurants</p></div><span class="tag ${source?"green":"warm"}">${source?"HTML · bağlı":"Kaynak etkin değil"}</span></section>`+
-      (run?`<section class="overview collection-overview">${[[run.record_count,"restoran","Seçili veri sürümünde"],[run.metadata.represented_neighborhood_count,"temsil edilen mahalle","13 hedef mahalle tarandı"],[run.metadata.cuisine_count,"mutfak türü","Kaynakta listelenen"]].map(([n,label,note])=>`<div class="metric"><div><div class="metric-number"><strong>${esc(n)}</strong><span class="metric-label">${label}</span></div><small>${note}</small></div></div>`).join("")}</section>
+      `<section class="connector-strip"><div><span class="eyebrow">BAĞLI KAYNAK</span><h2>${esc(source?.name || "South Walton · Restoranlar")}</h2><p>Visit South Walton · ${data.canonical_regions?.length ?? 0} mahalle · Yalnızca Restaurants</p></div><span class="tag ${source?"green":"warm"}">${source?"HTML · bağlı":"Kaynak etkin değil"}</span></section>`+
+      (run?`<section class="overview collection-overview">${[[run.record_count,"restoran","Seçili veri sürümünde"],[run.metadata.represented_neighborhood_count,"temsil edilen mahalle",`${run.metadata.target_neighborhood_count} hedef mahalle tarandı`],[run.metadata.cuisine_count,"mutfak türü","Kaynakta listelenen"]].map(([n,label,note])=>`<div class="metric"><div><div class="metric-number"><strong>${esc(n)}</strong><span class="metric-label">${label}</span></div><small>${note}</small></div></div>`).join("")}</section>
       <div class="collection-version"><label>Sürüm <select id="restaurant-version" aria-label="Restoran veri sürümü">${runs.map((r,i)=>`<option value="${esc(r.id)}" ${r.id===run.id?"selected":""}>${i===0?"Son çekim · ":""}${esc(date(r.fetched_at))} · ${r.record_count} kayıt · ${r.id.slice(0,6)}</option>`).join("")}</select></label><a class="download-link" href="/api/restaurant-runs/${run.id}/raw" download>↓ Ham kaynak manifestini indir</a></div>
       <p class="source-stamp">Son çekim: ${esc(date(runs[0].fetched_at))} · Seçili çekim: ${esc(date(run.fetched_at))}<br>Kaynak güncellemesi: ${shown(run.source_updated)}</p>
       <div class="stage-note" id="restaurant-diff" role="status"><p>Sürüm farkı yükleniyor…</p></div>
       <div class="workspace-grid"><section class="library" aria-label="Toplanan restoran verileri"><div class="library-title"><h2>Restoran dizini</h2><small id="restaurant-count">Yükleniyor…</small></div>
       <div class="toolbar restaurant-toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><input id="restaurant-search" type="search" aria-label="Restoran ara" placeholder="Ad, adres veya açıklama ara…" value="${esc(this.filters.search)}"></div><select id="restaurant-neighborhood" aria-label="Mahalle filtresi"></select><select id="restaurant-cuisine" aria-label="Mutfak türü filtresi"></select><select id="restaurant-meal" aria-label="Öğün filtresi"></select></div>
       <div class="table-scroll"><table><thead><tr><th>RESTORAN</th><th>KAYNAK MAHALLE</th><th>MUTFAK TÜRÜ</th></tr></thead><tbody id="restaurant-rows"><tr><td colspan="3">Kayıtlar yükleniyor…</td></tr></tbody></table></div></section><section class="detail" id="restaurant-detail" aria-label="Restoran ayrıntıları"></section></div>`:
-      `<section class="quality-result empty"><h2>İlk restoran çekimi hazır</h2><p>“Restoran verilerini topla” ile 13 mahallenin restoran dizinini kaydet. Her başarılı çekim ayrı sürüm olarak korunur.</p></section>`)+
+      `<section class="quality-result empty"><h2>İlk restoran çekimi hazır</h2><p>“Restoran verilerini topla” ile yapılandırılmış mahallelerin restoran dizinini kaydet. Her başarılı çekim ayrı sürüm olarak korunur.</p></section>`)+
       `<div class="stage-note"><p>Miramar Beach, Seascape ve Sandestin kapsam dışında. Mahalle bilgisi, restoranın bulunduğu kaynak filtresinden gelir; adresinden tahmin edilmez. Menü, fiyat ve değerlendirme puanı toplanmaz. İşletmelerin kendi siteleri ziyaret edilmez.</p></div>`;
     if(!run) return;
     main.querySelector('#restaurant-version').addEventListener('change',e=>{this.selectedRun=e.target.value;this.render(main,data,heading);});

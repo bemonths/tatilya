@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.5.0**. Genel kaynak toplama altyapısı, plaj, NWS hava ve restoran toplayıcıları hazır. Housing Atlas'tan bağımsız bir projedir.
+30A veri ve içerik üretim uygulaması · **v0.6.0**. Genel kaynak toplama altyapısı, plaj, NWS hava ve restoran toplayıcıları hazır. Housing Atlas'tan bağımsız bir projedir.
 
 ## Açılış
 
@@ -25,7 +25,7 @@ Kayıtlar bu projenin `data/` klasöründeki SQLite veritabanında, ham kaynakla
 
 Toplama işleri artık source_id ile izlenir; başarılı, başarısız ve iptal edilmiş çekimler genel source_runs yapısında saklanır. İşler panelinde kaynak adı görünür. Eski plaj ekranı, indirmeler ve veri sürümleri çalışmaya devam eder. Üç gerçek connector **BeachesConnector**, **WeatherConnector** ve **RestaurantsConnector** olarak kayıtlıdır; başka kaynak için yalnızca URL eklemek yeterli değildir.
 
-v0.1/v0.2/v0.3/v0.4 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 5'e tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
+v0.1/v0.2/v0.3/v0.4/v0.5 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 6'ya tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
 
 13 canonical bölge kimliği ve entities/entity_sources tabloları yalnızca temel seviyede hazırdır. Otomatik entity matching, region polygon mapping ve mahalle tahmini yoktur. Claude/OpenAI, Playwright, scheduler ve içerik üretimi henüz uygulanmadı.
 
@@ -80,3 +80,7 @@ Menü/fiyat, ratings/reviews, restoranın kendi sitesini tarama, scheduler ve AI
 Kaynakta description bulunmayan veya boş açıklamalı geçerli restoranlar NULL açıklamayla kaydedilir ve ekranda “Belirtilmemiş” görünür. Metin uydurulmaz; generic meta description fallback yapılmaz. `description_missing_count` yalnızca çekimin gözlem sayısıdır. Güncel canlı sonuç ve mahalle sayıları [M4 canlı inceleme notunda](docs/M4-RESTORAN-VERISI.md).
 
 Mevcut şema 5 kaynak onarımı: uygulama açılışında restoran URL’sinin www/no-www ve son slash varyantları aynı kaynak olarak tanınır. Yalnız eski varsayılan yöntem/not güncellenir; kullanıcı seçimleri, kaynak sürümü ve geçmiş korunur. Tekrar açılışta gereksiz UPDATE yapılmaz. HTTPS dışı, query/fragment, credentials ve farklı host/port eşleşmez. Bu davranış kod güncellendikten sonra uygulama tamamen kapatılıp yeniden açıldığında devreye girer.
+
+## Destinasyon katmanı · v0.6
+
+30A ilk production destinasyonudur. Global seçici kaynakları, bölgeleri, işleri ve veri geçmişini destinasyona göre yükler. NWS yapılandırılmış hava noktalarını kullanır; South Walton connector’ları yalnız 30A’ya bağlanır. Aynı URL veya bölge adı farklı destinasyonlarda bulunabilir. Kaynak kimlikleri ve geçmiş snapshot’lar korunur. İkinci production destinasyonu eklenmedi. Tasarım, migration ve yeni destinasyon ekleme akışı: [M5 destinasyon katmanı](docs/M5-DESTINASYON-KATMANI.md).

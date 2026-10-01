@@ -32,7 +32,8 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
     path = tmp_path / "studio.sqlite3"
     make_legacy_db(path)
     db = Database(path)
-    sources_before = db.sources()
+    with db.connect() as con:
+        sources_before = [{**dict(r),"destination_id":"30a","scope_region_id":None} for r in con.execute("SELECT * FROM sources ORDER BY created_at,name")]
     with db.connect() as con:
         history_before = [tuple(row) for row in con.execute("SELECT * FROM source_history")]
         record_before = tuple(con.execute("SELECT * FROM beach_records").fetchone())
@@ -49,7 +50,7 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
     assert db.source_run("old-failed")["metadata"]["source_identity_unknown"]
     assert db.source_run("old-canceled")["status"] == "canceled"
     with db.connect() as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 6
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert [tuple(row) for row in con.execute("SELECT * FROM source_history")] == history_before
         assert tuple(con.execute("SELECT * FROM beach_records").fetchone()) == (*record_before, "Santa Rosa Beach", None)
@@ -173,7 +174,7 @@ class TestConnector:
     def supports(self, source):
         return source["url"] == "https://example.org/30a"
 
-    def collect(self, source, raw_path, progress, canceled):
+    def collect(self, source, raw_path, progress, canceled, *, context):
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         raw_path.write_text("Synthetic test response", encoding="utf-8")
         return CollectionResult([{"external_id": "test-id", "value": 12}], 1, 0, None)
@@ -191,8 +192,8 @@ class TestConnector:
 
 def test_second_connector_needs_no_job_or_app_special_case(tmp_path):
     registry = ConnectorRegistry([*DEFAULT_REGISTRY.connectors, TestConnector()])
-    assert registry.for_source({"url": beaches.SOURCE_URL}).name == "south-walton-beaches"
-    assert registry.for_source({"url": "https://unknown.example"}) is None
+    assert registry.for_source({"destination_id":"30a","url": beaches.SOURCE_URL}).name == "south-walton-beaches"
+    assert registry.for_source({"destination_id":"30a","url": "https://unknown.example"}) is None
     with TestClient(create_app(tmp_path, registry), headers=HEADERS) as client:
         source = client.post("/api/sources", json=payload()).json()
         job, run = collect(client, source["id"])
@@ -229,10 +230,10 @@ def test_regions_and_entity_integrity_without_auto_matching(tmp_path):
     db = Database(tmp_path / "studio.sqlite3")
     db.initialize()
     with db.connect() as con:
-        assert [tuple(row) for row in con.execute("SELECT * FROM regions ORDER BY rowid")] == list(REGIONS)
+        assert [tuple(row) for row in con.execute("SELECT id,name FROM regions ORDER BY rowid")] == list(REGIONS)
         assert len(REGIONS) == 13
         assert con.execute("SELECT COUNT(*) FROM entities").fetchone()[0] == 0
-        con.execute("INSERT INTO entities VALUES ('entity-1','hotel','The Pearl',NULL,NULL,NULL,'now','now')")
+        con.execute("INSERT INTO entities VALUES ('entity-1','hotel','The Pearl',NULL,NULL,NULL,'now','now','30a')")
         ids = [source["id"] for source in db.sources()][:2]
         con.execute("INSERT INTO entity_sources(entity_id,source_id,external_id) VALUES ('entity-1',?,'external-a')", (ids[0],))
         con.execute("INSERT INTO entity_sources(entity_id,source_id,external_id) VALUES ('entity-1',?,'external-b')", (ids[1],))

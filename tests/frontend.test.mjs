@@ -81,3 +81,60 @@ test('bound existing restaurant source enables collection regardless of display 
   assert.match(main.innerHTML,/<button[^>]*data-action="collect-restaurants"[^>]*>↓ Restoran verilerini topla<\/button>/);
   assert.doesNotMatch(main.innerHTML.match(/<button[^>]*data-action="collect-restaurants"[^>]*>/)[0],/disabled/);
 });
+
+import {destinationOptions, storedDestination, persistDestination, resetDestinationState, destinationRows} from '../studio/web/destinations.js';
+import {api, setDestination, destinationPath, StaleDestinationResponse} from '../studio/web/api.js';
+import {BeachScreen} from '../studio/web/collection.js';
+
+test('destination dropdown renders stable IDs and escapes names',()=>{
+  const html=destinationOptions([{id:'a',name:'<Coast>',subtitle:'North'},{id:'b',name:'Bay'}],'b');
+  assert.match(html,/value="b" selected/);assert.match(html,/&lt;Coast&gt;/);
+});
+test('destination selection persists per client storage',()=>{
+  const store=new Map(),storage={getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)};
+  assert.equal(storedDestination(storage),null);persistDestination(storage,'test-coast');
+  assert.equal(storedDestination(storage),'test-coast');
+  assert.equal(storedDestination({getItem:()=>null}),null);
+});
+test('selected destination is used for bootstrap lists and source creation',async()=>{
+  const original=globalThis.fetch,calls=[];
+  globalThis.fetch=async(url,options)=>{calls.push([url,options]);return {ok:true,json:async()=>[]};};
+  try {
+    setDestination('test-coast');
+    for(const path of ['bootstrap','sources','jobs','collections','weather-runs','restaurant-runs']) await api(path);
+    await api('sources',{method:'POST',body:JSON.stringify({name:'Test'})});
+    assert.ok(calls.every(([url])=>url.includes('destination_id=test-coast')));
+    assert.equal(JSON.parse(calls.at(-1)[1].body).destination_id,'test-coast');
+    assert.equal(destinationPath('events'), 'events?destination_id=test-coast');
+  } finally {globalThis.fetch=original;setDestination(null);}
+});
+test('stale async responses cannot overwrite another destination',async()=>{
+  const original=globalThis.fetch;let resolve;
+  globalThis.fetch=()=>new Promise(r=>{resolve=r;});
+  try {
+    setDestination('a');const pending=api('bootstrap');setDestination('b');
+    resolve({ok:true,json:async()=>({selected_destination:{id:'a'}})});
+    await assert.rejects(pending,StaleDestinationResponse);
+  } finally {globalThis.fetch=original;setDestination(null);}
+});
+test('switching resets screen selections filters snapshots without resetting request generations',()=>{
+  const screens=[new BeachScreen(),new WeatherScreen(),new RestaurantScreen()];
+  for(const s of screens){s.selectedRun='old';s.selectedRecord='old';s.sequence=8;s.snapshot={records:['old']};}
+  const state={page:'collect',data:{},selected:'old',search:'old'};
+  resetDestinationState(state,screens);
+  assert.equal(state.data,null);assert.equal(state.page,'collect');assert.equal(state.search,'');
+  for(const s of screens){assert.equal(s.selectedRun,null);assert.equal(s.sequence,9);}
+  assert.equal(screens[0].snapshot,null);assert.equal(screens[2].snapshot,null);
+});
+test('source and job rows are destination filtered',()=>{
+  const rows=[{id:'1',destination_id:'a'},{id:'2',destination_id:'b'}];
+  assert.deepEqual(destinationRows(rows,{id:'b'}),[rows[1]]);
+});
+for(const [Screen,field,label,connector] of [[BeachScreen,'collections','plaj','beach_connector'],[WeatherScreen,'weather_runs','hava','weather_connector'],[RestaurantScreen,'restaurant_runs','restoran','restaurant_connector']]) {
+  test(`${field} same-route destination switch renders empty state and never wrong destination records`,()=>{
+    const data={selected_destination:{id:'other',name:'Other'},sources:[{id:'source',destination_id:'30a',enabled:1,connector:{name:'test'}}],jobs:[],[field]:[{id:'old-run',destination_id:'30a'}],[connector]:{name:'test'}};
+    const main={innerHTML:''};new Screen().render(main,data,(_title,description)=>description);
+    assert.match(main.innerHTML,new RegExp(`Bu destinasyon için ${label} kaynağı bağlı değil`));
+    assert.ok(!main.innerHTML.includes('old-run'));
+  });
+}

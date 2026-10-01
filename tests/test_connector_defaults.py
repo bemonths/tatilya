@@ -33,7 +33,7 @@ UNSAFE = [
 
 @pytest.mark.parametrize('url', VARIANTS + [r.SOURCE_URL.replace('.com/', '.com:443/'), r.SOURCE_URL.replace('https://www.', 'HTTPS://WWW.')])
 def test_restaurant_source_variants_bind(url):
-    connector = DEFAULT_REGISTRY.for_source({'url': url})
+    connector = DEFAULT_REGISTRY.for_source({'destination_id':'30a','url': url})
     assert connector.name == 'south-walton-restaurants'
     assert connector.version == 'south-walton-restaurants/1'
     assert connector.method == 'HTML'
@@ -41,7 +41,7 @@ def test_restaurant_source_variants_bind(url):
 
 @pytest.mark.parametrize('url', UNSAFE)
 def test_unsafe_or_different_source_identity_is_rejected(url):
-    assert not r.RestaurantsConnector().supports({'url': url})
+    assert not r.RestaurantsConnector().supports({'destination_id':'30a','url': url})
 
 
 def test_identity_helper_accepts_only_explicit_aliases_and_preserves_other_connectors():
@@ -49,9 +49,9 @@ def test_identity_helper_accepts_only_explicit_aliases_and_preserves_other_conne
     assert https_source_identity('https://www.directory.example/places/', host_aliases=aliases) == ('directory.example', '/places')
     assert https_source_identity('https://other.example/places', host_aliases=aliases) is None
     for module, connector in ((beaches, beaches.BeachesConnector()), (weather, weather.WeatherConnector())):
-        assert connector.supports({'url': module.SOURCE_URL})
-        assert not connector.supports({'url': module.SOURCE_URL.rstrip('/')})
-        assert not connector.supports({'url': module.SOURCE_URL.replace('www.', '')})
+        assert connector.supports({'destination_id':'30a','url': module.SOURCE_URL})
+        assert not connector.supports({'destination_id':'30a','url': module.SOURCE_URL.rstrip('/')})
+        assert not connector.supports({'destination_id':'30a','url': module.SOURCE_URL.replace('www.', '')})
 
 
 def existing_v5(tmp_path, url, method='Belirlenecek', notes=OLD_RESTAURANT_NOTE, enabled=1):
@@ -62,7 +62,7 @@ def existing_v5(tmp_path, url, method='Belirlenecek', notes=OLD_RESTAURANT_NOTE,
                     (url,method,notes,'My restaurant source','Genel','Seaside','Aylık',enabled,source['id']))
         con.execute('CREATE TABLE repair_writes (source_id TEXT)')
         con.execute('CREATE TRIGGER track_source_update AFTER UPDATE ON sources BEGIN INSERT INTO repair_writes VALUES (NEW.id); END')
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
     return db, db.source(source['id'])
 
 
@@ -91,7 +91,7 @@ def test_existing_v5_repairs_defaults_binds_api_and_collects(tmp_path, monkeypat
     db.initialize(); db.initialize()
     assert history_and_writes(db) == (history_before,1)
     assert db.source(before['id']) == {**before,'method':'HTML','notes':RESTAURANT_NOTE}
-    with db.connect() as con: assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+    with db.connect() as con: assert con.execute('PRAGMA user_version').fetchone()[0] == 6
 
 
 @pytest.mark.parametrize('method', ['API','JSON','HTML','Belirlenecek'])

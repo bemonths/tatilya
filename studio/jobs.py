@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 
 from .database import Conflict, Database
+from .destinations import DEFAULT_DESTINATION_ID
 from .sources.base import SourceError, CollectionCanceled
 from .diagnostics import diagnostic
 
@@ -16,14 +17,14 @@ class JobQueue:
         self.closing = False
         self.registry = db.registry
 
-    def submit_audit(self):
+    def submit_audit(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.lock:
             if self.closing:
                 raise Conflict("Uygulama kapanıyor.")
-            records = [row for row in self.db.sources() if row["enabled"]]
+            records = [row for row in self.db.sources(destination_id) if row["enabled"]]
             if not records:
                 raise Conflict("Önce en az bir etkin kaynak ekleyin.")
-            identifier = self.db.add_job()
+            identifier = self.db.add_job(destination_id=destination_id)
             self.executor.submit(self._audit, identifier, records)
             return self.db.job(identifier)
 
@@ -87,7 +88,8 @@ class JobQueue:
             def progress(percent, message):
                 if not self.db.update_job(identifier, progress=percent, message=message):
                     raise CollectionCanceled()
-            batch = connector.collect(source, raw_path, progress, canceled)
+            context = self.db.context(source["destination_id"])
+            batch = connector.collect(source, raw_path, progress, canceled, context=context)
             self.db.record_raw_artifact(identifier, raw_path)
             self.db.complete_source_run(identifier, batch, connector)
         except CollectionCanceled:
@@ -105,7 +107,7 @@ class JobQueue:
     def shutdown(self):
         with self.lock:
             self.closing = True
-            for job in self.db.jobs():
+            for job in self.db.jobs(None):
                 if job["status"] in ("queued", "running"):
                     self.db.update_job(job["id"], status="interrupted", message="Uygulama kapanırken iş durdu.")
         self.executor.shutdown(wait=True, cancel_futures=True)

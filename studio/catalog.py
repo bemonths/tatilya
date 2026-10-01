@@ -7,22 +7,7 @@ REGIONS = ["Tüm 30A", *(name for _, name in CANONICAL_REGIONS)]
 METHODS = ["Belirlenecek", "HTML", "JSON", "API", "PDF", "Playwright"]
 CADENCES = ["Günlük", "Haftalık", "Aylık", "Gerektiğinde"]
 
-SEEDS = [
-    ("Visit South Walton", "https://www.visitsouthwalton.com/", "Genel",
-     "Bölge rehberi ve kaynak keşfi. South Walton kapsamındaki kayıtlar 30A için ayrıca filtrelenecek.", "Belirlenecek"),
-    ("South Walton · Restoranlar", "https://www.visitsouthwalton.com/listings/culinary-experiences/", "Yeme içme",
-     "Visit South Walton Dining dizinindeki 30A kapsamındaki restoranlar. Ad, mahalle, açıklama, adres, iletişim, cuisine, meals served ve kaynakta listelenen amenities toplanır. Menü ve fiyat verisi bu connector’ın kapsamında değildir.", "HTML"),
-    ("South Walton · Plaj erişimleri", "https://www.visitsouthwalton.com/beach-bay-access-locations/", "Plaj",
-     "Plaj erişim noktalarının adresi, koordinatları, erişim türü ve kaynakta listelenen olanakları. Veri toplama ekranında belirtilen kıyı kapsamı kullanılır.", "JSON"),
-    ("South Walton · Etkinlikler", "https://www.visitsouthwalton.com/events/", "Etkinlik",
-     "Etkinlik takvimi. Tarih, konum ve iptal değişikliklerinin takibi planlanıyor.", "Belirlenecek"),
-    ("South Walton · Ulaşım", "https://www.visitsouthwalton.com/listings/transportation/", "Ulaşım",
-     "Ulaşım işletmeleri. Fiyat ve hizmet kapsamı henüz toplanmadı.", "Belirlenecek"),
-    ("National Weather Service", "https://www.weather.gov/", "Hava",
-     "30A koridorundaki batı, orta ve doğu örnek noktaları için NWS tahminleri ve aktif hava uyarıları. Forecast, saatlik forecast ve aktif alert verileri api.weather.gov üzerinden toplanır.", "API"),
-    ("30A · Bölge rehberi", "https://30a.com/", "Genel",
-     "Yerel içerik ve konu keşfi. Otomatik veri toplama henüz bağlı değil.", "Belirlenecek"),
-]
+from .destinations.thirty_a import SEEDS
 
 STEPS = [
     ("sources", "Veri kaynakları", "Kaynak kütüphanesi", "active"),

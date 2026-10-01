@@ -1,6 +1,6 @@
 # 30A Studio — inceleme ve bağımsız proje mimarisi
 
-29 Eylül 2026 incelemesi · 30 Eylül 2026 v0.5.0 güncellemesi
+29 Eylül 2026 incelemesi · 1 Ekim 2026 v0.6.0 güncellemesi
 
 ## Housing Atlas incelemesi
 
@@ -25,7 +25,7 @@
 
 Bu tespitler mimari incelemedir; Housing Atlas için çalıştırma, entegrasyon testi veya genel kod denetimi yapılmadı. Özellikle canlı Claude ve Playwright davranışları bu çalışmada denenmedi.
 
-## 30A v0.5 mimarisi
+## v0.6 destinasyon mimarisi
 
 Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullanılır. Node derlemesi yoktur. Lacivert/turuncu görünüm ve sol üretim akışı korunmuştur. Bu sürümün amacı veri katmanını yeni kaynaklara hazırlamaktır.
 
@@ -38,7 +38,7 @@ Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullan�
 | sources/base.py | Connector Protocol, CollectionResult ve kontrollü hata türleri |
 | sources/registry.py | Kaynak→connector eşleştirme; BeachesConnector, WeatherConnector ve RestaurantsConnector kayıtlı |
 | sources/beaches.py | HTTP, parse/validate, plaj kayıtlarını yazma/okuma ve karşılaştırma alanları |
-| regions.py | 13 sabit bölge kimliği/adı; polygon veya koordinat sınırı yok |
+| destinations/ | İlk kurulum 30A profili ve iş başına SQLite ConnectorContext |
 | diagnostics.py | Hata türü ve traceback konumları; exception metni ve locals kaydedilmez |
 | web/collection.js | Aynı plaj ekranı; eklenen/kaldırılan/değişen/aynı kayıt özeti |
 
@@ -46,6 +46,11 @@ Python 3.12+, FastAPI/Uvicorn, bağımsız HTML/CSS/JavaScript ve SQLite kullan�
 
 ```mermaid
 erDiagram
+    destinations ||--o{ sources : destination_id
+    destinations ||--o{ regions : destination_id
+    destinations ||--o{ jobs : destination_id
+    destinations ||--o{ source_runs : destination_id
+    destinations ||--o{ destination_weather_anchors : destination_id
     sources ||--o{ jobs : source_id
     sources ||--o{ source_runs : source_id
     jobs ||--o| source_runs : job_id
@@ -107,3 +112,7 @@ Batı/orta/doğu noktaları 53 Visit South Walton plaj kaydının boylam sırala
 `upgrade_v5` yalnızca restaurant_records/restaurant_regions ve gerekli index'leri ekler; varsayılan seed yöntemi/notunu tam eşleşme koşullarıyla düzeltir. Kayıtlar source_runs'a, mahalle ilişkileri restoran kaydına ve mevcut regions tablosuna bağlıdır. Opaque mahalle ID'leri sabitlenmez; 13 canonical isim doğrudan mevcut region ID'lerine eşlenir. Miramar Beach/Seascape/Sandestin ve Restaurants dışı türler alınmaz. Entity matching uygulanmaz.
 
 Raw depolama ana manifest + ayrı HTML response dosyalarından oluşur. Snapshot yalnızca generic transaction başarıyla bittiğinde görünür. Liste/detay API'leri read-only'dir; raw endpoint yalnızca seçili run'ın manifestini indirir. Menü/fiyat, ratings/reviews, own-site crawling, scheduler ve AI kapsam dışında kalır. Güvenilir kaynak tarihi bulunmadığında source_updated NULL'dır. [Veri sözleşmesi ve testler](M4-RESTORAN-VERISI.md).
+
+## v0.6 sınırları
+
+`migration_v6.py` source/region global unique kısıtlarını destinasyon kapsamına taşır; jobs/runs/entities provenance ve FK alanları ekler. Bootstrap ve SSE sadece seçili destinasyonu okur. Frontend request nesli geçiş sonrası eski yanıtları reddeder. Direct ID endpoint’leri kararlı kimliklerle çalışır; bu yerel ayrım bir erişim yetkilendirme sistemi değildir. [M5 ayrıntıları](M5-DESTINASYON-KATMANI.md).

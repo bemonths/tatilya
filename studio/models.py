@@ -3,24 +3,26 @@ from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
-from .catalog import CADENCES, CATEGORIES, METHODS, REGIONS
+from .catalog import CADENCES, CATEGORIES, METHODS
 
 
 class SourceInput(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    destination_id: str = Field(min_length=1, max_length=80)
+    scope_region_id: str | None = None
     name: str = Field(min_length=2, max_length=160)
     url: HttpUrl
     category: str = "Genel"
-    region: str = "Tüm 30A"
+    region: str = Field(default="", max_length=160)
     method: str = "Belirlenecek"
     cadence: str = "Haftalık"
     notes: str = Field(default="", max_length=3000)
     enabled: bool = True
 
-    @field_validator("category", "region", "method", "cadence")
+    @field_validator("category", "method", "cadence")
     @classmethod
     def known_value(cls, value, info):
-        choices = {"category": CATEGORIES, "region": REGIONS, "method": METHODS, "cadence": CADENCES}
+        choices = {"category": CATEGORIES, "method": METHODS, "cadence": CADENCES}
         if value not in choices[info.field_name]:
             raise ValueError("Listeden geçerli bir değer seçin.")
         return value
@@ -40,10 +42,12 @@ class SourceInput(BaseModel):
 
 
 class SourceUpdate(SourceInput):
+    destination_id: str | None = None
     expected_version: int = Field(ge=1)
 
 
 class JobInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["catalog_audit", "source_collection", "beach_collection"] = "catalog_audit"
+    destination_id: str | None = None
     source_id: str | None = Field(default=None, min_length=1, max_length=64)

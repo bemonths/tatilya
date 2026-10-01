@@ -9,7 +9,6 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 from .base import CollectionResult, SourceError, CollectionCanceled
-from .weather_anchors import ANCHORS, ANCHOR_PROVENANCE
 
 SOURCE_URL = "https://www.weather.gov/"
 API_ROOT = "https://api.weather.gov"
@@ -90,7 +89,7 @@ def parse_location(body, anchor):
     zone = text(p.get("timeZone"))
     if not re.fullmatch(r"[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+", zone):
         raise SourceError("NWS saat dilimi eksik veya geçersiz.")
-    result = {**anchor, "cwa": p["cwa"], "grid_x": p["gridX"], "grid_y": p["gridY"], "time_zone": zone}
+    result = {**{k:anchor[k] for k in ("anchor_key","label","source_beach_name","source_beach_external_id","latitude","longitude")}, "cwa": p["cwa"], "grid_x": p["gridX"], "grid_y": p["gridY"], "time_zone": zone}
     for field, key in (("forecast_url", "forecast"), ("forecast_hourly_url", "forecastHourly"),
                        ("forecast_grid_data_url", "forecastGridData"), ("forecast_zone_url", "forecastZone"),
                        ("county_url", "county"), ("observation_stations_url", "observationStations")):
@@ -162,7 +161,7 @@ def parse_alerts(body):
 class APIReader:
     def __init__(self, client, raw_path, canceled):
         self.client, self.raw_path, self.canceled = client, raw_path, canceled
-        self.bundle = {"connector": "nws-weather/1", "provenance": ANCHOR_PROVENANCE, "responses": []}
+        self.bundle = {"connector": "nws-weather/1", "provenance": {"selection": "Destination weather anchors; per-response coordinates retained"}, "responses": []}
 
     def save(self, anchor, kind, url, response, content):
         self.bundle["responses"].append({"sequence": len(self.bundle["responses"]) + 1,
@@ -231,17 +230,18 @@ class APIReader:
         raise SourceError("NWS isteği tamamlanamadı.")
 
 
-def collect(raw_path, progress, canceled, *, client=None):
+def collect(raw_path, progress, canceled, *, anchors, client=None):
+    if not anchors: raise SourceError("Bu destinasyon için etkin hava örnek noktası yok.")
     owns_client = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(20, connect=10), verify=True)
     reader = APIReader(client, raw_path, canceled)
     locations, records, alerts, anchor_stamps = [], [], {}, {}
     try:
-        for index, anchor in enumerate(ANCHORS):
+        for index, anchor in enumerate(anchors):
             check_canceled(canceled)
             key = anchor["anchor_key"]
             point = f"{anchor['latitude']},{anchor['longitude']}"
-            progress(5 + index * 28, f"{anchor['label']} · NWS grid bilgisi okunuyor.")
+            progress(5 + int(index * 80 / len(anchors)), f"{anchor['label']} · NWS grid bilgisi okunuyor.")
             location = parse_location(reader.get(f"{API_ROOT}/points/{point}", anchor, "points"), anchor)
             locations.append(location)
             stamps = {}
@@ -271,7 +271,7 @@ def collect(raw_path, progress, canceled, *, client=None):
         source_updated = max((s for s in source_stamps if s), key=lambda s: datetime.fromisoformat(s.replace("Z", "+00:00")), default=None)
         metadata = {"anchors": len(locations), "forecast_period_count": sum(r["forecast_kind"] == "period" for r in records),
                     "hourly_period_count": sum(r["forecast_kind"] == "hourly" for r in records), "alert_count": len(alerts),
-                    "source_timestamps": anchor_stamps, "anchor_provenance": ANCHOR_PROVENANCE}
+                    "source_timestamps": anchor_stamps, "anchor_provenance": {"selection": "Destinasyonda yapılandırılmış örnek noktaları"}}
         progress(90, f"{len(records)} tahmin dönemi ve {len(alerts)} uyarı doğrulandı.")
         return CollectionResult(records, len(records), 0, source_updated, metadata,
                                 {"locations": locations, "alerts": list(alerts.values())})
@@ -293,8 +293,8 @@ class WeatherConnector:
     def supports(self, source):
         return source["url"] == SOURCE_URL
 
-    def collect(self, source, raw_path, progress, canceled):
-        return collect(raw_path, progress, canceled)
+    def collect(self, source, raw_path, progress, canceled, *, context):
+        return collect(raw_path, progress, canceled, anchors=context.weather_anchors)
 
     def store_records(self, con, run_id, records, related=None):
         for location in related["locations"]:

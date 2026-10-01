@@ -1,3 +1,4 @@
+from studio.destinations.thirty_a import ANCHORS, ANCHOR_PROVENANCE
 """Synthetic NWS responses only; no real HTTP in this module or pytest suite."""
 import copy
 import hashlib
@@ -70,14 +71,14 @@ class NWSMock:
 
 def run_mock(tmp_path, handler=None, canceled=lambda: False):
     with httpx.Client(transport=httpx.MockTransport(handler or NWSMock())) as client:
-        return weather.collect(tmp_path / 'source.json', lambda *args: None, canceled, client=client)
+        return weather.collect(tmp_path / 'source.json', lambda *args: None, canceled, client=client, anchors=ANCHORS)
 
 
 def install_mock(monkeypatch, handler):
     original = weather.collect
-    def collect(path, progress, canceled):
+    def collect(path, progress, canceled, *, anchors):
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-            return original(path, progress, canceled, client=client)
+            return original(path, progress, canceled, client=client, anchors=anchors)
     monkeypatch.setattr(weather, 'collect', collect)
 
 
@@ -94,11 +95,11 @@ def no_retry_delay(monkeypatch):
 
 
 def test_anchors_exact_and_registry_metadata(tmp_path):
-    assert [(a['anchor_key'], a['latitude'], a['longitude'], a['source_beach_external_id']) for a in weather.ANCHORS] == [
+    assert [(a['anchor_key'], a['latitude'], a['longitude'], a['source_beach_external_id']) for a in ANCHORS] == [
         ('west', 30.35548, -86.2638, '5c81ab02f836f9166348e96c'),
         ('central', 30.3167, -86.12845, '5c81a5acf836f90dc03cccca'),
         ('east', 30.2713, -85.99579, '5c81a6a2f836f9166348e961')]
-    assert 'mahalle merkezleri değildir' in weather.ANCHOR_PROVENANCE['scope']
+    assert 'mahalle merkezleri değildir' in ANCHOR_PROVENANCE['scope']
     assert len(DEFAULT_REGISTRY.connectors) == 3
     with TestClient(create_app(tmp_path)) as client:
         for rows in (client.get('/api/sources').json(), client.get('/api/bootstrap').json()['sources']):
@@ -106,7 +107,7 @@ def test_anchors_exact_and_registry_metadata(tmp_path):
             assert s['connector'] == {'name': 'nws-weather', 'version': 'nws-weather/1', 'method': 'API'}
             beach = next(s for s in rows if s['url'] == beaches.SOURCE_URL)
             assert beach['connector']['method'] == 'JSON'
-        assert client.get('/api/health').json()['version'] == '0.5.0'
+        assert client.get('/api/health').json()['version'] == '0.6.0'
 
 
 def test_full_collection_counts_nulls_dedupe_provenance_and_raw(tmp_path):
@@ -132,7 +133,7 @@ def test_full_collection_counts_nulls_dedupe_provenance_and_raw(tmp_path):
     raw = json.loads((tmp_path / 'source.json').read_text(encoding='utf-8'))
     assert len(raw['responses']) == 12
     assert [r['sequence'] for r in raw['responses']] == list(range(1, 13))
-    assert raw['responses'][0]['anchor'] == weather.ANCHORS[0]
+    assert all(raw['responses'][0]['anchor'][k]==v for k,v in ANCHORS[0].items())
     assert json.loads(raw['responses'][0]['body']) == points()
 
 
@@ -159,7 +160,7 @@ def test_response_endpoint_rejected_before_following(tmp_path, url):
 def test_points_required_fields(field, bad):
     data = points(); data['properties'][field] = bad
     with pytest.raises(SourceError):
-        weather.parse_location(data, weather.ANCHORS[0])
+        weather.parse_location(data, ANCHORS[0])
 
 
 @pytest.mark.parametrize('change', ['empty', 'duplicate', 'time', 'naive', 'percent', 'daytime'])
@@ -307,7 +308,7 @@ def make_v3(path):
 
 
 def snapshot_tables(con):
-    return {name: con.execute(f'SELECT * FROM {name} ORDER BY rowid').fetchall() for name in (
+    return {name: [row[:{'sources':12,'jobs':12,'source_runs':17,'regions':2,'entities':8}.get(name,len(row))] for row in con.execute(f'SELECT * FROM {name} ORDER BY rowid').fetchall()] for name in (
         'sources', 'source_history', 'jobs', 'source_runs', 'beach_records', 'regions', 'entities', 'entity_sources')}
 
 
@@ -317,7 +318,7 @@ def test_v3_migration_preserves_every_table_and_raw_with_backup(tmp_path):
     raw = (tmp_path / 'raw/old-success/source.html').read_bytes()
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         assert snapshot_tables(con) == before
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
@@ -335,7 +336,7 @@ def test_fresh_and_legacy_upgrade_chains(tmp_path, version):
     if version: make_legacy_db(path, version)
     db = Database(path); db.initialize()
     with db.connect() as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         for table in ('weather_locations', 'weather_forecast_periods', 'weather_alerts', 'weather_alert_anchors'):
             assert con.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0

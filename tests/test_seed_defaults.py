@@ -32,9 +32,9 @@ def test_migration_updates_only_exact_nws_defaults(tmp_path, notes, method, url,
     with sqlite3.connect(path) as con:
         after = con.execute("SELECT * FROM sources WHERE id='nws'").fetchone()
         expected = list(before); expected[5] = expected_method; expected[7] = expected_notes
-        assert list(after) == expected
+        assert list(after) == expected + ["30a",None]
         assert con.execute('SELECT * FROM source_history').fetchall() == history
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con:
         assert con.execute("SELECT * FROM sources WHERE id='nws'").fetchone() == before
@@ -48,7 +48,7 @@ def test_migration_beach_method_preserves_user_choice(tmp_path, method, expected
     with sqlite3.connect(path) as con:
         con.execute("UPDATE sources SET method=? WHERE id='source-a'", (method,))
     db = Database(path); before = db.source('source-a'); db.initialize()
-    assert db.source('source-a') == {**before, 'method': expected}
+    assert db.source('source-a') == {**before, 'method': expected, 'destination_id':'30a','scope_region_id':None}
 
 
 def test_fresh_seed_methods_and_nws_description(tmp_path):

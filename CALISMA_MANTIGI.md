@@ -1,6 +1,6 @@
 # 30A Studio — Çalışma mantığı
 
-Bu belge **v0.5.0** davranışını açıklar. Uygulama, 30A kaynak verilerini yerel olarak toplar ve sürümlerini saklar. Housing Atlas bağımsız bir projedir; kodu, verisi, ayarları veya tarayıcı profili kullanılmaz.
+Bu belge **v0.6.0** davranışını açıklar. Uygulama, 30A kaynak verilerini yerel olarak toplar ve sürümlerini saklar. Housing Atlas bağımsız bir projedir; kodu, verisi, ayarları veya tarayıcı profili kullanılmaz.
 
 ## Çalışan kapsam
 
@@ -14,7 +14,7 @@ Canonical bölge ve entity tabloları yalnızca veri modelinin temelidir. Otomat
 
 Varsayılan veri alanı `data/`, veritabanı `data/studio.sqlite3` dosyasıdır. `--data-dir` ayrı alan seçer. Tarayıcı sekmesini kapatmak sunucuyu durdurmaz; standart başlatma penceresinde Ctrl+C kullanılır.
 
-Şema sürümü 5'tir. v0.1/v0.2/v0.3/v0.4 açılırken SQLite backup API ile `data/backups/` altında yükseltme öncesi kopya alınır. Şema değişiklikleri ve veri aktarımı tek transaction içindedir; hata olursa geri alınır. Daha yeni bir şema bu uygulama sürümüyle açılmaz.
+Şema sürümü 6’dır. v0.1/v0.2/v0.3/v0.4/v0.5 açılırken SQLite backup API ile `data/backups/` altında yükseltme öncesi kopya alınır. Şema değişiklikleri ve veri aktarımı tek transaction içindedir; hata olursa geri alınır. Daha yeni bir şema bu uygulama sürümüyle açılmaz.
 
 ## Ana akış
 
@@ -160,6 +160,12 @@ Ham dosyalar `raw/<run-id>/listing/0001.html` ve `detail/NNNN.html` gibi sayısa
 
 Yeni API: `/api/restaurant-runs`, `/api/restaurant-runs/{id}`, `/api/restaurant-runs/{id}/raw`. Domain API yalnızca başarılı restoran sürümlerini sunar; generic source-runs başarısız/iptal çekimleri de korur. Ham indirme yalnızca o run'ın raw dizinindeki manifest.json dosyasına izin verir. UI Plaj/Hava/Restoranlar sekmeleri, tarihli sürümler, fark sayıları, arama ve üç filtre içerir; iş sonucundan restoran sekmesi açılır. Dış bağlantılar noopener/noreferrer kullanır.
 
-v4→v5 migration yedek aldıktan sonra restoran tablolarını ekler. Diğer domain kayıtlarını, geçmişi ve raw dosyaları değiştirmez. Tam restoran seed URL'si için method yalnızca Belirlenecek ise HTML olur; notes yalnızca eski varsayılan metne eşitse güncellenir. Koşullar bağımsızdır; kullanıcı notu/yöntemi korunur. Fresh DB ve v1/v2/v3/v4 zinciri şema 5'e ulaşır. Kapsam, HTTP sınırları ve testler: [M4-RESTORAN-VERISI](docs/M4-RESTORAN-VERISI.md).
+v4→v5 migration yedek aldıktan sonra restoran tablolarını ekler. Diğer domain kayıtlarını, geçmişi ve raw dosyaları değiştirmez. Tam restoran seed URL'si için method yalnızca Belirlenecek ise HTML olur; notes yalnızca eski varsayılan metne eşitse güncellenir. Koşullar bağımsızdır; kullanıcı notu/yöntemi korunur. Fresh DB ve v1/v2/v3/v4/v5 zinciri şema 6’ya ulaşır. Kapsam, HTTP sınırları ve testler: [M4-RESTORAN-VERISI](docs/M4-RESTORAN-VERISI.md).
 
 Restoran kaynağının açılış onarımı, şema zaten 5 olsa da çalışır. `sources/url_identity.py` izinli HTTPS host alias’larını ve son slash farkını normalize eder; query/fragment, credentials, farklı host/port ve belirsiz path biçimlerini reddeder. `connector_defaults.py` aynı supports kontrolüyle sadece Belirlenecek yöntemini ve birebir eski seed notunu koşullu düzeltir. Kaynak URL’si, diğer kullanıcı alanları, source.version ve source_history değişmez; doğru alanlar yeniden yazılmaz. Plaj/hava supports davranışları korunur.
+
+## Destinasyon bağlamı
+
+Global seçici `studio.destination_id` tarayıcı kaydını kullanır. Her liste/bootstrap/SSE isteği seçili destinasyonla gönderilir. Sunucuda ortak seçim yoktur. Source create seçili destinasyonu zorunlu taşır; normal edit kaynağı başka destinasyona taşıyamaz. JobQueue SQLite’tan ConnectorContext alır. Kaynak toplama işi ve run source’un destination_id değerini kaydeder; katalog kontrolü yalnız seçili kaynakları inceler. Diff başka destinasyonla karşılaştırma yapmaz. Geç gelen yanıtlar, önceki filtre ve detay seçimleri destinasyon geçişinde bırakılır.
+
+30A metadata, seed, bölge ve hava noktası varsayılanları `destinations/thirty_a.py` içinde; runtime kaynak SQLite’tır. Hava generic, South Walton plaj/restoran connector’ları 30A kapsamlıdır. [M5 belgesi](docs/M5-DESTINASYON-KATMANI.md) migration, testler ve yeni destinasyon kontrol listesini içerir.

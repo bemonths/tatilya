@@ -1,3 +1,4 @@
+from studio.destinations.thirty_a import ANCHORS, ANCHOR_PROVENANCE
 """Synthetic HTML only; suite-wide no_real_http prevents internet access."""
 import copy
 import hashlib
@@ -75,9 +76,9 @@ def run_mock(tmp_path, handler=None, canceled=lambda: False):
 
 def install_mock(monkeypatch, handler):
     original = r.collect
-    def collect(path, progress, canceled):
+    def collect(path, progress, canceled, *, regions=None):
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-            return original(path, progress, canceled, client=client)
+            return original(path, progress, canceled, client=client, regions=regions)
     monkeypatch.setattr(r, 'collect', collect)
 
 
@@ -104,7 +105,7 @@ def test_registry_and_fresh_seed(tmp_path):
         assert DEFAULT_REGISTRY.for_source(source).diff_enabled
         assert data['restaurant_runs'] == []
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 6
 
 
 @pytest.mark.parametrize('version', [1, 2, 3, 4])
@@ -115,7 +116,7 @@ def test_upgrade_chain(tmp_path, version):
     else: make_legacy_db(path, version)
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         assert con.execute('SELECT COUNT(*) FROM restaurant_records').fetchone()[0] == 0
         assert con.execute('SELECT COUNT(*) FROM restaurant_regions').fetchone()[0] == 0
@@ -154,9 +155,12 @@ def test_v4_preserves_beach_weather_entities_and_raw(tmp_path):
     with db.connect() as con:
         con.execute("INSERT INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ('nws','NWS',weather.SOURCE_URL,'Hava','Tüm 30A','API','Haftalık','Weather',1,1,'now','now'))
     source = db.source('nws'); connector = weather.WeatherConnector()
-    identifier = db.add_job('source_collection','Weather snapshot',source_id=source['id'],connector=connector)
+    identifier='weather-before-upgrade'
+    with db.connect() as con:
+        con.execute("INSERT INTO jobs(id,kind,title,status,created_at,source_id) VALUES (?,'source_collection','Weather snapshot','queued','now',?)",(identifier,source['id']))
+        con.execute("INSERT INTO source_runs(id,source_id,job_id,status,connector_name,connector_version) VALUES (?,?,?,'queued',?,?)",(identifier,source['id'],identifier,connector.name,connector.version))
     with httpx.Client(transport=httpx.MockTransport(NWSMock())) as client:
-        batch = weather.collect(tmp_path/'weather.json',lambda *args:None,lambda:False,client=client)
+        batch = weather.collect(tmp_path/'weather.json',lambda *args:None,lambda:False,client=client,anchors=ANCHORS)
     db.record_raw_artifact(identifier,tmp_path/'weather.json')
     db.complete_source_run(identifier,batch,connector)
     tables = ('weather_locations','weather_forecast_periods','weather_alerts','weather_alert_anchors')
@@ -499,7 +503,7 @@ def test_nullable_description_published_to_db_api_and_metadata(tmp_path, monkeyp
         assert snapshot['run']['metadata']['description_missing_count'] == 1
         assert snapshot['run']['record_count'] == 2
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 5
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 6
             description_column = next(row for row in con.execute('PRAGMA table_info(restaurant_records)') if row['name'] == 'description')
             assert description_column['notnull'] == 0
             assert con.execute('SELECT COUNT(*) FROM restaurant_records WHERE run_id=? AND description IS NULL', (job['id'],)).fetchone()[0] == 1

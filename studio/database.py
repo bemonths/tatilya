@@ -6,7 +6,10 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .catalog import SEEDS
+from .destinations import DEFAULT_PROFILE, DEFAULT_DESTINATION_ID
+from .destinations.context import ConnectorContext
+from .migration_v6 import upgrade_v6
+SEEDS = DEFAULT_PROFILE.SEEDS
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -41,22 +44,25 @@ class Database:
         with self.connect() as con:
             con.execute("PRAGMA journal_mode=WAL")
             version = con.execute("PRAGMA user_version").fetchone()[0]
-            if version > 5:
+            if version > 6:
                 raise RuntimeError("Bu veri dosyası daha yeni bir uygulama sürümüne ait.")
-            if version == 5:
+            if version == 6:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4):
+            if version in (1, 2, 3, 4, 5):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
+            con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4):
+            if version in (3, 4, 5):
                 if version == 3:
                     upgrade_v4(con)
-                upgrade_v5(con)
+                if version < 5:
+                    upgrade_v5(con)
+                upgrade_v6(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -98,17 +104,35 @@ class Database:
                 for name, url, category, notes, method in SEEDS:
                     stamp, identifier = now(), uuid.uuid4().hex
                     con.execute("INSERT INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (
-                        identifier, name, url, category, "Tüm 30A", method, "Haftalık", notes,
+                        identifier, name, url, category, f"Tüm {DEFAULT_PROFILE.METADATA["name"]}", method, "Haftalık", notes,
                         1, 1, stamp, stamp))
                 con.execute("INSERT INTO metadata VALUES ('seeded', ?)", (now(),))
             upgrade_v3(con)
             upgrade_v4(con)
             upgrade_v5(con)
+            upgrade_v6(con)
             reconcile_connector_defaults(con)
 
-    def sources(self):
+    def destinations(self):
         with self.connect() as con:
-            return [dict(row) for row in con.execute("SELECT * FROM sources ORDER BY created_at, name")]
+            return [dict(r) for r in con.execute("SELECT * FROM destinations WHERE enabled=1 ORDER BY sort_order,id")]
+
+    def destination(self, identifier=DEFAULT_DESTINATION_ID):
+        with self.connect() as con:
+            row=con.execute("SELECT * FROM destinations WHERE id=? AND enabled=1",(identifier,)).fetchone()
+            if not row: raise KeyError(identifier)
+            return dict(row)
+
+    def context(self, identifier=DEFAULT_DESTINATION_ID):
+        destination=self.destination(identifier)
+        with self.connect() as con:
+            regions=tuple(dict(r) for r in con.execute("SELECT * FROM regions WHERE destination_id=? ORDER BY sort_order,id",(identifier,)))
+            anchors=tuple({**dict(r), "source_beach_external_id":r["provenance_external_id"] or "", "source_beach_name":r["provenance_name"] or ""} for r in con.execute("SELECT * FROM destination_weather_anchors WHERE destination_id=? AND enabled=1 ORDER BY sort_order,anchor_key",(identifier,)))
+        return ConnectorContext(destination,regions,anchors)
+
+    def sources(self, destination_id=DEFAULT_DESTINATION_ID):
+        with self.connect() as con:
+            return [dict(row) for row in con.execute("SELECT * FROM sources WHERE destination_id=? ORDER BY created_at, name",(destination_id,))]
 
     def source(self, identifier):
         with self.connect() as con:
@@ -118,17 +142,27 @@ class Database:
     def save_source(self, data, identifier=None, expected_version=None):
         identifier = identifier or uuid.uuid4().hex
         stamp = now()
+        destination_id=data.get("destination_id", DEFAULT_DESTINATION_ID)
+        context=self.context(destination_id)
+        scope=data.get("scope_region_id")
+        if scope is not None and scope not in {r["id"] for r in context.canonical_regions}:
+            raise Conflict("Bölge seçili destinasyona ait değil.")
+        if scope is None:
+            scope=next((r["id"] for r in context.canonical_regions if r["name"]==data["region"]),None)
         fields = (data["name"], data["url"], data["category"], data["region"], data["method"],
                   data["cadence"], data["notes"], int(data["enabled"]))
         try:
             with self.connect() as con:
                 if expected_version is None:
-                    con.execute("INSERT INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                                (identifier, *fields, 1, stamp, stamp))
+                    con.execute("INSERT INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                (identifier, *fields, 1, stamp, stamp,destination_id,scope))
                 else:
+                    existing=con.execute("SELECT destination_id FROM sources WHERE id=?",(identifier,)).fetchone()
+                    if existing and existing[0] != destination_id:
+                        raise Conflict("Kaynağın destinasyonu değiştirilemez.")
                     cursor = con.execute("""UPDATE sources SET name=?, url=?, category=?, region=?, method=?,
-                        cadence=?, notes=?, enabled=?, version=version+1, updated_at=? WHERE id=? AND version=?""",
-                        (*fields, stamp, identifier, expected_version))
+                        cadence=?, notes=?, enabled=?, scope_region_id=?, version=version+1, updated_at=? WHERE id=? AND version=?""",
+                        (*fields, scope, stamp, identifier, expected_version))
                     if not cursor.rowcount:
                         if not con.execute("SELECT 1 FROM sources WHERE id=?", (identifier,)).fetchone():
                             raise KeyError(identifier)
@@ -140,23 +174,28 @@ class Database:
         except sqlite3.IntegrityError as exc:
             raise Conflict("Bu adres kaynak kütüphanesinde zaten var.") from exc
 
-    def add_job(self, kind="catalog_audit", title="Kaynak kayıtlarını kontrol et", source_id=None, connector=None, source_version=None):
+    def add_job(self, kind="catalog_audit", title="Kaynak kayıtlarını kontrol et", source_id=None, connector=None, source_version=None, destination_id=DEFAULT_DESTINATION_ID):
         identifier = uuid.uuid4().hex
         try:
             with self.connect() as con:
                 con.execute("BEGIN IMMEDIATE")
+                self.destination(destination_id)
                 if connector:
                     source = con.execute("SELECT * FROM sources WHERE id=?", (source_id,)).fetchone()
                     if (not source or not source["enabled"] or
                             (source_version is not None and source["version"] != source_version)):
                         raise Conflict("Kaynak değişti veya arşivlendi. Listeyi yenileyip yeniden deneyin.")
-                con.execute("INSERT INTO jobs(id,kind,title,status,created_at,message,source_id) VALUES (?,?,?,?,?,?,?)",
-                            (identifier, kind, title, "queued", now(), "Sırada bekliyor", source_id))
+                if source_id:
+                    source=con.execute("SELECT * FROM sources WHERE id=?",(source_id,)).fetchone()
+                    if not source: raise Conflict("Kaynak bulunamadı.")
+                    destination_id=source["destination_id"]
+                con.execute("INSERT INTO jobs(id,kind,title,status,created_at,message,source_id,destination_id) VALUES (?,?,?,?,?,?,?,?)",
+                            (identifier, kind, title, "queued", now(), "Sırada bekliyor", source_id,destination_id))
                 if connector:
                     con.execute("""INSERT INTO source_runs
-                        (id,source_id,job_id,status,source_url,connector_name,connector_version,metadata)
-                        VALUES (?,?,?,'queued',?,?,?,?)""", (identifier, source_id, identifier, source["url"],
-                        connector.name, connector.version, json.dumps({"source_name": source["name"], "source_version": source["version"]})))
+                        (id,source_id,job_id,status,source_url,connector_name,connector_version,destination_id,metadata)
+                        VALUES (?,?,?,'queued',?,?,?,?,?)""", (identifier, source_id, identifier, source["url"],
+                        connector.name, connector.version, destination_id, json.dumps({"source_name": source["name"], "source_version": source["version"]})))
         except sqlite3.IntegrityError as exc:
             raise Conflict("Aynı türde bir iş zaten sırada veya çalışıyor.") from exc
         return identifier
@@ -169,9 +208,9 @@ class Database:
         result.pop("diagnostic", None)
         return result
 
-    def jobs(self):
+    def jobs(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
-            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id ORDER BY jobs.rowid DESC LIMIT 100")]
+            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
 
     def job(self, identifier):
         with self.connect() as con:
@@ -222,10 +261,10 @@ class Database:
         result["metadata"] = json.loads(result["metadata"])
         return result
 
-    def source_runs(self, source_id=None):
+    def source_runs(self, source_id=None, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
             return [self.decode_run(row) for row in con.execute(
-                "SELECT * FROM source_runs WHERE (? IS NULL OR source_id=?) ORDER BY rowid DESC", (source_id, source_id))]
+                "SELECT * FROM source_runs WHERE (? IS NULL OR source_id=?) AND destination_id=? ORDER BY rowid DESC", (source_id, source_id,destination_id))]
 
     def source_run(self, identifier):
         with self.connect() as con:
@@ -251,8 +290,8 @@ class Database:
             if connector and not getattr(connector, "diff_enabled", True):
                 return {"available": False, "reason": "Bu veri türünde kayan tahmin penceresi kullanıldığı için kayıt farkı özeti gösterilmiyor."}
             previous = con.execute("""SELECT id,connector_version FROM source_runs WHERE source_id=? AND connector_name=?
-                AND status='done' AND rowid<? ORDER BY rowid DESC LIMIT 1""",
-                (run["source_id"], run["connector_name"], run["sequence"])).fetchone()
+                AND destination_id=? AND status='done' AND rowid<? ORDER BY rowid DESC LIMIT 1""",
+                (run["source_id"], run["connector_name"],run["destination_id"], run["sequence"])).fetchone()
             if not previous:
                 return {"available": False, "previous_run_id": None, "reason": "Önceki başarılı sürüm yok."}
             connector = self.registry.by_name(run["connector_name"])
@@ -304,10 +343,10 @@ class Database:
                         (message, stamp, json.dumps(result), json.dumps(entries, ensure_ascii=False), identifier))
             return True
 
-    def collections(self):
+    def collections(self, destination_id=DEFAULT_DESTINATION_ID):
         """v0.2 plaj ekranı/API için salt okunur uyumluluk görünümü."""
         with self.connect() as con:
-            return [dict(row) for row in con.execute("SELECT collections.* FROM collections JOIN source_runs USING(id) ORDER BY source_runs.rowid DESC")]
+            return [dict(row) for row in con.execute("SELECT collections.* FROM collections JOIN source_runs USING(id) WHERE source_runs.destination_id=? ORDER BY source_runs.rowid DESC",(destination_id,))]
 
     def collection(self, identifier):
         with self.connect() as con:

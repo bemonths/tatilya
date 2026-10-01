@@ -11,7 +11,7 @@ import httpx
 from .base import CollectionResult, SourceError, CollectionCanceled
 from .html_tree import Tree, Node
 from .url_identity import https_source_identity
-from ..regions import REGIONS
+from ..destinations.thirty_a import REGIONS
 
 SOURCE_URL = 'https://www.visitsouthwalton.com/listings/culinary-experiences/'
 HOSTS = {'www.visitsouthwalton.com', 'visitsouthwalton.com'}
@@ -235,13 +235,16 @@ class Reader:
         raise SourceError('Restoran isteği tamamlanamadı.')
 
 
-def collect(raw_path,progress,canceled,*,client=None):
+def collect(raw_path,progress,canceled,*,client=None,regions=None):
+    region_map = REGION_MAP if regions is None else {r["name"]:r["id"] for r in regions}
+    if not region_map or not set(region_map).issubset(REGION_MAP):
+        raise SourceError("Restoran bölge yapılandırması kaynak kapsamıyla eşleşmiyor.")
     own=client is None;client=client or httpx.Client(timeout=httpx.Timeout(20,connect=10),verify=True)
     reader=Reader(client,raw_path,canceled)
     try:
         content,_=reader.get(SOURCE_URL,'filters');filters=parse_filters(content)
         candidates={};page_count=duplicates=0;counts={}
-        for index,neighborhood in enumerate(REGION_MAP):
+        for index,neighborhood in enumerate(region_map):
             progress(5+index*3,f'{neighborhood} · Restaurants dizini okunuyor.')
             pending=[normalized_page(listing_url(filters,neighborhood))];seen=set();region_ids=set()
             while pending:
@@ -268,10 +271,12 @@ def collect(raw_path,progress,canceled,*,client=None):
             if identity(final)!=card['external_id']:raise SourceError('Restoran detay yönlendirmesi kaynak kimliğini değiştirdi.')
             record=parse_detail(content,final,card['neighborhoods'])
             if record['name']!=card['name']:raise SourceError('Restoran kartı ile detay adı uyuşmuyor; kimlik doğrulanamadı.')
+            for region in record["regions"]:
+                region["canonical_region_id"]=region_map[region["source_neighborhood"]]
             records.append(record)
         check(canceled)
         if not records:raise SourceError('13 hedef mahallede restoran bulunamadı; kaynak yapısını kontrol edin.')
-        metadata={'target_neighborhood_count':len(REGION_MAP),'listing_page_count':page_count,
+        metadata={'target_neighborhood_count':len(region_map),'listing_page_count':page_count,
                   'unique_restaurant_count':len(records),'detail_page_count':len(records),'duplicate_count':duplicates,
                   'neighborhood_counts':counts,'business_type':'Restaurants','excluded_neighborhoods':sorted(EXCLUDED),
                   'filters':filters,'represented_neighborhood_count':sum(bool(c) for c in counts.values()),
@@ -286,8 +291,9 @@ class RestaurantsConnector:
     name='south-walton-restaurants';version='south-walton-restaurants/1';method='HTML';diff_enabled=True
     raw_filename='manifest.json'
     def supports(self,source):
-        return https_source_identity(source['url'], host_aliases=SOURCE_HOST_ALIASES) == SOURCE_IDENTITY
-    def collect(self,source,raw_path,progress,canceled):return collect(raw_path,progress,canceled)
+        return source.get('destination_id') == '30a' and https_source_identity(source['url'], host_aliases=SOURCE_HOST_ALIASES) == SOURCE_IDENTITY
+    def collect(self,source,raw_path,progress,canceled,*,context):
+        return collect(raw_path,progress,canceled,regions=context.canonical_regions)
     def store_records(self,con,run_id,records,related=None):
         for record in records:
             row={k:v for k,v in record.items() if k not in ('regions','source_neighborhoods')}

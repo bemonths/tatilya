@@ -17,13 +17,14 @@
       <span class="brand-symbol">30A<span class="brand-wave">≈</span></span>
       <span>studio<span class="brand-sub">VERİ & İÇERİK</span></span>
     </a>
-    <div class="workspace-label"><span class="location-dot"></span> Florida <span class="divider">/</span> Scenic Highway 30A</div>
-    <div class="top-actions"><span class="connection" id="connection">Bağlanıyor</span><button id="jobs-toggle" class="quiet" aria-controls="jobs-panel" aria-expanded="false">İşler <span class="count" id="jobs-count">0</span></button></div>
+    <div class="workspace-label" id="destination-subtitle"></div>
+    <div class="top-actions">
+      <label class="destination-control">Destinasyon <select id="destination-select" aria-label="Destinasyon"></select></label><span class="connection" id="connection">Bağlanıyor</span><button id="jobs-toggle" class="quiet" aria-controls="jobs-panel" aria-expanded="false">İşler <span class="count" id="jobs-count">0</span></button></div>
   </header>
   <aside class="sidebar">
-    <div class="project-label"><span class="eyebrow">ÇALIŞMA ALANI</span><strong>30A İçerik Stüdyosu</strong><span class="muted">Bölge bilgisi, tek bir akışta.</span></div>
+    <div class="project-label"><span class="eyebrow">ÇALIŞMA ALANI</span><strong id="destination-workspace">İçerik Stüdyosu</strong><span class="muted">Bölge bilgisi, tek bir akışta.</span></div>
     <nav id="navigation" aria-label="Üretim aşamaları"></nav>
-    <div class="sidebar-bottom"><a href="#settings" class="settings-link"><span aria-hidden="true">⚙</span> Çalışma alanı bilgisi</a><div class="version"><span class="live-dot"></span> Veri toplama <span id="app-version">v0.5.0</span></div></div>
+    <div class="sidebar-bottom"><a href="#settings" class="settings-link"><span aria-hidden="true">⚙</span> Çalışma alanı bilgisi</a><div class="version"><span class="live-dot"></span> Veri toplama <span id="app-version">v0.6.0</span></div></div>
   </aside>
   <main id="main" tabindex="-1"><div class="loading">Çalışma alanı açılıyor…</div></main>
   <aside id="jobs-panel" class="jobs-panel" aria-label="İşler" hidden>

@@ -192,7 +192,8 @@ def test_migration_keeps_existing_sources_and_jobs(tmp_path):
     from tests.legacy import make_legacy_db
     db = Database(tmp_path / "studio.sqlite3")
     make_legacy_db(db.path, version=1)
-    original = db.sources()
+    with db.connect() as con:
+        original = [{**dict(r),"destination_id":"30a","scope_region_id":None} for r in con.execute("SELECT * FROM sources ORDER BY created_at,name")]
     db.initialize()
     assert db.sources() == original
     assert db.job("old-success")["result"] == {"included": 1}

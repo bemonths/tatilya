@@ -16,7 +16,7 @@ def client(tmp_path):
 
 
 def payload(**changes):
-    return {"name": "Deneme kaynağı", "url": "https://example.org/30a", "category": "Konaklama",
+    return {"destination_id":"30a", "name": "Deneme kaynağı", "url": "https://example.org/30a", "category": "Konaklama",
             "region": "Rosemary Beach", "method": "HTML", "cadence": "Haftalık",
             "notes": "Konaklama türü, fiyat ve tarih", "enabled": True, **changes}
 
@@ -76,8 +76,8 @@ def test_duplicate_normalized_url(client):
 
 
 @pytest.mark.parametrize("change", [
-    {"url": "javascript:alert(1)"}, {"url": "file:///C:/private"},
-    {"url": "https://user:password@example.org"}, {"name": " "}, {"category": "Bilinmeyen"},
+    {"destination_id":"30a","url": "javascript:alert(1)"}, {"destination_id":"30a","url": "file:///C:/private"},
+    {"destination_id":"30a","url": "https://user:password@example.org"}, {"name": " "}, {"category": "Bilinmeyen"},
 ])
 def test_invalid_source_rejected(client, change):
     assert client.post("/api/sources", json=payload(**change)).status_code == 422

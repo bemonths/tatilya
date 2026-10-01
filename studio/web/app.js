@@ -1,4 +1,5 @@
-import {api, esc, host, date} from "./api.js";
+import {destinationOptions, storedDestination, persistDestination, resetDestinationState} from "./destinations.js";
+import {api, esc, host, date, setDestination, destinationRevision, destinationPath} from "./api.js";
 import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen} from "./restaurants.js";
@@ -10,6 +11,7 @@ const state = {data:null, page:"sources", selected:null, search:"", category:"",
 const statusLabels = {queued:"Sırada", running:"Çalışıyor", done:"Tamamlandı", failed:"Hata", canceled:"İptal edildi", interrupted:"Yarıda kaldı"};
 const active = job => ["queued", "running"].includes(job.status);
 let toastTimer;
+let events=null;
 let lastCollectionId=null;
 const beachScreen=new BeachScreen();
 const weatherScreen=new WeatherScreen();
@@ -20,6 +22,7 @@ const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen
 const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants"};
 
 function toast(text) {
+  if(!text) return;
   clearTimeout(toastTimer);
   $("#toast").textContent = text;
   $("#toast").hidden = false;
@@ -64,15 +67,15 @@ function render() {
 function renderSources() {
   const sources = state.data.sources.filter(source=>source.enabled);
   const categories = new Set(sources.map(source=>source.category));
-  $("#main").innerHTML = pageHeading("Veri kaynakları", "30A hakkında bildiğimiz her şeyin başlangıç noktası. Kaynakları seç, düzenle ve veri toplamaya hazırla.",
+  $("#main").innerHTML = pageHeading("Veri kaynakları", `${state.data.selected_destination.name} hakkında bildiğimiz her şeyin başlangıç noktası. Kaynakları seç, düzenle ve veri toplamaya hazırla.`,
     `<button data-action="audit">✓ Kayıtları kontrol et</button><button data-action="add" class="primary"><span class="plus">+</span> Kaynak ekle</button>`) +
     `<section class="overview" aria-label="Kaynak özeti">
       <div class="metric"><span class="metric-icon" aria-hidden="true">▤</span><div><div class="metric-number"><strong>${sources.length.toLocaleString("tr")}</strong><span class="metric-label">etkin kaynak</span></div><small>Kütüphaneye eklenen kaynak adayları</small></div></div>
       <div class="metric"><span class="metric-icon" aria-hidden="true">▦</span><div><div class="metric-number"><strong>${categories.size}</strong><span class="metric-label">kategoride kaynak</span></div><small>Konaklamadan etkinliklere</small></div></div>
-      <div class="metric"><span class="metric-icon" aria-hidden="true">⇣</span><div><div class="metric-number"><strong>${state.data.collections[0]?.included_count || 0}</strong><span class="metric-label">son çekimde veri kaydı</span></div><small>${state.data.collections.length?"Plaj erişimleri · "+esc(date(state.data.collections[0].fetched_at)):"Plaj veri toplayıcısı hazır"}</small></div></div>
+      <div class="metric"><span class="metric-icon" aria-hidden="true">⇣</span><div><div class="metric-number"><strong>${state.data.collections[0]?.included_count || 0}</strong><span class="metric-label">son çekimde veri kaydı</span></div><small>${state.data.collections.length?"Plaj erişimleri · "+esc(date(state.data.collections[0].fetched_at)):"Henüz plaj verisi yok"}</small></div></div>
     </section>
     <div class="workspace-grid"><section class="library" aria-label="Kaynak kütüphanesi">
-      <div class="library-title"><h2>Kaynak kütüphanesi</h2><small>30A / South Walton</small></div>
+      <div class="library-title"><h2>Kaynak kütüphanesi</h2><small>${esc(state.data.selected_destination.name)} / ${esc(state.data.selected_destination.subtitle)}</small></div>
       <div class="toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><input type="search" id="source-search" aria-label="Kaynak ara" placeholder="Kaynak adı, adres veya not ara…" value="${esc(state.search)}"></div>
         <select id="category-filter" aria-label="Kategori filtresi">${options(state.data.categories,state.category,"Tüm kategoriler")}</select>
         <select id="region-filter" aria-label="Bölge filtresi">${options(state.data.regions,state.region,"Tüm bölgeler")}</select></div>
@@ -80,7 +83,7 @@ function renderSources() {
       <div class="table-scroll"><table><thead><tr><th scope="col">KAYNAK</th><th scope="col">KATEGORİ</th><th scope="col">YÖNTEM</th><th scope="col">SIKLIK</th><th scope="col">DURUM</th></tr></thead><tbody id="source-rows"></tbody></table></div>
       <div class="table-note"><span aria-hidden="true">ⓘ</span> Kaynak kaydı eklemek veri çekme işlemini başlatmaz.</div>
     </section><section id="source-detail" class="detail" aria-label="Seçili kaynak ayrıntıları"></section></div>
-    <div class="stage-note"><span class="note-mark" aria-hidden="true">↳</span><p><strong>Üç veri toplayıcısı hazır.</strong> <a href="#collect">Veri toplama</a> ekranından South Walton plaj erişimlerini, restoran dizinini ve NWS hava tahminlerini çekebilir, kayıtları ve önceki sürümleri inceleyebilirsin.</p></div>`;
+    <div class="stage-note"><span class="note-mark" aria-hidden="true">↳</span><p><strong>Destinasyonun bağlı kaynakları.</strong> <a href="#collect">Veri toplama</a> ekranından hazır kaynakları çekebilir, kayıtları ve önceki sürümleri inceleyebilirsin.</p></div>`;
   $("#source-search").addEventListener("input", event=>{state.search=event.target.value; renderRows();});
   $("#category-filter").addEventListener("change", event=>{state.category=event.target.value; renderRows();});
   $("#region-filter").addEventListener("change", event=>{state.region=event.target.value; renderRows();});
@@ -136,7 +139,7 @@ function renderQuality() {
 
 function renderSettings() {
   $("#main").innerHTML = pageHeading("Çalışma alanı bilgisi", "30A Studio’nun sürümü ve kayıt konumu.") +
-    `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">30A’ya ait kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
+    `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">Destinasyonların kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
     <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj, hava ve restoran verisi hazır</h2><p>Kaynak kütüphanesi, gerçek plaj, restoran ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
 }
 
@@ -200,7 +203,8 @@ function openEditor(source=null) {
 }
 
 async function refreshSources() {
-  state.data.sources=await api("sources");
+  const sources=await api("sources");
+  state.data.sources=sources;
   render();
 }
 
@@ -210,6 +214,7 @@ $("#source-form").addEventListener("submit", async event=>{
   button.disabled=true;
   $("#form-error").hidden=true;
   const payload=Object.fromEntries(new FormData(event.target));
+  payload.destination_id=state.data.selected_destination.id;
   payload.enabled=state.editing?Boolean(state.editing.enabled):true;
   if(state.editing) payload.expected_version=state.editing.version;
   try {
@@ -282,21 +287,44 @@ for(const id of ["#dialog-close","#dialog-cancel"]) $(id).addEventListener("clic
 document.addEventListener("keydown",event=>{if(event.key==="Escape" && !$("#jobs-panel").hidden && !$("#source-dialog").open) toggleJobs(false);});
 window.addEventListener("hashchange",render);
 
-async function start() {
+async function start(destinationId=storedDestination(localStorage)) {
+  events?.close();events=null;
+  const ticket=setDestination(destinationId);
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen]);
+  lastCollectionId=lastWeatherId=lastRestaurantId=null;
+  $("#source-dialog").close();
+  $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';
+  $("#jobs-content").innerHTML='';
   try {
-    state.data=await api("bootstrap");
+    let data;
+    try { data=await api("bootstrap"); }
+    catch(error) {
+      if(error.stale) return;
+      if(error.status===404 && destinationId && ticket===destinationRevision()) return start(null);
+      throw error;
+    }
+    if(ticket!==destinationRevision()) return;
+    state.data=data;
+    // Resolve the server default before opening requests and event stream.
+    if(!destinationId) { setDestination(data.selected_destination.id); return start(data.selected_destination.id); }
+    persistDestination(localStorage,data.selected_destination.id);
+    $("#destination-subtitle").textContent=data.selected_destination.subtitle || data.selected_destination.name;
+    $("#destination-workspace").textContent=`${data.selected_destination.name} İçerik Stüdyosu`;
+    $("#destination-select").innerHTML=destinationOptions(data.destinations,data.selected_destination.id);
     lastCollectionId=state.data.collections[0]?.id || null;
     lastWeatherId=state.data.weather_runs[0]?.id || null;
     lastRestaurantId=state.data.restaurant_runs?.[0]?.id || null;
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
-    const events=new EventSource("/api/events");
+    events=new EventSource(`/api/${destinationPath("events")}`);
     events.addEventListener("open",()=>{
+      if(ticket!==destinationRevision()) return;
       $("#connection").textContent="Yerel bağlantı";$("#connection").classList.remove("offline");
       refreshSources().catch(()=>{});
     });
     events.addEventListener("jobs",async event=>{
-      state.data.jobs=JSON.parse(event.data);renderJobs();
+      if(ticket!==destinationRevision()) return;
+      state.data.jobs=JSON.parse(event.data).filter(job=>job.destination_id===state.data.selected_destination.id);renderJobs();
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
       const restaurantLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-restaurants");
       if(restaurantLatest && restaurantLatest.id!==lastRestaurantId) {
@@ -326,11 +354,13 @@ async function start() {
         } catch(error) {toast(error.message);}
       }
     });
-    events.addEventListener("error",()=>{$("#connection").textContent="Yeniden bağlanıyor";$("#connection").classList.add("offline");});
+    events.addEventListener("error",()=>{if(ticket!==destinationRevision())return;$("#connection").textContent="Yeniden bağlanıyor";$("#connection").classList.add("offline");});
   } catch(error) {
+    if(error.stale || ticket!==destinationRevision()) return;
     $("#connection").textContent="Bağlantı kurulamadı";$("#connection").classList.add("offline");
     $("#main").innerHTML=`<section class="error-page"><h1>Çalışma alanı açılamadı</h1><p>${esc(error.message)}</p><p>Başlatma penceresinin açık olduğundan emin olup yeniden dene.</p><button class="primary" data-action="reload">Yeniden dene</button></section>`;
   }
 }
 
+$("#destination-select").addEventListener("change",event=>start(event.target.value));
 start();
