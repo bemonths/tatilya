@@ -50,4 +50,8 @@ Başlık, açıklama, makale, video ve görselleri dışa aktar. Çerçevesiz uy
 
 ## Destinasyon temeli — v0.6.0
 
-Şema 6, ilk production destinasyonu 30A, destinasyon kapsamlı sources/regions/jobs/runs/entities, DB hava noktaları, ConnectorContext ve global seçici tamamlandı. Gerçek kullanıcı DB’si önce kopyada doğrulandı; eski veriler korundu. Sentetik ikinci/üçüncü destinasyonlar sadece testlerde kullanıldı. NWS generic kaldı; South Walton connector’ları 30A kapsamına bağlandı. v0.6 kendi dalında kod incelemesine sunulur; main’e merge edilmez. [M5 kapsam ve testler](M5-DESTINASYON-KATMANI.md).
+Şema 6, ilk production destinasyonu 30A, destinasyon kapsamlı sources/regions/jobs/runs/entities, DB hava noktaları, ConnectorContext ve global seçici tamamlandı. Gerçek kullanıcı DB’si önce kopyada doğrulandı; eski veriler korundu. Sentetik ikinci/üçüncü destinasyonlar sadece testlerde kullanıldı. NWS generic kaldı; South Walton connector’ları 30A kapsamına bağlandı. Onaylı v0.6, 1 Ekim 2026'da fast-forward ile main'e alındı ve v0.6.0 etiketiyle sabitlendi. [M5 kapsam ve testler](M5-DESTINASYON-KATMANI.md).
+
+## Konaklama envanteri — v0.7 keşif aşaması
+
+Book>Direct public JSON yolu doğrulandı. Ancak aynı konumun bütün sayfaları farklı tarih aralıklarında farklı kayıt kimlikleri döndürüyor. Tarihten bağımsız tam envanter gereksinimi için veri yolu veya açık kapsam kararı gerekiyor. Bu nedenle henüz schema 7, lodging connector veya yeni ekran eklenmedi; uygulama v0.6.0 olarak kalır. [M6 keşif ve kanıt](M6-KONAKLAMA-KAYNAK-KEŞFİ.md).

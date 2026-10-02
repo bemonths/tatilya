@@ -31,6 +31,7 @@ v0.1/v0.2/v0.3/v0.4/v0.5 veritabanı açılırken önce `data/backups/` içine S
 
 ## Belgeler
 
+- [Konaklama kaynağı keşfi — tam envanter kapsamı henüz doğrulanmadı](docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md)
 - [Uygulamanın çalışma mantığı](CALISMA_MANTIGI.md)
 - [Housing Atlas incelemesi ve 30A mimarisi](docs/MIMARI.md)
 - [Kademeli geliştirme planı](docs/ASAMALAR.md)
