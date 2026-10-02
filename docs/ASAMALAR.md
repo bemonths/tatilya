@@ -54,4 +54,4 @@ Başlık, açıklama, makale, video ve görselleri dışa aktar. Çerçevesiz uy
 
 ## Konaklama envanteri — v0.7 keşif aşaması
 
-Book>Direct public JSON yolu doğrulandı. Ancak aynı konumun bütün sayfaları farklı tarih aralıklarında farklı kayıt kimlikleri döndürüyor. Tarihten bağımsız tam envanter gereksinimi için veri yolu veya açık kapsam kararı gerekiyor. Bu nedenle henüz schema 7, lodging connector veya yeni ekran eklenmedi; uygulama v0.6.0 olarak kalır. [M6 keşif ve kanıt](M6-KONAKLAMA-KAYNAK-KEŞFİ.md).
+Book>Direct public JSON araması doğrulandı; aynı konumun bütün sayfaları farklı tarihlerde farklı kayıt kimlikleri döndürüyor. 3 Ekim'deki ikinci keşfin kararı C: public tarihsiz tam unit/provider inventory yolu hâlâ bulunamadı. Bundle, clone config, sitemap/dizinler ve resmi parent/child modeli incelendi; güncel resmi yönerge accommodation yönetiminin Extranet'ten Book>Direct'e geçtiğini belirtiyor. Tam/tarihten bağımsız envanter şartı korunuyor. Schema 7, lodging connector veya yeni ekran eklenmedi; uygulama v0.6.0 olarak kalır. [M6 keşif ve kanıt](M6-KONAKLAMA-KAYNAK-KEŞFİ.md).
