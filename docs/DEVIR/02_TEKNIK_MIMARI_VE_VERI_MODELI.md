@@ -1,0 +1,388 @@
+# Teknik Mimari ve Veri Modeli
+
+## Teknoloji
+
+- Python 3.12+
+- FastAPI
+- Uvicorn
+- SQLite
+- HTTPX
+- HTML/CSS/Vanilla JS
+- SSE
+- ThreadPoolExecutor
+- pytest
+- Node built-in frontend tests
+
+Frontend için bundler yoktur.
+
+## Yerel başlatma
+
+Proje yolu:
+
+```text
+C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio
+```
+
+Başlatma:
+
+```text
+baslat.bat
+```
+
+Varsayılan server:
+
+```text
+127.0.0.1:8830
+```
+
+Varsayılan DB:
+
+```text
+data/studio.sqlite3
+```
+
+## Üst seviye modüller
+
+```text
+studio/
+├─ app.py
+├─ database.py
+├─ jobs.py
+├─ models.py
+├─ migrations.py
+├─ migration_v6.py
+├─ destinations/
+├─ sources/
+└─ web/
+```
+
+Ana sorumluluklar:
+
+- `app.py`: HTTP API, bootstrap, domain endpoint'leri, SSE.
+- `database.py`: SQLite erişimi, CRUD, jobs/runs, diff, raw artifact izi.
+- `jobs.py`: generic toplama kuyruğu.
+- `sources/base.py`: Connector Protocol + CollectionResult.
+- `sources/registry.py`: source → connector eşleştirme.
+- `destinations/`: profile ve runtime context.
+- `web/`: vanilla JS UI.
+
+## Multi-destination veri modeli
+
+### destinations
+
+Stabil destination kimliği.
+
+Production: `30a`.
+
+### regions
+
+Destination'a bağlı canonical alt bölgeler.
+
+Önemli:
+
+```text
+UNIQUE(destination_id, name)
+```
+
+Global region-name uniqueness yoktur.
+
+30A canonical bölgeleri:
+- Dune Allen
+- Gulf Place
+- Santa Rosa Beach
+- Blue Mountain Beach
+- Grayton Beach
+- WaterColor
+- Seaside
+- Seagrove
+- WaterSound
+- Seacrest
+- Alys Beach
+- Rosemary Beach
+- Inlet Beach
+
+### sources
+
+Başlıca alanlar:
+- id
+- name
+- url
+- category
+- region legacy display text
+- method
+- cadence
+- notes
+- enabled
+- version
+- timestamps
+- destination_id
+- scope_region_id
+
+URL uniqueness:
+
+```text
+UNIQUE(destination_id, url)
+```
+
+Aynı NWS URL'si iki destinasyonda kullanılabilir.
+
+### source_history
+
+Source edit snapshot'ları.
+
+### jobs
+
+Asenkron iş kaydı:
+- catalog audit
+- source collection
+
+Destination provenance taşır.
+
+### source_runs
+
+Her kabul edilmiş veri çekiminin tarihsel kaydı.
+
+Başlıca alanlar:
+- id
+- source_id
+- job_id
+- destination_id
+- status
+- started_at
+- fetched_at
+- finished_at
+- source_url
+- connector_name
+- connector_version
+- raw_path
+- raw_sha256
+- source_updated
+- record_count
+- excluded_count
+- metadata
+- error
+
+### entities / entity_sources
+
+Gelecekte farklı kaynaklardaki aynı gerçek dünyadaki varlığı bağlamak için temel.
+
+Henüz otomatik entity matching yoktur.
+
+### destination_weather_anchors
+
+NWS gibi generic connector'ların destination'a göre kullanacağı koordinatlar.
+
+## ConnectorContext
+
+Runtime source of truth SQLite'tır.
+
+`ConnectorContext`:
+- destination
+- canonical_regions
+- weather_anchors
+
+taşır.
+
+Connector'ın global `REGIONS` veya hard-coded weather point import etmesi yerine context kullanması beklenir.
+
+## Connector sözleşmesi
+
+Connector:
+
+```text
+supports(source)
+collect(source, raw_path, progress, canceled, context=...)
+store_records(...)
+read_records(...)
+comparison_value(...)
+```
+
+ve metadata:
+- name
+- version
+- raw_filename
+- method
+- diff_enabled
+
+### Generic / destination-specific ayrımı
+
+Generic:
+- `nws-weather`
+
+Destination-specific:
+- `south-walton-beaches`
+- `south-walton-restaurants`
+
+Specific connector `destination_id=30a` olmadan bağlanmaz.
+
+## Job sistemi
+
+ThreadPoolExecutor bugün tek worker ile çalışır.
+
+Akış:
+1. source etkin mi?
+2. registry connector buluyor mu?
+3. job + queued source_run oluştur.
+4. queue collect başlatır.
+5. raw dosya yazılır.
+6. parse/validate.
+7. domain kayıtları ve run success tek transaction.
+8. job result oluşturulur.
+
+### İptal
+
+İptal:
+- DB status'ünü değiştirir,
+- connector checkpoint'lerde bunu görür,
+- geç sonuç publish edilmez.
+
+## Raw artifact modeli
+
+Plaj:
+
+```text
+raw/<run>/source.html
+```
+
+Hava:
+
+```text
+raw/<run>/source.json
+```
+
+Restoran:
+
+```text
+raw/<run>/manifest.json
+raw/<run>/listing/...
+raw/<run>/detail/...
+```
+
+Ana `raw_sha256`, DB katmanında gerçek dosyadan hesaplanır.
+
+Amaç:
+- provenance,
+- tekrar inceleme,
+- parser değişikliği analizi,
+- kaynak yapısı değişikliği teşhisi.
+
+## Diff
+
+Diff:
+- aynı source_id,
+- aynı connector,
+- aynı destination,
+- önceki başarılı run
+
+üzerinden hesaplanır.
+
+Başarısız/iptal run atlanır.
+
+External ID kümeleri:
+- added
+- removed
+
+ortak ID alan farkları:
+- changed
+- unchanged
+
+Weather rolling forecast için diff disabled.
+
+## Domain tabloları
+
+### Beach
+
+`beach_records`
+
+Alanlar:
+- external_id
+- name
+- city/source region text
+- address
+- lat/lon
+- access_type
+- features
+- nullable canonical_region_id
+
+### Weather
+
+- weather_locations
+- weather_forecast_periods
+- weather_alerts
+- weather_alert_anchors
+
+### Restaurants
+
+- restaurant_records
+- restaurant_regions
+
+Description nullable'dır.
+
+## Migration stratejisi
+
+Şema yükseltmeden önce:
+- SQLite backup API ile yedek,
+- transaction,
+- gerekiyorsa table rebuild,
+- `PRAGMA foreign_key_check`,
+- hata halinde rollback.
+
+Stable şema: `6`.
+
+v0.7 lodging discovery sırasında schema 7 oluşturulmadı.
+
+## API'nin ana grupları
+
+Genel:
+- `/api/health`
+- `/api/destinations`
+- `/api/bootstrap`
+- `/api/sources`
+- `/api/jobs`
+- `/api/events`
+- `/api/source-runs`
+
+Domain:
+- `/api/collections` (beach uyumluluk)
+- `/api/weather-runs`
+- `/api/restaurant-runs`
+
+Liste endpoint'leri destination-filtered'dır.
+
+## Frontend destination davranışı
+
+Seçim:
+
+```text
+localStorage["studio.destination_id"]
+```
+
+İstekler query ile destination taşır.
+
+Destinasyon değişince:
+- eski SSE kapanır,
+- filtre/detail state resetlenir,
+- request revision artar,
+- eski response yeni UI'a yazılmaz.
+
+## Güvenlik kapsamı
+
+Uygulama localhost için tasarlanmıştır.
+
+- TrustedHost sınırı
+- write isteklerinde `X-Studio-Request`
+- Origin kontrolü
+- dış URL fetch allowlist'leri
+- path traversal kontrolleri
+- raw endpoint root sınırları
+
+Bu bir kullanıcı yetkilendirme sistemi değildir.
+
+## Teknik borç / dikkat noktaları
+
+- `app.py` bootstrap içinde bazı connector metadata hâlâ domain-specific key'ler kullanır.
+- UI domain target mapping explicit'tir.
+- Product/package adı hâlâ `thirtya-studio`; multi-destination branding henüz yapılmadı.
+- Entity eşleme tamamlanmadı.
+- Scheduler yok.
+- Eski uyumluluk export'ları kalsa bile runtime source of truth DB olmalıdır.

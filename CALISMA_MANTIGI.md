@@ -1,171 +1,424 @@
-# 30A Studio — Çalışma mantığı
+# 30A Studio — Master Devir / Çalışma Mantığı
 
-Bu belge **v0.6.0** davranışını açıklar. Uygulama, 30A kaynak verilerini yerel olarak toplar ve sürümlerini saklar. Housing Atlas bağımsız bir projedir; kodu, verisi, ayarları veya tarayıcı profili kullanılmaz.
+> **Bu dosya projenin ana devir-teslim belgesidir.**
+>
+> Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`, `M3`, `M4`, `M5`, `M6`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
+>
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmıştır.
 
-## Çalışan kapsam
+## 1. Bir bakışta mevcut durum
 
-Kaynak kütüphanesi, katalog kontrolü, genel connector seçimi ve toplama kuyruğu, çekim geçmişi, plaj verisi ekranı, filtreler, sürüm farkı ve CSV indirme çalışır. Gerçek ağa bağlanan üç connector vardır: **BeachesConnector / south-walton-beaches** (HTML içindeki JSON) , **WeatherConnector / nws-weather** (resmî API) ve **RestaurantsConnector / south-walton-restaurants** (HTML dizin/detay).
+| Alan | Güncel durum |
+|---|---|
+| Repo | `bemonths/tatilya` |
+| Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
+| Başlatma | `baslat.bat` |
+| Stable branch | `main` |
+| Stable commit | `a938367a280ef799597d5d90dc39ef34a26a6fcb` |
+| Stable tag | `v0.6.0` |
+| Stable uygulama sürümü | `0.6.0` |
+| Stable SQLite şeması | `6` |
+| Aktif araştırma branch'i | `v0.7-lodging-inventory` |
+| Aktif branch HEAD | `23905962126ba9f00f7f8b6223c67c9633e70c2c` |
+| Aktif branch durumu | Yalnız dokümantasyon/kanıt; uygulama ve DB hâlâ v0.6.0 / şema 6 |
+| Son CI | Başarılı |
+| Test tabanı | 289 Python testi + 19 frontend testi |
+| Mevcut gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini |
+| Mevcut production destinasyonu | 30A / South Walton, Florida |
+| Konaklama durumu | Book>Direct date-filtered search doğrulandı; tarihten bağımsız tam unit/provider inventory bulunamadı |
 
-Canonical bölge ve entity tabloları yalnızca veri modelinin temelidir. Otomatik entity matching, region polygon mapping, mahalle tahmini, haftalık scheduler, Claude/OpenAI, Playwright, konu araştırması, makale, görsel, video ve yayın üretimi uygulanmadı. İleri içerik ekranları plan gösterir.
+## 2. Projenin amacı
 
-## Açılış ve kayıt alanı
+30A Studio yalnız bir scraper veya veri tabanı değildir. Uzun vadeli amaç, **30A / South Walton gibi mikro-destinasyonlar için güvenilir veri toplayan ve bu veriyi YouTube içerik üretim zincirine kanıt katmanı olarak veren yerel bir içerik stüdyosu** oluşturmaktır.
 
-`baslat.bat`, gerekirse Python 3.12 sanal ortamını oluşturur, `requirements-lock.txt` paketlerini kurar ve `python -m studio` çalıştırır. Kurulum işareti `.venv/studio-ready` dosyasıdır. Uygulama yalnızca `127.0.0.1:8830` üzerinde açılır. Bu adreste zaten 30A Studio çalışıyorsa mevcut uygulama açılır. Başka bir program portu kullanıyorsa `--port` seçilebilir.
+İlk gerçek kullanım alanı İngilizce, yüz göstermeyen, yaklaşık 15–17 dakikalık YouTube videolarıdır. İçerik yaklaşımı “mekânı tanıt” değil, **gerçek bir tatil kararını çöz** yaklaşımıdır.
 
-Varsayılan veri alanı `data/`, veritabanı `data/studio.sqlite3` dosyasıdır. `--data-dir` ayrı alan seçer. Tarayıcı sekmesini kapatmak sunucuyu durdurmaz; standart başlatma penceresinde Ctrl+C kullanılır.
+Örnek karar soruları:
 
-Şema sürümü 6’dır. v0.1/v0.2/v0.3/v0.4/v0.5 açılırken SQLite backup API ile `data/backups/` altında yükseltme öncesi kopya alınır. Şema değişiklikleri ve veri aktarımı tek transaction içindedir; hata olursa geri alınır. Daha yeni bir şema bu uygulama sürümüyle açılmaz.
+- Hangi 30A mahallesi hangi tatil tipi için daha uygun?
+- Hangi bölgede plaj erişimi daha rahat?
+- Hangi tarihler hava açısından daha mantıklı?
+- Hangi bölgede restoran/konaklama seçeneği daha güçlü?
+- Maliyet, ulaşım, sezon, kalabalık, deniz koşulları ve hizmet çeşitliliği nasıl değişiyor?
 
-## Ana akış
+Programdaki veri, videoda istatistik yağdırmak için değil; AI'ın ve editörün **kanıta dayalı araştırma, karşılaştırma ve senaryo üretmesi** için kullanılır.
+
+## 3. Uzun vadeli ürün modeli
+
+30A yalnızca ilk destinasyondur. Sistem baştan şu modelle tasarlanmıştır:
+
+```text
+Destinasyon
+├─ Kaynaklar
+├─ Canonical alt bölgeler
+├─ Plajlar
+├─ Hava
+├─ Restoranlar
+├─ Konaklama
+├─ Etkinlikler
+├─ Ulaşım
+├─ Fiyat / müsaitlik snapshot'ları
+├─ Araştırma / evidence pack
+└─ İçerik üretimi
+```
+
+Bugün production'da yalnız `30a` vardır. Gelecekte Napa Valley, Lake Tahoe, Cape Cod vb. destinasyonlar aynı motoru kullanabilmelidir.
+
+Bu yüzden yeni geliştirmelerde şu ayrım korunur:
+
+> Bu davranış generic core'da mı olmalı, yoksa yalnız bu destinasyona özel connector/profile içinde mi kalmalı?
+
+## 4. Temel veri ilkeleri
+
+1. **Kaynağın kimliği ve otoritesi doğrulanmadan veri ana kaynak kabul edilmez.**
+2. **Verinin ne anlama geldiği doğrulanmadan tabloya yanlış semantik ile yazılmaz.**
+3. Eksik alan tahmin edilmez; mümkünse `NULL` bırakılır.
+4. `fetched_at`, kaynağın kendi `source_updated` zamanı değildir.
+5. Adres/koordinattan mahalle tahmini yalnız açıkça tasarlanmış ayrı bir eşleme katmanında yapılabilir; connector bunu sessizce yapmaz.
+6. Kaynağın yayınladığı bir alan “listelenmedi” ise “yok” anlamına gelmez.
+7. Stable external ID tercih edilir; isimden kimlik üretmekten kaçınılır.
+8. Kısmi crawl sonucu başarılı snapshot olarak yayımlanmaz.
+9. Ham cevaplar ve SHA-256 izi korunur.
+10. Başarısız/iptal run önceki başarılı snapshot'ı bozmaz.
+11. Dynamic search sonucu “tam inventory” diye adlandırılmaz.
+12. Kaynak keşfinde öncelik: API → structured JSON → HTML → public network endpoint → gerekiyorsa browser automation.
+13. Playwright varsayılan değildir; HTTP/JSON ile çözülüyorsa kullanılmaz.
+
+Ayrıntı: `docs/DEVIR/03_VERI_KAYNAKLARI_VE_DOGRULAMA.md`.
+
+## 5. Çalışan teknik yığın
+
+- Python 3.12+
+- FastAPI
+- Uvicorn
+- SQLite
+- HTTPX
+- HTML/CSS/Vanilla JavaScript
+- Server-Sent Events
+- `ThreadPoolExecutor`
+- pytest
+- frontend testleri için Node built-in test runner
+
+PySide6/Qt kullanılmaz. Node tabanlı frontend build sistemi yoktur.
+
+Yerel uygulama varsayılan olarak `http://127.0.0.1:8830` adresinde çalışır.
+
+`baslat.bat`:
+- proje klasörüne geçer,
+- gerekirse `.venv` oluşturur,
+- bağımlılıkları kurar,
+- `python -m studio` başlatır.
+
+Varsayılan DB: `data/studio.sqlite3`  
+Ham cevaplar: `data/raw/`  
+Yedekler: `data/backups/`
+
+## 6. Multi-destination omurgası
+
+v0.6 ile 30A sistemin kendisi olmaktan çıkarıldı ve ilk `destination` haline getirildi.
+
+Production kaydı:
+
+```text
+id       = 30a
+name     = 30A
+subtitle = South Walton, Florida
+```
+
+Destination-scoped temel yapılar:
+- `destinations`
+- `regions`
+- `sources`
+- `jobs`
+- `source_runs`
+- `entities`
+- `destination_weather_anchors`
+
+Önemli kurallar:
+- Aynı URL farklı destinasyonlarda kullanılabilir.
+- Aynı bölge adı farklı destinasyonlarda kullanılabilir.
+- Source başka destination'a normal edit ile taşınamaz.
+- Job/run hangi destinasyon için üretildiyse provenance bunu korur.
+- Diff başka destinasyondaki run ile karşılaştırmaz.
+- NWS connector generic'tir.
+- South Walton Beaches ve Restaurants connector'ları 30A'ya özeldir.
+
+Frontend seçimi server-global değildir. Seçim `localStorage["studio.destination_id"]` ile tutulur. Destination değişince eski async cevapların yeni ekrana yazılması engellenir.
+
+## 7. Connector modeli
+
+Genel connector sözleşmesi `studio/sources/base.py` içindedir.
+
+Connector şu sorumlulukları taşır:
+- `name`
+- `version`
+- `raw_filename`
+- `method`
+- `diff_enabled`
+- `supports(source)`
+- `collect(..., context=ConnectorContext)`
+- `store_records(...)`
+- `read_records(...)`
+- `comparison_value(...)`
+
+`ConnectorContext` runtime'da destination'a ait:
+- destination kaydı,
+- canonical regions,
+- weather anchors
+
+gibi yapılandırmayı taşır.
+
+Yeni domain connector'ı mümkün olduğunca generic `source_collection → job → run → raw → atomic publish` akışını kullanmalıdır.
+
+## 8. Job / source_run / raw artifact akışı
 
 ```mermaid
 flowchart TD
-    A[Kaynak seçimi] --> B[Registry uygun connector bulur]
-    B --> C[Kaynağa bağlı job ve source_run oluşturulur]
-    C --> D[Tek çalışanlı kuyruk]
-    D --> E[Kaynağı oku ve ham yanıtı sakla]
-    E --> F[Ayrıştır ve doğrula]
-    F --> G[Domain kayıtlarını ve başarılı bitişi tek işlemde kaydet]
-    G --> H[Önceki başarılı sürümle karşılaştır]
-    F --> I[Hata veya iptal: önceki başarılı sürümleri koru]
+    A[Kaynak kaydı] --> B[Registry connector seçer]
+    B --> C[Job + queued source_run]
+    C --> D[Tek çalışanlı queue]
+    D --> E[Kaynağı çek]
+    E --> F[Ham cevabı sakla]
+    F --> G[Parse + validation]
+    G --> H[Domain kayıtlarını transaction içinde yaz]
+    H --> I[Run ve job = done]
+    I --> J[Önceki başarılı run ile diff]
+    G --> K[Hata/iptal]
+    K --> L[Kısmi domain publish yok]
 ```
 
-Kaynak eklemek toplama başlatmaz. Formdaki sıklık bir plan alanıdır, zamanlayıcı değildir. Desteklenmeyen kaynak için “Bu kaynak için henüz veri toplayıcı bağlanmadı.” yanıtı döner. Böyle bir istek henüz kabul edilmiş bir çekim olmadığı için job/run oluşturmaz.
+Önemli:
+- `run.id` bugün job kimliğiyle aynıdır.
+- Ham artifact SHA'sı DB katmanında gerçek dosya baytlarından hesaplanır.
+- İptal edilmiş iş geç gelen sonucu publish edemez.
+- Domain yazımı hata verirse transaction geri alınır.
+- Başarısız/iptal run tarihsel olarak kalır.
 
-## Kaynak kütüphanesi
+## 9. Bugün çalışan domain'ler
 
-Kaynak; ad, URL, kategori, bölge etiketi, yöntem, sıklık, notlar ve etkinlik durumunu taşır. URL'nin `#` kısmı kaldırılır ve tekrar eklenmesi engellenir. Geçersiz adres şeması, adres içindeki kullanıcı adı/parola ve bilinmeyen seçim değerleri reddedilir.
+### 9.1 Plaj erişimleri
 
-Düzenleme `expected_version` taşır. Başka pencere kaydı değiştirmişse eski düzenleme yeni kaydı ezmez. Kaydedilen sürümler `source_history` tablosuna yazılır. Arşivleme silme değildir ve geri alınabilir.
+Kaynak: `https://www.visitsouthwalton.com/beach-bay-access-locations/`  
+Connector: `south-walton-beaches`  
+Yöntem: HTML içindeki JSON  
+Scope: 30A-specific
 
-`catalog_audit`, etkin kaynakların yöntem ve açıklama alanlarını kontrol eder. Bağlı connector'ı registry üzerinden tanır. İnternete bağlanmaz, içerik doğruluğunu veya güncelliğini kanıtlamaz. Birden fazla kaynağı kapsadığı için `jobs.source_id` NULL'dır. Kaynak değişirse önceki kontrol raporu ön yüzde eskimiş gösterilir.
+Toplanan başlıca alanlar:
+- external ID
+- ad
+- kaynak yerleşim adı
+- adres
+- koordinatlar
+- erişim tipi
+- kaynakta listelenen olanaklar
 
-## Connector sözleşmesi
+Örnek live snapshot'larda 53 kıyı erişim kaydı görülmüştür; bu sayı sabit kabul kriteri değildir.
 
-`studio/sources/base.py`, sonuç sözleşmesini ve küçük bir Python Protocol tanımlar. CollectionResult; normalize edilmiş kayıtları, toplam/kapsam dışı sayısını, kaynak güncelleme metnini ve ek metadata'yı taşır. Ayrıca `related` sözlüğü, kayıt sayısına dahil olmayan domain ilişkilerini (hava noktaları ve uyarıları) aynı transaction içinde yazılmak üzere taşır.
+### 9.2 NWS hava
 
-| Sorumluluk | Metot / alan |
-|---|---|
-| Kimlik, sürüm, ham dosya adı | `name`, `version`, `method`, `raw_filename`, `diff_enabled` |
-| Kaynak desteği | `supports(source)` |
-| Çekme, ham yanıtı yazma, parse/validate | `collect(source, raw_path, progress, canceled)` |
-| Domain kayıtlarını transaction içinde yazma | `store_records(connection, run_id, records, related)` |
-| Kaydedilen kayıtları okuma | `read_records(connection, run_id)` |
-| Fark raporu için alan seçimi | `comparison_value(record)` |
+Source record URL: `https://www.weather.gov/`  
+API: `https://api.weather.gov`  
+Connector: `nws-weather`  
+Scope: generic
 
-`registry.py` BeachesConnector ve WeatherConnector'ı kaydeder. `jobs.py` plaj modülünü import etmez. Yeni kaynak için connector, gerekiyorsa domain migration'ı ve testleri yazılıp registry'ye eklenir; jobs.py/app.py yönlendirmesine kaynağa özel if blokları gerekmez. Plaj ekranı ve CSV uçları korunmuştur; yeni domain'lerin özel ekran/dışa aktarma ihtiyacı ayrıca uygulanmalıdır.
+Destination'ın `destination_weather_anchors` kayıtlarını kullanır.
 
-## Job ve source_run
+30A için üç örnek nokta:
+- Batı 30A
+- Orta 30A
+- Doğu 30A
 
-Yeni toplama türü `source_collection`'dır. Kaynak etkin ve destekleniyor olmalıdır. Job ve queued run aynı transaction içinde oluşturulur. Bu sürümde run kimliği job kimliğiyle aynıdır; `job_id` ilişkisi ayrıca saklanır.
+Bunlar canonical mahalle merkezi değildir; hava örnek noktalarıdır.
 
-Her kabul edilmiş çekim queued/running/done/failed/canceled/interrupted durumuyla source_runs içinde izlenir. Alanları: id, source_id, job_id, status, started_at, fetched_at, finished_at, source_url, connector_name, connector_version, raw_path, raw_sha256, source_updated, record_count, excluded_count, error_message, metadata JSON.
+Toplanır:
+- NWS point/grid bilgisi
+- 12 saatlik forecast dönemleri
+- saatlik forecast
+- aktif alerts
 
-Başlangıç metadata'sı kaynak adı ve sürüm numarasını içerir. started_at iş çalışınca yazılır. İndirme oluşmadıysa raw/fetched_at alanları NULL'dır. Ham dosya oluşursa SHA-256 yalnızca Database.record_raw_artifact() tarafından diskteki gerçek baytlardan hesaplanır; CollectionResult hash taşımaz; fetched_at dosyanın yazım zamanıdır. Başarısız ayrıştırmada da ham dosya bilgisi korunur. Doğrulanmamış kayıtlar yayımlanmaz; başarısız çekimin record_count değeri sıfırdır.
+Rolling forecast olduğu için generic record diff kapalıdır.
 
-Tek çalışanlı ThreadPoolExecutor kullanılır. Aynı kaynakta ikinci aktif toplama engellenir, farklı kaynaklar sıraya girebilir. Yürütücü kuyruğu bellekte, iş ve run bilgileri SQLite'tadır. Yeniden açılışta etkin kalan işler/run'lar interrupted yapılır; otomatik yeniden çalıştırılmaz.
+### 9.3 Restoranlar
 
-İptal isteği durumu hemen değiştirir. Connector iptali kontrol noktalarında görür; süren ağ çağrısı zaman aşımını bekleyebilir. Domain kayıtları yazılmadan önce job ve run'ın hâlâ aktif olduğu transaction içinde denetlenir. İptal edilmiş iş geç gelen sonuç yayımlayamaz. Domain yazımı hata verirse kısmi kayıtlar ve başarılı bitiş birlikte geri alınır.
+Kaynak: `https://www.visitsouthwalton.com/listings/culinary-experiences/`  
+Connector: `south-walton-restaurants`  
+Yöntem: HTML dizin + detay  
+Scope: 30A-specific
 
-## Plaj connector'ı
+Kapsam: 13 canonical mahalle; Miramar Beach, Seascape ve Sandestin hariç.
 
-Kaynak: [Visit South Walton plaj erişimleri](https://www.visitsouthwalton.com/beach-bay-access-locations/). HTTPX ile HTML alınır; initMarkers veri dizisinin JSON nesneleri ayrıştırılır. Kaynak JavaScript çalıştırılmaz.
+Alanlar:
+- stable listing path identity
+- ad
+- açıklama nullable
+- adres
+- telefon
+- e-posta
+- website
+- cuisines
+- meals served
+- amenities
+- source neighborhood provenance
 
-TLS kontrolü açıktır. En fazla üç yönlendirme izlenir; yalnızca açık izin listesindeki `visitsouthwalton.com` ve `www.visitsouthwalton.com`, HTTPS ve varsayılan/443 port kabul edilir. www/apex geçişleri iki yönde desteklenir; diğer alt alanlar ve yanıltıcı alan adı son ekleri reddedilir. Kullanıcı bilgisi içeren adresler izlenmez. Ağ/5xx hatasında bir kez yeniden deneme vardır; 429 ve kalıcı hatalar kullanıcıya bildirilir. Yanıt sınırı 5 MB, bağlantı zaman aşımı 10 saniye, diğer HTTP işlemleri için 20 saniyedir.
+Gerçek kullanıcı snapshot'ında 138 restoran ve 141 restoran-bölge ilişkisi korunmuştur. Bunlar kaynak değişebileceği için sabit test sayısı değildir.
 
-Kimlik, ad, adres, city, tür, koordinatlar ve olanak listesi doğrulanır. Bozuk/boş veri, yinelenen kimlik veya beklenmeyen tür bütün çekimi başarısız yapar. Kayıtlar beach_records içinde kalır ve run_id artık source_runs'a bağlıdır.
+## 10. Konaklama — şu an nerede kaldık?
 
-Kapsam değişmedi: tür regional/neighborhood; kaynak yerleşimi Santa Rosa Beach, Grayton Beach, Seacrest veya Inlet Beach olmalı. Miramar ve koy/göl noktaları dışarıda kalır. İlk canlı örnekte 70 noktanın 53'ü seçilmişti; bunlar sabit hedef sayıları değildir.
+Branch: `v0.7-lodging-inventory`  
+HEAD: `23905962126ba9f00f7f8b6223c67c9633e70c2c`
 
-city ve source_region_text kaynaktaki yerleşim adını korur. canonical_region_id NULL bırakılır. Metin veya koordinattan mahalle tahmini yapılmaz. Listelenmeyen olanak “yok” değildir. Deniz durumu bayrağı etiketi güncel bayrak rengini göstermez. Kaynak güncelleme metninin bilinmeyen zaman dilimi tahmin edilmez.
+Bu branch'te **kod, şema veya production DB değişmedi**. Yalnız kaynak keşfi ve kanıt belgelendi.
 
-## Canonical bölge ve entity temeli
+Doğrulanan Book>Direct giriş: `https://visitsouthwalton.bookdirect.net/`
 
-`studio/regions.py` ve regions tablosunda aynı 13 sabit kimlik vardır: dune-allen, gulf-place, santa-rosa-beach, blue-mountain-beach, grayton-beach, watercolor, seaside, seagrove, watersound, seacrest, alys-beach, rosemary-beach, inlet-beach. Kaynak formundaki “Tüm 30A” kapsam seçeneği mahalle kaydı değildir.
+Doğrulanan public clone API host: `admin.bookdirect.net`
 
-entities: id, entity_type, canonical_name, nullable canonical_region_id/latitude/longitude, created_at, updated_at. entity_sources: entity_id, source_id, external_id, nullable source_url/record_url. Bir kaynak/external_id çifti yalnızca bir entity'ye bağlanabilir; bir entity çok sayıda kaynağa bağlanabilir. Foreign key denetimi açıktır.
+Önemli public yol sınıfları:
+- clone config: `/show.json`
+- list/search: `/lodgings.json`, `/lodgings/search.json`
+- detail: `/lodgings/:id.json`
 
-Tablolar boş oluşturulur. Entity düzenleme arayüzü/API'si, otomatik eşleştirme ve polygon eşleştirme yoktur. Plajlar zorla entity sistemine aktarılmaz; koordinat veya mahalle sınırı üretilmez.
+Ancak:
+- tarihsiz liste 400,
+- tarihsiz search 400,
+- tarihsiz bilinen-ID detail 400,
+- `checkin` zorunlu,
+- farklı tarihlerde farklı ID kümeleri dönüyor.
 
-## Sürüm farkı
+Dune Allen örneği:
+- 2–3 Ekim 2026: 112 benzersiz ID
+- 2–3 Kasım 2026: 113 benzersiz ID
 
-Diff etkinse seçili başarılı run; aynı source_id ve connector_name için önceki başarılı run ile karşılaştırılır. Başarısız/iptal edilmiş çekimler atlanır. Önceki sürüm yoksa bu açıkça yazılır. Diff çıktısında previous_connector_version, connector_version ve connector_version_changed bulunur. Toplayıcı sürümleri farklıysa karşılaştırma korunur; ekranda ayrıştırma değişikliğinin farkları etkileyebileceği uyarısı gösterilir. Bu kural migration sonrası eski v0.2 ile ilk yeni çekim için de geçerlidir. Sıralama run kayıt sırasıdır; tek çalışan ve kaynak başına tek aktif iş bu düzeni korur.
+Bir tarihin listesinde görünmeyen ID, tarihli detail isteğinde yine 200 dönebildi. Dışlama sebebinin availability, minimum stay veya başka backend scope olup olmadığı **unknown** bırakıldı.
 
-External_id kümelerinden added/removed; ortak kimliklerden changed/unchanged hesaplanır. Plajlarda ad, adres, city/source_region_text, koordinatlar, erişim türü ve olanaklar karşılaştırılır. Olanak sırası/tekrarı değişiklik sayılmaz. İş kimliği ve zaman karşılaştırılmaz. Rapor okunurken hesaplanır ve eski kayıtları değiştirmez.
+Visit South Walton sitemap'i ve 11 public listing directory incelendi. Statik provider/otel sayfaları bulundu ancak bütün provider veya bütün unit kayıtlarını deterministik veren tarihsiz public inventory yolu bulunamadı.
 
-## Migration ve uyumluluk
+**Karar:** Book>Direct date-filtered search, statik “tam konaklama envanteri” olarak kullanılmayacak.
 
-Eski başarılı sürüm kimlikleri, plajlar, kaynaklar, arşiv durumu, düzenleme geçmişi, iş sonuç/günlükleri ve ham dosya yolları korunur. Eski beach_collection işleri source_collection olarak adlandırılır. Başarılı eski çekimlerden jobs.source_id doldurulur. Eski başarısız işte kaynak bilgisi saklanmamışsa tahmin edilmez; NULL ve source_identity_unknown metadata'sı kullanılır. Bilinmeyen başlangıç zamanı NULL kalır.
+Bu kaynak ileride tarih/misafir/rate/availability/minimum stay gibi snapshot tabanlı fiyat-müsaitlik katmanında değerlendirilebilir.
 
-collections fiziksel tablosu, başarılı plaj sürümlerini sunan salt okunur uyumluluk görünümüne dönüşür. `/api/collections`, CSV ve ham indirme uçları çalışır. Eski beach_collection POST değeri alias olarak kabul edilir; yeni job türü source_collection olur. Verisi eksik tarihsel işler genel run geçmişinde kalır, gerçek başarılı plaj sürümü gibi gösterilmez.
+Tam envanter için yeni, deterministik bir public/read/export sözleşmesi bulunmadan schema 7 lodging connector geliştirilmemelidir.
 
-## Teşhis ve canlı ilerleme
+Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
-Beklenmeyen hata türü ve traceback konumları jobs.diagnostic JSON alanında tutulur. Teknik mesaj str(exc) üzerinden alınır; password/token/api_key, Authorization/Bearer, ghp_/sk- ve URL kimlik bilgileri gibi yaygın kalıplar [REDACTED] ile gizlendikten sonra en fazla 500 karakter saklanır. Traceback yalnızca dosya adı, satır ve fonksiyon içerir; kaynak satırı ve locals saklanmaz. Kullanıcıya anlaşılır sabit mesaj gösterilir. Diagnostic normal job API/SSE yanıtına dahil edilmez. Yerel veritabanından geliştirici tarafından incelenebilir.
+## 11. Stable release ve test durumu
 
-Ön yüz `/api/events` SSE bağlantısıyla iş listesini alır. Sunucu saniyede bir değişikliği kontrol eder. İşler paneli kaynak adını, ilerlemeyi ve günlüğü gösterir; başarılı plaj çekimi sürüm listesini yeniler.
+Stable: `main @ a938367a280ef799597d5d90dc39ef34a26a6fcb`  
+Tag: `v0.6.0`
 
-## API ve dışa aktarma
+Tag doğrudan bu commit'e işaret eder.
 
-Mevcut kaynak CRUD, job, bootstrap, health, SSE ve collections uçları korunur. Yeni uçlar:
+Son v0.7 docs commit CI:
+- 289 Python testi geçti
+- 19 frontend testi geçti
+- GitHub Actions başarılı
 
-| İstek | Sonuç |
-|---|---|
-| POST /api/jobs | kind: source_collection ve source_id ile genel toplama |
-| GET /api/source-runs?source_id=... | Başarısız/iptal dahil run listesi; filtre isteğe bağlı |
-| GET /api/source-runs/{id} | Run, connector'ın kayıtları ve fark raporu |
-| GET /api/source-runs/{id}/diff | Önceki başarılı sürümle fark sayıları |
+Bilinen non-blocking uyarılar:
+- Starlette TestClient / httpx deprecation warning
+- GitHub Actions Node 20 action'larının Node 24 üzerinde zorlanması uyarısı
 
-Bootstrap canonical bölge listesini de döndürür. Kaynak listesindeki connector alanı desteği gösterir. CSV, UTF-8 BOM/noktalı virgül kullanır, metinsel formül başlangıçlarını etkisizleştirir. Ham HTML metin eki olarak indirilir. Değişiklik istekleri X-Studio-Request: 1 taşır ve varsa Origin kontrol edilir. Uzaktan kullanıcı hesabı/yetkilendirme sistemi yoktur; uygulama yerel kullanım içindir.
+## 12. Kullanıcı verisini koruma politikası
 
-## Geliştirme ve sonraki aşamalar
+`data/` gerçek kullanıcı verisidir.
 
-Kurulum: `python -m pip install -e ".[test]"`. Test: `python -m pytest -q`. GitHub Actions Python 3.12 üzerinde aynı komutları push/pull_request olaylarında çalıştırır. Testler sentetik yanıt ve MockTransport kullanır; gerçek HTTP transport kullanımını engelleyen fixture vardır. Test connector'ı yalnızca test kodundadır, uygulamaya demo kayıt eklenmez.
+Yapılmaması gerekenler:
+- DB'yi sıfırlamak,
+- `data/` klasörünü silmek,
+- test için production DB'yi rastgele değiştirmek,
+- migration testini doğrudan tek kopya DB üzerinde denemek.
 
-Yedek için uygulama kapalıyken data klasörünün tamamı kopyalanır. GitHub'a kod, testler ve belgeler gönderilir; data, yedekler, ham çekimler, .venv, .env ve önbellekler gönderilmez. Yeni connector'lar ve veri kalite kontrolleri sonraki adımlardır. İçerik onayları, verisi değişen içeriği eskimiş işaretleme, AI ve medya akışı henüz uygulanmadı.
+Şema migration'larında:
+1. gerçek DB'nin yedeği alınır,
+2. mümkünse ayrı copy üzerinde migration denenir,
+3. count/FK kontrolleri yapılır,
+4. sonra gerçek DB açılır.
 
-İlgili belgeler: [mimari](docs/MIMARI.md), [aşamalar](docs/ASAMALAR.md), [v0.2 plaj kaynağı çalışması](docs/M2-VERI-TOPLAMA.md).
+v0.6 migration doğrulamasında raporlanan örnek sayılar:
+- 8 sources
+- 4 source_history
+- 9 jobs
+- 6 source_runs
+- 159 beach_records
+- 6 weather_locations
+- 1020 forecast rows
+- 138 restaurant_records
+- 141 restaurant_regions
 
-Kaynak kütüphanesindeki hazır durumu ve bağlı yöntem, beach adına değil genel `source.connector` bilgisine dayanır. Ayrıntıda toplayıcı adı ve sürümü görünür. İşler panelindeki plaj ekranı bağlantısı yalnızca sonuçta plaj connector adını taşıyan işlere verilir; diğer genel toplama işleri bu ekrana yönlendirilmez.
+Bunlar yalnız o doğrulama anının snapshot'ıdır.
 
-## Hava domain'i · v0.4
+## 13. Geliştirme çalışma biçimi
 
-WeatherConnector `nws-weather/1`, `method=API`, `diff_enabled=False` metadata'sı taşır; BeachesConnector `method=JSON`, `diff_enabled=True` kullanır. Source API metadata'sı name/version/method döndürür. Yöntem alanı kaynak formundaki plan yerine bağlı connector yöntemini gösterir; kaynak satırındaki kullanıcı seçimi korunur; varsayılanlar aşağıdaki migration koşullarıyla güncellenir.
+1. Proje yöneticisi (ayrı bir Claude sohbeti) görevi `GÖREV-NN` numarasıyla yazar.
+2. Kullanıcı görevi Claude Code'a taşır.
+3. Claude Code görevi kullanıcının gerçek yerel repo ortamında, görevin kendi dalında uygular.
+4. Claude Code testleri çalıştırır, gerekiyorsa geçici veri klasöründe canlı smoke yapar, commit eder ve kendi dalına push eder.
+5. Claude Code Türkçe raporunu yazar; görev metni, rapor ve istenen çıktılar `docs/gorevler/GOREV-NN/` altında aynı dala push edilir.
+6. Yönetici commit'i, CI sonucunu ve raporu GitHub üzerinden inceler; gerekirse düzeltme görevi verir.
+7. Gerekliyse kullanıcı kritik manuel davranışı gerçek ortamda onaylar.
+8. Dal kullanıcının onayıyla main'e alınır.
+9. Stable release tag'lenir.
+10. Sonraki görev dalı açılır.
 
-Her çekim `/points/{lat},{lon}` → yanıttaki forecast ve forecastHourly adresleri → `/alerts/active?point={lat},{lon}` sırasını üç sabit örnek noktada yürütür. Adresler yalnızca HTTPS api.weather.gov, credentials olmadan ve varsayılan/443 port ile izlenir. Noktalar ve provenance `weather_anchors.py` içindedir. Canonical mahalle merkezleri değildir.
+Görev dalı; yönetici incelemesi, gereken gerçek smoke ve kullanıcı onayı tamamlanmadan main'e alınmamalıdır.
 
-`weather_locations`, `weather_forecast_periods`, `weather_alerts`, `weather_alert_anchors` tabloları v3→v4 migration'ında yalnızca eklenir. Eski domain kayıtları korunur; yalnızca aşağıda belirtilen kaynak varsayılanları koşullu güncellenir. v0.4 döneminde bu adım v4 ile biter; v0.5 artık devamında upgrade_v5 çalıştırır. Kaynak/run/iş, hava lokasyonu ve alert ilişkileri foreign key ile korunur.
+Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 
-CollectionResult.records tüm normal ve saatlik forecast dönemlerini içerir; record_count bunların toplamıdır. İlişkili noktalar/uyarılar related içindedir. Metadata anchors/forecast_period_count/hourly_period_count/alert_count ve nokta başına generatedAt/updateTime içerir. source_updated her normal forecast'in updateTime (yoksa generatedAt) değerlerinin en yenisidir; bizim çekim zamanımız değildir. API'nin dönem sayıları sabit kabul edilmez. Null, sıfır ve kaynak ISO offset'i korunur; dewpoint birimi ayrıca saklanır.
+## 14. Şu anda uygulanmamış başlıca alanlar
 
-Her yanıtın endpoint'i, anchor'ı, türü, çekim sırası, durumu, çekim zamanı ve ham body metni `data/raw/<run-id>/source.json` paketine yazılır. Ana dosyanın SHA-256'sı sadece Database.record_raw_artifact() tarafından hesaplanır. Yanıt tamamlandıkça paket atomik değiştirilir. Başarısız/kesilmiş istekte önceki tamamlanmış yanıtlar korunur; boyut sınırını aşan veya ortasında iptal edilen yanıtın tamamı saklanmaz. Başarısız/iptal çekimde domain kaydı yayımlanmaz.
+- Tam lodging inventory connector
+- Lodging rates / availability history
+- Historical climate (NOAA/NCEI)
+- Deniz suyu sıcaklığı / koşullar
+- Yakıt fiyatı
+- Overture/POI enrichment
+- Etkinlik connector
+- Ulaşım connector
+- Grocery / günlük ihtiyaç fiyatları
+- Restoran menü/fiyat enrichment
+- Scheduler
+- Otomatik entity matching
+- Region polygon mapping
+- AI evidence-pack / konu seçimi
+- Makale/senaryo
+- Görsel plan
+- Video render
+- Yayın paketi
 
-Hava sekmesi üç nokta arasında geçiş, başarılı sürüm seçimi, bütün normal dönemler, ilk 24 saatlik kayıt ve seçili noktanın uyarılarını gösterir. Zamanlar points.timeZone ile biçimlenir; çekim listesi UTC etiketi taşır. Hava için generic run_diff, connector.diff_enabled üzerinden açıklamalı available=false döndürür. Job sonuç hedefleri ortak domainTarget helper ile #collect, #collect/weather veya #collect/restaurants seçer.
+## 15. Sonraki geliştirici / AI için ilk kurallar
 
-Ek uçlar: GET /api/weather-runs, GET /api/weather-runs/{id}, GET /api/weather-runs/{id}/raw. Ayrıntı run/locations/forecast_periods/hourly_periods/alerts/diff döndürür. Sadece başarılı hava run'ları sunulur. Ham indirme raw dizini dışına çıkamaz. Genel /api/source-runs korunur.
+1. Önce bu belgeyi oku.
+2. Sonra `docs/DEVIR/05_SURUM_GECMISI_VE_GUNCEL_DURUM.md` oku.
+3. Aktif görev veri kaynağıyla ilgiliyse `03_VERI_KAYNAKLARI_VE_DOGRULAMA.md` oku.
+4. Kod değişmeden önce gerçek branch/head'i doğrula.
+5. `data/` klasörüne zarar verme.
+6. Kaynak semantiğini doğrulamadan schema/domain yazma.
+7. 30A-specific davranışı generic core'a gömme.
+8. Yeni destination uyumluluğunu test et.
+9. Test fixture'ları canlı web'e bağımlı yapma.
+10. Canlı smoke sonuçlarını sabit production/test sayısı haline getirme.
+11. Kullanıcı onayı olmadan feature branch'i main'e merge etme.
+12. v0.7 lodging konusunda date-filtered sonucu “tam inventory” diye modelleme.
 
-NWS HTTP: TLS açık, bağlantı 10 s/diğer işlemler 20 s timeout, yanıt başına 5 MB, en çok 3 yönlendirme. Ağ/timeout/5xx için bir kez ve 0.5 s iptal edilebilir beklemeyle retry; 429 doğrudan anlaşılır hata. Uyarı sayfalaması en fazla 5 sayfa; eksik veri başarı sayılmaz. İstekler sırayla yapılır. NWS alanları ve schema açıklaması: [M3-HAVA-VERISI](docs/M3-HAVA-VERISI.md).
+## 16. Devir dokümanı indeksi
 
-Tarihsel NOAA iklimi, observation station/current conditions, scheduler, Claude/OpenAI bu sürümde yoktur. Nokta yanıtındaki istasyon URL'si yalnızca provenance olarak saklanır, çağrılmaz.
+- `CALISMA_MANTIGI.md` — ana devir ve çalışma mantığı
+- `docs/DEVIR/01_URUN_VIZYONU_VE_KARARLAR.md`
+- `docs/DEVIR/02_TEKNIK_MIMARI_VE_VERI_MODELI.md`
+- `docs/DEVIR/03_VERI_KAYNAKLARI_VE_DOGRULAMA.md`
+- `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
+- `docs/DEVIR/05_SURUM_GECMISI_VE_GUNCEL_DURUM.md`
+- `docs/DEVIR/06_ROADMAP_VE_ACIK_KONULAR.md`
+- `docs/DEVIR/07_YENI_AI_BASLANGIC_TALIMATI.md`
 
-Varsayılan kaynak düzeltmesi: temiz kurulumda NWS yöntemi API, South Walton plaj yöntemi JSON olarak seed tanımından alınır. v3→v4 migration yalnızca tam kaynak URL'si eşleşen ve yöntemi hâlâ `Belirlenecek` olan bu iki kaydı günceller. NWS notu yalnızca eski varsayılan açıklamayla birebir aynıysa yeni tahmin/uyarı açıklamasına çevrilir. Not ve yöntem koşulları bağımsızdır; kullanıcı notu veya seçtiği yöntem korunur. Diğer kaynak alanları ve source_history değiştirilmez. Yükseltme öncesi yedek eski değerleri içerir. Zaten şema v4 olan veritabanlarında bu migration yeniden çalıştırılmaz.
+Mevcut ayrıntılı domain belgeleri de korunmalıdır:
+- `docs/M2-VERI-TOPLAMA.md`
+- `docs/M3-HAVA-VERISI.md`
+- `docs/M4-RESTORAN-VERISI.md`
+- `docs/M5-DESTINASYON-KATMANI.md`
+- `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
-## Restoran domain'i · v0.5
+---
 
-RestaurantsConnector (`south-walton-restaurants/1`, HTML, diff_enabled=True) mevcut `source_collection` kuyruğunu ve atomik kaydetme işlemini kullanır. jobs.py için özel restoran yolu eklenmez. Ana HTML formundaki etiket/değer/parametre adları okunur; 13 hedef mahalle ve Restaurants filtresi her sonuç sayfasında doğrulanır. Sayfalama filtreleri korur. Aynı detay path'i bir kez çekilir; bulunduğu tüm mahalleler source provenance olarak saklanır. Adresten mahalle çıkarılmaz ve entities sisteminde eşleme yapılmaz.
-
-`restaurant_records` run+external_id anahtarı ve JSON array kontrolü; `restaurant_regions` kayıtla bileşik FK ve mevcut canonical regions ile FK kullanır. Kimlik, `/listing/slug/` yoludur. Açıklama, adres, iletişim, site, sıralanmış mutfak/öğün/olanak listeleri ve mahalle ilişkileri generic diff'e dahildir. Kısmi HTTP/parse/yazım hatasında kayıtlar ve ilişkiler yayımlanmaz; önceki başarılı sürüm kalır.
-
-Ham dosyalar `raw/<run-id>/listing/0001.html` ve `detail/NNNN.html` gibi sayısal adlarla yazılır; ana dosya manifest.json'dur. Response sırası, türü, mahallesi, istenen/son URL, durum, content-type, çekim zamanı, bağıl dosya ve alt dosya SHA-256 manifestte bulunur. Manifestin DB hash'ini yalnızca `Database.record_raw_artifact()` hesaplar. Yalnızca tamamlanmış, boyut sınırındaki yanıtlar saklanır. Çekim zamanı, source_updated yerine kullanılmaz.
-
-Yeni API: `/api/restaurant-runs`, `/api/restaurant-runs/{id}`, `/api/restaurant-runs/{id}/raw`. Domain API yalnızca başarılı restoran sürümlerini sunar; generic source-runs başarısız/iptal çekimleri de korur. Ham indirme yalnızca o run'ın raw dizinindeki manifest.json dosyasına izin verir. UI Plaj/Hava/Restoranlar sekmeleri, tarihli sürümler, fark sayıları, arama ve üç filtre içerir; iş sonucundan restoran sekmesi açılır. Dış bağlantılar noopener/noreferrer kullanır.
-
-v4→v5 migration yedek aldıktan sonra restoran tablolarını ekler. Diğer domain kayıtlarını, geçmişi ve raw dosyaları değiştirmez. Tam restoran seed URL'si için method yalnızca Belirlenecek ise HTML olur; notes yalnızca eski varsayılan metne eşitse güncellenir. Koşullar bağımsızdır; kullanıcı notu/yöntemi korunur. Fresh DB ve v1/v2/v3/v4/v5 zinciri şema 6’ya ulaşır. Kapsam, HTTP sınırları ve testler: [M4-RESTORAN-VERISI](docs/M4-RESTORAN-VERISI.md).
-
-Restoran kaynağının açılış onarımı, şema zaten 5 olsa da çalışır. `sources/url_identity.py` izinli HTTPS host alias’larını ve son slash farkını normalize eder; query/fragment, credentials, farklı host/port ve belirsiz path biçimlerini reddeder. `connector_defaults.py` aynı supports kontrolüyle sadece Belirlenecek yöntemini ve birebir eski seed notunu koşullu düzeltir. Kaynak URL’si, diğer kullanıcı alanları, source.version ve source_history değişmez; doğru alanlar yeniden yazılmaz. Plaj/hava supports davranışları korunur.
-
-## Destinasyon bağlamı
-
-Global seçici `studio.destination_id` tarayıcı kaydını kullanır. Her liste/bootstrap/SSE isteği seçili destinasyonla gönderilir. Sunucuda ortak seçim yoktur. Source create seçili destinasyonu zorunlu taşır; normal edit kaynağı başka destinasyona taşıyamaz. JobQueue SQLite’tan ConnectorContext alır. Kaynak toplama işi ve run source’un destination_id değerini kaydeder; katalog kontrolü yalnız seçili kaynakları inceler. Diff başka destinasyonla karşılaştırma yapmaz. Geç gelen yanıtlar, önceki filtre ve detay seçimleri destinasyon geçişinde bırakılır.
-
-30A metadata, seed, bölge ve hava noktası varsayılanları `destinations/thirty_a.py` içinde; runtime kaynak SQLite’tır. Hava generic, South Walton plaj/restoran connector’ları 30A kapsamlıdır. [M5 belgesi](docs/M5-DESTINASYON-KATMANI.md) migration, testler ve yeni destinasyon kontrol listesini içerir.
+**Son güncelleme:** 3 Ekim 2026  
+**Stable:** v0.6.0  
+**Aktif araştırma:** v0.7 lodging inventory discovery / sonuç C

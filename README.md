@@ -33,6 +33,9 @@ v0.1/v0.2/v0.3/v0.4/v0.5 veritabanı açılırken önce `data/backups/` içine S
 
 - [Konaklama kaynağı keşfi — tam envanter kapsamı henüz doğrulanmadı](docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md)
 - [Uygulamanın çalışma mantığı](CALISMA_MANTIGI.md)
+- [Kanal konsepti ve içerik stratejisi](docs/KONSEPT.md)
+- [Devir belgeleri (01–07)](docs/DEVIR/)
+- [v0.6 teknik çalışma mantığı (eski kök belge)](docs/TEKNIK-CALISMA-MANTIGI-v0.6.md)
 - [Housing Atlas incelemesi ve 30A mimarisi](docs/MIMARI.md)
 - [Kademeli geliştirme planı](docs/ASAMALAR.md)
 - [Plaj veri kaynağının kapsamı ve kontrolleri](docs/M2-VERI-TOPLAMA.md)
