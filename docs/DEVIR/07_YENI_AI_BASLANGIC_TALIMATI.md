@@ -123,7 +123,7 @@ Mevcut taban:
 
 ## Main'e merge
 
-Kullanıcı açıkça onaylamadan feature branch'i main'e alma.
+Main'e alma kararı proje yöneticisine aittir. Görev dalını main'e yalnız görev metni bunu açıkça istediğinde al; kullanıcıdan onay isteme.
 
 ## Şu an senden beklenmeyenler
 

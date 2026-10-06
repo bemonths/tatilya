@@ -1,6 +1,6 @@
 # Aşama 2 — İlk gerçek veri kaynağı · v0.2 tarihsel çalışma kaydı
 
-Bu belge v0.2 aşamasını kaydeder. Güncel v0.3 run/connector, migration ve yönlendirme davranışı [çalışma mantığında](../CALISMA_MANTIGI.md) açıklanmıştır.
+Bu belge v0.2 aşamasını kaydeder. Güncel v0.3 run/connector, migration ve yönlendirme davranışı [çalışma mantığında](TEKNIK-CALISMA-MANTIGI-v0.6.md) açıklanmıştır.
 
 ## Kaynak ve yöntem
 

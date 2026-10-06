@@ -301,6 +301,8 @@ Tam envanter için yeni, deterministik bir public/read/export sözleşmesi bulun
 
 Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
+> **7 Ekim 2026 yönetici kararı:** Tarihten bağımsız tam konaklama envanteri şartı kaldırıldı; içerik için gerekli değildir. Konaklama, belirli tarihler için yapılan Book>Direct aramalarının etiketli anlık görüntüleri olarak modellenecek: arama tarihi, giriş/çıkış tarihi, misafir sayısı, mahalle filtresi, dönen kayıtlar ve kaynağın verdiği fiyat alanları. Bu veri hiçbir yerde tam envanter diye adlandırılmayacak.
+
 ## 11. Stable release ve test durumu
 
 Stable: `main @ a938367a280ef799597d5d90dc39ef34a26a6fcb`  
@@ -354,12 +356,12 @@ Bunlar yalnız o doğrulama anının snapshot'ıdır.
 4. Claude Code testleri çalıştırır, gerekiyorsa geçici veri klasöründe canlı smoke yapar, commit eder ve kendi dalına push eder.
 5. Claude Code Türkçe raporunu yazar; görev metni, rapor ve istenen çıktılar `docs/gorevler/GOREV-NN/` altında aynı dala push edilir.
 6. Yönetici commit'i, CI sonucunu ve raporu GitHub üzerinden inceler; gerekirse düzeltme görevi verir.
-7. Gerekliyse kullanıcı kritik manuel davranışı gerçek ortamda onaylar.
-8. Dal kullanıcının onayıyla main'e alınır.
+7. Gerçek ortamda yapılması gereken arayüz ve canlı kontrolleri Claude Code kendisi yapar (gerekirse ekran görüntüsüyle); kullanıcıdan onay veya manuel test istenmez.
+8. Dal, proje yöneticisinin kararıyla main'e alınır; Claude Code main'e yalnız görev metni bunu açıkça istediğinde alır.
 9. Stable release tag'lenir.
 10. Sonraki görev dalı açılır.
 
-Görev dalı; yönetici incelemesi, gereken gerçek smoke ve kullanıcı onayı tamamlanmadan main'e alınmamalıdır.
+Görev dalı; yönetici incelemesi ve gereken gerçek ortam kontrolleri tamamlanmadan ve yönetici main'e alma kararını görev metninde vermeden main'e alınmamalıdır. Teknik kararlar yöneticiye aittir; kullanıcı makale (video metni) aşamasına kadar karar mekanizması değildir.
 
 Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 
@@ -396,12 +398,15 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 8. Yeni destination uyumluluğunu test et.
 9. Test fixture'ları canlı web'e bağımlı yapma.
 10. Canlı smoke sonuçlarını sabit production/test sayısı haline getirme.
-11. Kullanıcı onayı olmadan feature branch'i main'e merge etme.
+11. Görev metni (yönetici kararı) açıkça istemedikçe görev dalını main'e merge etme.
 12. v0.7 lodging konusunda date-filtered sonucu “tam inventory” diye modelleme.
 
 ## 16. Devir dokümanı indeksi
 
 - `CALISMA_MANTIGI.md` — ana devir ve çalışma mantığı
+- `docs/KONSEPT.md` — kanal konsepti ve içerik stratejisi; içerik yönünde bağlayıcı belge
+- `docs/TEKNIK-CALISMA-MANTIGI-v0.6.md` — v0.6 uygulamasının ayrıntılı teknik çalışma mantığı (eski kök belge)
+- `docs/gorevler/` — görev metinleri, raporlar ve görev çıktıları (`GOREV-NN/`)
 - `docs/DEVIR/01_URUN_VIZYONU_VE_KARARLAR.md`
 - `docs/DEVIR/02_TEKNIK_MIMARI_VE_VERI_MODELI.md`
 - `docs/DEVIR/03_VERI_KAYNAKLARI_VE_DOGRULAMA.md`

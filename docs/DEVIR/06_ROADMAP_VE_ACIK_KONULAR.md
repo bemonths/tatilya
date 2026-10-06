@@ -1,8 +1,10 @@
 # Roadmap ve Açık Konular
 
-> Bu belge kesin sprint planı değil, mevcut ürün kararlarıyla uyumlu öncelik havuzudur. Kullanıcı onayı olmadan yeni domain seçilmiş sayılmaz.
+> Bu belge kesin sprint planı değil, mevcut ürün kararlarıyla uyumlu öncelik havuzudur. Proje yöneticisinin kararı olmadan yeni domain seçilmiş sayılmaz.
 
 ## Şu anki açık konu: lodging
+
+> **7 Ekim 2026 yönetici kararı:** Tarihten bağımsız tam konaklama envanteri şartı kaldırıldı; içerik için gerekli değildir. Konaklama, belirli tarihler için yapılan Book>Direct aramalarının etiketli anlık görüntüleri olarak modellenecek: arama tarihi, giriş/çıkış tarihi, misafir sayısı, mahalle filtresi, dönen kayıtlar ve kaynağın verdiği fiyat alanları. Bu veri hiçbir yerde tam envanter diye adlandırılmayacak. Bu bölümün aşağıdaki kısmı kararın öncesindeki durumu anlatır.
 
 ### Hedef
 

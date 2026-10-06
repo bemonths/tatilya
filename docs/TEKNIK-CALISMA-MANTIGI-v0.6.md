@@ -124,7 +124,7 @@ Kurulum: `python -m pip install -e ".[test]"`. Test: `python -m pytest -q`. GitH
 
 Yedek için uygulama kapalıyken data klasörünün tamamı kopyalanır. GitHub'a kod, testler ve belgeler gönderilir; data, yedekler, ham çekimler, .venv, .env ve önbellekler gönderilmez. Yeni connector'lar ve veri kalite kontrolleri sonraki adımlardır. İçerik onayları, verisi değişen içeriği eskimiş işaretleme, AI ve medya akışı henüz uygulanmadı.
 
-İlgili belgeler: [mimari](docs/MIMARI.md), [aşamalar](docs/ASAMALAR.md), [v0.2 plaj kaynağı çalışması](docs/M2-VERI-TOPLAMA.md).
+İlgili belgeler: [mimari](MIMARI.md), [aşamalar](ASAMALAR.md), [v0.2 plaj kaynağı çalışması](M2-VERI-TOPLAMA.md).
 
 Kaynak kütüphanesindeki hazır durumu ve bağlı yöntem, beach adına değil genel `source.connector` bilgisine dayanır. Ayrıntıda toplayıcı adı ve sürümü görünür. İşler panelindeki plaj ekranı bağlantısı yalnızca sonuçta plaj connector adını taşıyan işlere verilir; diğer genel toplama işleri bu ekrana yönlendirilmez.
 
@@ -144,7 +144,7 @@ Hava sekmesi üç nokta arasında geçiş, başarılı sürüm seçimi, bütün 
 
 Ek uçlar: GET /api/weather-runs, GET /api/weather-runs/{id}, GET /api/weather-runs/{id}/raw. Ayrıntı run/locations/forecast_periods/hourly_periods/alerts/diff döndürür. Sadece başarılı hava run'ları sunulur. Ham indirme raw dizini dışına çıkamaz. Genel /api/source-runs korunur.
 
-NWS HTTP: TLS açık, bağlantı 10 s/diğer işlemler 20 s timeout, yanıt başına 5 MB, en çok 3 yönlendirme. Ağ/timeout/5xx için bir kez ve 0.5 s iptal edilebilir beklemeyle retry; 429 doğrudan anlaşılır hata. Uyarı sayfalaması en fazla 5 sayfa; eksik veri başarı sayılmaz. İstekler sırayla yapılır. NWS alanları ve schema açıklaması: [M3-HAVA-VERISI](docs/M3-HAVA-VERISI.md).
+NWS HTTP: TLS açık, bağlantı 10 s/diğer işlemler 20 s timeout, yanıt başına 5 MB, en çok 3 yönlendirme. Ağ/timeout/5xx için bir kez ve 0.5 s iptal edilebilir beklemeyle retry; 429 doğrudan anlaşılır hata. Uyarı sayfalaması en fazla 5 sayfa; eksik veri başarı sayılmaz. İstekler sırayla yapılır. NWS alanları ve schema açıklaması: [M3-HAVA-VERISI](M3-HAVA-VERISI.md).
 
 Tarihsel NOAA iklimi, observation station/current conditions, scheduler, Claude/OpenAI bu sürümde yoktur. Nokta yanıtındaki istasyon URL'si yalnızca provenance olarak saklanır, çağrılmaz.
 
@@ -160,7 +160,7 @@ Ham dosyalar `raw/<run-id>/listing/0001.html` ve `detail/NNNN.html` gibi sayısa
 
 Yeni API: `/api/restaurant-runs`, `/api/restaurant-runs/{id}`, `/api/restaurant-runs/{id}/raw`. Domain API yalnızca başarılı restoran sürümlerini sunar; generic source-runs başarısız/iptal çekimleri de korur. Ham indirme yalnızca o run'ın raw dizinindeki manifest.json dosyasına izin verir. UI Plaj/Hava/Restoranlar sekmeleri, tarihli sürümler, fark sayıları, arama ve üç filtre içerir; iş sonucundan restoran sekmesi açılır. Dış bağlantılar noopener/noreferrer kullanır.
 
-v4→v5 migration yedek aldıktan sonra restoran tablolarını ekler. Diğer domain kayıtlarını, geçmişi ve raw dosyaları değiştirmez. Tam restoran seed URL'si için method yalnızca Belirlenecek ise HTML olur; notes yalnızca eski varsayılan metne eşitse güncellenir. Koşullar bağımsızdır; kullanıcı notu/yöntemi korunur. Fresh DB ve v1/v2/v3/v4/v5 zinciri şema 6’ya ulaşır. Kapsam, HTTP sınırları ve testler: [M4-RESTORAN-VERISI](docs/M4-RESTORAN-VERISI.md).
+v4→v5 migration yedek aldıktan sonra restoran tablolarını ekler. Diğer domain kayıtlarını, geçmişi ve raw dosyaları değiştirmez. Tam restoran seed URL'si için method yalnızca Belirlenecek ise HTML olur; notes yalnızca eski varsayılan metne eşitse güncellenir. Koşullar bağımsızdır; kullanıcı notu/yöntemi korunur. Fresh DB ve v1/v2/v3/v4/v5 zinciri şema 6’ya ulaşır. Kapsam, HTTP sınırları ve testler: [M4-RESTORAN-VERISI](M4-RESTORAN-VERISI.md).
 
 Restoran kaynağının açılış onarımı, şema zaten 5 olsa da çalışır. `sources/url_identity.py` izinli HTTPS host alias’larını ve son slash farkını normalize eder; query/fragment, credentials, farklı host/port ve belirsiz path biçimlerini reddeder. `connector_defaults.py` aynı supports kontrolüyle sadece Belirlenecek yöntemini ve birebir eski seed notunu koşullu düzeltir. Kaynak URL’si, diğer kullanıcı alanları, source.version ve source_history değişmez; doğru alanlar yeniden yazılmaz. Plaj/hava supports davranışları korunur.
 
@@ -168,4 +168,4 @@ Restoran kaynağının açılış onarımı, şema zaten 5 olsa da çalışır. 
 
 Global seçici `studio.destination_id` tarayıcı kaydını kullanır. Her liste/bootstrap/SSE isteği seçili destinasyonla gönderilir. Sunucuda ortak seçim yoktur. Source create seçili destinasyonu zorunlu taşır; normal edit kaynağı başka destinasyona taşıyamaz. JobQueue SQLite’tan ConnectorContext alır. Kaynak toplama işi ve run source’un destination_id değerini kaydeder; katalog kontrolü yalnız seçili kaynakları inceler. Diff başka destinasyonla karşılaştırma yapmaz. Geç gelen yanıtlar, önceki filtre ve detay seçimleri destinasyon geçişinde bırakılır.
 
-30A metadata, seed, bölge ve hava noktası varsayılanları `destinations/thirty_a.py` içinde; runtime kaynak SQLite’tır. Hava generic, South Walton plaj/restoran connector’ları 30A kapsamlıdır. [M5 belgesi](docs/M5-DESTINASYON-KATMANI.md) migration, testler ve yeni destinasyon kontrol listesini içerir.
+30A metadata, seed, bölge ve hava noktası varsayılanları `destinations/thirty_a.py` içinde; runtime kaynak SQLite’tır. Hava generic, South Walton plaj/restoran connector’ları 30A kapsamlıdır. [M5 belgesi](M5-DESTINASYON-KATMANI.md) migration, testler ve yeni destinasyon kontrol listesini içerir.

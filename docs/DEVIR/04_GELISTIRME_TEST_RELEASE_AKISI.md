@@ -13,12 +13,12 @@ Gereksinim / sorun
 → commit + görev dalına push
 → Claude Code raporu; görev metni, rapor ve çıktılar docs/gorevler/GOREV-NN/ altında aynı dala push edilir
 → yönetici commit, CI ve raporu GitHub'dan inceler; gerekirse düzeltme görevi verir
-→ gerekirse kullanıcı gerçek ortamda manuel kabul yapar
-→ kullanıcı onayıyla main merge
+→ gerekirse Claude Code gerçek ortamda arayüz ve canlı kontrolü kendisi yapar (gerekirse ekran görüntüsüyle)
+→ yönetici kararıyla main merge (Claude Code yalnız görev metni açıkça istediğinde)
 → release tag
 ```
 
-Bu modelin amacı, yöneticinin erişemediği gerçek yerel program/DB ve canlı kaynak davranışını Claude Code tarafında test ettirmek ve commit'i ayrıca bağımsız incelemektir. Kullanıcı İngilizce bilmez ve kod okumaz; görevi ve raporu taşır, main'e alma kararını verir. Raporlar bu yüzden Türkçe ve sadedir.
+Bu modelin amacı, yöneticinin erişemediği gerçek yerel program/DB ve canlı kaynak davranışını Claude Code tarafında test ettirmek ve commit'i ayrıca bağımsız incelemektir. Kullanıcı İngilizce bilmez ve kod okumaz; görevi ve raporu taşır, makale (video metni) aşamasına kadar karar vermez. Raporlar bu yüzden Türkçe ve sadedir.
 
 ## Repo ve local
 
@@ -69,7 +69,7 @@ Feature branch main'e ancak:
 - kod incelemesi,
 - CI,
 - gereken real smoke,
-- kullanıcı kabulü
+- yönetici kararı (Claude Code main'e yalnız görev metni açıkça istediğinde alır)
 
 sonrası alınmalıdır.
 
@@ -211,18 +211,18 @@ Commit geldikten sonra şu kontrol edilir:
 - main yanlışlıkla değişmiş mi?
 - tag doğru commit'e mi işaret ediyor?
 
-## Kullanıcı manuel testleri
+## Claude Code'un gerçek ortam kontrolleri
 
-Kullanıcıya otomatik testlerin zaten kanıtladığı her şeyi tekrar yaptırmak gerekmez.
+Kullanıcıdan onay veya manuel test istenmez. Otomatik testlerin zaten kanıtladığı davranış ayrıca elle denenmez.
 
-Manuel test yalnız gerçek ortamın anlamlı olduğu yerlerde:
-- eski user DB migration
-- UI gerçek rendering
-- local path/process
-- browser behavior
-- production snapshot görünürlüğü
+Gerçek ortamın anlamlı olduğu yerlerde kontrolü Claude Code kendisi yapar:
+- eski kullanıcı DB'si migration'ı (önce gerçek DB'nin kopyasında)
+- UI'nin gerçek tarayıcıda görünümü
+- yerel yol/süreç davranışı
+- tarayıcı davranışı
+- gerçek DB kopyasıyla açılan uygulamada snapshot görünürlüğü
 
-için kullanılmalıdır.
+Sonuç, gerekiyorsa ekran görüntüsüyle birlikte görev raporuna yazılır.
 
 ## Release
 
@@ -273,7 +273,7 @@ Restaurant source “Bağlantı bekliyor” görünüyordu. Git branch/head asl�
 - [ ] destination isolation
 - [ ] raw artifact
 - [ ] live smoke
-- [ ] user critical smoke
+- [ ] Claude Code gerçek ortam kontrolü (gerekirse ekran görüntüsüyle)
 - [ ] docs
 - [ ] branch push
 - [ ] main merge

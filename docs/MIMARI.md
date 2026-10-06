@@ -75,7 +75,7 @@ Yeni connector eklenirken kaynak desteği, okuma/doğrulama, domain saklama/okum
 
 ## Fark, yönlendirme ve teşhis
 
-Fark raporu aynı source ve connector'ın önceki başarılı run'ını seçer. External_id esas alınır; başarısız ve iptal edilmiş çekimler atlanır. Olanakların sırası fark sayılmaz; eski satırlar değişmez. Ayrıntılı alan sözleşmesi CALISMA_MANTIGI.md içindedir.
+Fark raporu aynı source ve connector'ın önceki başarılı run'ını seçer. External_id esas alınır; başarısız ve iptal edilmiş çekimler atlanır. Olanakların sırası fark sayılmaz; eski satırlar değişmez. Ayrıntılı alan sözleşmesi [TEKNIK-CALISMA-MANTIGI-v0.6.md](TEKNIK-CALISMA-MANTIGI-v0.6.md) içindedir.
 
 HTTP bağlayıcısı en fazla üç yönlendirmeyi yalnızca açık izin listesindeki visitsouthwalton.com veya www.visitsouthwalton.com, HTTPS ve varsayılan/443 port koşuluyla takip eder. İzin listesi dışındaki host, alt alan veya güvenli olmayan adres için istek yapılmaz. Ham HTML çalıştırılmaz. Boyut/zaman sınırları, sınırlı yeniden deneme ve iptal korunmuştur.
 
@@ -89,7 +89,7 @@ Testler migration, rollback, kalıcılık, genel connector/job, başarısız run
 
 Kullanıcı veritabanının kopyasında 7 kaynak, 1 kaynak geçmişi, 1 eski başarılı run ve 53 plaj satırının korunduğu doğrulandı. Yeni sürümle yapılan canlı çekim yine 53 kayıt verdi; eski sürümle farkı 0 eklenen, 0 kaldırılan, 0 değişen ve 53 aynı kayıttı. Bu sayılar yalnızca o doğrulama anına aittir.
 
-Tam çalışma akışı: [CALISMA_MANTIGI.md](../CALISMA_MANTIGI.md). Geliştirme planı: [ASAMALAR.md](ASAMALAR.md).
+Tam çalışma akışı: [TEKNIK-CALISMA-MANTIGI-v0.6.md](TEKNIK-CALISMA-MANTIGI-v0.6.md). Geliştirme planı: [ASAMALAR.md](ASAMALAR.md).
 
 Kaynak UI durumu genel connector metadata bilgisini kullanır; özel plaj bağlantıları yalnızca plaj connector sonuçlarına aittir. Diff, connector sürümleri farklı olsa da çalışır ve sürüm değişimini üç ek alanla bildirir. Ham SHA-256 yalnızca Database.record_raw_artifact() tarafından diskteki dosyadan hesaplanır; CollectionResult içinde ikinci hash alanı yoktur.
 
