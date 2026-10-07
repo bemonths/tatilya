@@ -48,11 +48,11 @@ app 0.9.0 / schema 9
 
 ```text
 gorev-07-konaklama
-Book>Direct konaklama profili (Konaklama sekmesi; canlı çekim izin bekliyor) ve referans tablosunun tamamlanması
+Book>Direct konaklama profili (Konaklama sekmesi) ve referans tablosunun tamamlanması
 app 0.10.0 / schema 10
 ```
 
-main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir. Gerçek veritabanı yalnız görev metni açıkça isterse ve normal kullanımla, önce `data/` tam yedeği alınarak güncellenir (CLAUDE.md). Gerçek veritabanı şema 9'dur; main'deki 0.9.0 onu açar. Görev dalının 0.10.0'ı açınca şema 10'a yükseltir; gerçek veride bu yalnız görev metni isterse yapılır.
+main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir. Gerçek veritabanı yalnız görev metni açıkça isterse ve normal kullanımla, önce `data/` tam yedeği alınarak güncellenir (CLAUDE.md). Gerçek veritabanı 7 Ekim 2026'dan beri şema 10'dur; main'deki 0.9.0 onu açmaz, uygulama bu dal main'e alınana kadar `gorev-07-konaklama` dalından çalıştırılır.
 
 ## Çalışan connector'lar
 

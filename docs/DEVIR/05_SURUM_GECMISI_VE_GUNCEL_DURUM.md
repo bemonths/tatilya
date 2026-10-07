@@ -24,7 +24,8 @@ schema 10
 ```
 
 Bu dal:
-- Book>Direct konaklama profili toplayıcısını (`bookdirect-lodging/1`, şema 10, Konaklama sekmesi) ekler; canlı çekim izin bekliyor,
+- Book>Direct konaklama profili toplayıcısını (`bookdirect-lodging/1`, şema 10, Konaklama sekmesi) ekler; gerçek veride ilk çekim 7 Ekim 2026,
+- bilgi toplama ilkesini (CLAUDE.md, CALISMA_MANTIGI §4 madde 13–14) yazar,
 - referans tablosunu tamamlar (`yerine_gecildi` durumu; 103 satır),
 - main'e alınmadı; karar yöneticinin.
 
@@ -297,10 +298,10 @@ Dal: `gorev-06-referanslar`, uygulama 0.9.0, şema 9.
 
 Dal: `gorev-07-konaklama`, uygulama 0.10.0, şema 10.
 
-- Konaklama: generic Book>Direct toplayıcısı; clone, konum filtresi eşlemesi (30A: 14 filtre, Seagrove Beach → Seagrove) ve 4 tarih penceresi SQLite'ta; ön yüz istemci anahtarı yalnız bellekte; bütün arama sayfaları, sınırlı denemeli canlı fiyat, ilan başına fiyat takvimi (aylık özet); okuma anında mahalle × pencere özeti. 39 test. Canlı çekim yapılmadı: Claude Code'un izin denetimi anahtarı paketten okuyan isteği engelledi; geçici deneme ve gerçek DB güncellemesi bekliyor. Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
+- Konaklama: generic Book>Direct toplayıcısı; clone, konum filtresi eşlemesi (30A: 14 filtre, Seagrove Beach → Seagrove) ve 4 tarih penceresi SQLite'ta; ön yüz istemci anahtarı yalnız bellekte; bütün arama sayfaları, sınırlı denemeli canlı fiyat, ilan başına fiyat takvimi (aylık özet); okuma anında mahalle × pencere özeti. 40 test. Geçici deneme ve gerçek çekim (her biri ~73 dk, ~2.655 istek): 4 pencerede 2.389 benzersiz ilan; tür, oda ve kapasite her mahallede var; fiyat çok seyrek (liste fiyatı birkaç ilanda, takvimlerin çoğu gizli, takvimler yalnız Ekim–Mart). İlk deneme Claude Code'un izin denetimince engellenmişti; kullanıcı izin modunu değiştirdikten sonra çalıştı. Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
 - Referans tablosu: 103 satır (89 doğrulandı, 2 çelişkili, 9 doğrulanamadı, 3 yerine geçildi). Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
-- v9 → v10 migration denemesi gerçek DB kopyasında temiz; gerçek DB değişmedi (şema 9).
-- Bilgi toplama kurallarının değiştirilmesi (Adım 2) izin denetimince engellendi; kural belgeleri değişmedi.
+- v9 → v10 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261007-2235/`), v9 → v10, yalnız konaklama toplayıcısı; sonra 18 jobs, 15 source_runs, 2.389 lodging_listings, 9.189 lodging_search_results; `integrity_check` ok, `foreign_key_check` boş.
+- Bilgi toplama ilkesi (Adım 2) ayrı commit'le yazıldı (ilk deneme izin denetimince engellenmişti).
 
 ---
 
@@ -318,11 +319,11 @@ Stable ürün:
 Çalışan veri domain'leri:
 **beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu** ve plaj–mahalle eşlemesi v3; `gorev-07-konaklama` dalında ayrıca **konaklama profili** (tarihli arama anlık görüntüleri)
 
-Kodlanmış ama canlı çalıştırılmamış:
-**lodging** (tarihli arama anlık görüntüleri; `gorev-07-konaklama`)
+Görev dalında, gerçek veride çalışmış:
+**lodging** (tarihli arama anlık görüntüleri; `gorev-07-konaklama`; fiyat verisi seyrek)
 
 Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-07-konaklama` yönetici incelemesinden ve konaklama çekimi için izin kararından sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).
+`gorev-07-konaklama` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).

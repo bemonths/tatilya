@@ -4,7 +4,28 @@ Tarih: 7 Ekim 2026 · Görev: GÖREV-07 · Dal: `gorev-07-konaklama` · Uygulama
 
 ## Durum
 
-Toplayıcı, şema, arayüz ve testler hazır. **Canlı çekim henüz yapılmadı:** 7 Ekim 2026'da Claude Code'un otomatik izin denetimi, ön yüz paketinden istemci anahtarını okuyup kullanan isteği "kimlik bilgisi keşfi" sayarak engelledi. Bu yüzden geçici klasörde canlı deneme, gerçek veritabanı güncellemesi ve gerçek veriden özet dosyaları bekliyor; ayrıntı `docs/gorevler/GOREV-07/RAPOR.md`. Aşağıdaki yöntem kodun ve ağsız testlerin anlattığıdır; sayılar canlı çekimden sonra eklenecek.
+Toplayıcı, şema, arayüz ve testler hazır; 7 Ekim 2026'da geçici klasörde ve gerçek veritabanında çalıştırıldı (Claude Code'un izin denetimi ilk denemeyi engellemişti; kullanıcı izin modunu değiştirdikten sonra çalıştırıldı). Özet dosyaları: `docs/gorevler/GOREV-07/konaklama-ozet.csv`, `konaklama-aylik-fiyat.csv`.
+
+## 7 Ekim 2026 çekimleri
+
+| | Geçici klasör (`work/gorev-07/temp-data`) | Gerçek veritabanı |
+|---|---:|---:|
+| Süre | 72,7 dk | 72,6 dk |
+| İstek | 2.659 | 2.655 |
+| Benzersiz ilan | 2.389 | 2.389 |
+| Arama satırı (pencere × filtre × ilan) | 9.197 | 9.189 |
+| Canlı fiyat isteği | 52 | 48 |
+| Liste fiyatı olan arama satırı | 20 | 12 |
+| Güncel canlı fiyat (liveness 0) olan satır | 13 (her durum) | 1 |
+| Fiyat takviminde en az bir fiyatlı gün olan ilan | 248 | 248 |
+
+Gerçek çekim: `abe7764d13cb4c9198e2b873ebc4d7c7`, ön yüz sürüm yolu `/20261006094543/`, 4 pencerenin hepsi arandı, kapsam dışı 5 konum filtresi (Defuniak Springs, Freeport, Miramar Beach, Sandestin, Seascape). İstemci anahtarı ne ham dosyalarda (2.655 yanıt, gzip içerikleri dahil) ne veritabanında bulundu.
+
+**Ne verdi:** her mahallede aramada görünen ilan sayısı, türü, yatak odası ve kapasite. Sonbahar 2026 penceresinde mahalle filtrelerine göre ilan sayısı: Seagrove (Seagrove Beach filtresiyle birlikte) 473, Seacrest 287, WaterColor 241, Santa Rosa Beach 221, Blue Mountain Beach 170, WaterSound 162, Rosemary Beach 160, Dune Allen 112, Seaside 111, Inlet Beach 92, Grayton Beach 85, Gulf Place 27, Alys Beach 2. Bütün ilanlarda kaynak kategorileri: Beach Homes & Cottages 1.547, Condominiums, Townhomes & Villas 770, Rental Agencies 65 (kiralama şirketinin kendi kaydı; birim değil), Hotels 6, Campgrounds & RV Parks 3, Bed & Breakfast Inns 2, Resorts 2; 19 ilanda kaynağın bu clone'da adını vermediği kategori kimlikleri (5, 852, 9) var.
+
+**Ne vermedi:** fiyat. Aramalarda liste fiyatı yalnız birkaç ilanda dolu; canlı fiyat neredeyse hiç dönmüyor; 2.389 ilanın 1.536'sında fiyat takvimi gizli (`hide_rate_calendar`) ve takvimi fiyatlı 248 ilanın takvimi yalnız Ekim 2026–Mart 2027'yi kapsıyor (yaz ayları yok). Pencere fiyatı çıkan mahalle × pencere hücresi 6 (en çok Seaside Kış 2027: 170 ilanın 6'sı). Takvimden aylık ortanca fiyat 12 mahallede var ama birçoğu 1–20 ilana dayanıyor; en geniş taban Seaside (87–116 ilan, Ekim–Ocak ortancası 770–894 $). Fiyat seviyesi için bu kaynak tek başına yetmiyor.
+
+**Dikkat:** Seagrove satırı Seagrove ve Seagrove Beach filtrelerinin birleşimidir. Aramada görünmeyen ilan dolu ya da yok anlamına gelmez; pencere geceleri takvimde fiyatlı olan ilanların çoğu o pencerenin aramasında görünmedi (kaynağın dışlama kuralı bilinmiyor).
 
 ## Amaç
 
@@ -40,12 +61,12 @@ Kaynağın adres ve koordinatından mahalle çıkarılmaz; mahalle yalnız konum
 1. Giriş HTML'i → sürümlü paket → istemci anahtarı (tek tanım yoksa API'ye istek yapılmadan durur).
 2. `show.json`: konumlar, kategoriler (varsayılan "All Lodging" kategorisi), olanaklar.
 3. Her pencere × her eşlenmiş konum filtresi için `lodgings.json`'un bütün sayfaları. Sayfalar arasında toplam değişir ya da okunan benzersiz ilan sayısı bildirilen toplamla tutmazsa filtre bir kez baştan okunur, yine tutmazsa çekim başarısız olur (kısmi sonuç yayımlanmaz). Bugünden önce başlayan pencere aranmaz, `skipped_past` diye kaydedilir; bütün pencereler geçmişteyse çekim durur.
-4. Canlı fiyat: her pencerede `live_rates_enabled` olan ilanlar 50'şerlik gruplarla sorulur; ön yüzün yaptığı gibi yanıtı bekleyen (`liveness` dolu ve 0 değil) ilanlar en fazla 3 denemeye kadar, 2 sn arayla yeniden sorulur. Dönen fiyat, en az gece ve `liveness` saklanır; yanıtta hiç görünmeyen ilan `no_answer`.
+4. Canlı fiyat: ön yüz paketindeki mantığa göre (`get_live_rate_ids`, `request_live_rates`; 7 Ekim 2026'da okundu) aramada fiyatı olmayan ya da fiyatı beklemede (`liveness` 1) olan ilanlar sorulur; ön yüz yalnız arama satırında `liveness` dolu olanlara bakar, toplayıcı ayrıca `live_rates_enabled` işaretli olanları da sorar. İlanlar 50'şerlik gruplarla gider; yanıtı bekleyen (`liveness` dolu ve 0 değil) ilanlar yeniden sorulur. Ön yüz 20 denemeye kadar, 1 sn + 0,75 sn × deneme arayla soruyor; toplayıcı aynı aralıkla en fazla 5 deneme yapar. Dönen fiyat, en az gece ve `liveness` saklanır; yanıtta hiç görünmeyen ilan `no_answer`.
 5. Takvim: görülen her benzersiz ilan için `rates.json` bir kez okunur. Ham günlük değerler veritabanına yazılmaz; ilan başına ay ay fiyatlı gün sayısı, en düşük, ortanca ve en yüksek gecelik fiyat ve en sık görülen en az gece (`los`) saklanır. Ayrıca her pencerenin gecelerinin takvim fiyatlarının ortalaması, yalnız bütün geceler fiyatlıysa saklanır. Kaynak takvim vermezse (HTTP 400/404/422) ilan `unavailable` diye kaydedilir, çekim sürer.
 6. İstekler sıralı, aralarında 1,25 sn; ağ hatası ve 5xx bir kez yeniden denenir, 429 çekimi durdurur. İlerleme ve iptal her istekte denetlenir. Ham yanıtlar gzip ile sıkıştırılıp saklanır; manifestte her yanıtın adresi, durumu, zamanı, sıkıştırılmamış gövdenin SHA-256'sı ve baytı var.
 7. Bütün kayıtlar tek transaction'da yazılır; hata ya da iptal önceki başarılı sürümü bozmaz.
 
-İstek sayısı ve süre (tahmin, canlı çekimde ölçülecek): GÖREV-02 örneklerinde bir pencerede Dune Allen 112, Seaside 111, Rosemary Beach 160 ilan gösterdi; 14 filtre × 4 pencere için yaklaşık 120–200 arama sayfası, birkaç yüz canlı fiyat isteği ve ilan sayısı kadar (1.000–2.000) takvim isteği; 1,25 sn arayla yaklaşık 45–60 dakika.
+İstek sayısı ve süre (7 Ekim 2026, ölçülen): yaklaşık 215 arama sayfası, 48–52 canlı fiyat isteği ve 2.389 takvim isteği; toplam ~2.655 istek, 1,25 sn arayla ~73 dakika. Süreyi takvim istekleri belirliyor (ilanların çoğunda takvim gizli ve boş döndüğü halde görev her ilan için bir kez okunmasını istiyor).
 
 ## Saklanan alanlar (şema 10)
 
@@ -64,7 +85,7 @@ Boş alan NULL kalır. Kaynakta listelenmemiş bir olanak "yok" demek değildir.
 
 ## Okuma anında hesaplanan özet
 
-`GET /api/lodging-runs/{id}` her mahalle × pencere için hesaplar (hiçbiri saklanmaz; bizim hesabımız): ilan sayısı (aynı mahallenin iki filtresinde görünen ilan bir kez), kategori dağılımı (varsayılan "All Lodging" hariç kaynak kategorileri; bir ilan birden fazla kategoride olabilir), yatak odası dağılımı (ortanca, 4+ odalı pay, stüdyo–6+ dağılımı; yatak odası belirtilmiş ilanlar üzerinden), kapasite ortancası, fiyat bilgisi olan ilan payı ve kaynağı, fiyatı olan ilanlarda gecelik fiyatın ortancası ve çeyrekler aralığı. Fiyat önceliği: aramadaki liste fiyatı (`average_rate`), yoksa canlı fiyat, yoksa pencerenin bütün geceleri fiyatlıysa takvim ortalaması. Ayrıca mahalle başına takvimden aylık ortanca gecelik fiyat (ilanların aylık ortancalarının ortancası). `GET /api/lodging-runs/{id}/listings?region_id=…` mahallenin ilanlarını pencere satırları ve aylık takvimiyle verir.
+`GET /api/lodging-runs/{id}` her mahalle × pencere için hesaplar (hiçbiri saklanmaz; bizim hesabımız): ilan sayısı (aynı mahallenin iki filtresinde görünen ilan bir kez), kategori dağılımı (varsayılan "All Lodging" hariç kaynak kategorileri; bir ilan birden fazla kategoride olabilir), yatak odası dağılımı (ortanca, 4+ odalı pay, stüdyo–6+ dağılımı; yatak odası belirtilmiş ilanlar üzerinden), kapasite ortancası, fiyat bilgisi olan ilan payı ve kaynağı, fiyatı olan ilanlarda gecelik fiyatın ortancası ve çeyrekler aralığı. Fiyat önceliği: güncel canlı fiyat (`liveness` 0; ön yüz arama fiyatını bununla değiştirir), yoksa aramadaki liste fiyatı (`average_rate`), yoksa diğer canlı yanıt, yoksa pencerenin bütün geceleri fiyatlıysa takvim ortalaması. Ayrıca mahalle başına takvimden aylık ortanca gecelik fiyat (ilanların aylık ortancalarının ortancası). `GET /api/lodging-runs/{id}/listings?region_id=…` mahallenin ilanlarını pencere satırları ve aylık takvimiyle verir.
 
 Her özetin etiketi: "<arama günü> tarihinde yapılan aramada görünen ilanlar; tam envanter değildir; fiyatlar kaynağa göre en düşük müsait günlük fiyata dayanır, vergi ve ücretlerin dahil olup olmadığı kaynakta belirtilmiyor."
 
@@ -88,4 +109,4 @@ Veri toplama → **Konaklama**: toplama düğmesi, sürüm seçimi, ham manifest
 
 ## Testler
 
-`tests/test_lodging.py` (39 test; sahte sunucu, `httpx.MockTransport`, ağ yok): anahtarın paketten çözülmesi ve hiçbir çıktıya yazılmaması, eksik/çift anahtar ve paket yolu, anahtarı içeren yanıtın saklanmaması, konum eşlemesi (Seagrove Beach dahil), eksik konum ve tanımsız bölge, sayfalama ve değişen toplam, geçmiş pencere, boş fiyat alanları (NULL), canlı fiyat denemeleri ve deneme sınırı, takvim özetleri ve pencere ortalaması, ilan biçim hataları, iptal, API ile toplama ve özet, eklemeden sonra hata ile geri alma, API üzerinden iptal, taze kurulum yapılandırması ve kısıtlar, v9 → v10 migration ve geri alma, yapılandırmanın üzerine yazılmaması, destinasyon yalıtımı, kaynak adresi eşleşmesi. Arayüz yardımcıları `tests/frontend.test.mjs` içinde.
+`tests/test_lodging.py` (40 test; sahte sunucu, `httpx.MockTransport`, ağ yok): anahtarın paketten çözülmesi ve hiçbir çıktıya yazılmaması, eksik/çift anahtar ve paket yolu, anahtarı içeren yanıtın saklanmaması, konum eşlemesi (Seagrove Beach dahil), eksik konum ve tanımsız bölge, sayfalama ve değişen toplam, geçmiş pencere, boş fiyat alanları (NULL), canlı fiyat denemeleri, deneme sınırı ve ön yüzün hangi ilanı sorduğu kuralı, takvim özetleri ve pencere ortalaması, ilan biçim hataları, iptal, API ile toplama ve özet, eklemeden sonra hata ile geri alma, API üzerinden iptal, taze kurulum yapılandırması ve kısıtlar, v9 → v10 migration ve geri alma, yapılandırmanın üzerine yazılmaması, destinasyon yalıtımı, kaynak adresi eşleşmesi. Arayüz yardımcıları `tests/frontend.test.mjs` içinde.

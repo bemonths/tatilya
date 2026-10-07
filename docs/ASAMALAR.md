@@ -70,4 +70,4 @@ GÖREV-06 (7 Ekim 2026, `gorev-06-referanslar` dalı): kasırga sayımı yalnız
 
 ## Konaklama profili ve referans tablosunun tamamlanması — v0.10.0
 
-GÖREV-07 (7 Ekim 2026, `gorev-07-konaklama` dalı): yer seçiminin en büyük eksiği için Book>Direct tarihli arama anlık görüntüleri — her mahallede görünen konaklama türleri, büyüklükleri ve kaynağın verdiği fiyatlar; generic toplayıcı, şema 10, Veri toplama → Konaklama sekmesi (canlı çekim izin bekliyor). Referans tablosu 103 satıra tamamlandı (`yerine_gecildi` durumu). [M10 konaklama profili](M10-KONAKLAMA-PROFILI.md).
+GÖREV-07 (7 Ekim 2026, `gorev-07-konaklama` dalı): yer seçiminin en büyük eksiği için Book>Direct tarihli arama anlık görüntüleri — her mahallede görünen konaklama türleri, büyüklükleri ve kaynağın verdiği fiyatlar; generic toplayıcı, şema 10, Veri toplama → Konaklama sekmesi; gerçek veride ilk çekim 2.389 ilan, fiyat verisi seyrek. Referans tablosu 103 satıra tamamlandı (`yerine_gecildi` durumu). [M10 konaklama profili](M10-KONAKLAMA-PROFILI.md).

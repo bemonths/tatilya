@@ -17,15 +17,15 @@
 | Stable tag | `v0.9.0` → `7110f88` — **v0.9.0 — kasırga evre kuralı ve referans tablosu** (önceki: `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
 | Stable uygulama sürümü / şema | `0.9.0` / `9` (main ve `v0.9.0`) |
 | Aktif geliştirme dalı | `gorev-07-konaklama` — Book>Direct konaklama profili toplayıcısı (Konaklama sekmesi) ve referans tablosunun tamamlanması (`yerine_gecildi` durumu, 103 satır) |
-| Aktif dal durumu | Uygulama `0.10.0`, şema `10`; konaklama toplayıcısı canlı çalıştırılmadı (izin bekliyor, `docs/gorevler/GOREV-07/RAPOR.md`); main'e alınmadı; karar yöneticinin |
+| Aktif dal durumu | Uygulama `0.10.0`, şema `10`; konaklama toplayıcısı geçici klasörde ve gerçek veride çalıştırıldı; main'e alınmadı; karar yöneticinin |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
 | Son CI | main @ 7110f88 başarılı; görev dalının sonucu `docs/gorevler/GOREV-07/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 554 Python testi + 46 frontend testi (main/v0.9.0: 513 + 42) |
+| Test tabanı | Görev dalında 555 Python testi + 46 frontend testi (main/v0.9.0: 513 + 42) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); görev dalında ayrıca Book>Direct konaklama aramaları (`bookdirect-lodging/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
-| Gerçek veritabanı | Şema 9 (GÖREV-06'da tam yedekten sonra normal kullanımla yükseltildi; GÖREV-07'de değişmedi). main'deki 0.9.0 onu açar. Görev dalının 0.10.0'ı açınca önce yedek alıp şema 10'a yükseltir; bu yükseltme gerçek veride ancak konaklama çekimiyle birlikte, görev metni isterse yapılır. |
+| Gerçek veritabanı | 7 Ekim 2026'da (GÖREV-07) tam yedekten (`work/yedek/20261007-2235/`) sonra normal kullanımla şema 10'a yükseltildi ve yalnız konaklama toplayıcısı çalıştı. Şema 10 dosyasını main'deki 0.9.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-07-konaklama` dalından çalıştırılır. |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
-| Konaklama durumu | Tarihli arama anlık görüntüleri toplayıcısı görev dalında yazıldı ve ağsız testlerle doğrulandı (`docs/M10-KONAKLAMA-PROFILI.md`); canlı çekim yapılmadı |
+| Konaklama durumu | Tarihli arama anlık görüntüleri toplayıcısı görev dalında; gerçek veride ilk çekim 7 Ekim 2026 (4 pencerede 2.389 benzersiz ilan; fiyat verisi çok seyrek). Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md` |
 
 ## 2. Projenin amacı
 
@@ -307,7 +307,7 @@ GÖREV-07: yeni durum `yerine_gecildi` (çözülen çelişkide eski satır silin
 
 ### 9.8 Konaklama profili (`gorev-07-konaklama`, uygulama 0.10.0, şema 10)
 
-Generic `bookdirect-lodging/1` toplayıcısı: clone adresi, konum filtresi → kanonik mahalle eşlemesi ve örnek tarih pencereleri SQLite'tan (30A: `visitsouthwalton.bookdirect.net`, 14 filtre — Seagrove Beach da Seagrove'a bağlı —, dört Cumartesi–Cumartesi 7 gecelik pencere). Ön yüzün herkese açık istemci anahtarı her çekimde paketten okunur, yalnız bellekte tutulur. Her pencere × filtre için bütün arama sayfaları, sınırlı denemeli canlı fiyat, ilan başına bir fiyat takvimi (ay ay özet); özetler okuma anında. Veri toplama → Konaklama sekmesi. Canlı çekim izin bekliyor. Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
+Generic `bookdirect-lodging/1` toplayıcısı: clone adresi, konum filtresi → kanonik mahalle eşlemesi ve örnek tarih pencereleri SQLite'tan (30A: `visitsouthwalton.bookdirect.net`, 14 filtre — Seagrove Beach da Seagrove'a bağlı —, dört Cumartesi–Cumartesi 7 gecelik pencere). Ön yüzün herkese açık istemci anahtarı her çekimde paketten okunur, yalnız bellekte tutulur. Her pencere × filtre için bütün arama sayfaları, sınırlı denemeli canlı fiyat, ilan başına bir fiyat takvimi (ay ay özet); özetler okuma anında. Veri toplama → Konaklama sekmesi. 7 Ekim 2026 gerçek çekimi: 2.655 istek, ~73 dk, 2.389 ilan; tür, oda ve kapasite her mahallede var, fiyat yalnız birkaç ilanda (takvimlerin çoğu gizli, takvimler yalnız Ekim–Mart). Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
 
 ## 10. Konaklama — şu an nerede kaldık?
 
@@ -355,8 +355,8 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 Stable: main ve tag `v0.9.0` → `7110f881e69793b907ecd791a52e761d569cdfd1` (uygulama 0.9.0, şema 9; 7 Ekim 2026'da GÖREV-07 Adım 1 ile fast-forward ve açıklamalı etiket "v0.9.0 — kasırga evre kuralı ve referans tablosu"; main CI başarılı). Önceki: `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
 
 Aktif dal `gorev-07-konaklama`:
-- 554 Python testi ve 46 frontend testi geçti (tam takım art arda en az 3 kez)
-- konaklama profili toplayıcısı (şema 10, Konaklama sekmesi; canlı çekim izin bekliyor); referans tablosu tamamlandı (`yerine_gecildi`); uygulama 0.10.0
+- 555 Python testi ve 46 frontend testi geçti (tam takım art arda en az 3 kez)
+- konaklama profili toplayıcısı (şema 10, Konaklama sekmesi; gerçek veride çalıştı); referans tablosu tamamlandı (`yerine_gecildi`); bilgi toplama ilkesi (§4 madde 13–14); uygulama 0.10.0
 - main'e alınmadı
 
 Bilinen non-blocking uyarılar:
@@ -402,7 +402,7 @@ v0.8 (şema 7 → 8) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` ko
 
 v0.9 (şema 8 → 9) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı (satır sayıları, kaynaklar ve çekimler aynı; `integrity_check` ok, `foreign_key_check` boş). Ardından (GÖREV-06) `data/` tam yedeği (`work/yedek/20261007-1935/`, 380 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v8-14fb0efcabd8429ebdb63c0fdb353ac9.sqlite3`) ve yalnız kasırga toplayıcısı çalıştırıldı (`/2`, 227 geçiş, 10'u işaretli); `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-06/RAPOR.md`.
 
-v0.10 (şema 9 → 10) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski bütün tabloların satır sayıları ve çekimler aynı; yalnız 11 konaklama tablosu, 30A konaklama yapılandırması (1 clone, 14 konum filtresi, 4 pencere) ve 1 kaynak eklendi; `integrity_check` ok, `foreign_key_check` boş. Gerçek veritabanı GÖREV-07'de değiştirilmedi (konaklama çekimi izin beklediği için).
+v0.10 (şema 9 → 10) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski bütün tabloların satır sayıları ve çekimler aynı; yalnız 11 konaklama tablosu, 30A konaklama yapılandırması (1 clone, 14 konum filtresi, 4 pencere) ve 1 kaynak eklendi; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-07) `data/` tam yedeği (`work/yedek/20261007-2235/`, 384 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v9-f6412e0032864a4d8088398d54fe0223.sqlite3`) ve yalnız konaklama toplayıcısı çalıştırıldı (çekim `abe7764d…`, 2.655 istek, ~73 dk, 2.389 ilan, 9.189 arama satırı); `integrity_check` ok, `foreign_key_check` boş; eski çekimler aynı; istemci anahtarı ne ham dosyalarda ne veritabanında; ayrıntı `docs/gorevler/GOREV-07/RAPOR.md`.
 
 ## 13. Geliştirme çalışma biçimi
 

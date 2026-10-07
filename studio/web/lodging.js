@@ -103,7 +103,7 @@ export class LodgingScreen {
       <div class="table-scroll"><table class="lodging-table"><thead><tr><th>MAHALLE</th>${snap.windows.map(w=>`<th>${windowHeader(w)}</th>`).join("")}</tr></thead>
       <tbody>${snap.regions.map(region=>`<tr class="${region.region_id===this.selectedRegion?"selected":""}"><td><button class="source-name" data-lodging-region="${esc(region.region_id)}">${esc(region.region_name)}</button><small>${region.filters.map(esc).join(", ")}</small></td>
         ${snap.windows.map(w=>`<td>${summaryCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      <p class="source-stamp">Fiyat önceliği: aramadaki liste fiyatı, yoksa canlı fiyat, yoksa pencerenin bütün geceleri fiyatlıysa takvimin gecelik ortalaması. Çeyrekler arası aralık fiyatı olan ilanlardan hesaplanır (bizim hesabımız).</p></section>
+      <p class="source-stamp">Fiyat önceliği: güncel canlı fiyat (ön yüz arama fiyatını bununla değiştirir), yoksa aramadaki liste fiyatı, yoksa diğer canlı yanıt, yoksa pencerenin bütün geceleri fiyatlıysa takvimin gecelik ortalaması. Çeyrekler arası aralık fiyatı olan ilanlardan hesaplanır (bizim hesabımız).</p></section>
       <div id="lodging-region"></div>`;
     body.querySelector(".lodging-table").addEventListener("click",event=>{
       const button=event.target.closest("[data-lodging-region]");
