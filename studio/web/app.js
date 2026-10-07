@@ -5,6 +5,7 @@ import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen} from "./restaurants.js";
 import {NeighborhoodScreen} from "./neighborhoods.js";
 import {ClimateScreen, CLIMATE_ACTIONS, CLIMATE_BUTTONS, CLIMATE_CONNECTORS} from "./climate.js";
+import {ReferencesScreen} from "./references.js";
 import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 
@@ -26,7 +27,8 @@ const neighborhoodScreen=new NeighborhoodScreen();
 let climateDoneIds=new Set();
 const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status==="done" && Object.values(CLIMATE_CONNECTORS).includes(j.result?.connector_name)).map(j=>j.id);
 const climateScreen=new ClimateScreen();
-const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/climate":climateScreen};
+const referencesScreen=new ReferencesScreen();
+const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
 const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods",
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
 
@@ -65,6 +67,7 @@ function render() {
   restaurantScreen.invalidate();
   neighborhoodScreen.invalidate();
   climateScreen.invalidate();
+  referencesScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
@@ -313,7 +316,7 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,climateScreen]);
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,climateScreen,referencesScreen]);
   lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';

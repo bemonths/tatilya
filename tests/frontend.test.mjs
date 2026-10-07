@@ -147,7 +147,7 @@ test('neighborhood jobs and tabs route to the fourth domain',()=>{
   const tabs=collectionTabs('neighborhoods');
   assert.match(tabs,/href="#collect\/neighborhoods" aria-current="page">Mahalleler</);
   assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
-  assert.equal((tabs.match(/class="tab/g)||[]).length,5);
+  assert.equal((tabs.match(/class="tab/g)||[]).length,6);
 });
 test('neighborhoods list west to east by representative point',()=>{
   const ordered=westToEast([hood('Inlet Beach',-86.0),hood('Dune Allen',-86.25),hood('Seaside',-86.13),hood('Alpha',-86.13)]);
@@ -381,4 +381,51 @@ test('storms inside a radius only in non-tropical stages are listed separately a
   assert.match(body.innerHTML,/Yalnız fırtınanın tropikal veya subtropikal olduğu evreler sayılır \(HURDAT2 durum kodları TD, TS, HU, SD, SS\)/);
   storms.run.connector_version='hurdat2-storm-proximity/1';screen.draw({querySelector:()=>body});
   assert.match(body.innerHTML,/Bu çekim eski kuralla \(hurdat2-storm-proximity\/1\) yapıldı/);
+});
+
+import {ReferencesScreen, groupByTopic, statusCounts, filterReferences, referenceLink, referenceRow, VIDEO_RULE} from '../studio/web/references.js';
+
+const ref=(id,konu,durum,extra={})=>({id,konu,durum,ifade:`Statement ${id}.`,deger:'5',birim:'USD',kapsam:'30A',kaynak_adi:'Source',kaynak_sahibi:'Owner',
+  kaynak_url:'https://example.gov/doc',belge_konumu:'Sec. 1',kisa_alinti:'quoted words',belge_tarihi:'2025',erisim_tarihi:'2026-10-07',belge_sha256:'a'.repeat(64),
+  guven:'birincil',celiski_notu:'',yeniden_kontrol_tarihi:'2027-10-07',not:'',overdue:false,...extra});
+const TOPICS={'plaj-kurallari':'Plaj kuralları','guvenlik':'Güvenlik','parklar':'Parklar'};
+const STATUSES={dogrulandi:'doğrulandı',celiskili:'çelişkili',dogrulanamadi:'doğrulanamadı'};
+test('reference tab routes to the sixth collection tab',()=>{
+  const tabs=collectionTabs('references');
+  assert.match(tabs,/href="#collect\/references" aria-current="page">Referanslar</);
+  assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
+});
+test('references group by topic order, count statuses and overdue rows, and filter',()=>{
+  const rows=[ref('b','guvenlik','celiskili',{overdue:true}),ref('a','plaj-kurallari','dogrulandi'),ref('c','parklar','dogrulanamadi',{ifade:'Grayton fee'}),ref('d','yeni-konu','dogrulandi')];
+  assert.deepEqual(groupByTopic(rows,TOPICS).map(g=>[g.label,g.rows.map(r=>r.id)]),[['Plaj kuralları',['a']],['Güvenlik',['b']],['Parklar',['c']],['yeni-konu',['d']]]);
+  assert.deepEqual(statusCounts(rows),{dogrulandi:2,celiskili:1,dogrulanamadi:1,overdue:1});
+  assert.deepEqual(filterReferences(rows,{status:'overdue'}).map(r=>r.id),['b']);
+  assert.deepEqual(filterReferences(rows,{status:'dogrulandi',search:''}).map(r=>r.id),['a','d']);
+  assert.deepEqual(filterReferences(rows,{search:'GRAYTON'}).map(r=>r.id),['c']);
+});
+test('reference rows link only https sources, escape text and mark overdue rechecks',()=>{
+  assert.match(referenceLink('https://example.gov/a','<Doc>'),/href="https:\/\/example.gov\/a" target="_blank" rel="noopener noreferrer">&lt;Doc&gt; ↗<\/a>/);
+  for(const url of ['http://example.gov','javascript:alert(1)','','bad']) assert.equal(referenceLink(url,'<Doc>'),'&lt;Doc&gt;');
+  const html=referenceRow(ref('x','guvenlik','celiskili',{ifade:'<b>bold</b>',celiski_notu:'Other page says 31 October.',overdue:true}),STATUSES);
+  assert.match(html,/class="reference-overdue"/);assert.match(html,/tarihi geçti/);assert.match(html,/tag warm">çelişkili/);
+  assert.match(html,/&lt;b&gt;bold&lt;\/b&gt;/);assert.match(html,/Çelişki:<\/strong> Other page says 31 October\./);
+  assert.match(html,/doğrulama için, videoda kullanılmaz/);
+  const blank=referenceRow(ref('y','parklar','dogrulanamadi',{deger:'',birim:'',belge_sha256:'',kisa_alinti:''}),STATUSES);
+  assert.match(blank,/<span class="muted">—<\/span>/);assert.doesNotMatch(blank,/SHA-256|null|undefined/);
+});
+test('references screen shows counts, the video rule and an unavailable table',()=>{
+  const body={innerHTML:'',querySelector(selector){return selector==='#reference-groups'?(this.groupsElement ??= {innerHTML:''}):null;}};
+  const screen=new ReferencesScreen();
+  screen.snapshot={available:true,file:'thirty_a_references.csv',today:'2026-10-07',topics:TOPICS,statuses:STATUSES,problems:[],
+    rows:[ref('a','plaj-kurallari','dogrulandi'),ref('b','guvenlik','celiskili',{overdue:true})]};
+  screen.draw({querySelector:()=>body});
+  assert.match(body.innerHTML,/<strong>1<\/strong><span class="metric-label">doğrulandı/);
+  assert.match(body.innerHTML,/<strong>1<\/strong><span class="metric-label">yeniden kontrol/);
+  assert.ok(body.innerHTML.includes(VIDEO_RULE.slice(0,40)));
+  assert.match(body.groupsElement.innerHTML,/<h2>Plaj kuralları<\/h2><small>1 satır/);
+  screen.snapshot={...screen.snapshot,problems:['2. satır: <bad>']};screen.draw({querySelector:()=>body});
+  assert.match(body.innerHTML,/Tablo doğrulamadan geçmedi:<\/strong> 2\. satır: &lt;bad&gt;/);
+  const empty={innerHTML:'',querySelector:()=>null};screen.snapshot={available:false,reason:'Bu destinasyon için referans tablosu yok.',rows:[]};
+  screen.draw({querySelector:()=>empty});
+  assert.match(empty.innerHTML,/Referans tablosu yok<\/h2><p>Bu destinasyon için referans tablosu yok\./);
 });

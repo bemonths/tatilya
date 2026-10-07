@@ -30,5 +30,5 @@ export function domainTarget(name, beachName="south-walton-beaches") {
 
 export function collectionTabs(selected="beaches") {
   if(typeof selected==="boolean") selected=selected?"weather":"beaches";
-  return `<nav class="filter-row" aria-label="Veri türü">${[["beaches","#collect","Plaj erişimleri"],["weather","#collect/weather","Hava"],["restaurants","#collect/restaurants","Restoranlar"],["neighborhoods","#collect/neighborhoods","Mahalleler"],["climate","#collect/climate","İklim"]].map(([id,href,label])=>`<a class="tab ${selected===id?"active":""}" href="${href}" ${selected===id?'aria-current="page"':""}>${label}</a>`).join("")}</nav>`;
+  return `<nav class="filter-row" aria-label="Veri türü">${[["beaches","#collect","Plaj erişimleri"],["weather","#collect/weather","Hava"],["restaurants","#collect/restaurants","Restoranlar"],["neighborhoods","#collect/neighborhoods","Mahalleler"],["climate","#collect/climate","İklim"],["references","#collect/references","Referanslar"]].map(([id,href,label])=>`<a class="tab ${selected===id?"active":""}" href="${href}" ${selected===id?'aria-current="page"':""}>${label}</a>`).join("")}</nav>`;
 }

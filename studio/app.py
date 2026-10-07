@@ -18,7 +18,7 @@ from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
 from .sources import beaches, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
 from .sources.registry import DEFAULT_REGISTRY
-from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping
+from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
 WEB = Path(__file__).parent / "web"
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "data"
@@ -230,6 +230,18 @@ def create_app(data_dir: Path | None = None, registry=None):
         except beach_mapping.MappingError as exc:
             return {"available": False, "reason": str(exc), "rows": []}
         return {"available": True, "file": path.name, "methods": beach_mapping.METHOD_LABELS, "rows": rows}
+
+    @app.get("/api/references")
+    def references(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Committed, manually verified reference table of the destination profile; read-only."""
+        selected(destination_id)
+        path = getattr(PROFILES.get(destination_id), "REFERENCE_TABLE", None)
+        if path is None:
+            return {"available": False, "reason": "Bu destinasyon için referans tablosu yok.", "rows": []}
+        try:
+            return reference_table.snapshot(path)
+        except reference_table.ReferenceError as exc:
+            return {"available": False, "reason": str(exc), "rows": []}
 
     @app.get("/api/weather-runs")
     def weather_runs(destination_id: str = DEFAULT_DESTINATION_ID):
