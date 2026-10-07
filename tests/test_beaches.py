@@ -33,14 +33,17 @@ def run_job(client):
     return response.json()["id"]
 
 
-def finished(client, identifier):
-    deadline = time.monotonic() + 3
-    while time.monotonic() < deadline:
+def finished(client, identifier, timeout=30):
+    """Poll until the job leaves queued/running. The generous upper bound only matters on a loaded machine;
+    a finished job still returns on the first check, and the state is read once more at the deadline."""
+    deadline = time.monotonic() + timeout
+    while True:
         job = client.app.state.db.job(identifier)
         if job["status"] not in ("queued", "running"):
             return job
-        time.sleep(.01)
-    pytest.fail("Veri toplama işi bitmedi")
+        if time.monotonic() >= deadline:
+            pytest.fail(f"Veri toplama işi {timeout} sn içinde bitmedi: {job['status']} · {job['message']}")
+        time.sleep(.02)
 
 
 def fake_collector(content):

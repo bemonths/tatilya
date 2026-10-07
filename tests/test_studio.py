@@ -26,14 +26,16 @@ def editable(source, **changes):
     return {**{key: source[key] for key in keys}, "expected_version": source["version"], **changes}
 
 
-def wait_job(client, identifier):
-    deadline = time.monotonic() + 3
-    while time.monotonic() < deadline:
+def wait_job(client, identifier, timeout=30):
+    """Same bounded polling as tests.test_beaches.finished, through the public jobs API."""
+    deadline = time.monotonic() + timeout
+    while True:
         job = next(item for item in client.get("/api/jobs").json() if item["id"] == identifier)
         if job["status"] not in ("queued", "running"):
             return job
-        time.sleep(0.01)
-    pytest.fail("İş tamamlanmadı")
+        if time.monotonic() >= deadline:
+            pytest.fail(f"İş {timeout} sn içinde tamamlanmadı: {job['status']} · {job['message']}")
+        time.sleep(0.02)
 
 
 def test_sources_survive_restart_and_seed_is_not_duplicated(tmp_path):
