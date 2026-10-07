@@ -1,0 +1,10 @@
+external_id,plaj_adi,resmi_bolge_id,ilce_bolge_id,ilce_sonuc,ilce_yakin_bolge_id,ilce_yakin_sonuc,komsu_bolge_id,komsu_sonuc,turetilen_bolge_id,turetme_sonuc,zincir_yontem,zincir_bolge_id,zincir_sonuc
+5df3aad15a6c24371775bd16,Dune Allen Regional Beach Access,dune-allen,,sonucsuz,,sonucsuz,,sonucsuz,dune-allen,ayni,turetim_en_yakin_mahalle_noktasi,dune-allen,ayni
+5c8000ddf836f94c3171b973,Fort Panic Regional Beach Access - 43,dune-allen,,sonucsuz,,sonucsuz,dune-allen,ayni,dune-allen,ayni,komsu_tutarliligi,dune-allen,ayni
+5c803a5e0970a77f5a2f0e82,Ed Walline Regional Beach Access - 39,gulf-place,,sonucsuz,,sonucsuz,,sonucsuz,gulf-place,ayni,turetim_en_yakin_mahalle_noktasi,gulf-place,ayni
+5c803abb0970a7346100fff5,Gulfview Heights Regional Beach Access - 37,santa-rosa-beach,,sonucsuz,,sonucsuz,,sonucsuz,santa-rosa-beach,ayni,turetim_en_yakin_mahalle_noktasi,santa-rosa-beach,ayni
+5c79a4b00970a7972e59c7a2,Blue Mountain Regional Beach Access - 36,blue-mountain-beach,,sonucsuz,blue-mountain-beach,ayni,,sonucsuz,blue-mountain-beach,ayni,ilce_alt_bolum_yakin,blue-mountain-beach,ayni
+6a315b65def75df603062712,"Bets ""Beachmama"" Haynes Regional Beach Access",grayton-beach,grayton-beach,ayni,,sonucsuz,grayton-beach,ayni,grayton-beach,ayni,ilce_alt_bolum,grayton-beach,ayni
+5c8189f0f836f90da711b134,Santa Clara Regional Beach Access - 17,seagrove,,sonucsuz,,sonucsuz,seagrove,ayni,seagrove,ayni,komsu_tutarliligi,seagrove,ayni
+5c81ac29f836f9166535cba4,Walton Dunes - 8,seagrove,,sonucsuz,,sonucsuz,,sonucsuz,watersound,farkli,turetim_en_yakin_mahalle_noktasi,watersound,farkli
+5c8188bbf836f90da711b132,"Inlet Beach Regional Access - 2a, 2b, 2c",inlet-beach,,sonucsuz,inlet-beach,ayni,,sonucsuz,inlet-beach,ayni,ilce_alt_bolum_yakin,inlet-beach,ayni

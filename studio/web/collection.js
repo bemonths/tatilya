@@ -4,7 +4,7 @@ import {api, esc, date} from "./api.js";
 
 export const UNMAPPED="__unmapped__";
 /** Methods backed by a citable source (official guide, county subdivision data); derived ones are approximate. */
-export const SOURCED_METHODS=["resmi_rehber","ilce_alt_bolum"];
+export const SOURCED_METHODS=["resmi_rehber","ilce_alt_bolum","ilce_alt_bolum_yakin"];
 /** Reviewed mapping rows (committed file, read by the server) keyed by beach access id. */
 export function beachMapping(layer) {
   return new Map((layer?.available?layer.rows:[]).map(row=>[row.external_id,row]));
@@ -20,12 +20,13 @@ export function mappingCell(info) {
 export function mappingDetail(info) {
   if(!info.row) return '<div class="features-detail"><h3>Mahalle eşlemesi</h3><p class="muted">Bu erişim eşleme dosyasında yok: eşlenmemiş.</p></div>';
   const url=info.row.source.split(" ")[0];
-  const source=/^https:\/\//.test(url)?`<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(info.row.source)} ↗</a>`:`Mahalle çekimi ${esc(info.row.source)}`;
+  const source=/^https:\/\//.test(url)?`<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(info.row.source)} ↗</a>`
+    :info.row.method==="turetim_en_yakin_mahalle_noktasi"?`Mahalle çekimi ${esc(info.row.source)}`:esc(info.row.source);
   return `<div class="features-detail"><h3>Mahalle eşlemesi</h3><dl><div><dt>Mahalle</dt><dd>${esc(info.label)}</dd></div><div><dt>Yöntem</dt><dd>${esc(info.method)}</dd></div><div><dt>Belirsiz</dt><dd>${info.ambiguous?"evet":"hayır"}</dd></div></dl><p>${source}</p>${info.row.note?`<p class="muted">${esc(info.row.note)}</p>`:""}</div>`;
 }
 export function mappingNote(layer) {
   if(!layer?.available) return esc(layer?.reason || "Plaj–mahalle eşleme dosyası yok.");
-  return "Mahalle bilgisi plaj kaynağında yoktur; ayrı ve gözden geçirilebilir eşleme dosyasından gelir. “Resmî rehber” ve “ilçe alt bölüm verisi” eşlemeleri kaynak gösterilerek söylenebilir (ikincisi “Walton County subdivision verisine göre”); “program türetimi” yalnız yaklaşık konumdur.";
+  return "Mahalle bilgisi plaj kaynağında yoktur; ayrı ve gözden geçirilebilir eşleme dosyasından gelir. “Resmî rehber”, “ilçe alt bölüm verisi” ve “ilçe alt bölüm verisi (bitişik)” eşlemeleri kaynak gösterilerek söylenebilir (“Walton County subdivision verisine göre”, bitişikte “erişimin bitiştiği alt bölüm”); “komşu erişimlerle tutarlı” ve “program türetimi” yalnız yaklaşık konumdur.";
 }
 export function filterBeaches(records, {search="",city="",feature="",neighborhood=""}, mapping) {
   const query=search.toLocaleLowerCase('tr').trim();

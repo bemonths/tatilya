@@ -1,19 +1,22 @@
-"""30A plaj erişimi -> mahalle eşleme dosyasını üretir (v2). Geliştirme aracıdır; uygulama bunu çağırmaz.
+"""30A plaj erişimi -> mahalle eşleme dosyasını üretir (v3). Geliştirme aracıdır; uygulama bunu çağırmaz.
 
 Eşleme dosyası bir kez üretilip commit edilir (studio/destinations/thirty_a_beach_neighborhoods.csv);
 uygulama yalnız okur. Yöntem, kısıt ve doğrulama: docs/M7-MAHALLE-VERISI.md.
 
-Yöntem sırası:
+Yöntem sırası (GÖREV-05 yönetici kararı):
 1. resmi_rehber: GÖREV-02 önizlemesindeki dolu satırlar olduğu gibi alınır.
-2. ilce_alt_bolum: erişim noktası Walton County "Subdivision Boundaries" poligonlarından birinin içindeyse ve
-   içinde olduğu alt bölümlerin adları, açık ad tablosuyla tek bir mahalleye bağlanıyorsa. Yakın (içinde olmayan)
-   poligonlar yalnız kaydedilir ve notta yazılır; bu yöntemde kullanılmaz.
-3. turetim_en_yakin_mahalle_noktasi: ilk iki yöntem sonuç vermezse, mahalle çekimindeki temsilî noktalara boylam
-   farkıyla en yakın mahalle (kaynak = mahalle çekiminin run kimliği). Atanabilir en yakın iki aday arasındaki fark
-   0.003 dereceden küçükse belirsiz=evet.
-Kısıt: resmî rehberin halka açık plaj erişimi olmadığını söylediği Alys Beach ve Rosemary Beach'e hiçbir erişim
-atanmaz. İlçe verisi bir erişimi bu iki mahallenin alt bölümüne düşürürse erişim o mahalleye atanmaz; satır
-"resmî rehberle çelişki" notuyla işaretlenir.
+2. ilce_alt_bolum: nokta, ad tablosunda bir mahalleye bağlanan bir Walton County alt bölüm poligonunun içinde.
+3. ilce_alt_bolum_yakin: nokta böyle bir poligonun içinde değil; ad tablosunda bir mahalleye bağlanan poligonlar
+   arasında 30 m veya daha yakın olan(lar) tek bir mahalle gösteriyor. Noktanın tabloda olmayan bir poligonun
+   içinde olması bu kuralı engellemez. 30 m içinde farklı mahalleler varsa sonuç yok; 30–75 m kullanılmaz.
+4. komsu_tutarliligi: ilk üç yöntemle atanamayan erişimin boylam sırasına göre batısındaki ve doğusundaki en yakın
+   kaynağa dayalı erişim (yöntemi 1, 2 veya 3) aynı mahalledeyse o mahalle.
+5. turetim_en_yakin_mahalle_noktasi: ilk dördü sonuç vermezse mahalle temsilî noktalarına boylam farkıyla en yakın
+   mahalle (kaynak = mahalle çekiminin run kimliği); atanabilir en yakın iki aday arasındaki fark 0.003°'den küçükse
+   belirsiz=evet.
+Kısıt: resmî rehberin halka açık plaj erişimi olmadığını söylediği Alys Beach ve Rosemary Beach'e hiçbir yöntem
+erişim atamaz. İlçe verisi bir erişimi bu iki mahallenin alt bölümüne bağlarsa satır "resmî rehberle çelişki"
+notuyla işaretlenir ve sonraki yöntemlere geçilir.
 
 Kullanım (depo kökünden; veritabanı salt okunur açılır, ağa yalnız --ilce-sorgula ile çıkılır):
   .venv\\Scripts\\python.exe -X utf8 -m tools.plaj_mahalle_esleme --data-dir <veri-klasörü> ^
@@ -35,7 +38,8 @@ from pathlib import Path
 
 import httpx
 
-from studio.destinations.beach_neighborhoods import COLUMNS, METHOD_COUNTY, METHOD_DERIVED, METHOD_OFFICIAL
+from studio.destinations.beach_neighborhoods import (COLUMNS, METHOD_COUNTY, METHOD_COUNTY_ADJACENT, METHOD_DERIVED,
+                                                     METHOD_LABELS, METHOD_NEIGHBORS, METHOD_OFFICIAL)
 from studio.destinations.thirty_a import (BEACH_NEIGHBORHOOD_MAPPING, BEACH_SUBDIVISIONS, COUNTY_SUBDIVISION_LAYER,
                                           METADATA, REGIONS, SUBDIVISION_NEIGHBORHOODS)
 
@@ -49,15 +53,19 @@ OFFICIAL_PREFIX = f"VSW Guide to Beach Parking and Transportation (yayın {OFFIC
 NO_PUBLIC_ACCESS = ("alys-beach", "rosemary-beach")
 AMBIGUITY_DEGREES = 0.003
 REGION_NAMES = dict(REGIONS)
-SUBDIVISION_COLUMNS = ("external_id", "alt_bolum_adi", "poligon_kimligi", "iliski", "mesafe_m", "katman_url", "sorgu_zamani")
+SOURCED_METHODS = (METHOD_OFFICIAL, METHOD_COUNTY, METHOD_COUNTY_ADJACENT)
+SUBDIVISION_COLUMNS = ("external_id", "alt_bolum_adi", "alt_bolum_numarasi", "poligon_kimligi", "iliski", "mesafe_m",
+                       "katman_url", "sorgu_zamani")
 TABLE_COLUMNS = ("alt_bolum_adi", "bolge_id", "gerekce")
 RELATIONS = ("iceride", "yakin", "sonucsuz")
-NEAR_METERS, SEARCH_METERS, TIE_METERS = 75, 100, 0.1
+# Polygons up to NEAR_METERS are recorded; only those up to ADJACENT_METERS can assign (rule 3).
+NEAR_METERS, ADJACENT_METERS, SEARCH_METERS = 75, 30, 100
 QUERY_GAP = 0.25
-USER_AGENT = "30AStudio/0.7 (+https://github.com/bemonths/tatilya)"
-VALIDATION_COLUMNS = ("external_id", "plaj_adi", "resmi_bolge_id", "ilce_durum", "ilce_alt_bolum_adi", "ilce_bolge_id",
-                      "ilce_sonuc", "turetilen_bolge_id", "turetme_sonuc")
-DIFF_COLUMNS = ("external_id", "plaj_adi", "v1_bolge_id", "v1_yontem", "v2_bolge_id", "v2_yontem", "degisen")
+USER_AGENT = "30AStudio/0.8 (+https://github.com/bemonths/tatilya)"
+VALIDATION_COLUMNS = ("external_id", "plaj_adi", "resmi_bolge_id", "ilce_bolge_id", "ilce_sonuc", "ilce_yakin_bolge_id",
+                      "ilce_yakin_sonuc", "komsu_bolge_id", "komsu_sonuc", "turetilen_bolge_id", "turetme_sonuc",
+                      "zincir_yontem", "zincir_bolge_id", "zincir_sonuc")
+DIFF_COLUMNS = ("external_id", "plaj_adi", "onceki_bolge_id", "onceki_yontem", "yeni_bolge_id", "yeni_yontem", "degisen")
 
 
 # --- Program türetimi -----------------------------------------------------------------------------
@@ -89,21 +97,30 @@ def derived_note(result):
 # --- İlçe alt bölüm verisi ------------------------------------------------------------------------
 
 def read_subdivisions(path):
-    """Reviewed per-access query results grouped by beach id; one relation per access."""
+    """Reviewed per-access query results grouped by beach id (all polygons inside and within NEAR_METERS)."""
     groups = {}
     with open(path, encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if tuple(reader.fieldnames or ()) != SUBDIVISION_COLUMNS:
             raise SystemExit("Alt bölüm sonuç dosyasının sütunları beklenen biçimde değil.")
         for row in reader:
-            if row["iliski"] not in RELATIONS:
-                raise SystemExit(f"Alt bölüm sonucunda tanınmayan ilişki: {row['iliski']}")
-            if (row["iliski"] == "sonucsuz") != (not row["poligon_kimligi"]):
-                raise SystemExit(f"Alt bölüm sonucu tutarsız: {row['external_id']}")
+            relation = row["iliski"]
+            if relation not in RELATIONS:
+                raise SystemExit(f"Alt bölüm sonucunda tanınmayan ilişki: {relation}")
+            if relation == "sonucsuz":
+                if any(row[key] for key in ("alt_bolum_adi", "alt_bolum_numarasi", "poligon_kimligi", "mesafe_m")):
+                    raise SystemExit(f"Sonuçsuz satırda poligon bilgisi var: {row['external_id']}")
+            else:
+                try:
+                    distance = float(row["mesafe_m"])
+                except ValueError:
+                    raise SystemExit(f"Alt bölüm mesafesi okunamadı: {row['external_id']}") from None
+                if not row["poligon_kimligi"] or distance < 0 or distance > NEAR_METERS or (relation == "iceride" and distance != 0):
+                    raise SystemExit(f"Alt bölüm sonucu tutarsız: {row['external_id']}")
             groups.setdefault(row["external_id"], []).append(row)
     for identifier, rows in groups.items():
-        if len({row["iliski"] for row in rows}) != 1:
-            raise SystemExit(f"Bir erişim için birden fazla ilişki türü var: {identifier}")
+        if len(rows) > 1 and any(row["iliski"] == "sonucsuz" for row in rows):
+            raise SystemExit(f"Sonuçsuz erişimde başka satır var: {identifier}")
     return groups
 
 
@@ -127,46 +144,81 @@ def read_name_table(path):
     return table
 
 
-def county_result(rows, table):
-    """Decide the county evidence for one access. Only polygons containing the point can assign a region."""
-    if not rows:
-        return {"status": "sorgu_yok", "region_id": None, "rows": []}
-    relation = rows[0]["iliski"]
-    if relation != "iceride":
-        return {"status": relation, "region_id": None, "rows": rows}
-    regions = sorted({table[row["alt_bolum_adi"]] for row in rows if row["alt_bolum_adi"] in table})
-    if not regions:
-        return {"status": "tabloda_yok", "region_id": None, "rows": rows}
+def decide(rows, table):
+    """Status, region and the rows behind it for a set of candidate polygons."""
+    named = [row for row in rows if row["alt_bolum_adi"] in table]
+    regions = sorted({table[row["alt_bolum_adi"]] for row in named})
+    if not named:
+        return {"status": "tabloda_yok" if rows else "yok", "region_id": None, "rows": rows, "regions": []}
     if len(regions) > 1:
-        return {"status": "karisik", "region_id": None, "rows": rows, "regions": regions}
+        return {"status": "karisik", "region_id": None, "rows": named, "regions": regions}
     if regions[0] in NO_PUBLIC_ACCESS:
-        return {"status": "celiski", "region_id": None, "rows": rows, "regions": regions}
-    return {"status": "atandi", "region_id": regions[0], "rows": rows}
+        return {"status": "celiski", "region_id": None, "rows": named, "regions": regions}
+    return {"status": "atandi", "region_id": regions[0], "rows": named, "regions": regions}
 
 
-def names(rows):
-    return ", ".join(f"'{row['alt_bolum_adi'] or 'adsız'}' (OBJECTID {row['poligon_kimligi']})" for row in rows)
+def inside_result(rows, table):
+    """Rule 2: polygons that contain the point."""
+    if not rows:
+        return {"status": "sorgu_yok", "region_id": None, "rows": [], "regions": []}
+    return decide([row for row in rows if row["iliski"] == "iceride"], table)
 
 
-def county_note(result, table):
-    status, rows = result["status"], result["rows"]
-    if status == "atandi":
-        return f"Walton County Subdivision Boundaries: erişim noktası {names(rows)} içinde; ad tablosu: {REGION_NAMES[result['region_id']]}."
-    if status == "celiski":
-        region = REGION_NAMES[result["regions"][0]]
-        return (f"Resmî rehberle çelişki: ilçe verisi erişimi {names(rows)} içine düşürüyor ({region}); resmî rehber ({OFFICIAL_DATE}) "
-                f"{region}'te halka açık plaj erişimi olmadığını söylüyor. Bu mahalleye atanmadı.")
-    if status == "karisik":
-        return f"İlçe verisi: erişim noktası {names(rows)} içinde; adlar farklı mahalleler gösteriyor ({', '.join(REGION_NAMES[r] for r in result['regions'])})."
-    if status == "tabloda_yok":
-        return f"İlçe verisi: erişim noktası {names(rows)} içinde; ad bir mahalleyi açıkça belirtmiyor."
-    if status == "yakin":
-        mapped = sorted({REGION_NAMES[table[row['alt_bolum_adi']]] for row in rows if row["alt_bolum_adi"] in table})
-        hint = f" Adı {', '.join(mapped)} gösteriyor; yakın sonuç bu yöntemde kullanılmaz." if mapped else ""
-        return f"İlçe verisi: nokta alt bölüm poligonu içinde değil; en yakın: {names(rows)}, {rows[0]['mesafe_m']} m.{hint}"
-    if status == "sonucsuz":
-        return f"İlçe verisi: {NEAR_METERS} m içinde alt bölüm poligonu yok."
-    return "İlçe alt bölüm sorgusu bu erişim için yapılmadı."
+def adjacent_result(rows, table, inside):
+    """Rule 3: only when the point is not inside a polygon whose name is in the table; mapped polygons <= 30 m."""
+    if inside["status"] in ("atandi", "karisik", "celiski"):
+        return {"status": "uygulanmaz", "region_id": None, "rows": [], "regions": []}
+    near = sorted((row for row in rows if row["iliski"] == "yakin" and float(row["mesafe_m"]) <= ADJACENT_METERS),
+                  key=lambda row: (float(row["mesafe_m"]), row["poligon_kimligi"]))
+    result = decide(near, table)
+    if result["status"] == "tabloda_yok":
+        result["status"] = "yok"
+    return result
+
+
+def label(rows):
+    return ", ".join(f"'{row['alt_bolum_adi'] or 'adsız'}' (alt bölüm no {row['alt_bolum_numarasi'] or '-'}, OBJECTID {row['poligon_kimligi']})"
+                     for row in rows)
+
+
+def county_notes(rows, inside, adjacent, table):
+    """Plain-language notes on the county evidence of one access."""
+    notes = []
+    if inside["status"] == "sorgu_yok":
+        return ["İlçe alt bölüm sorgusu bu erişim için yapılmadı."]
+    unnamed_inside = [row for row in rows if row["iliski"] == "iceride" and row["alt_bolum_adi"] not in table]
+    if inside["status"] == "atandi":
+        notes.append(f"Walton County Subdivision Boundaries: erişim noktası {label(inside['rows'])} içinde; ad tablosu: {REGION_NAMES[inside['region_id']]}.")
+    elif inside["status"] == "karisik":
+        notes.append(f"İlçe verisi: nokta {label(inside['rows'])} içinde; adlar farklı mahalleler gösteriyor ({', '.join(REGION_NAMES[r] for r in inside['regions'])}).")
+    elif inside["status"] == "celiski":
+        region = REGION_NAMES[inside["regions"][0]]
+        notes.append(f"Resmî rehberle çelişki: ilçe verisi erişimi {label(inside['rows'])} içine düşürüyor ({region}); resmî rehber ({OFFICIAL_DATE}) "
+                     f"{region}'te halka açık plaj erişimi olmadığını söylüyor. Bu mahalleye atanmadı.")
+    if unnamed_inside and inside["status"] != "karisik":
+        notes.append(f"Nokta adı tabloda olmayan {label(unnamed_inside)} içinde.")
+    if adjacent["status"] == "atandi":
+        distance = adjacent["rows"][0]["mesafe_m"]
+        notes.append(f"Walton County Subdivision Boundaries: erişim noktası {label(adjacent['rows'][:1])} poligonuna {distance} m "
+                     f"(≤ {ADJACENT_METERS} m); ad tablosu: {REGION_NAMES[adjacent['region_id']]}.")
+    elif adjacent["status"] == "karisik":
+        notes.append(f"İlçe verisi: {ADJACENT_METERS} m içinde farklı mahallelere bağlanan poligonlar var: {label(adjacent['rows'])} "
+                     f"({', '.join(REGION_NAMES[r] for r in adjacent['regions'])}); bitişik kural sonuç vermedi.")
+    elif adjacent["status"] == "celiski":
+        region = REGION_NAMES[adjacent["regions"][0]]
+        notes.append(f"Resmî rehberle çelişki: {ADJACENT_METERS} m içindeki {label(adjacent['rows'])} {region} gösteriyor; "
+                     f"resmî rehber {region}'te halka açık plaj erişimi olmadığını söylüyor. Bu mahalleye atanmadı.")
+    elif adjacent["status"] == "yok" and inside["status"] != "atandi":
+        mapped_far = [row for row in rows if row["iliski"] == "yakin" and row["alt_bolum_adi"] in table]
+        if mapped_far:
+            nearest_row = min(mapped_far, key=lambda row: float(row["mesafe_m"]))
+            notes.append(f"İlçe verisi: tabloda olan en yakın alt bölüm {label([nearest_row])}, {nearest_row['mesafe_m']} m "
+                         f"({ADJACENT_METERS} m'den uzak; kullanılmadı).")
+        elif not [row for row in rows if row["iliski"] != "sonucsuz"]:
+            notes.append(f"İlçe verisi: {NEAR_METERS} m içinde alt bölüm poligonu yok.")
+        else:
+            notes.append(f"İlçe verisi: {NEAR_METERS} m içindeki poligonların adları bir mahalleyi belirtmiyor.")
+    return notes
 
 
 def county_source(rows):
@@ -192,7 +244,7 @@ def polygon_distance(latitude, longitude, rings):
 
 
 def query_subdivisions(beaches, client, raw_dir, layer_url=COUNTY_SUBDIVISION_LAYER, pause=None):
-    """Point-in-polygon query per access; if none, the nearest polygon(s) within NEAR_METERS. Raw answers are kept."""
+    """Per access: every polygon containing the point and every other polygon within NEAR_METERS. Raw answers are kept."""
     pause = QUERY_GAP if pause is None else pause
     raw_dir = Path(raw_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -213,26 +265,26 @@ def query_subdivisions(beaches, client, raw_dir, layer_url=COUNTY_SUBDIVISION_LA
                 "geometryType": "esriGeometryPoint", "inSR": "4326", "spatialRel": "esriSpatialRelIntersects",
                 "outFields": "OBJECTID,OWNER_NAME,SUBDIVISION_NUMBER,LEGAL_1,USE_DESC", "f": "json"}
         inside = get({**base, "returnGeometry": "false"}, f"{beach['external_id']}-iceride.json")
+        time.sleep(pause)
+        near = get({**base, "distance": str(SEARCH_METERS), "units": "esriSRUnit_Meter", "returnGeometry": "true", "outSR": "4326"},
+                   f"{beach['external_id']}-yakin.json")
         stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        row = lambda feature, relation, distance: {
-            "external_id": beach["external_id"], "alt_bolum_adi": (feature["attributes"].get("OWNER_NAME") or "").strip(),
-            "poligon_kimligi": str(feature["attributes"]["OBJECTID"]), "iliski": relation, "mesafe_m": distance,
-            "katman_url": layer_url, "sorgu_zamani": stamp}
-        if inside:
-            rows += [row(feature, "iceride", "0") for feature in sorted(inside, key=lambda f: f["attributes"]["OBJECTID"])]
-        else:
-            time.sleep(pause)
-            near = get({**base, "distance": str(SEARCH_METERS), "units": "esriSRUnit_Meter", "returnGeometry": "true", "outSR": "4326"},
-                       f"{beach['external_id']}-yakin.json")
-            measured = sorted(((polygon_distance(beach["latitude"], beach["longitude"], f["geometry"]["rings"]), f)
-                               for f in near if (f.get("geometry") or {}).get("rings")), key=lambda item: (item[0], item[1]["attributes"]["OBJECTID"]))
-            measured = [(distance, feature) for distance, feature in measured if distance <= NEAR_METERS]
-            if measured:
-                best = measured[0][0]
-                rows += [row(feature, "yakin", f"{distance:.1f}") for distance, feature in measured if distance - best <= TIE_METERS]
-            else:
-                rows.append({"external_id": beach["external_id"], "alt_bolum_adi": "", "poligon_kimligi": "", "iliski": "sonucsuz",
-                             "mesafe_m": "", "katman_url": layer_url, "sorgu_zamani": stamp})
+
+        def row(feature, relation, distance):
+            attributes = feature["attributes"]
+            return {"external_id": beach["external_id"], "alt_bolum_adi": (attributes.get("OWNER_NAME") or "").strip(),
+                    "alt_bolum_numarasi": (attributes.get("SUBDIVISION_NUMBER") or "").strip(),
+                    "poligon_kimligi": str(attributes["OBJECTID"]), "iliski": relation, "mesafe_m": distance,
+                    "katman_url": layer_url, "sorgu_zamani": stamp}
+
+        found = [row(feature, "iceride", "0") for feature in sorted(inside, key=lambda f: f["attributes"]["OBJECTID"])]
+        inside_ids = {feature["attributes"]["OBJECTID"] for feature in inside}
+        measured = sorted(((polygon_distance(beach["latitude"], beach["longitude"], f["geometry"]["rings"]), f) for f in near
+                           if f["attributes"]["OBJECTID"] not in inside_ids and (f.get("geometry") or {}).get("rings")),
+                          key=lambda item: (item[0], item[1]["attributes"]["OBJECTID"]))
+        found += [row(feature, "yakin", f"{distance:.1f}") for distance, feature in measured if distance <= NEAR_METERS]
+        rows += found or [{"external_id": beach["external_id"], "alt_bolum_adi": "", "alt_bolum_numarasi": "", "poligon_kimligi": "",
+                           "iliski": "sonucsuz", "mesafe_m": "", "katman_url": layer_url, "sorgu_zamani": stamp}]
         time.sleep(pause)
     return rows
 
@@ -258,35 +310,96 @@ def official_rows(path, beach_ids):
     return rows
 
 
+def neighbors(ordered, index, sourced):
+    """Nearest sourced access to the west and to the east of ordered[index] (longitude order)."""
+    west = next((ordered[i] for i in range(index - 1, -1, -1) if ordered[i]["external_id"] in sourced), None)
+    east = next((ordered[i] for i in range(index + 1, len(ordered)) if ordered[i]["external_id"] in sourced), None)
+    return west, east
+
+
+def neighbor_result(ordered, index, sourced):
+    west, east = neighbors(ordered, index, sourced)
+    if not west or not east:
+        return {"status": "tek_taraf", "region_id": None, "west": west, "east": east}
+    same = sourced[west["external_id"]]["bolge_id"] == sourced[east["external_id"]]["bolge_id"]
+    return {"status": "ayni" if same else "farkli", "region_id": sourced[west["external_id"]]["bolge_id"] if same else None,
+            "west": west, "east": east}
+
+
+def neighbor_note(result, sourced):
+    side = lambda beach: (f"{beach['name']} ({REGION_NAMES[sourced[beach['external_id']]['bolge_id']]}, "
+                          f"{METHOD_LABELS[sourced[beach['external_id']]['yontem']]})")
+    if result["status"] == "ayni":
+        return f"Batıdaki en yakın kaynaklı erişim {side(result['west'])} ve doğudaki {side(result['east'])} aynı mahallede."
+    if result["status"] == "farkli":
+        return f"Komşu tutarlılığı sonuç vermedi: batıda {side(result['west'])}, doğuda {side(result['east'])}."
+    present = result["west"] or result["east"]
+    return f"Komşu tutarlılığı sonuç vermedi: yalnız bir tarafta kaynaklı erişim var{f' ({side(present)})' if present else ''}."
+
+
 def build(beaches, neighborhoods, official, neighborhood_run_id, subdivisions=None, table=None):
     """Return (mapping rows, validation rows, conflicts), west to east by the beach access longitude."""
     subdivisions, table = subdivisions or {}, table or {}
-    mapping, validation, conflicts = [], [], []
-    for beach in sorted(beaches, key=lambda beach: (beach["longitude"], beach["name"])):
-        derived = nearest(beach["longitude"], neighborhoods)
-        county = county_result(subdivisions.get(beach["external_id"], []), table)
-        row = {"external_id": beach["external_id"], "plaj_adi": beach["name"]}
-        if county["status"] == "celiski":
-            conflicts.append({**row, "alt_bolum": names(county["rows"]), "bolge_id": county["regions"][0]})
+    ordered = sorted(beaches, key=lambda beach: (beach["longitude"], beach["name"]))
+    evidence, sourced, conflicts = {}, {}, []
+    for beach in ordered:
+        rows = subdivisions.get(beach["external_id"], [])
+        inside = inside_result(rows, table)
+        adjacent = adjacent_result(rows, table, inside)
+        evidence[beach["external_id"]] = (rows, inside, adjacent)
+        for result in (inside, adjacent):
+            if result["status"] == "celiski":
+                conflicts.append({"external_id": beach["external_id"], "plaj_adi": beach["name"], "alt_bolum": label(result["rows"]),
+                                  "bolge_id": result["regions"][0]})
+        base = {"external_id": beach["external_id"], "plaj_adi": beach["name"], "belirsiz": "hayır"}
         if beach["external_id"] in official:
             entry = official[beach["external_id"]]
-            mapping.append({**row, "bolge_id": entry["region_id"], "yontem": METHOD_OFFICIAL, "kaynak": OFFICIAL_SOURCE,
-                            "not": entry["note"], "belirsiz": "hayır"})
-            region = county["region_id"]
-            validation.append({**row, "resmi_bolge_id": entry["region_id"], "ilce_durum": county["status"],
-                               "ilce_alt_bolum_adi": " | ".join(r["alt_bolum_adi"] for r in county["rows"]),
-                               "ilce_bolge_id": region or "",
-                               "ilce_sonuc": "sonucsuz" if region is None else ("ayni" if region == entry["region_id"] else "farkli"),
-                               "turetilen_bolge_id": derived["chosen"]["region_id"],
-                               "turetme_sonuc": "ayni" if derived["chosen"]["region_id"] == entry["region_id"] else "farkli"})
-        elif county["region_id"]:
-            mapping.append({**row, "bolge_id": county["region_id"], "yontem": METHOD_COUNTY, "kaynak": county_source(county["rows"]),
-                            "not": county_note(county, table), "belirsiz": "hayır"})
+            sourced[beach["external_id"]] = {**base, "bolge_id": entry["region_id"], "yontem": METHOD_OFFICIAL,
+                                             "kaynak": OFFICIAL_SOURCE, "not": entry["note"]}
+        elif inside["status"] == "atandi":
+            sourced[beach["external_id"]] = {**base, "bolge_id": inside["region_id"], "yontem": METHOD_COUNTY,
+                                             "kaynak": county_source(inside["rows"]), "not": " ".join(county_notes(rows, inside, adjacent, table))}
+        elif adjacent["status"] == "atandi":
+            sourced[beach["external_id"]] = {**base, "bolge_id": adjacent["region_id"], "yontem": METHOD_COUNTY_ADJACENT,
+                                             "kaynak": county_source(adjacent["rows"]), "not": " ".join(county_notes(rows, inside, adjacent, table))}
+    mapping, validation = [], []
+    for index, beach in enumerate(ordered):
+        identifier = beach["external_id"]
+        rows, inside, adjacent = evidence[identifier]
+        derived = nearest(beach["longitude"], neighborhoods)
+        if identifier in official:
+            others = {key: value for key, value in sourced.items() if key != identifier}
+            around = neighbor_result(ordered, index, others)
+            validation.append(validate(beach, official[identifier]["region_id"], inside, adjacent, around, derived))
+        if identifier in sourced:
+            mapping.append(sourced[identifier])
+            continue
+        around = neighbor_result(ordered, index, sourced)
+        notes = county_notes(rows, inside, adjacent, table)
+        row = {"external_id": identifier, "plaj_adi": beach["name"]}
+        if around["status"] == "ayni":
+            west, east = around["west"]["external_id"], around["east"]["external_id"]
+            mapping.append({**row, "bolge_id": around["region_id"], "yontem": METHOD_NEIGHBORS, "kaynak": f"komşu erişimler {west} ve {east}",
+                            "not": " ".join([neighbor_note(around, sourced), *notes]), "belirsiz": "hayır"})
         else:
             mapping.append({**row, "bolge_id": derived["chosen"]["region_id"], "yontem": METHOD_DERIVED, "kaynak": neighborhood_run_id,
-                            "not": f"{derived_note(derived)} {county_note(county, table)}",
+                            "not": " ".join([derived_note(derived), neighbor_note(around, sourced), *notes]),
                             "belirsiz": "evet" if derived["ambiguous"] else "hayır"})
     return mapping, validation, conflicts
+
+
+def validate(beach, official_region, inside, adjacent, around, derived):
+    """What each later method would say for an official access (official mapping itself is never changed)."""
+    outcome = lambda region: "sonucsuz" if region is None else ("ayni" if region == official_region else "farkli")
+    results = [(METHOD_COUNTY, inside["region_id"]), (METHOD_COUNTY_ADJACENT, adjacent["region_id"]),
+               (METHOD_NEIGHBORS, around["region_id"]), (METHOD_DERIVED, derived["chosen"]["region_id"])]
+    chain_method, chain_region = next((method, region) for method, region in results if region is not None)
+    return {"external_id": beach["external_id"], "plaj_adi": beach["name"], "resmi_bolge_id": official_region,
+            "ilce_bolge_id": inside["region_id"] or "", "ilce_sonuc": outcome(inside["region_id"]),
+            "ilce_yakin_bolge_id": adjacent["region_id"] or "", "ilce_yakin_sonuc": outcome(adjacent["region_id"]),
+            "komsu_bolge_id": around["region_id"] or "", "komsu_sonuc": outcome(around["region_id"]),
+            "turetilen_bolge_id": derived["chosen"]["region_id"], "turetme_sonuc": outcome(derived["chosen"]["region_id"]),
+            "zincir_yontem": chain_method, "zincir_bolge_id": chain_region, "zincir_sonuc": outcome(chain_region)}
 
 
 def compare(previous, mapping):
@@ -296,10 +409,11 @@ def compare(previous, mapping):
     for row in mapping:
         old = before.get(row["external_id"])
         old_region, old_method = (old["bolge_id"], old["yontem"]) if old else ("", "")
-        changed = [label for label, a, b in (("bolge", old_region, row["bolge_id"]), ("yontem", old_method, row["yontem"])) if a != b]
+        changed = [name for name, a, b in (("bolge", old_region, row["bolge_id"]), ("yontem", old_method, row["yontem"])) if a != b]
         if changed:
-            changes.append({"external_id": row["external_id"], "plaj_adi": row["plaj_adi"], "v1_bolge_id": old_region, "v1_yontem": old_method,
-                            "v2_bolge_id": row["bolge_id"], "v2_yontem": row["yontem"], "degisen": "+".join(changed)})
+            changes.append({"external_id": row["external_id"], "plaj_adi": row["plaj_adi"], "onceki_bolge_id": old_region,
+                            "onceki_yontem": old_method, "yeni_bolge_id": row["bolge_id"], "yeni_yontem": row["yontem"],
+                            "degisen": "+".join(changed)})
     return changes
 
 
@@ -377,11 +491,12 @@ def main(argv=None, client=None):
     if args.fark:
         write(args.fark, DIFF_COLUMNS, changes)
     methods = Counter(row["yontem"] for row in mapping)
-    print(f"resmî rehber {methods[METHOD_OFFICIAL]}, ilçe alt bölüm {methods[METHOD_COUNTY]}, program türetimi {methods[METHOD_DERIVED]}, "
-          f"belirsiz {sum(row['belirsiz'] == 'evet' for row in mapping)}, resmî rehberle çelişki {len(conflicts)}")
-    print(f"doğrulama (ilçe): {Counter(row['ilce_sonuc'] for row in validation)}; (türetme): {Counter(row['turetme_sonuc'] for row in validation)}")
+    print(", ".join(f"{METHOD_LABELS[method]} {methods[method]}" for method in METHOD_LABELS)
+          + f"; belirsiz {sum(row['belirsiz'] == 'evet' for row in mapping)}; resmî rehberle çelişki {len(conflicts)}")
+    for key in ("ilce_sonuc", "ilce_yakin_sonuc", "komsu_sonuc", "turetme_sonuc", "zincir_sonuc"):
+        print(f"doğrulama {key}: {dict(Counter(row[key] for row in validation))}")
     if args.onceki:
-        print(f"v1 -> v2 değişen satır: {len(changes)}")
+        print(f"önceki -> yeni değişen satır: {len(changes)}")
     return mapping, validation, conflicts, changes
 
 
