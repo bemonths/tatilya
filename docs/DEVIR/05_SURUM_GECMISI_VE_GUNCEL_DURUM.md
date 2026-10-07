@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.8.0 -> de6685f10699d37afd4e1f13b115a6fa13369355
-main -> de6685f10699d37afd4e1f13b115a6fa13369355
-app 0.8.0
-schema 8
+tag v0.9.0 -> 7110f881e69793b907ecd791a52e761d569cdfd1
+main -> 7110f881e69793b907ecd791a52e761d569cdfd1
+app 0.9.0
+schema 9
 ```
+
+7 Ekim 2026'da GÖREV-07 Adım 1 ile main `7110f88`'e (GÖREV-06) fast-forward edildi ve bu commit'e açıklamalı `v0.9.0` etiketi konuldu ("v0.9.0 — kasırga evre kuralı ve referans tablosu"). main CI: success.
 
 7 Ekim 2026'da GÖREV-06 Adım 1 ile main `de6685f`'e (GÖREV-05) fast-forward edildi ve bu commit'e açıklamalı `v0.8.0` etiketi konuldu ("v0.8.0 — eşleme v3 ve iklim paketi"). main CI: success.
 
@@ -16,19 +18,19 @@ schema 8
 ## Aktif branch
 
 ```text
-gorev-06-referanslar
-app 0.9.0
-schema 9
+gorev-07-konaklama
+app 0.10.0
+schema 10
 ```
 
 Bu dal:
-- kasırga sayımını yalnız tropikal ve subtropikal evrelere göre yapar (`hurdat2-storm-proximity/2`; şema 9'da `storm_passages.non_tropical_only`),
-- elle doğrulanmış referans tablosunu (85 olgu), Referanslar sekmesini ve South Walton aylık turist vergisi dosyasını ekler,
+- Book>Direct konaklama profili toplayıcısını (`bookdirect-lodging/1`, şema 10, Konaklama sekmesi) ekler; canlı çekim izin bekliyor,
+- referans tablosunu tamamlar (`yerine_gecildi` durumu; 103 satır),
 - main'e alınmadı; karar yöneticinin.
 
 Test:
-- 513 Python
-- 42 frontend
+- 554 Python
+- 46 frontend
 
 ---
 
@@ -287,6 +289,19 @@ Dal: `gorev-06-referanslar`, uygulama 0.9.0, şema 9.
 - Referans tablosu: 85 satır (73 doğrulandı, 6 çelişkili, 6 doğrulanamadı); `GET /api/references`, Referanslar sekmesi; aylık TDT dosyası (334 ay). Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
 - Gerçek DB: `data/` tam yedeği (`work/yedek/20261007-1935/`), v8 → v9 (uygulama yedeği `studio-v8-14fb0efc…`), yalnız kasırga toplayıcısı; sonra 17 jobs, 14 source_runs, 2 storm_corridor_snapshots, 454 storm_passages; `integrity_check` ok, `foreign_key_check` boş.
 
+## v0.9.0 — kasırga evre kuralı ve referans tablosu
+
+7 Ekim 2026'da main'e alındı ve etiketlendi (`v0.9.0` → `7110f88`). İçerik yukarıdaki GÖREV-06 bölümünde.
+
+## GÖREV-07 — konaklama profili ve referans tablosunun tamamlanması (dal)
+
+Dal: `gorev-07-konaklama`, uygulama 0.10.0, şema 10.
+
+- Konaklama: generic Book>Direct toplayıcısı; clone, konum filtresi eşlemesi (30A: 14 filtre, Seagrove Beach → Seagrove) ve 4 tarih penceresi SQLite'ta; ön yüz istemci anahtarı yalnız bellekte; bütün arama sayfaları, sınırlı denemeli canlı fiyat, ilan başına fiyat takvimi (aylık özet); okuma anında mahalle × pencere özeti. 39 test. Canlı çekim yapılmadı: Claude Code'un izin denetimi anahtarı paketten okuyan isteği engelledi; geçici deneme ve gerçek DB güncellemesi bekliyor. Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
+- Referans tablosu: 103 satır (89 doğrulandı, 2 çelişkili, 9 doğrulanamadı, 3 yerine geçildi). Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
+- v9 → v10 migration denemesi gerçek DB kopyasında temiz; gerçek DB değişmedi (şema 9).
+- Bilgi toplama kurallarının değiştirilmesi (Adım 2) izin denetimince engellendi; kural belgeleri değişmedi.
+
 ---
 
 ## Konaklama: açık konu
@@ -298,16 +313,16 @@ Dal: `gorev-06-referanslar`, uygulama 0.9.0, şema 9.
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.8.0 — eşleme v3 ve iklim paketi**
+**v0.9.0 — kasırga evre kuralı ve referans tablosu**
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants + neighborhoods + iklim** ve plaj–mahalle eşlemesi v3; `gorev-06-referanslar` dalında ayrıca kasırga evre kuralı ve **elle doğrulanmış referans tablosu**
+**beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu** ve plaj–mahalle eşlemesi v3; `gorev-07-konaklama` dalında ayrıca **konaklama profili** (tarihli arama anlık görüntüleri)
 
-Kodlanmamış:
-**lodging** (tarihli arama anlık görüntüleri olarak planlandı)
+Kodlanmış ama canlı çalıştırılmamış:
+**lodging** (tarihli arama anlık görüntüleri; `gorev-07-konaklama`)
 
 Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-06-referanslar` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).
+`gorev-07-konaklama` yönetici incelemesinden ve konaklama çekimi için izin kararından sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).

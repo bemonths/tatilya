@@ -66,4 +66,8 @@ GÖREV-05 (7 Ekim 2026, `gorev-05-iklim` dalı): ilk videonun "ne zaman gitmeli"
 
 ## Referans tablosu ve kasırga evre kuralı — v0.9.0
 
-GÖREV-06 (7 Ekim 2026, `gorev-06-referanslar` dalı): kasırga sayımı yalnız tropikal ve subtropikal evrelere göre (şema 9); toplayıcıyla alınamayan olgular için elle doğrulanmış, kaynaklı referans tablosu (85 satır), Veri toplama → Referanslar sekmesi ve South Walton aylık turist vergisi dosyası. İlk video için veri temelinin son parçası; sonraki aşama kanıt paketi ve makale. [M9 referans tablosu](M9-REFERANS-TABLOSU.md).
+GÖREV-06 (7 Ekim 2026, `gorev-06-referanslar` dalı): kasırga sayımı yalnız tropikal ve subtropikal evrelere göre (şema 9); toplayıcıyla alınamayan olgular için elle doğrulanmış, kaynaklı referans tablosu (85 satır), Veri toplama → Referanslar sekmesi ve South Walton aylık turist vergisi dosyası. İlk video için veri temelinin son parçası; sonraki aşama kanıt paketi ve makale. [M9 referans tablosu](M9-REFERANS-TABLOSU.md). 7 Ekim 2026'da main'e alındı ve `v0.9.0` olarak etiketlendi.
+
+## Konaklama profili ve referans tablosunun tamamlanması — v0.10.0
+
+GÖREV-07 (7 Ekim 2026, `gorev-07-konaklama` dalı): yer seçiminin en büyük eksiği için Book>Direct tarihli arama anlık görüntüleri — her mahallede görünen konaklama türleri, büyüklükleri ve kaynağın verdiği fiyatlar; generic toplayıcı, şema 10, Veri toplama → Konaklama sekmesi (canlı çekim izin bekliyor). Referans tablosu 103 satıra tamamlandı (`yerine_gecildi` durumu). [M10 konaklama profili](M10-KONAKLAMA-PROFILI.md).

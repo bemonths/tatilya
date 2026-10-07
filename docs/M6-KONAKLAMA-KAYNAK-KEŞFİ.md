@@ -1,5 +1,7 @@
 # M6 — Konaklama kaynağı keşfi
 
+> **GÖREV-07 notu (7 Ekim 2026):** tarihli arama anlık görüntüleri toplayıcısı yazıldı (`bookdirect-lodging/1`, şema 10); yöntem ve sınırlar `docs/M10-KONAKLAMA-PROFILI.md`. Bu belge keşif kaydıdır.
+
 Keşif: 1–3 Ekim 2026. İkinci aşama sonucu **C — PUBLIC DATE-INDEPENDENT INVENTORY PATH STILL NOT FOUND**. Public JSON arama sözleşmesi doğrulandı; tarihten bağımsız tam envanter gereksinimi karşılanmadı. Connector uygulaması başlamadı. Uygulama 0.6.0 ve SQLite şema 6 olarak kaldı.
 
 **v0.7 için elimizde hâlâ yalnız date-filtered search var; tam unit inventory veya provider inventory doğrulanmadı.** Statik sağlayıcı sayfaları bulunması, tüm sağlayıcıları keşfeden bir envanter yolu bulunduğu anlamına gelmiyor. Tam/tarihten bağımsız envanter şartı korunuyor.

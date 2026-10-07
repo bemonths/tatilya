@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.9.0 (geliştirme dalı `gorev-06-referanslar`) — kasırga evre kuralı ve elle doğrulanmış referans tablosu** · son stable etiket: v0.8.0 (eşleme v3 ve iklim paketi). Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
+30A veri ve içerik üretim uygulaması · **v0.10.0 (geliştirme dalı `gorev-07-konaklama`) — konaklama profili (Book>Direct tarihli aramalar) ve tamamlanan referans tablosu** · son stable etiket: v0.9.0 (kasırga evre kuralı ve referans tablosu). Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
 
 ## Açılış
 
@@ -23,9 +23,9 @@ Kayıtlar bu projenin `data/` klasöründeki SQLite veritabanında, ham kaynakla
 
 ## Veri temeli ve yükseltme
 
-Toplama işleri artık source_id ile izlenir; başarılı, başarısız ve iptal edilmiş çekimler genel source_runs yapısında saklanır. İşler panelinde kaynak adı görünür. Eski plaj ekranı, indirmeler ve veri sürümleri çalışmaya devam eder. Yedi gerçek connector **BeachesConnector**, **WeatherConnector**, **RestaurantsConnector**, **NeighborhoodsConnector**, **ClimateNormalsConnector**, **WaterTemperatureConnector** ve **StormProximityConnector** olarak kayıtlıdır; başka kaynak için yalnızca URL eklemek yeterli değildir.
+Toplama işleri artık source_id ile izlenir; başarılı, başarısız ve iptal edilmiş çekimler genel source_runs yapısında saklanır. İşler panelinde kaynak adı görünür. Eski plaj ekranı, indirmeler ve veri sürümleri çalışmaya devam eder. Sekiz gerçek connector **BeachesConnector**, **WeatherConnector**, **RestaurantsConnector**, **NeighborhoodsConnector**, **ClimateNormalsConnector**, **WaterTemperatureConnector**, **StormProximityConnector** ve **BookDirectLodgingConnector** olarak kayıtlıdır; başka kaynak için yalnızca URL eklemek yeterli değildir.
 
-v0.1–v0.8 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 9'a tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
+v0.1–v0.9 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 10'a tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
 
 13 canonical bölge kimliği ve entities/entity_sources tabloları yalnızca temel seviyede hazırdır. Otomatik entity matching ve region polygon mapping yoktur; toplayıcılar adres veya koordinattan mahalle tahmin etmez. Plaj erişimlerinin mahallesi yalnız ayrı ve gözden geçirilebilir eşleme dosyasından gelir ([M7](docs/M7-MAHALLE-VERISI.md)). Claude/OpenAI, Playwright, scheduler ve içerik üretimi henüz uygulanmadı.
 
@@ -44,6 +44,7 @@ v0.1–v0.8 veritabanı açılırken önce `data/backups/` içine SQLite yedeği
 - [Mahalle verisi ve plaj–mahalle eşlemesi](docs/M7-MAHALLE-VERISI.md)
 - [İklim verisi: normaller, deniz suyu sıcaklığı, kasırga geçmişi](docs/M8-IKLIM-VERISI.md)
 - [Elle doğrulanmış referans tablosu](docs/M9-REFERANS-TABLOSU.md)
+- [Konaklama profili: Book>Direct tarihli arama anlık görüntüleri](docs/M10-KONAKLAMA-PROFILI.md)
 
 ## Geliştirme
 
@@ -63,7 +64,7 @@ Beklenmeyen hataların teknik mesajları yaygın parola/token/API anahtarı ve U
 
 ## NWS hava verisi · v0.4
 
-**Veri toplama → Hava → Hava verilerini topla** ile üç örnek noktanın güncel NWS tahminlerini ve aktif uyarılarını ayrı bir çekim olarak saklayın. Kaynak kütüphanesinde National Weather Service **API · bağlı / Toplayıcı hazır** görünür. Veri toplama içindeki Plaj/Hava/Restoranlar/Mahalleler/İklim/Referanslar sekmeleri ve İşler panelindeki sonuç bağlantıları ilgili domain'i açar.
+**Veri toplama → Hava → Hava verilerini topla** ile üç örnek noktanın güncel NWS tahminlerini ve aktif uyarılarını ayrı bir çekim olarak saklayın. Kaynak kütüphanesinde National Weather Service **API · bağlı / Toplayıcı hazır** görünür. Veri toplama içindeki Plaj/Hava/Restoranlar/Mahalleler/Konaklama/İklim/Referanslar sekmeleri ve İşler panelindeki sonuç bağlantıları ilgili domain'i açar.
 
 Batı / Orta / Doğu seçimi, Visit South Walton kaynağındaki 53 kıyı erişiminin boylam sıralamasına dayanır. Noktalar canonical mahalle merkezleri değildir. Tam koordinat/provenance ve NWS akışı: [Hava verisi sözleşmesi](docs/M3-HAVA-VERISI.md).
 
@@ -105,3 +106,7 @@ Plaj ekranında her erişimin yanında mahalle ve yöntem etiketi görünür (e�
 ## Referans tablosu · v0.9.0
 
 **Veri toplama → Referanslar** sekmesi, toplayıcıyla alınamayan ama videoda söylenecek bilgileri salt okunur gösterir: Walton County plaj kuralları (Ordinance 2025-22), South Walton Fire District bayrak ve ateş kuralları, plaj erişimi ve Beach Park and Ride, havalimanlarına kuş uçuşu uzaklıklar, golf arabası ve düşük hızlı araç kanunları, park ve orman ücretleri, kasırga sezonu, ziyaretçi ve konaklama göstergeleri. Her satırda kaynak bağlantısı, belgedeki yeri, kısa alıntı, erişim tarihi, durum ("doğrulandı", "çelişkili", "doğrulanamadı") ve yeniden kontrol tarihi vardır; tarihi geçen satırlar işaretlenir. Tablo `studio/destinations/thirty_a_references.csv` dosyasındadır ve elle güncellenir; uygulama yalnız okur ve doğrular. South Walton'ın aylık turist vergisi tahsilatları `studio/destinations/thirty_a_tdt_collections.csv` dosyasındadır. Ayrıntılar ve video dili: [M9](docs/M9-REFERANS-TABLOSU.md).
+
+## Konaklama profili · v0.10.0
+
+**Veri toplama → Konaklama → Konaklama aramalarını topla**, Visit South Walton'ın resmî "Stay" sayfasının kullandığı Book>Direct aramalarını yapılandırılmış tarih pencerelerinde (30A için 2026 sonbaharı, 2027 kışı, bahar tatili ve yazı; Cumartesi–Cumartesi 7 gece) her mahalle filtresi için çalıştırır: görünen ilanlar, türleri, yatak odası, banyo ve kapasite, kaynağın verdiği liste ve canlı fiyatlar, her ilanın fiyat takviminin aylık özeti. Sekmede mahalle × pencere özeti (ilan sayısı, tür ve oda dağılımı, fiyatlı ilan payı, gecelik fiyat ortancası ve çeyrekleri), mahalle başına aylık takvim ortancaları ve ilan ayrıntıları görünür. Bu veri belirli tarihlerdeki aramaların anlık görüntüsüdür, tam envanter değildir; fiyatlar kaynağa göre en düşük müsait günlük fiyata dayanır ve vergi/ücretlerin dahil olup olmadığı kaynakta belirtilmiyor. Çekim sıralı ve aralıklı isteklerle uzun sürebilir. Ayrıntılar: [M10](docs/M10-KONAKLAMA-PROFILI.md).

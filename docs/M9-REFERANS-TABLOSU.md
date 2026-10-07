@@ -1,6 +1,6 @@
 # M9 — Elle doğrulanmış referans tablosu
 
-Tarih: 7 Ekim 2026 · Görev: GÖREV-06 · Dal: `gorev-06-referanslar` · Uygulama `0.9.0`
+Tarih: 7 Ekim 2026 · Görevler: GÖREV-06 (tablo), GÖREV-07 (tamamlama, `yerine_gecildi` durumu) · Uygulama `0.10.0`
 
 ## Amaç
 
@@ -31,20 +31,21 @@ Toplayıcıyla alınamayan ama ilk videoda söylenecek her bilgiyi (plaj kuralla
 | `erisim_tarihi` | Belgenin alındığı gün (`YYYY-AA-GG`, UTC). |
 | `belge_sha256` | Alınan dosyanın ya da sayfanın SHA-256'sı. |
 | `guven` | `birincil` (kuralın veya verinin sahibi) / `ikincil` (başkasının özeti). |
-| `durum` | `dogrulandi` / `celiskili` / `dogrulanamadi` |
+| `durum` | `dogrulandi` / `celiskili` / `dogrulanamadi` / `yerine_gecildi` |
 | `celiski_notu` | Çelişkili satırda zorunlu; karşı satırın kimliği ve farkı. |
 | `yeniden_kontrol_tarihi` | Satırın yeniden kontrol edileceği gün. |
 | `not` | Kapsam sınırları, hesap açıklaması, uyarılar. |
 
 ## Doğrulayıcı kuralları
 
-`references.problems()` her ihlali okunur bir cümleyle döndürür; testler (`tests/test_references.py`) repodaki tablonun hiç ihlal içermediğini denetler. Kurallar: sütunlar ve sırası birebir; zorunlu alanlar dolu; kimlik biçimi ve tekilliği; konu, kapsam, güven ve durum tanımlı değerlerden; erişim ve yeniden kontrol tarihi `YYYY-AA-GG` ve yeniden kontrol erişimden sonra; belge tarihi kısmi tarih biçimlerinden biri; `dogrulandi` ve `celiskili` satırlarda https adresi ve SHA-256 zorunlu; `celiskili` satırda çelişki notu zorunlu; kısa alıntı en fazla 25 kelime. API (`GET /api/references`) satırları, doğrulama sonucunu ve yeniden kontrol tarihi geçmiş satırları (`overdue`) verir; bozuk dosyada uygulama hata vermez, nedenini gösterir.
+`references.problems()` her ihlali okunur bir cümleyle döndürür; testler (`tests/test_references.py`) repodaki tablonun hiç ihlal içermediğini denetler. Kurallar: sütunlar ve sırası birebir; zorunlu alanlar dolu; kimlik biçimi ve tekilliği; konu, kapsam, güven ve durum tanımlı değerlerden; erişim ve yeniden kontrol tarihi `YYYY-AA-GG` ve yeniden kontrol erişimden sonra; belge tarihi kısmi tarih biçimlerinden biri; `dogrulandi`, `celiskili` ve `yerine_gecildi` satırlarda https adresi ve SHA-256 zorunlu; `celiskili` satırda çelişki notu zorunlu; `yerine_gecildi` satırın notunda `yerine geçen: <kimlik>` yazmalı ve o kimlik tabloda `dogrulandi` bir satır olmalı; kısa alıntı en fazla 25 kelime. API (`GET /api/references`) satırları, doğrulama sonucunu, yeniden kontrol tarihi geçmiş satırları (`overdue`) ve yerine geçen satırın kimliğini (`replaced_by`) verir; bozuk dosyada uygulama hata vermez, nedenini gösterir.
 
 ## Kaynak politikası
 
 - `CALISMA_MANTIGI.md` §4 madde 14: belirli bir resmî belgenin kaynak göstermek için tek seferlik elle alınması toplayıcı sayılmaz; URL, erişim tarihi ve SHA-256 ile kaydedilir. Bu tablonun belgeleri böyle alındı (`work/referans-belgeler/al.py`, repo adresli User-Agent, istekler arası 1,5 sn).
 - Bot doğrulaması (Cloudflare vb.) olan sayfa otomasyonla aşılmaz; okunamazsa satır `dogrulanamadi` olur (7 Ekim 2026'da Florida State Parks sayfaları HTTP 403 döndürdü).
 - İki kaynak çelişirse ikisi de ayrı satır olarak yazılır, ikisi de `celiskili` olur ve `celiski_notu` doldurulur; hangisinin doğru olduğuna tabloyu dolduran karar vermez. Aynı belgenin iki sayfası çelişirse de böyle yapılır.
+- Çelişki daha güncel bir resmî kaynakla ya da yönetici kararıyla çözülürse (GÖREV-07) eski satırlar silinmez: durumları `yerine_gecildi` olur, `celiski_notu` korunur, `not` sütununa gerekçe ve `yerine geçen: <kimlik>` yazılır; geçerli değer yeni ya da seçilen satırda `dogrulandi` olarak durur.
 - Taranmış belgeler (Ordinance 2025-22, metin katmanı yok) sayfa görüntüleri çıkarılıp okunarak işlendi; OCR yalnız arama içindir, alıntılar sayfa görüntüsünden doğrulandı. Metin tabanlı PDF'lerdeki infografik değerler Windows'un PDF çizicisiyle sayfa görüntüsü üretilip gözle doğrulandı.
 
 ## Durumlar ve video dili
@@ -52,6 +53,7 @@ Toplayıcıyla alınamayan ama ilk videoda söylenecek her bilgiyi (plaj kuralla
 - **`dogrulandi`** — kaynak gösterilerek söylenebilir (ör. "Walton County'nin plaj yönetmeliğine göre …").
 - **`celiskili`** — ancak çelişki açıkça söylenerek ya da daha güncel bir resmî kaynakla çözülerek kullanılır.
 - **`dogrulanamadi`** — videoda kullanılmaz.
+- **`yerine_gecildi`** — kayıt için durur, videoda kullanılmaz; yerine geçen satır kullanılır.
 - Değeri bizim hesapladığımız satırlar (havalimanı uzaklıkları) `not` sütununda "bizim hesabımız" diye işaretlidir.
 
 ## Yeniden kontrol kuralı
@@ -60,7 +62,9 @@ Kurallar, ücretler, saatler ve tanımlar yılda bir yeniden kontrol edilir (7 E
 
 ## 7 Ekim 2026 içeriği
 
-85 satır: 73 `dogrulandi`, 6 `celiskili`, 6 `dogrulanamadi`.
+GÖREV-06'da 85 satır (73 `dogrulandi`, 6 `celiskili`, 6 `dogrulanamadi`); GÖREV-07 sonrası 103 satır: 89 `dogrulandi`, 2 `celiskili`, 9 `dogrulanamadi`, 3 `yerine_gecildi`.
+
+GÖREV-06 dağılımı (kayıt için):
 
 | Konu | Satır | Doğrulandı | Çelişkili | Doğrulanamadı | Başlıca kaynak |
 |---|---:|---:|---:|---:|---|
@@ -75,6 +79,28 @@ Kurallar, ücretler, saatler ve tanımlar yılda bir yeniden kontrol edilir (7 E
 
 Çelişkiler: cankurtaran sezonu (SWFD SSS: 1 Mart–30 Eylül, 10:00–18:00, 8 kule; Visit South Walton: 1 Mart–31 Ekim), Timpoochee Trail uzunluğu (19 mil / 18,5 mil) ve 2025 ziyaretçi sayısı (aynı raporun 5. sayfasında 4.586.000, 8. sayfasında 4,57 milyon; doğrudan harcama da iki sayfada farklı). Ziyaretçi ve konaklama satırlarındaki ADR değerleri, Airbnb ve Vrbo'nun 2025'te fiyat gösterimini değiştirmesiyle (temizlik ve platform ücretleri dahil) yıllar arası karşılaştırmada şişkin görünebilir; bu uyarı ilgili satırların notunda.
 
+GÖREV-07 sonrası dağılım:
+
+| Konu | Satır | Doğrulandı | Çelişkili | Doğrulanamadı | Yerine geçildi |
+|---|---:|---:|---:|---:|---:|
+| Plaj kuralları | 29 | 29 | 0 | 0 | 0 |
+| Güvenlik | 13 | 11 | 0 | 0 | 2 |
+| Plaj erişimi | 17 | 15 | 0 | 2 | 0 |
+| Ulaşım | 17 | 14 | 2 | 1 | 0 |
+| Parklar | 8 | 2 | 0 | 6 | 0 |
+| Kasırga sezonu | 2 | 2 | 0 | 0 | 0 |
+| Sezon ve maliyet | 14 | 13 | 0 | 0 | 1 |
+| Genel | 3 | 3 | 0 | 0 | 0 |
+| **Toplam** | **103** | **89** | **2** | **9** | **3** |
+
+GÖREV-07'de eklenen ve değişenler:
+- **Plajda alkol:** ilçe plaj yönetmeliğinde hüküm yok (`kural-alkol`); Walton County Tourism yasal yaştaki yetişkinlere yalnız kutu veya plastikle izin verildiğini yazıyor (`alkol-plaj-vsw`, ikincil özet); eyalet parklarında alkol tüketimi, satış yapan restoran ve konaklama yerleri ile park etkinlikleri dışında yasak (Florida Administrative Code 62D-2.014(12)); 21 yaş altına alkol bulundurmak yasak (F.S. 562.111); düşük hızlı araçta açık alkol kabı yasak (Walton County Sheriff's Office).
+- **Cankurtaran:** 2026 sezonu 1 Mart–31 Ekim, 10:00–18:00 (`cankurtaran-2026`; SoWal.com'un 2 Mart 2026 haberi, ikincil; Walton County Tourism'in sayfasıyla aynı). SWFD'nin kendi sitesinde 2026 duyurusu bulunamadı; iki eski satır `yerine_gecildi`.
+- **2025 ziyaretçi:** yönetici kararıyla raporun tabloları esas (4.586.000, `ziyaretci-2025-ozet` doğrulandı); 4,57 milyon satırı `yerine_gecildi`.
+- **Golf arabası ve düşük hızlı araç:** ilçe golf arabalarının ilçe yollarında kullanılmadığını, şerif hiçbir kamu yolunda kullanılamadığını söylüyor; ilçenin golf arabasına açtığı bir yol bulunamadı. Düşük hızlı araç: 35 mph ve altındaki yollar, kaldırım ve bisiklet yolunda yasak, US 98'de yasak (yalnız dört yollu kavşakta geçiş).
+- **Planlı topluluklar:** Seaside saatlik değişken ücretli otopark ve 06:00–24:00 ücretsiz servis; Alys Beach işaretli yerlerde ücretsiz ziyaretçi otoparkı, plaj ve plaj erişimleri halka kapalı; WaterColor'da topluluk derneğinin yönettiği ücretli park yerleri (otelin SSS'sinden, ikincil). Rosemary Beach ve WaterSound'un sitelerinde ziyaretçi otoparkı bilgisi bulunamadı (`dogrulanamadi`).
+- **Çözülemeyenler:** eyalet parklarının ücret ve saatleri (site Cloudflare doğrulaması; uygulama içi tarayıcıyla giriş reddedildi; ücret çizelgesi PDF'i de 403), Timpoochee uzunluğu (Walton County'nin resmî değeri bulunamadı; çelişki sürüyor), 30A hız sınırları (resmî karar belgesi bulunamadı; tek haber kaynağı Cloudflare arkasında).
+
 ## Aylık turist vergisi (TDT)
 
 Walton County Tourism'in "TDT Collections" sayfası (Gatsby sitesi) aylık raporları sayfanın statik sorgu dosyasındaki bir akordeon bileşeninden listeliyor (`/page-data/sq/d/2777485464.json`). Bağlantılar herkese açık PDF ve XLSX dosyalarına gidiyor. South Walton için Walton County Clerk of Courts & County Comptroller'ın "SW TDT Collections History with Monthly FYTD Comparisons" çalışma kitabı FY1999'dan bu yana bütün ayları içeriyor; `thirty_a_tdt_collections.csv` bu kitaptan üretildi (334 ay, her mali yılın aylık toplamı kitaptaki yıllık toplamla birebir aynı). Sütunlar: ay, mali yıl (Ekim–Eylül), vergi bölgesi, o dönemin oranıyla toplam tahsilat, oran değişimlerinden bağımsız %2 payı, kaynak sayfa, URL, erişim tarihi, SHA-256.
@@ -85,4 +111,4 @@ Walton County Tourism'in "TDT Collections" sayfası (Gatsby sitesi) aylık rapor
 
 ## Yeniden üretim
 
-`work/gorev-06/referans_tablosu.py` olguları, alıntıları ve konumları içerir; adres, erişim tarihi ve SHA-256'yı `work/referans-belgeler/manifest.json`'dan doldurur ve doğrulayıcıdan geçmeyen tabloyu yazmaz. `work/gorev-06/tdt_csv.py` TDT dosyasını üretir. İkisi de `work/` altındadır (repoya girmez); yeni bir sürüm gözden geçirildikten sonra ayrı commit olarak alınır.
+`work/gorev-06/referans_tablosu.py` (GÖREV-07 sürümü `work/gorev-07/referans_tablosu.py`) olguları, alıntıları ve konumları içerir; adres, erişim tarihi ve SHA-256'yı `work/referans-belgeler/manifest.json`'dan doldurur ve doğrulayıcıdan geçmeyen tabloyu yazmaz. `work/gorev-06/tdt_csv.py` TDT dosyasını üretir. İkisi de `work/` altındadır (repoya girmez); yeni bir sürüm gözden geçirildikten sonra ayrı commit olarak alınır.

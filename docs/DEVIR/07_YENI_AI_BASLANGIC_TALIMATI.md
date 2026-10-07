@@ -39,20 +39,20 @@ C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an
 ## Stable
 
 ```text
-tag v0.8.0 -> de6685f10699d37afd4e1f13b115a6fa13369355
-main -> de6685f10699d37afd4e1f13b115a6fa13369355
-app 0.8.0 / schema 8
+tag v0.9.0 -> 7110f881e69793b907ecd791a52e761d569cdfd1
+main -> 7110f881e69793b907ecd791a52e761d569cdfd1
+app 0.9.0 / schema 9
 ```
 
 ## Aktif branch
 
 ```text
-gorev-06-referanslar
-kasırga evre kuralı (HURDAT2 /2) ve elle doğrulanmış referans tablosu (Referanslar sekmesi)
-app 0.9.0 / schema 9
+gorev-07-konaklama
+Book>Direct konaklama profili (Konaklama sekmesi; canlı çekim izin bekliyor) ve referans tablosunun tamamlanması
+app 0.10.0 / schema 10
 ```
 
-main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir. Gerçek veritabanı yalnız görev metni açıkça isterse ve normal kullanımla, önce `data/` tam yedeği alınarak güncellenir (CLAUDE.md). Gerçek veritabanı 7 Ekim 2026'dan beri şema 9'dur; main'deki 0.8.0 onu açmaz, uygulama bu dal main'e alınana kadar `gorev-06-referanslar` dalından çalıştırılır.
+main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir. Gerçek veritabanı yalnız görev metni açıkça isterse ve normal kullanımla, önce `data/` tam yedeği alınarak güncellenir (CLAUDE.md). Gerçek veritabanı şema 9'dur; main'deki 0.9.0 onu açar. Görev dalının 0.10.0'ı açınca şema 10'a yükseltir; gerçek veride bu yalnız görev metni isterse yapılır.
 
 ## Çalışan connector'lar
 
@@ -60,7 +60,8 @@ main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yaln�
 - nws-weather
 - south-walton-restaurants
 - south-walton-neighborhoods (v0.7.0)
-- ncei-climate-normals, ndbc-water-temperature, hurdat2-storm-proximity (v0.8.0; generic, yapılandırma SQLite'ta; `docs/M8-IKLIM-VERISI.md`; kasırga `/2` görev dalında)
+- ncei-climate-normals, ndbc-water-temperature, hurdat2-storm-proximity (v0.8.0; generic, yapılandırma SQLite'ta; `docs/M8-IKLIM-VERISI.md`; kasırga `/2` v0.9.0'da)
+- bookdirect-lodging (`gorev-07-konaklama` dalında; generic, yapılandırma SQLite'ta; `docs/M10-KONAKLAMA-PROFILI.md`)
 
 Elle doğrulanmış referans tablosu connector değildir: `studio/destinations/thirty_a_references.csv` (`docs/M9-REFERANS-TABLOSU.md`).
 
