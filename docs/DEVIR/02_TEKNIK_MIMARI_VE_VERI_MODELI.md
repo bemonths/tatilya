@@ -333,13 +333,17 @@ Description nullable'dır.
 
 Plaj–mahalle eşlemesi tablo değildir; `beach_records.canonical_region_id` NULL kalır.
 
-### Climate (v0.8.0, şema 8; `gorev-05-iklim` dalı)
+### Climate (v0.8.0, şema 8; kasırga evre kuralı şema 9, `gorev-06-referanslar` dalı)
 
 - climate_normal_stations, climate_normal_values: istasyon × ay × değişken; nullable value, unit, completeness_flag, measurement_flag, years
 - water_temperature_stations (denenen yıllar, dosyası bulunan/olmayan yıllar), water_temperature_months (yıl-ay ortalaması °C, ölçüm sayısı, gün sayısı); ham ölçümler tabloda değil, ham dosyalarda
 - storm_corridor_snapshots (koridor, yarıçaplar, HURDAT2 dosya adı), storm_passages (fırtına × yarıçap: ilk giriş zamanı/ayı, en yakın uzaklık, daire içi en yüksek rüzgâr, sınıf, evre)
 
-Ayrıntı: `docs/M8-IKLIM-VERISI.md`.
+Ayrıntı: `docs/M8-IKLIM-VERISI.md`. Şema 9'da `storm_passages.non_tropical_only` (0/1): daireye yalnız tropikal olmayan evrede giren fırtına.
+
+### Referans tablosu (v0.9.0)
+
+Tablo değildir: `studio/destinations/thirty_a_references.csv` (elle doldurulan, repoda sürümlenen olgular) ve `thirty_a_tdt_collections.csv` (aylık turist vergisi). Genel okuyucu ve doğrulayıcı `studio/destinations/references.py`. Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
 
 ## Migration stratejisi
 
@@ -350,7 +354,7 @@ Ayrıntı: `docs/M8-IKLIM-VERISI.md`.
 - `PRAGMA foreign_key_check`,
 - hata halinde rollback.
 
-Stable şema: `7` (v0.7.0 ve main; v0.6.0 şema 6 idi). `gorev-05-iklim` dalında şema `8`: v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler; gerçek DB 7 Ekim 2026'da şema 8'e yükseltildi.
+Stable şema: `8` (v0.8.0 ve main): v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler. `gorev-06-referanslar` dalında şema `9`: v8 → v9 `storm_passages.non_tropical_only` sütununu ekler (kasırga evre kuralı); gerçek DB 7 Ekim 2026'da şema 9'a yükseltildi.
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
@@ -372,6 +376,7 @@ Domain:
 - `/api/neighborhood-runs` (v0.7.0)
 - `/api/beach-neighborhoods` (v0.7.0; profil dosyasındaki plaj–mahalle eşlemesi, salt okunur)
 - `/api/climate-runs`, `/api/climate`, `/api/climate-runs/{id}/raw` (v0.8.0; iklim çekimleri, yapılandırma ve son anlık görüntüler, ham manifest)
+- `/api/references` (v0.9.0; profil dosyasındaki elle doğrulanmış referans tablosu, doğrulama sonucu ve yeniden kontrol işaretiyle, salt okunur)
 
 Liste endpoint'leri destination-filtered'dır.
 

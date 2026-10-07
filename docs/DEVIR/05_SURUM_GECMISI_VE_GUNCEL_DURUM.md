@@ -3,31 +3,32 @@
 ## Stable durum
 
 ```text
-tag v0.7.0 -> 7f25e3ce947c69fef999f7f4454a79608008fcad
-main -> a7e38f25b28b8b72157d1f5eb3aa74058cfeebcf
-app 0.7.0
-schema 7
+tag v0.8.0 -> de6685f10699d37afd4e1f13b115a6fa13369355
+main -> de6685f10699d37afd4e1f13b115a6fa13369355
+app 0.8.0
+schema 8
 ```
+
+7 Ekim 2026'da GÖREV-06 Adım 1 ile main `de6685f`'e (GÖREV-05) fast-forward edildi ve bu commit'e açıklamalı `v0.8.0` etiketi konuldu ("v0.8.0 — eşleme v3 ve iklim paketi"). main CI: success.
 
 7 Ekim 2026'da GÖREV-04 Adım 1 ile main `7f25e3c`'ye fast-forward edildi ve bu commit'e açıklamalı `v0.7.0` etiketi konuldu ("v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi"). Aynı gün GÖREV-05 Adım 1 ile main `a7e38f2`'ye (GÖREV-04: eşleme v2, test bekleme düzeltmesi, gerçek veri güncelleme kuralı) fast-forward edildi; yeni etiket konmadı; main CI: success. Önceki stable `v0.6.0` → `a938367`.
 
 ## Aktif branch
 
 ```text
-gorev-05-iklim
-app 0.8.0
-schema 8
+gorev-06-referanslar
+app 0.9.0
+schema 9
 ```
 
 Bu dal:
-- plaj–mahalle eşlemesini v3 olarak kilitler (bitişik alt bölüm ≤ 30 m ve komşu erişimlerle tutarlılık),
-- iklim paketini ekler: NCEI 1991–2020 normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (üç generic toplayıcı, destinasyon yapılandırması SQLite'ta),
-- şema 8 (v7 → v8 migration) ve Veri toplama → İklim sekmesi,
+- kasırga sayımını yalnız tropikal ve subtropikal evrelere göre yapar (`hurdat2-storm-proximity/2`; şema 9'da `storm_passages.non_tropical_only`),
+- elle doğrulanmış referans tablosunu (85 olgu), Referanslar sekmesini ve South Walton aylık turist vergisi dosyasını ekler,
 - main'e alınmadı; karar yöneticinin.
 
 Test:
-- 479 Python
-- 37 frontend
+- 513 Python
+- 42 frontend
 
 ---
 
@@ -274,6 +275,20 @@ Canlı deneme (geçici klasör) ve gerçek DB (7 Ekim 2026): 168 normal değeri 
 
 ---
 
+## v0.8.0 — eşleme v3 ve iklim paketi
+
+7 Ekim 2026'da main'e alındı ve etiketlendi (`v0.8.0` → `de6685f`). İçerik yukarıdaki GÖREV-05 bölümünde.
+
+## GÖREV-06 — kasırga evre kuralı ve referans tablosu (dal)
+
+Dal: `gorev-06-referanslar`, uygulama 0.9.0, şema 9.
+
+- Kasırga sayımı: yalnız HURDAT2 TD, TS, HU, SD, SS evreleri; EX, LO, WV, DB noktaları giriş, en yakın mesafe ve rüzgâr hesabına girmez; yalnız tropikal olmayan evrede daireye giren fırtına işaretlenip saklanır. 1991–2025: 50 deniz milinde 20 → 16, 100 deniz milinde 37 → 33; kasırgalar (HU+MH) değişmedi (5 ve 9). Ayrıntı: `docs/M8-IKLIM-VERISI.md`.
+- Referans tablosu: 85 satır (73 doğrulandı, 6 çelişkili, 6 doğrulanamadı); `GET /api/references`, Referanslar sekmesi; aylık TDT dosyası (334 ay). Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
+- Gerçek DB: `data/` tam yedeği (`work/yedek/20261007-1935/`), v8 → v9 (uygulama yedeği `studio-v8-14fb0efc…`), yalnız kasırga toplayıcısı; sonra 17 jobs, 14 source_runs, 2 storm_corridor_snapshots, 454 storm_passages; `integrity_check` ok, `foreign_key_check` boş.
+
+---
+
 ## Konaklama: açık konu
 
 3 Ekim'deki blocker, tam/tarihten bağımsız lodging inventory idi. 7 Ekim 2026 yönetici kararıyla bu şart kaldırıldı: konaklama tarihli arama anlık görüntüleri olarak modellenecek. Tam envanter iddiası taşıyan bir “lodging inventory connector” yine yapılmamalıdır.
@@ -283,10 +298,10 @@ Canlı deneme (geçici klasör) ve gerçek DB (7 Ekim 2026): 168 normal değeri 
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** (main etiketin önünde: eşleme v2)
+**v0.8.0 — eşleme v3 ve iklim paketi**
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants + neighborhoods** ve plaj–mahalle eşlemesi (v0.7.0'da v1, main'de v2, `gorev-05-iklim` dalında v3); görev dalında ayrıca **iklim** (normaller, deniz suyu sıcaklığı, kasırga geçişleri)
+**beach + weather + restaurants + neighborhoods + iklim** ve plaj–mahalle eşlemesi v3; `gorev-06-referanslar` dalında ayrıca kasırga evre kuralı ve **elle doğrulanmış referans tablosu**
 
 Kodlanmamış:
 **lodging** (tarihli arama anlık görüntüleri olarak planlandı)
@@ -295,4 +310,4 @@ Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-05-iklim` yönetici incelemesinden sonra main'e alınır; iklim açık konuları (`docs/M8-IKLIM-VERISI.md` §10) ve sıradaki domain'i yönetici seçer.
+`gorev-06-referanslar` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).

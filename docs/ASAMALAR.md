@@ -62,4 +62,8 @@ GÖREV-03 (7 Ekim 2026, `gorev-03-mahalleler` dalı): Visit South Walton mahalle
 
 ## İklim verisi — v0.8.0
 
-GÖREV-05 (7 Ekim 2026, `gorev-05-iklim` dalı): ilk videonun "ne zaman gitmeli" sorusu için üç generic toplayıcı — NOAA NCEI 1991–2020 aylık normalleri (Destin kıyı referansı, DeFuniak Springs iç kesim), NOAA NDBC PCBF1 deniz suyu sıcaklığı (yıl-ay ve çok yıllı aylık ortalama, bizim hesabımız) ve NOAA NHC HURDAT2 kasırga geçişleri (30A kıyı koridoruna 50/100 deniz mili, ilk giriş ayı ve sınıf, bizim hesabımız). Şema 8, Veri toplama → İklim sekmesi; gerçek veritabanı normal kullanımla şema 8'e yükseltildi. [M8 yöntem, sonuç ve sınırlar](M8-IKLIM-VERISI.md).
+GÖREV-05 (7 Ekim 2026, `gorev-05-iklim` dalı): ilk videonun "ne zaman gitmeli" sorusu için üç generic toplayıcı — NOAA NCEI 1991–2020 aylık normalleri (Destin kıyı referansı, DeFuniak Springs iç kesim), NOAA NDBC PCBF1 deniz suyu sıcaklığı (yıl-ay ve çok yıllı aylık ortalama, bizim hesabımız) ve NOAA NHC HURDAT2 kasırga geçişleri (30A kıyı koridoruna 50/100 deniz mili, ilk giriş ayı ve sınıf, bizim hesabımız). Şema 8, Veri toplama → İklim sekmesi; gerçek veritabanı normal kullanımla şema 8'e yükseltildi. [M8 yöntem, sonuç ve sınırlar](M8-IKLIM-VERISI.md). 7 Ekim 2026'da main'e alındı ve `v0.8.0` olarak etiketlendi.
+
+## Referans tablosu ve kasırga evre kuralı — v0.9.0
+
+GÖREV-06 (7 Ekim 2026, `gorev-06-referanslar` dalı): kasırga sayımı yalnız tropikal ve subtropikal evrelere göre (şema 9); toplayıcıyla alınamayan olgular için elle doğrulanmış, kaynaklı referans tablosu (85 satır), Veri toplama → Referanslar sekmesi ve South Walton aylık turist vergisi dosyası. İlk video için veri temelinin son parçası; sonraki aşama kanıt paketi ve makale. [M9 referans tablosu](M9-REFERANS-TABLOSU.md).

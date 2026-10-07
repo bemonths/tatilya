@@ -105,6 +105,8 @@ Değişken kodları API'de ve NCEI'nin 1991–2020 aylık normal belgesinde doğ
 - Altı saatlik noktalar arasındaki gerçek iz bilinmez; doğrusal ara değerleme yaklaşıktır.
 - Erken dönem kayıtları (uydu gözlemi öncesi) daha belirsizdir; 1851–1990 sayıları sonraki dönemle doğrudan karşılaştırılmamalıdır.
 
+**`/2` sonuçları (7 Ekim 2026, aynı HURDAT2 dosyası `hurdat2-1851-2025-092326.txt`).** 1991–2025'te 50 deniz mili içinde sayılan fırtına 20'den 16'ya, 100 deniz mili içinde 37'den 33'e indi; kasırga gücündekiler (HU+MH) değişmedi (50 deniz milinde 5, 100'de 9). Sayımdan çıkanlar daireye yalnız tropikal olmayan evrede girenler: 50 deniz milinde Ida 2009 (EX), Five 2010 (LO), Nestor 2019 (EX), Fay 2020 (LO, fırtınanın öncü alçak basıncı); 100 deniz milinde Paloma 2008 (LO), Ida 2009, Five 2010, Fay 2020. Nestor 2019 ve Tammy 2005'te yalnız en yakın uzaklık değişti. Bütün sezonlarda işaretli satır: 50 deniz milinde 5, 100'de 5. Tablolar: `docs/gorevler/GOREV-06/kasirga-aylik-1991-2025-v2.csv`, `kasirga-v1-v2-fark.csv`.
+
 **Video dili örneği.** "NOAA'nın HURDAT2 kayıtlarına göre 1991–2025 arasında merkezi 30A kıyısına 50 deniz mili (93 km) içinden geçen ve bu daire içinde kasırga gücünde rüzgâra ulaşan beş fırtına oldu; bu sayım NOAA verisinden bizim hesabımızdır."
 
 ## 6. Veri modeli (şema 8; şema 9'da `storm_passages.non_tropical_only`)
@@ -137,7 +139,7 @@ Mevcut kurallarla: SQLite backup API ile `data/backups/studio-v7-<id>.sqlite3` y
 
 7 Ekim 2026: gerçek veritabanının `work/` kopyasında deneme (yalnız yeni tablolar ve 3 kaynak eklendi, eski satırlar aynı, `integrity_check` ok, `foreign_key_check` boş); ardından `data/` tam yedeği (`work/yedek/20261007-1533/`, 352 dosya) alınıp uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v7-ff556c8bc97447fca0bafa160eb7a9a7.sqlite3`) ve yalnız üç iklim toplayıcısı çalıştırıldı. Sayılar: `docs/gorevler/GOREV-05/RAPOR.md`.
 
-**v8 → v9 (GÖREV-06):** aynı kurallarla (yedek, tek transaction, `foreign_key_check`, geri alma) `storm_passages` tablosuna `non_tropical_only INTEGER NOT NULL DEFAULT 0 CHECK (0/1)` sütunu eklenir; mevcut satırlar değişmez.
+**v8 → v9 (GÖREV-06):** aynı kurallarla (yedek, tek transaction, `foreign_key_check`, geri alma) `storm_passages` tablosuna `non_tropical_only INTEGER NOT NULL DEFAULT 0 CHECK (0/1)` sütunu eklenir; mevcut satırlar değişmez. 7 Ekim 2026: önce gerçek veritabanının `work/` kopyasında denendi (satır sayıları aynı, `integrity_check` ok, `foreign_key_check` boş); sonra `data/` tam yedeği (`work/yedek/20261007-1935/`, 380 dosya) alınıp uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v8-14fb0efcabd8429ebdb63c0fdb353ac9.sqlite3`) ve yalnız kasırga toplayıcısı çalıştırıldı (`/2` çekimi `4f23d0a2…`, 227 satır; `/1` çekimi olduğu gibi duruyor).
 
 ## 9. Testler
 

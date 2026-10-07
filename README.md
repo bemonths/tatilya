@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.8.0 (geliştirme dalı `gorev-05-iklim`) — iklim paketi ve plaj–mahalle eşlemesi v3** · son stable etiket: v0.7.0. Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
+30A veri ve içerik üretim uygulaması · **v0.9.0 (geliştirme dalı `gorev-06-referanslar`) — kasırga evre kuralı ve elle doğrulanmış referans tablosu** · son stable etiket: v0.8.0 (eşleme v3 ve iklim paketi). Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
 
 ## Açılış
 
@@ -25,7 +25,7 @@ Kayıtlar bu projenin `data/` klasöründeki SQLite veritabanında, ham kaynakla
 
 Toplama işleri artık source_id ile izlenir; başarılı, başarısız ve iptal edilmiş çekimler genel source_runs yapısında saklanır. İşler panelinde kaynak adı görünür. Eski plaj ekranı, indirmeler ve veri sürümleri çalışmaya devam eder. Yedi gerçek connector **BeachesConnector**, **WeatherConnector**, **RestaurantsConnector**, **NeighborhoodsConnector**, **ClimateNormalsConnector**, **WaterTemperatureConnector** ve **StormProximityConnector** olarak kayıtlıdır; başka kaynak için yalnızca URL eklemek yeterli değildir.
 
-v0.1–v0.7 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 8'e tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
+v0.1–v0.8 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 9'a tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
 
 13 canonical bölge kimliği ve entities/entity_sources tabloları yalnızca temel seviyede hazırdır. Otomatik entity matching ve region polygon mapping yoktur; toplayıcılar adres veya koordinattan mahalle tahmin etmez. Plaj erişimlerinin mahallesi yalnız ayrı ve gözden geçirilebilir eşleme dosyasından gelir ([M7](docs/M7-MAHALLE-VERISI.md)). Claude/OpenAI, Playwright, scheduler ve içerik üretimi henüz uygulanmadı.
 
@@ -43,6 +43,7 @@ v0.1–v0.7 veritabanı açılırken önce `data/backups/` içine SQLite yedeği
 - [Restoran dizini ve kapsamı](docs/M4-RESTORAN-VERISI.md)
 - [Mahalle verisi ve plaj–mahalle eşlemesi](docs/M7-MAHALLE-VERISI.md)
 - [İklim verisi: normaller, deniz suyu sıcaklığı, kasırga geçmişi](docs/M8-IKLIM-VERISI.md)
+- [Elle doğrulanmış referans tablosu](docs/M9-REFERANS-TABLOSU.md)
 
 ## Geliştirme
 
@@ -62,7 +63,7 @@ Beklenmeyen hataların teknik mesajları yaygın parola/token/API anahtarı ve U
 
 ## NWS hava verisi · v0.4
 
-**Veri toplama → Hava → Hava verilerini topla** ile üç örnek noktanın güncel NWS tahminlerini ve aktif uyarılarını ayrı bir çekim olarak saklayın. Kaynak kütüphanesinde National Weather Service **API · bağlı / Toplayıcı hazır** görünür. Veri toplama içindeki Plaj/Hava/Restoranlar/Mahalleler/İklim sekmeleri ve İşler panelindeki sonuç bağlantıları ilgili domain'i açar.
+**Veri toplama → Hava → Hava verilerini topla** ile üç örnek noktanın güncel NWS tahminlerini ve aktif uyarılarını ayrı bir çekim olarak saklayın. Kaynak kütüphanesinde National Weather Service **API · bağlı / Toplayıcı hazır** görünür. Veri toplama içindeki Plaj/Hava/Restoranlar/Mahalleler/İklim/Referanslar sekmeleri ve İşler panelindeki sonuç bağlantıları ilgili domain'i açar.
 
 Batı / Orta / Doğu seçimi, Visit South Walton kaynağındaki 53 kıyı erişiminin boylam sıralamasına dayanır. Noktalar canonical mahalle merkezleri değildir. Tam koordinat/provenance ve NWS akışı: [Hava verisi sözleşmesi](docs/M3-HAVA-VERISI.md).
 
@@ -99,4 +100,8 @@ Plaj ekranında her erişimin yanında mahalle ve yöntem etiketi görünür (e�
 
 ## İklim verisi · v0.8.0
 
-**Veri toplama → İklim** sekmesinde üç toplayıcı vardır: **İklim normallerini topla** (NOAA NCEI 1991–2020 aylık normalleri; 30A için kıyı referansı Destin–Fort Walton Beach Havalimanı ve iç kesim karşılaştırması DeFuniak Springs), **Deniz suyu sıcaklığını topla** (NOAA NDBC'nin PCBF1 Panama City Beach istasyonunun yıllık ölçüm dosyalarından aylık ortalama) ve **Kasırga izlerini topla** (NOAA NHC HURDAT2 kayıtlarından 30A kıyı koridoruna 50 ve 100 deniz mili içinden geçen fırtınalar). Toplayıcılar genel çekirdektedir; istasyonlar, kıyı koridoru ve yarıçaplar destinasyon yapılandırmasından gelir. Aylık tabloda değerler kaynağın birimiyle (°F, inç) ve altında °C/mm ile, bayrakları ve yıl sayılarıyla görünür; deniz suyu ortalamasının yanında kullanılan yıl sayısı yazar. Kasırga bölümünde yarıçap ve dönem seçilir; aylara ve sınıflara göre sayılar ile koridora en yakın geçen fırtınalar listelenir. Her tablonun altında kaynak ve "bizim hesabımız" etiketi vardır; değerler istasyonlara göredir, "30A'nın iklimi" diye sunulmaz. Ayrıntılar, yöntem ve sınırlar: [M8](docs/M8-IKLIM-VERISI.md).
+**Veri toplama → İklim** sekmesinde üç toplayıcı vardır: **İklim normallerini topla** (NOAA NCEI 1991–2020 aylık normalleri; 30A için kıyı referansı Destin–Fort Walton Beach Havalimanı ve iç kesim karşılaştırması DeFuniak Springs), **Deniz suyu sıcaklığını topla** (NOAA NDBC'nin PCBF1 Panama City Beach istasyonunun yıllık ölçüm dosyalarından aylık ortalama) ve **Kasırga izlerini topla** (NOAA NHC HURDAT2 kayıtlarından 30A kıyı koridoruna 50 ve 100 deniz mili içinden geçen fırtınalar). Toplayıcılar genel çekirdektedir; istasyonlar, kıyı koridoru ve yarıçaplar destinasyon yapılandırmasından gelir. Aylık tabloda değerler kaynağın birimiyle (°F, inç) ve altında °C/mm ile, bayrakları ve yıl sayılarıyla görünür; deniz suyu ortalamasının yanında kullanılan yıl sayısı yazar. Kasırga bölümünde yarıçap ve dönem seçilir; aylara ve sınıflara göre sayılar ile koridora en yakın geçen fırtınalar listelenir. v0.9.0'dan itibaren yalnız fırtınanın tropikal veya subtropikal olduğu evreler sayılır; daireye yalnız ekstratropikal, alçak basınç, dalga veya bozukluk evresinde giren fırtınalar ayrı bir "sayılmayan" satırında gösterilir. Her tablonun altında kaynak ve "bizim hesabımız" etiketi vardır; değerler istasyonlara göredir, "30A'nın iklimi" diye sunulmaz. Ayrıntılar, yöntem ve sınırlar: [M8](docs/M8-IKLIM-VERISI.md).
+
+## Referans tablosu · v0.9.0
+
+**Veri toplama → Referanslar** sekmesi, toplayıcıyla alınamayan ama videoda söylenecek bilgileri salt okunur gösterir: Walton County plaj kuralları (Ordinance 2025-22), South Walton Fire District bayrak ve ateş kuralları, plaj erişimi ve Beach Park and Ride, havalimanlarına kuş uçuşu uzaklıklar, golf arabası ve düşük hızlı araç kanunları, park ve orman ücretleri, kasırga sezonu, ziyaretçi ve konaklama göstergeleri. Her satırda kaynak bağlantısı, belgedeki yeri, kısa alıntı, erişim tarihi, durum ("doğrulandı", "çelişkili", "doğrulanamadı") ve yeniden kontrol tarihi vardır; tarihi geçen satırlar işaretlenir. Tablo `studio/destinations/thirty_a_references.csv` dosyasındadır ve elle güncellenir; uygulama yalnız okur ve doğrular. South Walton'ın aylık turist vergisi tahsilatları `studio/destinations/thirty_a_tdt_collections.csv` dosyasındadır. Ayrıntılar ve video dili: [M9](docs/M9-REFERANS-TABLOSU.md).
