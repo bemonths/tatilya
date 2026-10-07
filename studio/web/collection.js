@@ -3,6 +3,8 @@ import {collectionTabs} from "./connectors.js";
 import {api, esc, date} from "./api.js";
 
 export const UNMAPPED="__unmapped__";
+/** Methods backed by a citable source (official guide, county subdivision data); derived ones are approximate. */
+export const SOURCED_METHODS=["resmi_rehber","ilce_alt_bolum"];
 /** Reviewed mapping rows (committed file, read by the server) keyed by beach access id. */
 export function beachMapping(layer) {
   return new Map((layer?.available?layer.rows:[]).map(row=>[row.external_id,row]));
@@ -13,7 +15,7 @@ export function beachNeighborhood(record, mapping) {
 }
 export function mappingCell(info) {
   if(!info.row) return '<span class="tag warm">eşlenmemiş</span>';
-  return `${esc(info.label)}<div class="mapping-tags"><span class="tag ${info.row.method==="resmi_rehber"?"green":""}">${esc(info.method)}</span>${info.ambiguous?'<span class="tag warm">belirsiz</span>':""}</div>`;
+  return `${esc(info.label)}<div class="mapping-tags"><span class="tag ${SOURCED_METHODS.includes(info.row.method)?"green":""}">${esc(info.method)}</span>${info.ambiguous?'<span class="tag warm">belirsiz</span>':""}</div>`;
 }
 export function mappingDetail(info) {
   if(!info.row) return '<div class="features-detail"><h3>Mahalle eşlemesi</h3><p class="muted">Bu erişim eşleme dosyasında yok: eşlenmemiş.</p></div>';
@@ -23,7 +25,7 @@ export function mappingDetail(info) {
 }
 export function mappingNote(layer) {
   if(!layer?.available) return esc(layer?.reason || "Plaj–mahalle eşleme dosyası yok.");
-  return "Mahalle bilgisi plaj kaynağında yoktur; ayrı ve gözden geçirilebilir eşleme dosyasından gelir. “Resmî rehber” eşlemeleri kaynak gösterilerek söylenebilir; “program türetimi” yalnız yaklaşık konumdur.";
+  return "Mahalle bilgisi plaj kaynağında yoktur; ayrı ve gözden geçirilebilir eşleme dosyasından gelir. “Resmî rehber” ve “ilçe alt bölüm verisi” eşlemeleri kaynak gösterilerek söylenebilir (ikincisi “Walton County subdivision verisine göre”); “program türetimi” yalnız yaklaşık konumdur.";
 }
 export function filterBeaches(records, {search="",city="",feature="",neighborhood=""}, mapping) {
   const query=search.toLocaleLowerCase('tr').trim();

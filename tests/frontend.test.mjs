@@ -199,7 +199,7 @@ test('neighborhood screen never shows another destination runs',()=>{
   assert.equal(screen.selectedRun,null);assert.equal(screen.snapshot,null);assert.equal(screen.sequence,5);
 });
 
-import {UNMAPPED, beachMapping, beachNeighborhood, mappingCell, mappingDetail, mappingNote, filterBeaches} from '../studio/web/collection.js';
+import {UNMAPPED, SOURCED_METHODS, beachMapping, beachNeighborhood, mappingCell, mappingDetail, mappingNote, filterBeaches} from '../studio/web/collection.js';
 
 const layer={available:true,rows:[
   {external_id:'official',region_id:'seagrove',region_name:'Seagrove',method:'resmi_rehber',method_label:'resmî rehber',source:'https://www.visitsouthwalton.com/blog/guide-beach-parking-transportation/ (yayın 2023-05-04)',note:'başlık: Seagrove',ambiguous:false},
@@ -246,4 +246,18 @@ test('beach rows show the mapping column and an unmapped access stays visible',(
   screen.neighborhood=UNMAPPED;screen.rows({querySelector:id=>elements[id]});
   assert.equal(elements['#beach-count'].textContent,'1 / 2 kayıt');
   assert.match(elements['#beach-detail'].innerHTML,/Bu erişim eşleme dosyasında yok/);
+});
+test('county subdivision mappings are labelled, linked to the layer and shown as sourced',()=>{
+  const county={external_id:'county',region_id:'seagrove',region_name:'Seagrove',method:'ilce_alt_bolum',method_label:'ilçe alt bölüm verisi',
+    source:'https://services1.arcgis.com/TaXHPwWfIMuzJ7Ov/ArcGIS/rest/services/EnerGov_Additional/FeatureServer/13 (sorgu 2026-10-07)',note:"Walton County Subdivision Boundaries: 'SEAGROVE HORIZONS'",ambiguous:false};
+  const mapping=beachMapping({available:true,rows:[...layer.rows,county]});
+  assert.deepEqual(SOURCED_METHODS,['resmi_rehber','ilce_alt_bolum']);
+  const cell=mappingCell(beachNeighborhood(access('county'),mapping));
+  assert.match(cell,/Seagrove/);assert.match(cell,/tag green">ilçe alt bölüm verisi/);
+  assert.match(mappingCell(beachNeighborhood(access('derived'),mapping)),/class="tag ">program türetimi/);
+  const detail=mappingDetail(beachNeighborhood(access('county'),mapping));
+  assert.match(detail,/href="https:\/\/services1\.arcgis\.com\/TaXHPwWfIMuzJ7Ov\/ArcGIS\/rest\/services\/EnerGov_Additional\/FeatureServer\/13" target="_blank" rel="noopener noreferrer"/);
+  assert.match(detail,/&#39;SEAGROVE HORIZONS&#39;/);
+  assert.match(mappingNote(layer),/Walton County subdivision verisine göre/);
+  assert.deepEqual(filterBeaches([access('county'),access('derived')],{neighborhood:'seagrove'},mapping).map(r=>r.external_id),['county']);
 });

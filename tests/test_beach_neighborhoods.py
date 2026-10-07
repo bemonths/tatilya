@@ -1,7 +1,11 @@
 """Beach access -> neighborhood mapping layer: committed file, loader, API and generator. No network."""
 import csv
+import json
+import math
 import re
 from pathlib import Path
+
+import httpx
 
 import pytest
 from fastapi.testclient import TestClient
@@ -42,13 +46,38 @@ def test_committed_mapping_is_valid_and_follows_the_method():
     official = {row['external_id']: names[row['region_id']] for row in rows if row['method'] == bn.METHOD_OFFICIAL}
     assert official == {identifier: name for identifier, name in preview.items() if name}
     assert {row['external_id'] for row in rows} == set(preview)
+    subdivisions = gen.read_subdivisions(thirty_a.BEACH_SUBDIVISIONS)
+    table = gen.read_name_table(thirty_a.SUBDIVISION_NEIGHBORHOODS)
+    assert set(subdivisions) == {row['external_id'] for row in rows}
     for row in rows:
+        county = gen.county_result(subdivisions[row['external_id']], table)
         if row['method'] == bn.METHOD_OFFICIAL:
             assert row['source'] == gen.OFFICIAL_SOURCE and not row['ambiguous'] and row['note']
+        elif row['method'] == bn.METHOD_COUNTY:
+            # Only points inside a subdivision polygon whose names lead to exactly this neighborhood.
+            assert county['status'] == 'atandi' and county['region_id'] == row['region_id']
+            assert row['source'].startswith(thirty_a.COUNTY_SUBDIVISION_LAYER + ' (sorgu ')
+            assert row['note'].startswith('Walton County Subdivision Boundaries') and not row['ambiguous']
+            assert row['method_label'] == 'ilçe alt bölüm verisi'
         else:
+            assert county['status'] != 'atandi'
             assert re.fullmatch(r'[0-9a-f]{32}', row['source']) and row['note'].startswith('En yakın temsilî nokta')
             assert row['method_label'] == 'program türetimi'
     assert len({row['source'] for row in rows if row['method'] == bn.METHOD_DERIVED}) == 1
+    assert {row['method'] for row in rows} == {bn.METHOD_OFFICIAL, bn.METHOD_COUNTY, bn.METHOD_DERIVED}
+
+
+def test_committed_subdivision_files_are_consistent():
+    subdivisions = gen.read_subdivisions(thirty_a.BEACH_SUBDIVISIONS)
+    table = gen.read_name_table(thirty_a.SUBDIVISION_NEIGHBORHOODS)
+    for rows in subdivisions.values():
+        for row in rows:
+            assert row['katman_url'] == thirty_a.COUNTY_SUBDIVISION_LAYER and row['sorgu_zamani'].endswith('+00:00')
+            if row['iliski'] == 'yakin':
+                assert 0 <= float(row['mesafe_m']) <= gen.NEAR_METERS
+    returned = {row['alt_bolum_adi'] for rows in subdivisions.values() for row in rows}
+    # The table only holds names the query actually returned; no invented spellings.
+    assert set(table) <= returned
 
 
 def test_committed_file_is_package_data():
@@ -62,12 +91,14 @@ def test_committed_file_is_package_data():
 
 def test_loader_reads_rows_labels_and_tolerates_bom(tmp_path):
     rows = [ROW, {**ROW, 'external_id': 'b' * 24, 'bolge_id': 'seagrove', 'yontem': 'turetim_en_yakin_mahalle_noktasi',
-                  'kaynak': 'c' * 32, 'not': 'Synthetic note', 'belirsiz': 'evet'}]
+                  'kaynak': 'c' * 32, 'not': 'Synthetic note', 'belirsiz': 'evet'},
+            {**ROW, 'external_id': 'd' * 24, 'bolge_id': 'grayton-beach', 'yontem': 'ilce_alt_bolum',
+             'kaynak': thirty_a.COUNTY_SUBDIVISION_LAYER + ' (sorgu 2026-10-07)', 'not': 'Walton County Subdivision Boundaries'}]
     for encoding in ('utf-8', 'utf-8-sig'):
         loaded = bn.load(write_csv(tmp_path / f'{encoding}.csv', rows, encoding=encoding), CANONICAL)
-        assert [row['region_name'] for row in loaded] == ['Seaside', 'Seagrove']
-        assert [row['method_label'] for row in loaded] == ['resmî rehber', 'program türetimi']
-        assert [row['ambiguous'] for row in loaded] == [False, True]
+        assert [row['region_name'] for row in loaded] == ['Seaside', 'Seagrove', 'Grayton Beach']
+        assert [row['method_label'] for row in loaded] == ['resmî rehber', 'program türetimi', 'ilçe alt bölüm verisi']
+        assert [row['ambiguous'] for row in loaded] == [False, True, False]
         assert loaded[0]['note'] is None and loaded[1]['note'] == 'Synthetic note'
     assert bn.load(write_csv(tmp_path / 'empty.csv', []), CANONICAL) == []
 
@@ -105,7 +136,7 @@ def test_api_serves_mapping_for_30a_only(tmp_path):
         add_destination(client.app.state.db)
         layer = client.get('/api/beach-neighborhoods').json()
         assert layer['available'] and layer['file'] == BEACH_NEIGHBORHOOD_MAPPING.name
-        assert layer['methods'] == {'resmi_rehber': 'resmî rehber', 'turetim_en_yakin_mahalle_noktasi': 'program türetimi'}
+        assert layer['methods'] == {'resmi_rehber': 'resmî rehber', 'ilce_alt_bolum': 'ilçe alt bölüm verisi', 'turetim_en_yakin_mahalle_noktasi': 'program türetimi'}
         assert layer['rows'] == bn.load(BEACH_NEIGHBORHOOD_MAPPING, CANONICAL)
         assert client.get('/api/bootstrap').json()['beach_neighborhoods'] == layer
         other = client.get('/api/beach-neighborhoods?destination_id=test-coast').json()
@@ -187,14 +218,168 @@ def test_build_orders_west_to_east_and_validates_official_rows():
                 {'external_id': 'a' * 24, 'name': 'West', 'longitude': -86.04},
                 {'external_id': 'c' * 24, 'name': 'Official', 'longitude': -86.009}]
     official = {'c' * 24: {'region_id': 'seacrest', 'note': 'başlık: Seacrest'}}
-    mapping, validation = gen.build(beaches_, EAST, official, 'd' * 32)
+    mapping, validation, conflicts = gen.build(beaches_, EAST, official, 'd' * 32)
     assert [row['plaj_adi'] for row in mapping] == ['West', 'East', 'Official']
     assert [row['bolge_id'] for row in mapping] == ['seacrest', 'inlet-beach', 'seacrest']
     assert [row['yontem'] for row in mapping] == [bn.METHOD_DERIVED, bn.METHOD_DERIVED, bn.METHOD_OFFICIAL]
     assert mapping[0]['kaynak'] == 'd' * 32 and mapping[2]['kaynak'] == gen.OFFICIAL_SOURCE and mapping[2]['not'] == 'başlık: Seacrest'
-    assert validation == [{'external_id': 'c' * 24, 'plaj_adi': 'Official', 'resmi_bolge_id': 'seacrest', 'turetilen_bolge_id': 'inlet-beach',
-                           'ayni': 'hayır', 'boylam_farki': '0.0010', 'sonraki_aday': 'seacrest', 'sonraki_fark': '0.0313',
-                           'belirsiz': 'hayır', 'atlanan': ''}]
+    assert 'İlçe alt bölüm sorgusu bu erişim için yapılmadı.' in mapping[0]['not']
+    assert validation == [{'external_id': 'c' * 24, 'plaj_adi': 'Official', 'resmi_bolge_id': 'seacrest', 'ilce_durum': 'sorgu_yok',
+                           'ilce_alt_bolum_adi': '', 'ilce_bolge_id': '', 'ilce_sonuc': 'sonucsuz',
+                           'turetilen_bolge_id': 'inlet-beach', 'turetme_sonuc': 'farkli'}]
+    assert conflicts == []
+
+
+LAYER = thirty_a.COUNTY_SUBDIVISION_LAYER
+TABLE = {'SEAGROVE 1ST ADD': 'seagrove', 'SEASIDE S/D': 'seaside', 'ROSEMARY BEACH PH 1': 'rosemary-beach', 'ALYS BEACH PH 2': 'alys-beach'}
+
+
+def sub(identifier, name, relation='iceride', distance='0', polygon='7'):
+    return {'external_id': identifier, 'alt_bolum_adi': name, 'poligon_kimligi': polygon if relation != 'sonucsuz' else '',
+            'iliski': relation, 'mesafe_m': distance if relation != 'sonucsuz' else '', 'katman_url': LAYER, 'sorgu_zamani': '2026-10-07T10:36:38+00:00'}
+
+
+@pytest.mark.parametrize('rows,status,region', [
+    ([sub('x', 'SEAGROVE 1ST ADD')], 'atandi', 'seagrove'),
+    ([sub('x', 'INFORMATION ONLY'), sub('x', 'SEAGROVE 1ST ADD', polygon='8')], 'atandi', 'seagrove'),
+    ([sub('x', 'SUGARWOOD S/D')], 'tabloda_yok', None),
+    ([sub('x', '', polygon='9')], 'tabloda_yok', None),
+    ([sub('x', 'SEAGROVE 1ST ADD', 'yakin', '6.3')], 'yakin', None),
+    ([sub('x', '', 'sonucsuz')], 'sonucsuz', None),
+    ([], 'sorgu_yok', None),
+    ([sub('x', 'SEAGROVE 1ST ADD'), sub('x', 'SEASIDE S/D', polygon='8')], 'karisik', None),
+    ([sub('x', 'ROSEMARY BEACH PH 1')], 'celiski', None),
+    ([sub('x', 'ALYS BEACH PH 2')], 'celiski', None),
+])
+def test_county_result_only_inside_and_named_polygons_assign(rows, status, region):
+    result = gen.county_result(rows, TABLE)
+    assert result['status'] == status and result['region_id'] == region
+
+
+WEST_EAST = [hood('seaside', -86.137546), hood('seagrove', -86.108829), hood('seacrest', -86.0403), hood('alys-beach', -86.0306),
+             hood('rosemary-beach', -86.0161), hood('inlet-beach', -86.008)]
+
+
+def test_build_applies_method_order_and_marks_conflicts():
+    beaches_ = [{'external_id': 'i' * 24, 'name': 'Inside', 'longitude': -86.135},
+                {'external_id': 'y' * 24, 'name': 'Near', 'longitude': -86.134},
+                {'external_id': 'u' * 24, 'name': 'Unnamed', 'longitude': -86.133},
+                {'external_id': 'n' * 24, 'name': 'Nothing', 'longitude': -86.132},
+                {'external_id': 'r' * 24, 'name': 'Rosemary', 'longitude': -86.017},
+                {'external_id': 'o' * 24, 'name': 'Official', 'longitude': -86.11}]
+    subdivisions = {'i' * 24: [sub('i' * 24, 'SEAGROVE 1ST ADD')], 'y' * 24: [sub('y' * 24, 'SEAGROVE 1ST ADD', 'yakin', '6.3')],
+                    'u' * 24: [sub('u' * 24, 'SUGARWOOD S/D')], 'n' * 24: [sub('n' * 24, '', 'sonucsuz')],
+                    'r' * 24: [sub('r' * 24, 'ROSEMARY BEACH PH 1')], 'o' * 24: [sub('o' * 24, 'SEASIDE S/D')]}
+    official = {'o' * 24: {'region_id': 'seagrove', 'note': 'başlık: Seagrove'}}
+    mapping, validation, conflicts = gen.build(beaches_, WEST_EAST, official, 'd' * 32, subdivisions, TABLE)
+    by = {row['plaj_adi']: row for row in mapping}
+    assert (by['Inside']['bolge_id'], by['Inside']['yontem']) == ('seagrove', bn.METHOD_COUNTY)
+    assert by['Inside']['kaynak'] == f'{LAYER} (sorgu 2026-10-07)' and "'SEAGROVE 1ST ADD' (OBJECTID 7)" in by['Inside']['not']
+    # A nearby polygon is recorded in the note but never assigns.
+    assert (by['Near']['bolge_id'], by['Near']['yontem']) == ('seaside', bn.METHOD_DERIVED)
+    assert 'en yakın' in by['Near']['not'] and '6.3 m' in by['Near']['not'] and 'yakın sonuç bu yöntemde kullanılmaz' in by['Near']['not']
+    assert by['Unnamed']['yontem'] == bn.METHOD_DERIVED and 'ad bir mahalleyi açıkça belirtmiyor' in by['Unnamed']['not']
+    assert by['Nothing']['yontem'] == bn.METHOD_DERIVED and '75 m içinde alt bölüm poligonu yok' in by['Nothing']['not']
+    # County data inside Rosemary Beach contradicts the official guide: never assigned there, flagged instead.
+    assert by['Rosemary']['bolge_id'] == 'inlet-beach' and by['Rosemary']['yontem'] == bn.METHOD_DERIVED
+    assert 'Resmî rehberle çelişki' in by['Rosemary']['not']
+    assert conflicts == [{'external_id': 'r' * 24, 'plaj_adi': 'Rosemary', 'alt_bolum': "'ROSEMARY BEACH PH 1' (OBJECTID 7)", 'bolge_id': 'rosemary-beach'}]
+    # Official rows stay as they are; the county check is only reported.
+    assert (by['Official']['bolge_id'], by['Official']['yontem']) == ('seagrove', bn.METHOD_OFFICIAL)
+    assert validation == [{'external_id': 'o' * 24, 'plaj_adi': 'Official', 'resmi_bolge_id': 'seagrove', 'ilce_durum': 'atandi',
+                           'ilce_alt_bolum_adi': 'SEASIDE S/D', 'ilce_bolge_id': 'seaside', 'ilce_sonuc': 'farkli',
+                           'turetilen_bolge_id': 'seagrove', 'turetme_sonuc': 'ayni'}]
+    assert [row['yontem'] for row in mapping].count(bn.METHOD_COUNTY) == 1
+
+
+def test_compare_lists_region_and_method_changes():
+    previous = [{'external_id': 'a', 'plaj_adi': 'A', 'bolge_id': 'seaside', 'yontem': bn.METHOD_DERIVED},
+                {'external_id': 'b', 'plaj_adi': 'B', 'bolge_id': 'seagrove', 'yontem': bn.METHOD_DERIVED},
+                {'external_id': 'c', 'plaj_adi': 'C', 'bolge_id': 'seacrest', 'yontem': bn.METHOD_DERIVED}]
+    current = [{'external_id': 'a', 'plaj_adi': 'A', 'bolge_id': 'seagrove', 'yontem': bn.METHOD_COUNTY},
+               {'external_id': 'b', 'plaj_adi': 'B', 'bolge_id': 'seagrove', 'yontem': bn.METHOD_COUNTY},
+               {'external_id': 'c', 'plaj_adi': 'C', 'bolge_id': 'seacrest', 'yontem': bn.METHOD_DERIVED},
+               {'external_id': 'd', 'plaj_adi': 'D', 'bolge_id': 'seacrest', 'yontem': bn.METHOD_DERIVED}]
+    assert gen.compare(previous, current) == [
+        {'external_id': 'a', 'plaj_adi': 'A', 'v1_bolge_id': 'seaside', 'v1_yontem': bn.METHOD_DERIVED, 'v2_bolge_id': 'seagrove', 'v2_yontem': bn.METHOD_COUNTY, 'degisen': 'bolge+yontem'},
+        {'external_id': 'b', 'plaj_adi': 'B', 'v1_bolge_id': 'seagrove', 'v1_yontem': bn.METHOD_DERIVED, 'v2_bolge_id': 'seagrove', 'v2_yontem': bn.METHOD_COUNTY, 'degisen': 'yontem'},
+        {'external_id': 'd', 'plaj_adi': 'D', 'v1_bolge_id': '', 'v1_yontem': '', 'v2_bolge_id': 'seacrest', 'v2_yontem': bn.METHOD_DERIVED, 'degisen': 'bolge+yontem'}]
+
+
+def test_subdivision_and_name_table_readers_reject_doubt(tmp_path):
+    good = write_csv(tmp_path / 'sub.csv', [sub('a' * 24, 'SEAGROVE 1ST ADD'), sub('a' * 24, 'INFORMATION ONLY', polygon='8'),
+                                            sub('b' * 24, '', 'sonucsuz')], gen.SUBDIVISION_COLUMNS)
+    assert {key: len(rows) for key, rows in gen.read_subdivisions(good).items()} == {'a' * 24: 2, 'b' * 24: 1}
+    for rows, columns in (([sub('a' * 24, 'X')], gen.SUBDIVISION_COLUMNS[:-1]),
+                          ([{**sub('a' * 24, 'X'), 'iliski': 'icinde'}], gen.SUBDIVISION_COLUMNS),
+                          ([sub('a' * 24, 'X'), sub('a' * 24, 'Y', 'yakin', '3.0')], gen.SUBDIVISION_COLUMNS),
+                          ([{**sub('a' * 24, '', 'sonucsuz'), 'poligon_kimligi': '5'}], gen.SUBDIVISION_COLUMNS)):
+        with pytest.raises(SystemExit):
+            gen.read_subdivisions(write_csv(tmp_path / 'bad.csv', rows, columns))
+    table = write_csv(tmp_path / 'table.csv', [['SEAGROVE 1ST ADD', 'seagrove', 'adında SEAGROVE geçiyor']], gen.TABLE_COLUMNS)
+    assert gen.read_name_table(table) == {'SEAGROVE 1ST ADD': 'seagrove'}
+    for rows in ([['SEAGROVE 1ST ADD', 'seagrove', 'x'], ['SEAGROVE 1ST ADD', 'seaside', 'y']],
+                 [['MIRAMAR S/D', 'miramar-beach', 'x']], [['SEAGROVE 1ST ADD', 'seagrove', ' ']], [['', 'seagrove', 'x']]):
+        with pytest.raises(SystemExit):
+            gen.read_name_table(write_csv(tmp_path / 'bad-table.csv', rows, gen.TABLE_COLUMNS))
+
+
+def ring_around(lon, lat, dx_m, size_m=20):
+    """Square polygon whose west edge is dx_m metres east of the point."""
+    kx, ky = 111320 * math.cos(math.radians(lat)), 110574
+    x0, x1 = lon + dx_m / kx, lon + (dx_m + size_m) / kx
+    y0, y1 = lat - size_m / ky, lat + size_m / ky
+    return [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]
+
+
+def test_query_subdivisions_inside_near_tie_and_nothing(tmp_path):
+    beaches_ = [{'external_id': 'a' * 24, 'name': 'Inside', 'latitude': 30.31, 'longitude': -86.14},
+                {'external_id': 'b' * 24, 'name': 'Near', 'latitude': 30.31, 'longitude': -86.13},
+                {'external_id': 'c' * 24, 'name': 'Far', 'latitude': 30.31, 'longitude': -86.12}]
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        params = dict(request.url.params)
+        assert request.url.path.endswith('/FeatureServer/13/query') and request.url.host == 'services1.arcgis.com'
+        assert params['geometryType'] == 'esriGeometryPoint' and params['spatialRel'] == 'esriSpatialRelIntersects'
+        assert params['inSR'] == '4326' and json.loads(params['geometry'])['spatialReference'] == {'wkid': 4326}
+        point = json.loads(params['geometry'])
+        if 'distance' not in params:
+            assert params['returnGeometry'] == 'false'
+            features = [{'attributes': {'OBJECTID': 5, 'OWNER_NAME': 'SEAGROVE 1ST ADD '}}] if point['x'] == -86.14 else []
+        else:
+            assert params['units'] == 'esriSRUnit_Meter' and float(params['distance']) >= gen.NEAR_METERS and params['outSR'] == '4326'
+            if point['x'] == -86.13:
+                features = [{'attributes': {'OBJECTID': 9, 'OWNER_NAME': 'INFORMATION ONLY'}, 'geometry': {'rings': ring_around(point['x'], point['y'], 12)}},
+                            {'attributes': {'OBJECTID': 8, 'OWNER_NAME': 'SEAGROVE 3RD ADD'}, 'geometry': {'rings': ring_around(point['x'], point['y'], 12)}},
+                            {'attributes': {'OBJECTID': 7, 'OWNER_NAME': 'FARTHER S/D'}, 'geometry': {'rings': ring_around(point['x'], point['y'], 30)}}]
+            else:
+                features = [{'attributes': {'OBJECTID': 6, 'OWNER_NAME': 'TOO FAR'}, 'geometry': {'rings': ring_around(point['x'], point['y'], 90)}}]
+        return httpx.Response(200, json={'features': features})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        rows = gen.query_subdivisions(beaches_, client, tmp_path / 'raw', pause=0)
+    assert [(r['external_id'][0], r['alt_bolum_adi'], r['poligon_kimligi'], r['iliski'], r['mesafe_m']) for r in rows] == [
+        ('a', 'SEAGROVE 1ST ADD', '5', 'iceride', '0'), ('b', 'SEAGROVE 3RD ADD', '8', 'yakin', '12.0'),
+        ('b', 'INFORMATION ONLY', '9', 'yakin', '12.0'), ('c', '', '', 'sonucsuz', '')]
+    assert all(r['katman_url'] == LAYER and r['sorgu_zamani'] for r in rows)
+    assert len(seen) == 5 and sorted(p.name for p in (tmp_path / 'raw').iterdir()) == sorted(
+        [f"{'a' * 24}-iceride.json", f"{'b' * 24}-iceride.json", f"{'b' * 24}-yakin.json", f"{'c' * 24}-iceride.json", f"{'c' * 24}-yakin.json"])
+
+
+def test_query_errors_stop_generation(tmp_path):
+    beach = [{'external_id': 'a' * 24, 'name': 'A', 'latitude': 30.31, 'longitude': -86.14}]
+    for response in (httpx.Response(500, text='down'), httpx.Response(200, json={'error': {'code': 400, 'message': 'bad'}}),
+                     httpx.Response(200, json={'unexpected': True})):
+        with httpx.Client(transport=httpx.MockTransport(lambda request: response)) as client:
+            with pytest.raises(SystemExit):
+                gen.query_subdivisions(beach, client, tmp_path / 'raw', pause=0)
+
+
+def test_polygon_distance_in_meters():
+    rings = ring_around(-86.13, 30.31, 25)
+    assert abs(gen.polygon_distance(30.31, -86.13, rings) - 25) < 0.05
 
 
 def test_generator_end_to_end_reads_db_read_only_and_writes_loadable_file(tmp_path, monkeypatch):
@@ -211,14 +396,42 @@ def test_generator_end_to_end_reads_db_read_only_and_writes_loadable_file(tmp_pa
     hood_run = save_run(db, run_mock(tmp_path / 'hoods').records)
     preview = preview_csv(tmp_path / 'preview.csv', [[ids[0], 'West access', '', ''], [ids[1], 'Official access', 'Seaside', gen.OFFICIAL_PREFIX + 'başlık: Seaside'],
                                                      [ids[2], 'East access', '', '']])
+    subdivisions = write_csv(tmp_path / 'sub.csv', [sub(ids[0], 'VIZCAYA AT DUNE ALLEN S/D'), sub(ids[1], 'SEASIDE S/D'), sub(ids[2], '', 'sonucsuz')],
+                             gen.SUBDIVISION_COLUMNS)
+    table = write_csv(tmp_path / 'table.csv', [['VIZCAYA AT DUNE ALLEN S/D', 'dune-allen', 'adında DUNE ALLEN geçiyor'],
+                                               ['SEASIDE S/D', 'seaside', 'adında SEASIDE geçiyor']], gen.TABLE_COLUMNS)
+    previous = write_csv(tmp_path / 'v1.csv', [{**ROW, 'external_id': ids[0], 'bolge_id': 'gulf-place', 'yontem': bn.METHOD_DERIVED, 'kaynak': 'e' * 32}])
     before = (tmp_path / 'studio.sqlite3').read_bytes()
-    out, check = tmp_path / 'mapping.csv', tmp_path / 'check.csv'
-    mapping, validation = gen.main(['--data-dir', str(tmp_path), '--resmi', str(preview), '--cikti', str(out), '--dogrulama', str(check)])
+    out, check, diff = tmp_path / 'mapping.csv', tmp_path / 'check.csv', tmp_path / 'diff.csv'
+    mapping, validation, conflicts, changes = gen.main(['--data-dir', str(tmp_path), '--resmi', str(preview), '--cikti', str(out),
+                                                        '--dogrulama', str(check), '--alt-bolum', str(subdivisions), '--alt-bolum-tablosu', str(table),
+                                                        '--onceki', str(previous), '--fark', str(diff)])
     assert (tmp_path / 'studio.sqlite3').read_bytes() == before
     rows = bn.load(out, CANONICAL)
     assert [(row['beach_name'], row['region_id'], row['method']) for row in rows] == [
-        ('West access', 'dune-allen', bn.METHOD_DERIVED), ('Official access', 'seaside', bn.METHOD_OFFICIAL), ('East access', 'inlet-beach', bn.METHOD_DERIVED)]
-    assert rows[0]['source'] == hood_run and 'Daha yakın Rosemary Beach' in rows[2]['note'] and 'Alys Beach' in rows[2]['note']
+        ('West access', 'dune-allen', bn.METHOD_COUNTY), ('Official access', 'seaside', bn.METHOD_OFFICIAL), ('East access', 'inlet-beach', bn.METHOD_DERIVED)]
+    assert rows[2]['source'] == hood_run and 'Daha yakın Rosemary Beach' in rows[2]['note'] and 'Alys Beach' in rows[2]['note']
     with open(check, encoding='utf-8') as handle:
-        assert [row['external_id'] for row in csv.DictReader(handle)] == [ids[1]]
-    assert len(validation) == 1 and len(mapping) == 3
+        assert [(row['external_id'], row['ilce_sonuc']) for row in csv.DictReader(handle)] == [(ids[1], 'ayni')]
+    with open(diff, encoding='utf-8') as handle:
+        assert [(row['plaj_adi'], row['v1_bolge_id'], row['v2_bolge_id'], row['v2_yontem']) for row in csv.DictReader(handle)] == [
+            ('West access', 'gulf-place', 'dune-allen', bn.METHOD_COUNTY), ('Official access', '', 'seaside', bn.METHOD_OFFICIAL),
+            ('East access', '', 'inlet-beach', bn.METHOD_DERIVED)]
+    assert len(validation) == 1 and len(mapping) == 3 and conflicts == [] and len(changes) == 3
+
+
+def test_generator_network_only_on_request(tmp_path, monkeypatch):
+    monkeypatch.setattr(gen, 'read_inputs', lambda *args: ('beach-run', [{'external_id': 'a' * 24, 'name': 'A', 'latitude': 30.31, 'longitude': -86.14}],
+                                                             'hood-run', WEST_EAST))
+    with pytest.raises(SystemExit, match='--ham'):
+        gen.main(['--data-dir', str(tmp_path), '--ilce-sorgula'])
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={'features': [{'attributes': {'OBJECTID': 3, 'OWNER_NAME': 'SEAGROVE 1ST ADD'}}]})
+    out = tmp_path / 'sub.csv'
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        monkeypatch.setattr(gen, 'QUERY_GAP', 0)
+        rows = gen.main(['--data-dir', str(tmp_path), '--ilce-sorgula', '--ham', str(tmp_path / 'raw'), '--yalniz-sorgu', '--alt-bolum', str(out)], client=client)
+    assert len(calls) == 1 and [row['iliski'] for row in rows] == ['iceride']
+    assert {key: len(value) for key, value in gen.read_subdivisions(out).items()} == {'a' * 24: 1}

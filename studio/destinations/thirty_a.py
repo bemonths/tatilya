@@ -38,6 +38,11 @@ NEIGHBORHOOD_EXCLUDED = ("Miramar Beach", "Seascape", "Sandestin")
 # Reviewed beach access -> neighborhood layer, generated once by tools/plaj_mahalle_esleme.py and
 # committed; the app only reads it. Method and validation: docs/M7-MAHALLE-VERISI.md.
 BEACH_NEIGHBORHOOD_MAPPING = Path(__file__).with_name("thirty_a_beach_neighborhoods.csv")
+# Generator inputs (not read by the app): Walton County subdivision polygons queried per beach access,
+# and the explicit subdivision name -> neighborhood table. Names that do not clearly name a neighborhood stay out.
+COUNTY_SUBDIVISION_LAYER = "https://services1.arcgis.com/TaXHPwWfIMuzJ7Ov/ArcGIS/rest/services/EnerGov_Additional/FeatureServer/13"
+BEACH_SUBDIVISIONS = Path(__file__).with_name("thirty_a_beach_subdivisions.csv")
+SUBDIVISION_NEIGHBORHOODS = Path(__file__).with_name("thirty_a_subdivision_neighborhoods.csv")
 
 ANCHOR_PROVENANCE = {
     "source_url": "https://www.visitsouthwalton.com/beach-bay-access-locations/",

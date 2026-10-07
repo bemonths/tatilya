@@ -7,8 +7,8 @@ import csv
 import re
 
 COLUMNS = ("external_id", "plaj_adi", "bolge_id", "yontem", "kaynak", "not", "belirsiz")
-METHOD_OFFICIAL, METHOD_DERIVED = "resmi_rehber", "turetim_en_yakin_mahalle_noktasi"
-METHOD_LABELS = {METHOD_OFFICIAL: "resmî rehber", METHOD_DERIVED: "program türetimi"}
+METHOD_OFFICIAL, METHOD_COUNTY, METHOD_DERIVED = "resmi_rehber", "ilce_alt_bolum", "turetim_en_yakin_mahalle_noktasi"
+METHOD_LABELS = {METHOD_OFFICIAL: "resmî rehber", METHOD_COUNTY: "ilçe alt bölüm verisi", METHOD_DERIVED: "program türetimi"}
 AMBIGUOUS = {"evet": True, "hayır": False}
 ID_PATTERN = re.compile(r"[0-9a-f]{24}")
 
