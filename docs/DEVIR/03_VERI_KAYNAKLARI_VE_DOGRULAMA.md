@@ -158,7 +158,7 @@ Alanlar:
 - amenities
 - neighborhood provenance
 
-Own website yalnız veri alanı olarak saklanır; connector işletmenin sitesini crawl etmez.
+Own website veri alanı olarak saklanır. İşletmenin sitesi, dizindeki bağlantıyla kimliği belli olduğu için doğrudan okunabilir; okunan her sayfanın adresi, erişim tarihi ve ham kopyası saklanır. Bugünkü restoran toplayıcısı bunu henüz yapmıyor. (7 Ekim 2026, GÖREV-07: önceki "connector işletmenin sitesini crawl etmez" kuralı kaldırıldı.)
 
 ## National Weather Service
 
@@ -332,7 +332,6 @@ Yapma:
 - Adres üzerinden sessiz mahalle tahmini yapma.
 - Kaynakta olmayan update time üretme.
 - “empty” alanı “false/no” olarak yorumlama.
-- External site URL'sini otomatik crawl etme.
 - Provider ile unit'i aynı entity türü sayma.
 - Aynı isimli farklı kaydı sessiz merge etme.
 - Kaynak değişince parser'ın sessizce eksik kayıt üretmesine izin verme.

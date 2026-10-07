@@ -79,14 +79,14 @@ Commit `5800714`. Dal CI: çalıştırma 37653007192 — başarılı.
 | **Toplam** | **85** | **73** | **6** | **6** |
 
 Notlar:
-- Ordinance 2025-22 taranmış bir PDF; metin katmanı yok. Sayfalar görüntüye çevrilip okundu, her alıntı sayfa görüntüsünden doğrulandı, bölüm numaraları yazıldı. Alkol için ayrı bir satır var: "bu bölümde hüküm yok"; başka mevzuat aranmadı.
+- Ordinance 2025-22 taranmış bir PDF; metin katmanı yok. Sayfalar görüntüye çevrilip okundu, her alıntı sayfa görüntüsünden doğrulandı, bölüm numaraları yazıldı. Alkol için ayrı bir satır var: "bu bölümde hüküm yok"; başka mevzuat aranmadı. (GÖREV-07 notu (7 Ekim 2026): "başka mevzuat arama" sınırı kaldırıldı; plajda alkol kuralı GÖREV-07'de arandı.)
 - Havalimanı uzaklıkları FAA koordinatlarından bizim hesabımız (kuş uçuşu, 30A kıyı koridorunun en yakın ucuna): ECP 21,5 km (13,4 mil, doğu ucu), VPS 28,9 km (17,9 mil, batı ucu), PNS 89,5 km (yaklaşık 56 mil, batı ucu). Satır notlarında "bizim hesabımız" yazıyor.
 - En son yıllık rapor (2025): 4.586.000 ziyaretçi (aynı raporda başka sayfada 4,57 milyon, bkz. çelişkiler), 3.497.200 oda-gece, doluluk %48,3, ADR 354,10 $. Kapsam raporun dediği gibi Walton County. Son dört mevsim raporu: Yaz 2025 %69,1 / 500,54 $, Sonbahar 2025 %35,7 / 335,96 $, Kış 2026 %32,1 / 213,82 $, İlkbahar 2026 %56,6 / 389,17 $. Raporlardaki yöntem uyarısı nota eklendi: Airbnb (30 Nisan 2025) ve Vrbo (30 Mayıs 2025) fiyat gösterimini temizlik ve platform ücretleri dahil olacak biçimde değiştirdi; bu yüzden ADR yıllar arası karşılaştırmada şişkin görünebilir.
 - Yeniden kontrol tarihleri: kurallar, ücretler ve tanımlar 2027-10-07 (70 satır); mevsim ve yıllık rapor satırları 2026-12-01 (13 satır); çelişkili cankurtaran satırları sezondan önce 2027-02-01 (2 satır).
 
 ### Okunamayan kaynaklar
 
-- Florida State Parks sayfaları (Grayton Beach, Topsail Hill Preserve, Deer Lake; "hours-fees") HTTP 403 döndürdü (Cloudflare bot doğrulaması). Görev gereği otomasyonla aşılmadı. Bu üç parkın giriş ücreti ve saatleri (6 satır) "dogrulanamadi"; videoda kullanılmaz. Elle bir tarayıcıdan bakılıp tablo güncellenebilir.
+- Florida State Parks sayfaları (Grayton Beach, Topsail Hill Preserve, Deer Lake; "hours-fees") HTTP 403 döndürdü (Cloudflare bot doğrulaması). Görev gereği otomasyonla aşılmadı. (GÖREV-07 notu (7 Ekim 2026): bu sınır kaldırıldı; sayfalar GÖREV-07'de gerçek tarayıcıyla yeniden denendi.) Bu üç parkın giriş ücreti ve saatleri (6 satır) "dogrulanamadi"; videoda kullanılmaz. Elle bir tarayıcıdan bakılıp tablo güncellenebilir.
 - Geçici sorunlar (sonra okundu): Ordinance 2009-02 ilk denemelerde HTTP 522 verdi, üçüncü denemede alındı. Visit South Walton'ın Timpoochee rehber yazısının tahmin edilen adresi 404 verdi; doğru adres aynı sitede bulundu.
 
 ### Çelişkiler (ikisi de ayrı satır, ikisi de "celiskili"; hangisinin doğru olduğuna karar verilmedi)

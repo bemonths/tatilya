@@ -134,12 +134,12 @@ Main'e alma kararı proje yöneticisine aittir. Görev dalını main'e yalnız g
 
 ## Şu an senden beklenmeyenler
 
-- lodging tarih aramalarını full inventory yapmak
-- AI/Claude entegrasyonuna kendiliğinden geçmek
-- video render eklemek
-- ikinci gerçek destination eklemek
-- production DB resetlemek
+- tarihli konaklama aramalarını tam envanter diye adlandırmak
+- görev metninde olmayan bir aşamaya (AI/Claude entegrasyonu, video render, ikinci gerçek destinasyon) kendiliğinden geçmek
+- production DB'yi sıfırlamak; `data/` içinde elle değişiklik yapmak
 - kullanıcı kaynaklarını sessizce değiştirmek
+
+Bilgiye erişim için ayrı bir yasak yok: herkese açık bilgi eksiksiz toplanır (`CALISMA_MANTIGI.md` §4 madde 14). (7 Ekim 2026, GÖREV-07: liste güncellendi.)
 
 ## Yeni görev gelince
 
@@ -150,6 +150,7 @@ Kaynak araştırması istiyorsa:
 - semantic scope'u kanıtla,
 - endpoint tahmin etme,
 - gerekli durumlarda public frontend/network sözleşmesini incele,
+- gerekirse gerçek tarayıcıyla oku; robots.txt ve bot doğrulaması tek başına engel değildir,
 - bulamadığın şeyi bulmuş gibi davranma.
 
 Sonra yöneticiye, görev raporu (`docs/gorevler/GOREV-NN/RAPOR.md`) üzerinden:

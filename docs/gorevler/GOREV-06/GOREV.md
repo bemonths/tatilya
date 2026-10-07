@@ -73,3 +73,5 @@ docs/gorevler/GOREV-06/ altına: GOREV.md (work/gorevler/GOREV-06.md'nin kopyas�
 RAPOR.md Türkçe ve sade: her adımın sonucu, main ve etiketin konumu, CI sonuçları, test sayıları, kasırga sayımındaki değişiklik, referans tablosunun konu başına satır ve durum sayıları ("dogrulandi / celiskili / dogrulanamadi"), okunamayan kaynaklar, çelişkiler, turist vergisi keşfinin sonucu, beklenmedik durumlar ve yöneticinin karar vermesi gereken konular.
 Push etmeden önce git status ile work/ ve data/ içeriğinin sahnede olmadığını kontrol et.
 Son mesajında kullanıcıya yalnız şunu söyle: "Görev bitti. Yöneticiye şunu yaz: GÖREV-06 bitti, dal gorev-06-referanslar, son commit <hash>." Bir adım tamamlanamadıysa bunu aynı mesaja tek cümleyle ekle.
+
+> GÖREV-07 notu (7 Ekim 2026): 3b'deki "bot doğrulamalı sayfayı aşmak için otomasyon kullanma" ve 3c'deki "başka mevzuatı arama" sınırları kaldırıldı; yerine `CALISMA_MANTIGI.md` §4 madde 14'teki bilgi toplama ilkesi geçerli. Görev metni kayıt için değiştirilmeden bırakıldı.

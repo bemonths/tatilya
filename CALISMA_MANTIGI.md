@@ -82,8 +82,8 @@ Bu yüzden yeni geliştirmelerde şu ayrım korunur:
 10. Başarısız/iptal run önceki başarılı snapshot'ı bozmaz.
 11. Dynamic search sonucu “tam inventory” diye adlandırılmaz.
 12. Kaynak keşfinde öncelik: API → structured JSON → HTML → public network endpoint → gerekiyorsa browser automation.
-13. Playwright varsayılan değildir; HTTP/JSON ile çözülüyorsa kullanılmaz.
-14. Düzenli çalışan veri toplayıcılar robots.txt kurallarına uyar. Belirli bir resmî belgenin (rapor, yönetmelik PDF'i gibi) kaynak göstermek için tek seferlik elle alınması toplayıcı sayılmaz; URL, erişim tarihi ve SHA-256 ile kaydedilir. Programatik kullanım için yayımlanmış API'ler kendi kullanım koşullarıyla kullanılır. (7 Ekim 2026 yönetici kararı)
+13. İlk tercih API, JSON ve HTML'dir; gerekiyorsa tarayıcı otomasyonu kullanılır. (Yalnız verimlilik tercihi; 7 Ekim 2026, GÖREV-07.)
+14. **Bilgi toplama ilkesi** (7 Ekim 2026, GÖREV-07 yönetici kararı; GÖREV-03'te konan robots.txt kuralının yerine): Amaç, ziyaretçinin karar vermesi için gereken bilgiyi eksiksiz toplamaktır. Herkese açık yayımlanmış her bilgi alınabilir: resmî siteler, işletmelerin kendi siteleri, menüler, PDF'ler, harita ve veri servisleri. Gerekirse gerçek tarayıcıyla (Playwright ve bilgisayardaki Chrome veya Edge) okunur; robots.txt ve bot doğrulaması tek başına engel sayılmaz. İstekler siteyi yormayacak hızda yapılır; her bilginin kaynağı, erişim tarihi ve ham kopyası saklanır. Giriş gerektiren hesaplara girilmez, ücretli içerik aşılmaz. Doğruluk kuralları aynen geçerlidir: kaynağın söylemediği şey yazılmaz, hesaplanan ya da türetilen değer öyle etiketlenir. Uygulamadaki sınır: CAPTCHA veya "insan olduğunuzu doğrulayın" gibi etkileşimli bir doğrulama ekranı Claude Code tarafından çözülmez ve tarayıcıyı bot tespitinden gizleyen ayarlar kullanılmaz; sayfa normal bir tarayıcıda açılmıyorsa aynı bilgi başka bir resmî yayından aranır, bulunamazsa durum rapora yazılır.
 
 Ayrıntı: `docs/DEVIR/03_VERI_KAYNAKLARI_VE_DOGRULAMA.md`.
 
@@ -291,7 +291,7 @@ Video dili: "resmî rehber", "ilçe alt bölüm verisi" ve "ilçe alt bölüm ve
 
 Üç generic toplayıcı; destinasyona özel istasyon, koridor ve yarıçaplar SQLite'tan (30A için profil + v8 migration):
 
-- `ncei-climate-normals` — NCEI 1991–2020 aylık normalleri, anahtarsız veri API'si (`/access/services/data/v1`; robots.txt `/data*` yolunu kapattığı için yalnız bu yol). 30A: Destin–Fort Walton Beach Havalimanı (kıyı referansı, sıcaklık normali olan istasyonlar içinde 30A kıyı koridoruna en yakın, 20,5 km) ve DeFuniak Springs (iç kesim karşılaştırması, 44,1 km). Yedi değişken; tamlık/ölçüm bayrakları ve yıl sayıları saklanır; eksik değer NULL.
+- `ncei-climate-normals` — NCEI 1991–2020 aylık normalleri, anahtarsız veri API'si (`/access/services/data/v1`; ilk tercih API olduğu için bu yol). 30A: Destin–Fort Walton Beach Havalimanı (kıyı referansı, sıcaklık normali olan istasyonlar içinde 30A kıyı koridoruna en yakın, 20,5 km) ve DeFuniak Springs (iç kesim karşılaştırması, 44,1 km). Yedi değişken; tamlık/ölçüm bayrakları ve yıl sayıları saklanır; eksik değer NULL.
 - `ndbc-water-temperature` — NDBC tarihî yıllık dosyalarından PCBF1 (Panama City Beach, NOS 8729210) su sıcaklığı; yıl-ay ortalaması, ölçüm ve gün sayısı; çok yıllı aylık ortalamaya yalnız en az 20 günü ölçümlü yıl-aylar girer; 404 yıllar kaydedilir; ham ölçümler veritabanına yazılmaz.
 - `hurdat2-storm-proximity` — NHC HURDAT2 (güncel dosya adı veri sayfasından okunur), 1 saatlik ara değerleme, programdaki en batı ve en doğu plaj erişimi arasındaki koridora en yakın uzaklık, 50 ve 100 deniz mili içinde ilk giriş ayı ve daire içindeki en yüksek rüzgâra göre sınıf (TD/TS/HU/MH); bütün sezonlar saklanır, dönem okuma anında seçilir.
 

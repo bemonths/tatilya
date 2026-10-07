@@ -129,7 +129,7 @@ Overture Maps:
 
 için adaydır.
 
-Canonical entity matching olmadan dış POI dataset'i doğrudan source record'larla merge edilmemelidir.
+Yapılabilir, kaynak ve tarihle. Dış POI kaydı mevcut bir kayda ancak açık bir bağla (URL/domain, telefon, koordinat, elle gözden geçirme) bağlanır; bağ kurulamayan kayıt ayrı kalır. (7 Ekim 2026, GÖREV-07: önceki caydırıcı not kaldırıldı.)
 
 ## Restaurants enrichment
 
@@ -142,12 +142,7 @@ Gelecekte:
 - prices
 - opening hours
 
-Fakat:
-- entity matching,
-- menu versioning,
-- price field semantics
-
-önce tasarlanmalıdır.
+Yapılabilir, kaynak ve tarihle: işletmenin sitesi dizindeki bağlantıyla kimliği belli olduğu için doğrudan okunur; menü, fiyat ve saatler kaynak adresi, erişim tarihi ve ham kopyasıyla anlık görüntü olarak saklanır. (7 Ekim 2026, GÖREV-07: önceki "önce entity matching, menü sürümleme ve fiyat anlamı tasarlanmalı" şartı kaldırıldı.)
 
 ## Grocery / günlük harcama
 
@@ -155,7 +150,7 @@ Fakat:
 - Publix / Walmart / local markets
 - basket snapshots
 
-Ancak veri toplama maliyeti ve değişkenliği yüksektir.
+Yapılabilir, kaynak ve tarihle: fiyatlar çekim tarihli anlık görüntü olarak saklanır. (7 Ekim 2026, GÖREV-07: önceki caydırıcı not kaldırıldı.)
 
 ## Entity matching
 

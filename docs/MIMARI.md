@@ -111,7 +111,7 @@ Batı/orta/doğu noktaları 53 Visit South Walton plaj kaydının boylam sırala
 
 `upgrade_v5` yalnızca restaurant_records/restaurant_regions ve gerekli index'leri ekler; varsayılan seed yöntemi/notunu tam eşleşme koşullarıyla düzeltir. Kayıtlar source_runs'a, mahalle ilişkileri restoran kaydına ve mevcut regions tablosuna bağlıdır. Opaque mahalle ID'leri sabitlenmez; 13 canonical isim doğrudan mevcut region ID'lerine eşlenir. Miramar Beach/Seascape/Sandestin ve Restaurants dışı türler alınmaz. Entity matching uygulanmaz.
 
-Raw depolama ana manifest + ayrı HTML response dosyalarından oluşur. Snapshot yalnızca generic transaction başarıyla bittiğinde görünür. Liste/detay API'leri read-only'dir; raw endpoint yalnızca seçili run'ın manifestini indirir. Menü/fiyat, ratings/reviews, own-site crawling, scheduler ve AI kapsam dışında kalır. Güvenilir kaynak tarihi bulunmadığında source_updated NULL'dır. [Veri sözleşmesi ve testler](M4-RESTORAN-VERISI.md).
+Raw depolama ana manifest + ayrı HTML response dosyalarından oluşur. Snapshot yalnızca generic transaction başarıyla bittiğinde görünür. Liste/detay API'leri read-only'dir; raw endpoint yalnızca seçili run'ın manifestini indirir. Menü/fiyat, ratings/reviews, own-site crawling, scheduler ve AI bu sürümün kapsamında yoktur (yasak değildir; GÖREV-07). Güvenilir kaynak tarihi bulunmadığında source_updated NULL'dır. [Veri sözleşmesi ve testler](M4-RESTORAN-VERISI.md).
 
 ## v0.6 sınırları
 

@@ -23,6 +23,8 @@ Makinece okunabilir liste: `kaynaklar.csv`. Plaj erişimi → mahalle önizlemes
 | 9 | Yapılacaklar | Visit South Walton Events | kullanılabilir (etkinlik) | Eyalet parkı ve orman sayfaları otomatik erişime kapalı; kumul gölü isim listesi yok |
 | 10 | Günlük ihtiyaç | OpenStreetMap (Overpass) | sınırlı | Resmî envanter yok; tamlık bilinmiyor; ODbL |
 
+> **GÖREV-07 notu (7 Ekim 2026):** Bu keşifteki "robots.txt kapalı olduğu için kullanılmadı / bot korumalı olduğu için kullanılamaz" türü değerlendirmeler, yeni bilgi toplama ilkesiyle (`CALISMA_MANTIGI.md` §4 madde 14) geçerliliğini yitirdi: herkese açık bilgi gerekirse gerçek tarayıcıyla okunur; robots.txt ve bot doğrulaması tek başına engel değildir. İlgili yerlere tarihli not düşüldü; eski metin kayıt için korunuyor.
+
 ## Alan 1 — Mahalleler
 
 **1A. Visit South Walton mahalle dizini, mahalle sayfaları ve "16 Beachside Neighborhoods" medya kiti**
@@ -69,6 +71,7 @@ Kaynağa göre 13 mahallenin karakteri (dizin etiketleri ve tanıtım metinlerin
 - Anlam ve sınır: 13 mahallenin 12'si nokta olarak var, Gulf Place yok. Adlar GNIS biçiminde ("Dune Allen Beach", "Seacrest Beach" gibi). Hiçbir mahalle için sınır poligonu yok. "Seacrest Beach" noktası Alys Beach'in doğusunda; Visit South Walton'da Seacrest, Alys Beach'in batısında.
 - Teknik yol: Overpass QL JSON ya da bölgesel extract; OSM kimliği düzenlemeyle değişebilir, GNIS kimliği daha kararlı. Güncellenme: sürekli (yanıtta `timestamp_osm_base`).
 - Kullanım: ODbL; "© OpenStreetMap contributors" atfı gerekli, türetilmiş veritabanı yayımlanırsa aynı lisansla paylaşılmalı. Overpass ve openstreetmap.org robots.txt dosyaları API yollarını robotlara kapatıyor; kalıcı kullanım için bölgesel extract önerilir.
+  - *GÖREV-07 notu (7 Ekim 2026):* robots.txt tek başına engel değildir; Overpass siteyi yormayacak hızda kullanılabilir. ODbL lisans yükümlülüğü geçerlidir.
 - Örnek istek: tek Overpass sorgusu — 23:36 UTC, HTTP 200, 40 öğe.
 - **Değerlendirme: sınırlı.** Ad ve konum çapraz kontrolü için yararlı; resmî değil, Gulf Place eksik, sınır yok.
 
@@ -128,6 +131,7 @@ Rehberdeki "San Juan Beach Access" (Seagrove) programdaki "San Juan - 18" ile ya
 - Kullanım: ilçe sitesinin robots.txt'si belge yolunu engellemiyor. Resmî belge; ordinance ve bölüm numarasıyla atıf yapılmalı.
 - Örnek istek: PDF — ilk iki deneme HTTP 522 (sunucu zaman aşımı), üçüncüsü 2026-10-06 23:45 UTC'de HTTP 200, 3,7 MB, imzalı ve mühürlü 27 sayfa.
 - **Değerlendirme: kullanılabilir** (ilçe PDF kanalı; Municode kanalı kullanılamaz). En yetkili ve tarihli metin; kurallar elle tabloya alınmalı.
+  - *GÖREV-07 notu (7 Ekim 2026):* Municode kanalı da gerçek tarayıcıyla okunabilir; "kullanılamaz" yalnız teknik kolaylık açısından geçerli.
 
 **3B. South Walton Fire District — Beach Safety**
 - URL: https://www.swfd.org/beach-safety (alt sayfalar: surf conditions, flag conditions resource, beach bonfires, FAQ)
@@ -236,6 +240,7 @@ Destin–Fort Walton Beach Havalimanı 1991–2020 normalleri (°F, inç; bayrak
 - Güncellenme: haftada üç kez. Kullanım: açık erişim, atıf zorunlu.
 - Örnek istek: kolon belgesi PDF'i — 23:40 UTC, HTTP 200.
 - **Değerlendirme: sınırlı.** Atlantik için HURDAT2'nin kopyası ve resmî indirme yolu robots.txt'ye takılıyor.
+  - *GÖREV-07 notu (7 Ekim 2026):* robots.txt tek başına engel değildir; NCEI `/data` yolundaki dosyalar da alınabilir. Atlantik izleri zaten NHC'nin HURDAT2 dosyasından alınıyor.
 
 **5C. NOAA NHC Tropical Cyclone Climatology**
 - URL: https://www.nhc.noaa.gov/climo/ — Sahibi: NOAA NHC.
@@ -258,6 +263,7 @@ Destin–Fort Walton Beach Havalimanı 1991–2020 normalleri (°F, inç; bayrak
 - Anlam ve sınır: kişi değil para; tutar doluluğu, fiyatı ve vergi oranını birlikte yansıtır (yaz fiyatları zirveyi büyük gösterir). "South Walton" vergi bölgesi körfezin güneyindeki ilçe kısmının tamamıdır (Miramar Beach ve Sandestin dahil), 30A değildir. Vergi oranı yıllar içinde değişti. 2025 yıllık raporuna göre Kasım–Aralık 2024 tahsilatının bir kısmı yeni portal geçişi nedeniyle 2025'e kaymış olabilir. "Ay"ın konaklama ayı mı tahsil ayı mı olduğu yazmıyor.
 - Teknik yol: statik site; aylık veri sayfadaki akordeonun içinde tarayıcıda JavaScript ile yükleniyor; sunucunun gönderdiği HTML'de ve sayfa verisi JSON'unda yok. Veri uç noktası bulunamadı. Kararlı kimlik yok (doğal anahtar: ay + vergi bölgesi).
 - Güncellenme: aylık bültenler. Kullanım: robots.txt engel değil; "© Walton County TDC"; rakamlar atıfla kullanılabilir. Clerk sitesinin robots.txt'si genel botlara tamamen kapalı.
+  - *GÖREV-07 notu (7 Ekim 2026):* Clerk sitesinin robots.txt'si tek başına engel değildir. Aylık veri GÖREV-06'da sayfanın statik sorgu dosyası ve Clerk çalışma kitabından alındı.
 - Örnek istek: sayfa — 2026-10-06 23:33 UTC, HTTP 200; vergi bölgeleri ve oranlar anlatılıyor, aylık rakam HTML'de yok.
 - **Değerlendirme: sınırlı.** Konu için en iyi resmî aylık gösterge, ama makinece okunabilir yolu bulunamadı ve veri 30A'nın değil vergi bölgesinin parası.
 
@@ -275,6 +281,7 @@ Destin–Fort Walton Beach Havalimanı 1991–2020 normalleri (°F, inç; bayrak
 - Verdiği alanlar: yıllık ve mevsimlik ziyaretçi, oda-gece, harcama, vergi, doluluk, ortalama günlük fiyat (ADR) ve ziyaretçi profili. 2025 yıllık raporu: 4.586.000 ziyaretçi, 3.497.200 oda-gece, 61.444.321 $ turist vergisi, birleşik doluluk %48,3, ADR 354,10 $.
 - Anlam ve sınır: ilçe düzeyi (30A değil); ziyaretçi sayısı model tahmini; aylık değil; rapor 2025 fiyat yöntemindeki değişikliğin ADR karşılaştırmasını etkileyebileceğini söylüyor; raporda bazı iç tutarsızlıklar var.
 - Teknik yol: rapor listesi sayfa verisi JSON'unda yapılandırılmış (65 kayıt, 2017–2026; CMS kimliği + PDF bağlantısı); içerik grafik ağırlıklı PDF. Bağlantıların 41'i Visit South Walton'ın robots.txt ile kapalı `/userfiles/` yolunda.
+  - *GÖREV-07 notu (7 Ekim 2026):* `/userfiles/` yolunun robots.txt ile kapalı olması tek başına engel değildir; bu PDF'ler alınabilir (GÖREV-06'da alındı).
 - Güncellenme: yılda dört mevsim raporu ve bir yıllık rapor.
 - Örnek istek: rapor listesi JSON'u — 23:51 UTC, HTTP 200, 65 kayıt; 2025 yıllık rapor PDF'i — HTTP 200, 9,5 MB.
 - **Değerlendirme: sınırlı.** Yetkili ve uzun geçmişli; ama ilçe düzeyi, model tahmini ve aylık değil.
@@ -392,6 +399,7 @@ Kuş uçuşu mesafeler (haversine; 30A noktaları programın hava örnek noktala
 - Teknik yol: HTML; robots.txt izin veriyor, ancak site Cloudflare bot doğrulamasının arkasında (otomatik istemciler 403 alıyor). Kimlik park yolu.
 - Örnek istek: üç sayfa — 23:41 UTC, üçü de HTTP 403 (doğrulama sayfası).
 - **Değerlendirme: kullanılamaz** (otomatik bağlantı için). Resmî ve yetkili, ama bot korumasına takılıyor; yalnız elle ve erişim tarihiyle atıf yapılabilir.
+  - *GÖREV-07 notu (7 Ekim 2026):* değerlendirme "kullanılabilir (gerçek tarayıcıyla)" olarak değişti; bot doğrulaması tek başına engel değildir. Sonuç GÖREV-07 raporunda.
 
 **9B. Florida Forest Service — Point Washington State Forest**
 - URL: https://www.fdacs.gov/forest-wildfire/our-forests/state-forests/point-washington-state-forest
@@ -400,6 +408,7 @@ Kuş uçuşu mesafeler (haversine; 30A noktaları programın hava örnek noktala
 - Anlam ve sınır: sayfada tarih yok; ücretin kişi mi araç başına mı olduğu netleşmedi.
 - Kullanım: fdacs.gov robots.txt genel botlara tamamen kapalı (`Disallow: /`); bu yüzden sayfaya örnek istek yapılmadı, yalnız robots.txt alındı.
 - **Değerlendirme: kullanılamaz** (otomatik bağlantı için). Yetkili, ama robots.txt programı dışlıyor; yalnız elle ve tarihli atıf.
+  - *GÖREV-07 notu (7 Ekim 2026):* robots.txt tek başına engel değildir; sayfa okunabilir (GÖREV-06'da alındı, değerler referans tablosunda doğrulandı).
 
 **9C. Visit South Walton — Events ve "Coastal Dune Lakes" yazısı**
 - URL: https://www.visitsouthwalton.com/events/ (aralık araması: `/events/?startDate=AA/GG/YYYY&endDate=AA/GG/YYYY&page=N`, isteğe bağlı `neighborhood=` ve `category=`), https://www.visitsouthwalton.com/blog/rare-diverse-beautiful-coastal-dune-lakes/
@@ -419,6 +428,8 @@ Kuş uçuşu mesafeler (haversine; 30A noktaları programın hava örnek noktala
 
 **Alanın sonucu.** Etkinlik takvimi için bağlanabilir tek kaynak Visit South Walton Events'tir (seçki niteliğinde, South Walton geneli, saat dilimi yok). Eyalet parkları ve Point Washington için yetkili kaynaklar otomatik erişime kapalı (bot doğrulaması / robots.txt); ücret ve saatler elle, erişim tarihiyle kaydedilip her yıl yeniden kontrol edilmeli. Kıyı kumul göllerinin resmî isim listesi bulunamadı.
 
+> *GÖREV-07 notu (7 Ekim 2026):* eyalet parkları ve Point Washington kaynakları yeni ilkeye göre okunabilir; "otomatik erişime kapalı" değerlendirmesi geçerli değil.
+
 ## Alan 10 — Günlük ihtiyaç
 
 **10A. OpenStreetMap — Overpass API**
@@ -428,6 +439,7 @@ Kuş uçuşu mesafeler (haversine; 30A noktaları programın hava örnek noktala
 - Anlam ve sınır: veri haritacıların girdiği kadar, tamlık bilinmiyor. Örnek kutu 30A'dan geniş: 27 öğenin 8'i 30A'nın batısında (Miramar/Sandestin tarafı), 4'ü 30A'nın doğu ucunun ötesinde, 15'i 30A boylamları içinde. Etiket kalitesi değişken; süpermarket içi eczaneler çoğu zaman ayrı işaretli değil; bazı öğeler yıllardır düzenlenmemiş. Mahalle alanı yok.
 - Teknik yol: Overpass QL ile tek GET; kimlik OSM tipi + id + sürüm. Güncellenme: sürekli.
 - Kullanım: ODbL; "© OpenStreetMap contributors" atfı zorunlu; kamuya açılan türetilmiş bir veritabanı (ör. mahalle–market listesi) ODbL ile paylaşılmalı. Overpass robots.txt `/api/` yolunu botlara kapatıyor; kalıcı kullanım için bölgesel extract ya da kendi sunucu düşünülmeli.
+  - *GÖREV-07 notu (7 Ekim 2026):* robots.txt tek başına engel değildir; ODbL lisans yükümlülüğü geçerlidir.
 - Örnek istek: tek sorgu — 2026-10-06 23:48 UTC, HTTP 200; 27 öğe (12 süpermarket, 10 market, 5 eczane).
 - **Değerlendirme: sınırlı.** Teknik olarak hazır ve kimlikli; tamlık ve kalite bilinmiyor, ODbL yükümlülüğü var.
 

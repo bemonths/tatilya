@@ -29,7 +29,7 @@ Bu belge ilk videonun "ne zaman gitmeli" sorusu için kurulan iklim paketini anl
 
 **HTTP kuralları** (`studio/sources/climate_http.py`): yalnız https ve toplayıcının izinli alan adı; en fazla 3 yönlendirme, yalnız izinli alan adı içinde; ağ hatası ve 5xx için bir kez yeniden deneme; 429 hata; içerik türü ve boyut sınırı denetimi; istekler arasında 0,2 sn; `User-Agent: 30AStudio/0.8 (+https://github.com/bemonths/tatilya)`.
 
-**robots.txt** (7 Ekim 2026): NCEI `/data*` ve `/orders*` yollarını kapatıyor; toplayıcı yalnız `/access/services/data/v1` veri API'sini kullanır. NDBC yalnız adı belirtilmiş üç botu (008, SemrushBot, SemrushBot-SA) engelliyor; genel kural yok. NHC `User-agent: *` için hiçbir yolu kapatmıyor.
+**robots.txt** (7 Ekim 2026): NCEI `/data*` ve `/orders*` yollarını kapatıyor; toplayıcı yalnız `/access/services/data/v1` veri API'sini kullanır. NDBC yalnız adı belirtilmiş üç botu (008, SemrushBot, SemrushBot-SA) engelliyor; genel kural yok. NHC `User-agent: *` için hiçbir yolu kapatmıyor. **GÖREV-07 notu (7 Ekim 2026):** yeni bilgi toplama ilkesine göre robots.txt tek başına engel değildir (`CALISMA_MANTIGI.md` §4 madde 14); NCEI toplayıcısının veri API'sini kullanması yalnız verimlilik tercihidir.
 
 **Sürüm farkı.** Üç toplayıcıda kayıt farkı özeti kapalıdır ve gerekçesi API'de görünür (`diff_reason`): normaller on yılda bir üretilen durağan üründür; deniz suyu ortalamaları geçmiş yıllık dosyalardan yeniden hesaplanır; kasırga geçişleri her HURDAT2 sürümünden yeniden hesaplanır.
 

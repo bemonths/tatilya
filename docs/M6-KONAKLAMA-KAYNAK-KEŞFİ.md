@@ -80,7 +80,7 @@ Explicit `lodging.id` stabil kimlik adayıdır; ad veya sorgu metninden ID üret
 | bedrooms, bathrooms, sleeps | bedrooms, bathrooms, max_guests; boş değer NULL |
 | description | Temizlenmiş kaynak açıklaması; boş değer NULL |
 | phone, toll_free | Telefon ve alternatif telefon provenance'ı; boş değer NULL |
-| url | Yayınlanan harici bağlantı; veri olarak saklanabilir, crawl edilmez |
+| url | Yayınlanan harici bağlantı; veri olarak saklanır. (GÖREV-07 notu (7 Ekim 2026): işletmenin sitesi gerekirse doğrudan okunabilir; önceki "crawl edilmez" kuralı kaldırıldı.) |
 | amenity_ids + clone.amenities | Kaynağın etiketlerinden list[str] |
 | location_id / group_ids[] | Açık kaynak konumu ve filtre provenance'ı |
 
