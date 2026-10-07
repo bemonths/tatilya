@@ -333,7 +333,7 @@ Plaj–mahalle eşlemesi tablo değildir; `beach_records.canonical_region_id` NU
 - `PRAGMA foreign_key_check`,
 - hata halinde rollback.
 
-Stable şema: `6`.
+Stable şema: `7` (v0.7.0; v0.6.0 şema 6 idi).
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 

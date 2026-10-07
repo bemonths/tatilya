@@ -1,0 +1,50 @@
+alt_bolum_adi,iceride_satir,yakin_satir,bolge_id,karar
+BARBERY COAST S/D,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+BEACH HIGHLAND S/D,0,2,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+BEACH HIGHLANDS,0,2,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+BEACH HIGHLANDS 1ST ADD,0,2,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+BEACHSIDE CONDO AT SEAGROVE,1,0,seagrove,tabloda: adında mahalle adı geçiyor
+BEACHSIDE VILLAS CONDO PHASE,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+BLUE MOUNTAIN BCH S/D UNIT I,0,4,blue-mountain-beach,tabloda: adında mahalle adı geçiyor
+BUTLER'S ADD TOWN OF GRAYTON,1,0,,tabloda değil: tam mahalle adı yok (GRAYTON BEACH değil); aynı erişim 'TOWN OF GRAYTON BEACH' içinde
+BUTLER'S ADD TOWN OF GRAYTON BEACH,1,0,grayton-beach,tabloda: adında mahalle adı geçiyor
+DUNCAN 4 LOT S/D,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+DUVALLS VILLAS,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+EMERALD HILL CONDO PH II,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+GRAYTON BEACH COTTAGES S/D,1,0,grayton-beach,tabloda: adında mahalle adı geçiyor
+GRAYTON BEACH S/D,2,0,grayton-beach,tabloda: adında mahalle adı geçiyor
+GULF DUNES,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+GULF SHORE MANOR,2,2,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+INFORMATION ONLY,9,9,,"tabloda değil: bilgi kaydı, alt bölüm adı değil"
+INFORMATION ONLY NOW,1,0,,"tabloda değil: bilgi kaydı, alt bölüm adı değil"
+INFORMATION ONLY NOW GULF VIEWS S/D,2,0,,"tabloda değil: bilgi kaydı, alt bölüm adı değil"
+INFORMATION ONLY NOW MELODIA,1,0,,"tabloda değil: bilgi kaydı, alt bölüm adı değil"
+INFORMATION ONLY NOW VILLAGE OF SUGAR BEACH,1,0,,"tabloda değil: bilgi kaydı, alt bölüm adı değil"
+INFORMATION PLATE,1,1,,"tabloda değil: bilgi kaydı, alt bölüm adı değil"
+LEGACY CONDO,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+MISTRAL CONDO,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+MORRIS BCH S/D OF GOVT LT 23,1,0,,"tabloda değil: yasal tanım, mahalle adı yok"
+OCEANSIDE S/D,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+OVERLOOK AT INLET BEACH S/D,1,0,inlet-beach,tabloda: adında mahalle adı geçiyor
+PALMS AT DUNE ALLEN UNRECD,0,2,dune-allen,tabloda: adında mahalle adı geçiyor
+RAMSGATE TOWNHOMES,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+RAY'S MULTI-MOUNTAIN ESTATES,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+S/D OF FRAC'L SW1/4 OF SEC 2-3S-20,4,0,,"tabloda değil: yasal tanım, mahalle adı yok"
+S/D OF LOT 2,2,0,,"tabloda değil: yasal tanım, mahalle adı yok"
+S/D OF SEC 36-3S-18,0,2,,"tabloda değil: yasal tanım, mahalle adı yok"
+S/D OF W1/2 OF NW1/4 &,2,0,,"tabloda değil: yasal tanım, mahalle adı yok"
+S/D OF W1/2 OF SE1/4 OF SW1/4,4,2,,"tabloda değil: yasal tanım, mahalle adı yok"
+SEA HIGHLANDS S/D,0,2,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+SEA WALK S/D,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+SEACREST S/D,0,1,seacrest,tabloda: adında mahalle adı geçiyor
+SEAGROVE 1ST ADD,0,3,seagrove,tabloda: adında mahalle adı geçiyor
+SEAGROVE 3RD ADD,0,3,seagrove,tabloda: adında mahalle adı geçiyor
+SEAGROVE ENDEAVORS,2,1,,"tabloda değil: şirket/sahip adı, alt bölüm adı değil"
+SEAGROVE HORIZONS,1,0,seagrove,tabloda: adında mahalle adı geçiyor
+SEAGROVE REVISED,0,1,seagrove,tabloda: adında mahalle adı geçiyor
+SEAHAUNTS S/D TOWNHOMES,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+STALLWORTH PRESERVE,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+SUGARWOOD S/D,1,0,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"
+VIZCAYA AT DUNE ALLEN S/D,1,0,dune-allen,tabloda: adında mahalle adı geçiyor
+WALKOVER PROPERTIES,2,1,,"tabloda değil: şirket/sahip adı, alt bölüm adı değil"
+WALL STREET BEACH,0,1,,"tabloda değil: ad bir mahalleyi belirtmiyor (site, kompleks veya başka yer adı)"

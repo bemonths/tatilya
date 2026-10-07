@@ -3,31 +3,31 @@
 ## Stable durum
 
 ```text
-tag v0.6.0 -> a938367a280ef799597d5d90dc39ef34a26a6fcb
-app 0.6.0
-schema 6
-main -> 62d6b7b431669ca44a705b1c85f24f9df72bd6ca
+tag v0.7.0 -> 7f25e3ce947c69fef999f7f4454a79608008fcad
+app 0.7.0
+schema 7
+main -> 7f25e3ce947c69fef999f7f4454a79608008fcad
 ```
 
-`v0.6.0` tag'i doğrudan a938367'ye işaret eder. main, 7 Ekim 2026'da GÖREV-03 Adım 1 ile `62d6b7b`'ye fast-forward edildi: v0.6.0 koduna ek olarak konaklama keşif belgeleri (`v0.7-lodging-inventory`) ve GÖREV-01/02 belgeleri. Kod ve şema main'de hâlâ 0.6.0 / 6. main CI: success.
+7 Ekim 2026'da GÖREV-04 Adım 1 ile main `7f25e3c`'ye fast-forward edildi ve bu commit'e açıklamalı `v0.7.0` etiketi konuldu ("v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi"). main CI: success. Önceki stable `v0.6.0` → `a938367`; aynı gün daha önce main `62d6b7b`'ye (GÖREV-01/02 ve konaklama keşif belgeleri) alınmıştı.
 
 ## Aktif branch
 
 ```text
-gorev-03-mahalleler
-v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi
+gorev-04-esleme-v2
 app 0.7.0
 schema 7
 ```
 
 Bu dal:
-- mahalle toplayıcısını (`south-walton-neighborhoods`) ve şema 7'yi ekler,
-- plaj erişimi–mahalle eşleme katmanını ekler,
-- main'e alınmadı, tag yok; karar yöneticinin.
+- plaj–mahalle eşlemesini Walton County alt bölüm poligonlarıyla yeniden kurar (v2),
+- test bekleme yardımcılarını sağlamlaştırır,
+- gerçek veriyi güncelleme kuralını belgeler,
+- main'e alınmadı; karar yöneticinin.
 
 Test:
-- 390 Python
-- 29 frontend
+- 408 Python
+- 30 frontend
 
 ---
 
@@ -207,7 +207,7 @@ Book>Direct'i price/availability snapshot için ileride değerlendirmek mümkün
 
 ## v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi
 
-Dal: `gorev-03-mahalleler` (GÖREV-03, 7 Ekim 2026). Uygulama 0.7.0, şema 7. main'e alınmadı; tag yok.
+Dal: `gorev-03-mahalleler` (GÖREV-03, 7 Ekim 2026). Uygulama 0.7.0, şema 7. 7 Ekim 2026'da main'e alındı; tag `v0.7.0` → `7f25e3c`.
 
 Önemli:
 - `south-walton-neighborhoods/1`: Visit South Walton mahalle dizini (gömülü JSON) + mahalle sayfaları; 30A'ya özel
@@ -243,6 +243,14 @@ Bu tablo tarihsel doğrulama snapshot'ıdır; production invariant değildir.
 
 v0.7 (şema 7) migration denemesi, 7 Ekim 2026, gerçek DB'nin salt okunur kopyası: yukarıdaki sayılar aynen korundu; `sources` 8 → 9 (yalnız mahalle kaynağı eklendi); yeni `neighborhood_records` boş; `foreign_key_check` boş; 3 plaj, 2 hava ve 1 restoran sürümü API'de görünür kaldı.
 
+Gerçek DB güncellemesi, 7 Ekim 2026 (GÖREV-04): `data/` tam yedeği alındıktan sonra uygulama gerçek klasörle açıldı (v6 → v7, uygulama yedeği alındı) ve plaj, NWS, restoran, mahalle toplayıcıları çalıştı. Sonra: 10 source_runs, 212 beach_records, 9 weather_locations, 1530 forecast rows, 276 restaurant_records, 282 restaurant_regions, 13 neighborhood_records; `integrity_check` ok, `foreign_key_check` boş.
+
+---
+
+## GÖREV-04 — plaj–mahalle eşlemesi v2 (dal)
+
+Dal: `gorev-04-esleme-v2`. Walton County `EnerGov_Additional/FeatureServer/13` "Subdivision Boundaries" katmanıyla nokta-poligon sorgusu; yöntem sırası resmi_rehber → ilce_alt_bolum (yalnız içindeki poligonlar, açık ad tablosu) → turetim_en_yakin_mahalle_noktasi. Sonuç: 9 resmî rehber, 6 ilçe alt bölüm verisi, 38 program türetimi; doğrulama: ilçe yöntemi 9 resmî eşlemenin 1'inde aynı, 8'inde sonuçsuz, farklı yok. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`, `docs/gorevler/GOREV-04/RAPOR.md`.
+
 ---
 
 ## Konaklama: açık konu
@@ -254,10 +262,10 @@ v0.7 (şema 7) migration denemesi, 7 Ekim 2026, gerçek DB'nin salt okunur kopya
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.6.0**
+**v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi**
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants**; görev dalında ayrıca **neighborhoods + plaj–mahalle eşlemesi** (v0.7.0)
+**beach + weather + restaurants + neighborhoods** ve plaj–mahalle eşlemesi (main'de v1, `gorev-04-esleme-v2` dalında v2)
 
 Kodlanmamış:
 **lodging** (tarihli arama anlık görüntüleri olarak planlandı)
@@ -266,4 +274,4 @@ Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-v0.7.0 yönetici incelemesinden ve main'e alma kararından sonra stable olur; sıradaki domain'i yönetici seçer.
+eşleme v2 yönetici incelemesinden sonra main'e alınır; sıradaki domain'i yönetici seçer.

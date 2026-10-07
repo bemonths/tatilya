@@ -13,16 +13,17 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` @ `62d6b7b431669ca44a705b1c85f24f9df72bd6ca` (v0.6.0 kodu + GÖREV-01/02 ve konaklama keşif belgeleri) |
-| Stable tag | `v0.6.0` → `a938367a280ef799597d5d90dc39ef34a26a6fcb` |
-| Stable uygulama sürümü / şema | `0.6.0` / `6` |
-| Aktif geliştirme dalı | `gorev-03-mahalleler` — **v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** |
-| Aktif dal durumu | Uygulama `0.7.0`, SQLite şema `7`; main'e alınmadı, tag yok; main'e alma kararı yöneticinin |
+| Stable branch | `main` @ `7f25e3ce947c69fef999f7f4454a79608008fcad` |
+| Stable tag | `v0.7.0` → `7f25e3c` — **v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** (önceki: `v0.6.0` → `a938367`) |
+| Stable uygulama sürümü / şema | `0.7.0` / `7` |
+| Aktif geliştirme dalı | `gorev-04-esleme-v2` — plaj–mahalle eşlemesi v2 (ilçe alt bölüm poligonları), test bekleme düzeltmesi, gerçek veri güncelleme kuralı |
+| Aktif dal durumu | Uygulama `0.7.0`, şema `7` (şema değişmedi); main'e alınmadı; karar yöneticinin |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main @ 62d6b7b başarılı; görev dalının sonucu `docs/gorevler/GOREV-03/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 390 Python testi + 29 frontend testi (main/v0.6.0: 289 + 19) |
-| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini; görev dalında ayrıca mahalle dizini |
-| Plaj–mahalle eşlemesi | Görev dalında ayrı, gözden geçirilebilir katman: `studio/destinations/thirty_a_beach_neighborhoods.csv` (9 resmî rehber + 44 program türetimi) |
+| Son CI | main @ 7f25e3c başarılı; görev dalının sonucu `docs/gorevler/GOREV-04/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 408 Python testi + 30 frontend testi (main/v0.7.0: 390 + 29) |
+| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini |
+| Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. main'de v1 (9 resmî rehber + 44 program türetimi); görev dalında v2 (9 resmî rehber + 6 ilçe alt bölüm verisi + 38 program türetimi) |
+| Gerçek veritabanı | 7 Ekim 2026'da (GÖREV-04) tam yedekten sonra normal kullanımla şema 7'ye yükseltildi; dört toplayıcı çalıştı |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
 | Konaklama durumu | Book>Direct tarihli arama doğrulandı; tam envanter şartı 7 Ekim 2026'da kaldırıldı, konaklama tarihli arama anlık görüntüleri olarak modellenecek (henüz kodlanmadı) |
 
@@ -263,7 +264,7 @@ Alanlar:
 
 Gerçek kullanıcı snapshot'ında 138 restoran ve 141 restoran-bölge ilişkisi korunmuştur. Bunlar kaynak değişebileceği için sabit test sayısı değildir.
 
-### 9.4 Mahalleler (v0.7.0, `gorev-03-mahalleler` dalında)
+### 9.4 Mahalleler (v0.7.0)
 
 Kaynak: `https://www.visitsouthwalton.com/neighborhoods/`  
 Connector: `south-walton-neighborhoods`  
@@ -276,13 +277,13 @@ Alanlar: 24 haneli kaynak kimliği, permalink, ad, canonical bölge, kısa tanı
 
 7 Ekim 2026 canlı denemesinde 16 dizin kaydından 13 mahalle kaydedildi, 3'ü kapsam dışı sayıldı; bu sayılar sabit kabul kriteri değildir. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
-### 9.5 Plaj erişimi–mahalle eşlemesi (v0.7.0, `gorev-03-mahalleler` dalında)
+### 9.5 Plaj erişimi–mahalle eşlemesi (v1: v0.7.0; v2: `gorev-04-esleme-v2` dalında)
 
 Plaj kaynağında mahalle alanı yoktur. Eşleme, plaj toplayıcısından ve `beach_records`'tan ayrı, 30A'ya özel, gözden geçirilebilir bir katmandır: `studio/destinations/thirty_a_beach_neighborhoods.csv` (sütunlar: `external_id, plaj_adi, bolge_id, yontem, kaynak, not, belirsiz`). Dosyayı `tools/plaj_mahalle_esleme.py` üretir; dosya commit edilir, uygulama yalnız okur ve yeniden hesaplamaz.
 
-Yöntem sırası: (1) resmî park ve ulaşım rehberindeki (2023-05-04) 9 eşleme olduğu gibi — `resmi_rehber`; (2) kalan erişimler için mahalle temsilî noktalarına boylam farkıyla en yakın mahalle — `turetim_en_yakin_mahalle_noktasi`, kaynak = mahalle çekiminin run kimliği; Alys Beach ve Rosemary Beach'e (rehber: halka açık plaj erişimi yok) hiçbir erişim atanmaz; en yakın iki aday arasındaki fark 0,003°'den küçükse `belirsiz=evet`. Doğrulamada türetme 9 resmî eşlemenin 8'inde aynı sonucu verdi.
+v2 yöntem sırası: (1) resmî park ve ulaşım rehberindeki (2023-05-04) 9 eşleme olduğu gibi — `resmi_rehber`; (2) erişim noktası Walton County "Subdivision Boundaries" poligonlarından birinin içindeyse ve alt bölüm adı açık ad tablosuyla tek bir mahalleye bağlanıyorsa — `ilce_alt_bolum`; (3) kalan erişimler için mahalle temsilî noktalarına boylam farkıyla en yakın mahalle — `turetim_en_yakin_mahalle_noktasi`, kaynak = mahalle çekiminin run kimliği; en yakın iki aday arasındaki fark 0,003°'den küçükse `belirsiz=evet`. Alys Beach ve Rosemary Beach'e (rehber: halka açık plaj erişimi yok) hiçbir erişim atanmaz; ilçe verisi oraya düşürürse satır "resmî rehberle çelişki" diye işaretlenir. Yakın (içinde olmayan) alt bölüm poligonları kaydedilir ama atamada kullanılmaz. Ayrıntı ve doğrulama: `docs/M7-MAHALLE-VERISI.md`.
 
-Video dili: "resmî rehber" eşlemeleri kaynak gösterilerek söylenebilir; "program türetimi" eşlemeleri yalnız yaklaşık konum bilgisidir. Plaj ekranı her erişimde mahalle ve yöntem etiketini gösterir, mahalleye göre filtreler; dosyada olmayan kimlik "eşlenmemiş" görünür.
+Video dili: "resmî rehber" ve "ilçe alt bölüm verisi" eşlemeleri kaynak gösterilerek söylenebilir (ikincisi "Walton County subdivision verisine göre"); "program türetimi" eşlemeleri yalnız yaklaşık konum bilgisidir. Plaj ekranı her erişimde mahalle ve yöntem etiketini gösterir, mahalleye göre filtreler; dosyada olmayan kimlik "eşlenmemiş" görünür.
 
 ## 10. Konaklama — şu an nerede kaldık?
 
@@ -327,13 +328,12 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable kod: tag `v0.6.0` → `a938367a280ef799597d5d90dc39ef34a26a6fcb` (uygulama 0.6.0, şema 6).  
-main: `62d6b7b431669ca44a705b1c85f24f9df72bd6ca` — v0.6.0 koduna ek olarak konaklama keşif belgeleri ve GÖREV-01/02 belgeleri; 7 Ekim 2026'da fast-forward ile alındı, CI başarılı.
+Stable: main ve tag `v0.7.0` → `7f25e3ce947c69fef999f7f4454a79608008fcad` (uygulama 0.7.0, şema 7; 7 Ekim 2026'da fast-forward ve açıklamalı etiket; main CI başarılı). Önceki stable: `v0.6.0` → `a938367`.
 
-Aktif dal `gorev-03-mahalleler` (v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi):
-- 390 Python testi ve 29 frontend testi geçti
-- uygulama 0.7.0, şema 7
-- main'e alınmadı, tag oluşturulmadı
+Aktif dal `gorev-04-esleme-v2`:
+- 408 Python testi ve 30 frontend testi geçti; tam takım art arda 5 kez ve 3 eşzamanlı çalıştırmada geçti
+- plaj–mahalle eşlemesi v2, test bekleme yardımcıları, gerçek veri güncelleme kuralı
+- main'e alınmadı
 
 Bilinen non-blocking uyarılar:
 - Starlette TestClient / httpx deprecation warning
@@ -370,7 +370,9 @@ v0.6 migration doğrulamasında raporlanan örnek sayılar:
 
 Bunlar yalnız o doğrulama anının snapshot'ıdır.
 
-v0.7 (şema 6 → 7) migration denemesi 7 Ekim 2026'da gerçek DB'nin salt okunur kopyasında yapıldı: yukarıdaki satır sayılarının hepsi korundu, `sources` 8 → 9 oldu (yalnız "South Walton · Mahalleler" kaynağı eklendi), boş `neighborhood_records` tablosu oluştu, `foreign_key_check` boş döndü ve yedek alındı. Gerçek `data/` klasörüne dokunulmadı; gerçek DB, kullanıcı v0.7.0'ı ilk açtığında kendi yedeğini alarak yükselecek.
+v0.7 (şema 6 → 7) migration denemesi 7 Ekim 2026'da gerçek DB'nin salt okunur kopyasında yapıldı: yukarıdaki satır sayılarının hepsi korundu, `sources` 8 → 9 oldu (yalnız "South Walton · Mahalleler" kaynağı eklendi), boş `neighborhood_records` tablosu oluştu, `foreign_key_check` boş döndü ve yedek alındı. Gerçek `data/` klasörüne dokunulmadı.
+
+Gerçek DB, 7 Ekim 2026'da (GÖREV-04) `data/` klasörünün tam yedeği (`work/yedek/20261007-1318/`) alındıktan sonra uygulamanın normal kullanımıyla şema 7'ye yükseltildi (uygulama yedeği `data/backups/studio-v6-0940e8b1e88246ad87f5c25771e8addf.sqlite3`) ve dört toplayıcı çalıştırıldı. Sonrasında `integrity_check` ok, `foreign_key_check` boş; ayrıntılı sayılar `docs/gorevler/GOREV-04/RAPOR.md` içinde.
 
 ## 13. Geliştirme çalışma biçimi
 
@@ -450,5 +452,5 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 ---
 
 **Son güncelleme:** 7 Ekim 2026  
-**Stable:** v0.6.0  
-**Aktif geliştirme:** `gorev-03-mahalleler` — v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi (yönetici incelemesinde)
+**Stable:** v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi  
+**Aktif geliştirme:** `gorev-04-esleme-v2` — plaj–mahalle eşlemesi v2 (yönetici incelemesinde)
