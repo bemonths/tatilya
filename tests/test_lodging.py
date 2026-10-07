@@ -136,6 +136,7 @@ def calendar(identifier, start):
 def fast(monkeypatch):
     monkeypatch.setattr(bl, "REQUEST_GAP", 0)
     monkeypatch.setattr(bl, "LIVE_PAUSE", 0)
+    monkeypatch.setattr(bl, "LIVE_BACKOFF", 0)
 
 
 def config(**changes):
@@ -324,7 +325,16 @@ def test_live_rates_stop_after_the_attempt_limit(tmp_path, monkeypatch):
             return response
     mock = Stuck()
     run(tmp_path, mock)
-    assert [attempt for checkin, attempt, _ in mock.live_calls if checkin == "20261017"] == [1, 2, 3]
+    assert [attempt for checkin, attempt, _ in mock.live_calls if checkin == "20261017"] == [1, 2, 3, 4, 5]
+
+
+def test_live_rates_follow_the_front_end_rule():
+    base = {"average_rate": None, "average_rate_usd": None, "live_rates_enabled": 0, "liveness": None}
+    assert not bl.needs_live(base)                                                        # no live integration at all
+    assert bl.needs_live({**base, "live_rates_enabled": 1})                                # enabled, no price yet
+    assert bl.needs_live({**base, "liveness": 0})                                          # the front end asks when liveness is set
+    assert not bl.needs_live({**base, "live_rates_enabled": 1, "average_rate": 250.0})     # already priced and not pending
+    assert bl.needs_live({**base, "liveness": 1, "average_rate": 250.0})                   # priced but pending
 
 
 def test_calendar_is_read_once_per_listing_and_summarized_by_month(tmp_path):
@@ -585,3 +595,7 @@ def test_quartiles_and_price_priority():
     assert bl.price_of({**row, "live_average_rate_usd": 130.0}, {"mean_rate": 120.0}) == (130.0, "canli")
     assert bl.price_of({**row, "average_rate": 140.0}, None) == (140.0, "liste")
     assert bl.price_of(row, {"mean_rate": None}) == (None, None)
+    # A current live answer replaces a pending search price, as on the front end; a pending live answer does not.
+    pending = {**row, "average_rate": 250.0, "average_rate_usd": 250.0, "live_average_rate_usd": 310.0}
+    assert bl.price_of({**pending, "live_liveness": 0}, None) == (310.0, "canli")
+    assert bl.price_of({**pending, "live_liveness": 1}, None) == (250.0, "liste")

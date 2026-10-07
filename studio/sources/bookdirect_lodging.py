@@ -27,7 +27,8 @@ CLIENT_KEY = re.compile(r'auth_token\s*:\s*"([^"\\]{8,200})"')
 REQUEST_GAP = 1.25          # seconds between sequential requests
 PER_PAGE = 50
 MAX_PAGES = 100             # per window and location filter
-LIVE_BATCH, LIVE_ATTEMPTS, LIVE_PAUSE = 50, 3, 2.0
+# The front end asks again while an answer is pending, waiting 1 s + 0.75 s x attempt, up to 20 times; we stop after 5.
+LIVE_BATCH, LIVE_ATTEMPTS, LIVE_PAUSE, LIVE_BACKOFF = 50, 5, 1.0, 0.75
 CALENDAR_DAYS = 365
 CALENDAR_MISSING = (400, 404, 422)   # a listing whose calendar the source does not serve is recorded, not a failed run
 MAX_BYTES = 8_000_000
@@ -344,10 +345,10 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
         live_requests = 0
         for index, window in enumerate(active):
             progress(40 + int(15 * index / len(active)), f"{window['label']}: canlı fiyatlar soruluyor.")
-            ids = sorted({key[2] for key, row in results.items() if key[0] == window["window_key"] and row["live_rates_enabled"]})
+            ids = sorted({key[2] for key, row in results.items() if key[0] == window["window_key"] and needs_live(row)})
             answers, live_requests = live_rates(call, window, ids, live_requests, canceled)
             for key, row in results.items():
-                if key[0] == window["window_key"] and row["live_rates_enabled"]:
+                if key[0] == window["window_key"] and key[2] in ids:
                     answer = answers.get(key[2])
                     row.update({"live_status": "answered" if answer else "no_answer", "live_attempts": answer["attempts"] if answer else 1,
                                 **({"live_average_rate_usd": answer["rate"], "live_los": answer["los"], "live_liveness": answer["liveness"]} if answer else {})})
@@ -430,6 +431,16 @@ def search(call, window, location_id, location_name, clone):
                       f"veya {len(rows)} ilan okunup {sorted(totals)} bildirildi. Kısmi sonuç kaydedilmedi.")
 
 
+def needs_live(row):
+    """Like the front end's get_live_rate_ids: ask unless the search already gave a price that is not pending (liveness 1).
+
+    The front end only looks at listings whose search row carries a liveness value; we also ask the listings the source marks
+    live_rates_enabled, so a live price is not missed when the search row leaves liveness empty.
+    """
+    has_price = row["average_rate_usd"] is not None or row["average_rate"] is not None
+    return (bool(row["live_rates_enabled"]) or row["liveness"] is not None) and (row["liveness"] == 1 or not has_price)
+
+
 def live_rates(call, window, ids, request_count, canceled):
     """Ask the live-rate service like the front end: repeat for pending answers up to LIVE_ATTEMPTS times."""
     answers, pending = {}, list(ids)
@@ -437,7 +448,7 @@ def live_rates(call, window, ids, request_count, canceled):
         if not pending:
             break
         if attempt > 1:
-            pause(LIVE_PAUSE, canceled)
+            pause(LIVE_PAUSE + LIVE_BACKOFF * (attempt - 1), canceled)
         still = []
         for batch_index in range(0, len(pending), LIVE_BATCH):
             batch = pending[batch_index:batch_index + LIVE_BATCH]
@@ -475,7 +486,13 @@ def quartiles(values):
 
 
 def price_of(row, calendar):
-    """The listing's nightly price for a window and where it came from: list, then live, then a fully priced calendar."""
+    """The listing's nightly price for a window and where it came from.
+
+    A current live answer (liveness 0) comes first, as the front end replaces the search price with it; then the search
+    (list) price, then any other live answer, then the mean of a fully priced calendar window.
+    """
+    if row["live_average_rate_usd"] is not None and row.get("live_liveness") == 0:
+        return row["live_average_rate_usd"], "canli"
     if row["average_rate_usd"] is not None or row["average_rate"] is not None:
         return (row["average_rate_usd"] if row["average_rate_usd"] is not None else row["average_rate"]), "liste"
     if row["live_average_rate_usd"] is not None:
@@ -524,9 +541,9 @@ def summarize(con, run_id, region_order=()):
                         sources[source] += 1
                 q1, median, q3 = quartiles(prices)
                 cell.update({"categories": dict(categories.most_common()), "no_category": sum(1 for m in members if not any(c != default_category for c in m["category_ids"])),
-                             "bedrooms_known": len(bedrooms), "bedrooms_median": statistics.median(bedrooms) if bedrooms else None,
+                             "bedrooms_known": len(bedrooms), "bedrooms_median": float(statistics.median(bedrooms)) if bedrooms else None,
                              "bedrooms_4_plus_share": round(sum(b >= 4 for b in bedrooms) / len(bedrooms), 3) if bedrooms else None,
-                             "bedroom_buckets": bedroom_buckets(bedrooms), "sleeps_median": statistics.median(sleeps) if sleeps else None,
+                             "bedroom_buckets": bedroom_buckets(bedrooms), "sleeps_median": float(statistics.median(sleeps)) if sleeps else None,
                              "priced_count": len(prices), "priced_share": round(len(prices) / len(rows), 3) if rows else None,
                              "price_sources": {name: sources.get(name, 0) for name in PRICE_SOURCES},
                              "price_q1": q1, "price_median": median, "price_q3": q3})
