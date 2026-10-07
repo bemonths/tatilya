@@ -1,8 +1,8 @@
 import {api, esc} from "./api.js";
 import {collectionTabs} from "./connectors.js";
 
-export const STATUS_TAGS={dogrulandi:"green",celiskili:"warm",dogrulanamadi:""};
-export const VIDEO_RULE="Video dili: “doğrulandı” satırlar kaynak gösterilerek söylenebilir; “çelişkili” satırlar ancak çelişki açıkça söylenerek ya da daha güncel resmî bir kaynakla çözülerek kullanılır; “doğrulanamadı” satırlar videoda kullanılmaz.";
+export const STATUS_TAGS={dogrulandi:"green",celiskili:"warm",dogrulanamadi:"",yerine_gecildi:""};
+export const VIDEO_RULE="Video dili: “doğrulandı” satırlar kaynak gösterilerek söylenebilir; “çelişkili” satırlar ancak çelişki açıkça söylenerek ya da daha güncel resmî bir kaynakla çözülerek kullanılır; “doğrulanamadı” satırlar videoda kullanılmaz; “yerine geçildi” satırlar kayıt için durur, videoda yerine geçen satır kullanılır.";
 
 /** Rows grouped by topic in the table's topic order; unknown topics keep their key as label and come last. */
 export function groupByTopic(rows, topics={}) {
@@ -10,7 +10,7 @@ export function groupByTopic(rows, topics={}) {
   return order.map(key=>({key,label:topics[key] || key,rows:(rows||[]).filter(r=>r.konu===key)})).filter(group=>group.rows.length);
 }
 export function statusCounts(rows) {
-  const counts={dogrulandi:0,celiskili:0,dogrulanamadi:0,overdue:0};
+  const counts={dogrulandi:0,celiskili:0,dogrulanamadi:0,yerine_gecildi:0,overdue:0};
   for(const row of rows || []) { if(row.durum in counts) counts[row.durum]++; if(row.overdue) counts.overdue++; }
   return counts;
 }
@@ -28,6 +28,7 @@ export function referenceRow(row, statuses={}) {
   const value=row.deger?`${esc(row.deger)}${row.birim?` <small>${esc(row.birim)}</small>`:""}`:'<span class="muted">—</span>';
   const details=[row.kisa_alinti?`<p>Kaynaktan alıntı (doğrulama için, videoda kullanılmaz): “${esc(row.kisa_alinti)}”</p>`:"",
     row.belge_konumu?`<p>Belgedeki yeri: ${esc(row.belge_konumu)}</p>`:"", row.celiski_notu?`<p><strong>Çelişki:</strong> ${esc(row.celiski_notu)}</p>`:"",
+    row.replaced_by?`<p><strong>Yerine geçen satır:</strong> ${esc(row.replaced_by)}</p>`:"",
     row.not?`<p>Not: ${esc(row.not)}</p>`:"", row.belge_sha256?`<p class="source-host">SHA-256 ${esc(row.belge_sha256)}</p>`:""].join("");
   return `<tr class="${row.overdue?"reference-overdue":""}"><td><strong>${esc(row.id)}</strong><div class="reference-statement">${esc(row.ifade)}</div>${details?`<details class="reference-details"><summary>Alıntı ve notlar</summary>${details}</details>`:""}</td>
     <td>${value}</td><td>${esc(row.kapsam)}</td>
@@ -54,7 +55,7 @@ export class ReferencesScreen {
     if(!snapshot.available) {body.innerHTML=`<section class="quality-result empty"><h2>Referans tablosu yok</h2><p>${esc(snapshot.reason || "")}</p></section>`;return;}
     const counts=statusCounts(snapshot.rows);
     body.innerHTML=`<section class="overview collection-overview">${[[counts.dogrulandi,"doğrulandı","Kaynak gösterilerek söylenebilir"],[counts.celiskili,"çelişkili","Çelişki söylenmeden kullanılmaz"],
-      [counts.dogrulanamadi,"doğrulanamadı","Videoda kullanılmaz"],[counts.overdue,"yeniden kontrol","Tarihi geçmiş satır"]].map(([n,label,note])=>`<div class="metric"><div><div class="metric-number"><strong>${n}</strong><span class="metric-label">${label}</span></div><small>${note}</small></div></div>`).join("")}</section>
+      [counts.dogrulanamadi,"doğrulanamadı","Videoda kullanılmaz"],[counts.yerine_gecildi,"yerine geçildi","Kayıt için durur"],[counts.overdue,"yeniden kontrol","Tarihi geçmiş satır"]].map(([n,label,note])=>`<div class="metric"><div><div class="metric-number"><strong>${n}</strong><span class="metric-label">${label}</span></div><small>${note}</small></div></div>`).join("")}</section>
       ${snapshot.problems?.length?`<div class="stage-note reference-problems" role="alert"><p><strong>Tablo doğrulamadan geçmedi:</strong> ${snapshot.problems.map(esc).join(" · ")}</p></div>`:""}
       <div class="toolbar reference-toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><input type="search" id="reference-search" aria-label="Referanslarda ara" placeholder="Kimlik, ifade veya kaynak ara…" value="${esc(this.search)}"></div>
       <select id="reference-status" aria-label="Durum filtresi"><option value="">Bütün durumlar</option>${[...Object.entries(snapshot.statuses || {}),["overdue","yeniden kontrol tarihi geçmiş"]].map(([key,label])=>`<option value="${esc(key)}" ${key===this.status?"selected":""}>${esc(label)}</option>`).join("")}</select></div>

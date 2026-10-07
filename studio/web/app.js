@@ -4,6 +4,7 @@ import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen} from "./restaurants.js";
 import {NeighborhoodScreen} from "./neighborhoods.js";
+import {LodgingScreen, LODGING_CONNECTOR} from "./lodging.js";
 import {ClimateScreen, CLIMATE_ACTIONS, CLIMATE_BUTTONS, CLIMATE_CONNECTORS} from "./climate.js";
 import {ReferencesScreen} from "./references.js";
 import {WeatherScreen} from "./weather.js";
@@ -23,13 +24,15 @@ let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
 let lastNeighborhoodId=null;
 const neighborhoodScreen=new NeighborhoodScreen();
+let lastLodgingId=null;
+const lodgingScreen=new LodgingScreen();
 // The three climate jobs can be queued together; refresh on every newly finished one, not only the newest.
 let climateDoneIds=new Set();
 const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status==="done" && Object.values(CLIMATE_CONNECTORS).includes(j.result?.connector_name)).map(j=>j.id);
 const climateScreen=new ClimateScreen();
 const referencesScreen=new ReferencesScreen();
-const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
-const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods",
+const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
+const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
 
 function toast(text) {
@@ -66,6 +69,7 @@ function render() {
   weatherScreen.invalidate();
   restaurantScreen.invalidate();
   neighborhoodScreen.invalidate();
+  lodgingScreen.invalidate();
   climateScreen.invalidate();
   referencesScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
@@ -175,6 +179,9 @@ function updateAuditButtons() {
   const restaurantSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-restaurants");
   const restaurantBusy=state.data.jobs.some(j=>j.source_id===restaurantSource?.id && active(j));
   document.querySelectorAll('[data-action="collect-restaurants"]').forEach(button=>{button.disabled=!restaurantSource || restaurantBusy;button.textContent=restaurantBusy?"Toplama sürüyor…":"↓ Restoran verilerini topla";});
+  const lodgingSource=state.data.sources.find(s=>s.enabled && s.connector?.name===LODGING_CONNECTOR);
+  const lodgingBusy=state.data.jobs.some(j=>j.source_id===lodgingSource?.id && active(j));
+  document.querySelectorAll('[data-action="collect-lodging"]').forEach(button=>{button.disabled=!lodgingSource || lodgingBusy;button.textContent=lodgingBusy?"Toplama sürüyor…":"↓ Konaklama aramalarını topla";});
   const neighborhoodSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-neighborhoods");
   const neighborhoodBusy=state.data.jobs.some(j=>j.source_id===neighborhoodSource?.id && active(j));
   document.querySelectorAll('[data-action="collect-neighborhoods"]').forEach(button=>{button.disabled=!neighborhoodSource || neighborhoodBusy;button.textContent=neighborhoodBusy?"Toplama sürüyor…":"↓ Mahalle verilerini topla";});
@@ -282,6 +289,7 @@ $("#main").addEventListener("click", async event=>{
       case "collect-water-temperature":
       case "collect-storms":
       case "collect-neighborhoods":
+      case "collect-lodging":
       case "collect-restaurants":
       case "collect-weather":
       case "collect-beaches": {
@@ -316,8 +324,8 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,climateScreen,referencesScreen]);
-  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=null;climateDoneIds=new Set();
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,climateScreen,referencesScreen]);
+  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';
   $("#jobs-content").innerHTML='';
@@ -341,6 +349,7 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastWeatherId=state.data.weather_runs[0]?.id || null;
     lastRestaurantId=state.data.restaurant_runs?.[0]?.id || null;
     lastNeighborhoodId=state.data.neighborhood_runs?.[0]?.id || null;
+    lastLodgingId=state.data.lodging_runs?.[0]?.id || null;
     climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
@@ -368,6 +377,14 @@ async function start(destinationId=storedDestination(localStorage)) {
           state.data.neighborhood_runs=await api("neighborhood-runs");lastNeighborhoodId=neighborhoodLatest.id;neighborhoodScreen.selectedRun=null;
           if(location.hash==="#collect/neighborhoods") render();
           toast("Mahalle verileri kaydedildi. Mahalleler sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
+      const lodgingLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name===LODGING_CONNECTOR);
+      if(lodgingLatest && lodgingLatest.id!==lastLodgingId) {
+        try {
+          state.data.lodging_runs=await api("lodging-runs");lastLodgingId=lodgingLatest.id;lodgingScreen.selectedRun=null;lodgingScreen.snapshot=null;
+          if(location.hash==="#collect/lodging") render();
+          toast("Konaklama verileri kaydedildi. Konaklama sekmesinden inceleyebilirsin.");
         } catch(error) {toast(error.message);}
       }
       const climateFinished=climateDone(state.data.jobs);

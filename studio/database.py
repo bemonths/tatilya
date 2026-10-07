@@ -12,8 +12,9 @@ from .migration_v6 import upgrade_v6
 from .migration_v7 import upgrade_v7
 from .migration_v8 import upgrade_v8
 from .migration_v9 import upgrade_v9
+from .migration_v10 import upgrade_v10
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -54,14 +55,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8):
+            if version in (3, 4, 5, 6, 7, 8, 9):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -72,7 +73,9 @@ class Database:
                     upgrade_v7(con)
                 if version < 8:
                     upgrade_v8(con)
-                upgrade_v9(con)
+                if version < 9:
+                    upgrade_v9(con)
+                upgrade_v10(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -124,6 +127,7 @@ class Database:
             upgrade_v7(con)
             upgrade_v8(con)
             upgrade_v9(con)
+            upgrade_v10(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -144,7 +148,11 @@ class Database:
             stations=tuple(dict(r) for r in con.execute("SELECT * FROM destination_climate_stations WHERE destination_id=? AND enabled=1 ORDER BY sort_order,station_key",(identifier,)))
             row=con.execute("SELECT * FROM destination_storm_corridors WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
             corridor={**dict(row),"radii_nmi":json.loads(row["radii_nmi"])} if row else None
-        return ConnectorContext(destination,regions,anchors,stations,corridor)
+            row=con.execute("SELECT * FROM destination_lodging_sources WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
+            lodging={"clone_host":row["clone_host"],
+                     "locations":{r["source_location_name"]:r["region_id"] for r in con.execute("SELECT * FROM destination_lodging_locations WHERE destination_id=? ORDER BY source_location_name",(identifier,))},
+                     "windows":[dict(r) for r in con.execute("SELECT window_key,label,checkin,checkout FROM destination_lodging_windows WHERE destination_id=? AND enabled=1 ORDER BY sort_order,checkin",(identifier,))]} if row else None
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging)
 
     def sources(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:

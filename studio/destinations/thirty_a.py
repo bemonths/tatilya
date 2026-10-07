@@ -33,6 +33,8 @@ SEEDS = [
      "Yapılandırılmış istasyonun tarihî yıllık ölçüm dosyalarından aylık deniz suyu sıcaklığı ortalamaları (bizim hesabımız). 30A için PCBF1 (Panama City Beach).", "Dosya"),
     ("NOAA NHC · HURDAT2 kasırga izleri", "https://www.nhc.noaa.gov/data/", "Hava",
      "Atlantik best track dosyasından destinasyonun kıyı koridoruna yakın geçen tropikal siklonlar (bizim hesabımız): ilk giriş ayı, en yakın mesafe, daire içindeki en yüksek rüzgâr ve sınıf.", "Dosya"),
+    ("South Walton · Konaklama (Book>Direct)", "https://visitsouthwalton.bookdirect.net/", "Konaklama",
+     "Visit South Walton'ın resmî Stay ön yüzünün kullandığı Book>Direct aramaları: yapılandırılmış tarih pencerelerinde her mahalle filtresinde görünen ilanlar, türleri, büyüklükleri ve kaynağın verdiği fiyat alanları; ilan başına aylık fiyat takvimi özeti. Tarihli arama anlık görüntüsüdür, tam envanter değildir.", "JSON"),
 ]
 
 # Visit South Walton spells a few neighborhoods differently from the canonical regions.
@@ -79,6 +81,23 @@ CLIMATE_STATIONS = (
      "role": "iç kesim karşılaştırması", "latitude": 30.7244, "longitude": -86.0939, "distance_km": 44.1, "first_year": None},
     {"station_key": "water", "kind": "water_temperature", "station_id": "PCBF1", "label": "Panama City Beach (NOS 8729210)",
      "role": "deniz suyu sıcaklığı", "latitude": 30.213, "longitude": -85.88, "distance_km": 12.9, "first_year": 2005},
+)
+# Lodging search snapshots (generic Book>Direct connector; copied into SQLite by migration v10).
+# Location filters are matched by their exact names in the clone's show.json; "Seagrove Beach" is a separate filter in the
+# source and is also tied to Seagrove (each search row keeps the filter it came from). Other filters stay out of scope.
+LODGING_CLONE_HOST = "visitsouthwalton.bookdirect.net"
+LODGING_LOCATIONS = {
+    "Dune Allen": "dune-allen", "Gulf Place": "gulf-place", "Santa Rosa Beach": "santa-rosa-beach",
+    "Blue Mountain Beach": "blue-mountain-beach", "Grayton Beach": "grayton-beach", "Watercolor": "watercolor",
+    "Seaside": "seaside", "Seagrove": "seagrove", "Seagrove Beach": "seagrove", "Watersound": "watersound",
+    "Seacrest": "seacrest", "Alys Beach": "alys-beach", "Rosemary Beach": "rosemary-beach", "Inlet Beach": "inlet-beach",
+}
+# Saturday to Saturday, 7 nights (a common vacation-rental pattern; an assumption, not a source fact). Past windows are skipped.
+LODGING_WINDOWS = (
+    ("fall-2026", "Sonbahar 2026", "2026-10-17", "2026-10-24"),
+    ("winter-2027", "Kış 2027", "2027-01-16", "2027-01-23"),
+    ("spring-break-2027", "Bahar tatili 2027", "2027-03-13", "2027-03-20"),
+    ("summer-2027", "Yaz 2027", "2027-07-10", "2027-07-17"),
 )
 STORM_CORRIDOR = {
     "label": "30A kıyı koridoru",

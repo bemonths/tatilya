@@ -16,7 +16,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import beaches, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
+from .sources import beaches, bookdirect_lodging, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
@@ -95,6 +95,9 @@ def create_app(data_dir: Path | None = None, registry=None):
                                            "source_url": neighborhoods.SOURCE_URL, "scope": neighborhoods.SCOPE},
                 "beach_neighborhoods": beach_neighborhoods(destination_id),
                 "climate_runs": climate_runs(destination_id),
+                "lodging_runs": lodging_runs(destination_id),
+                "lodging_connector": {"name": bookdirect_lodging.BookDirectLodgingConnector.name, "method": "JSON",
+                                      "scope": bookdirect_lodging.SCOPE, "config": context.lodging},
                 "climate_connectors": {"normals": climate_normals.ClimateNormalsConnector.name,
                                        "water": water_temperature.WaterTemperatureConnector.name,
                                        "storms": storm_proximity.StormProximityConnector.name},
@@ -352,6 +355,48 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham iklim manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-iklim-{identifier[:8]}.json")
+
+    LODGING = bookdirect_lodging.BookDirectLodgingConnector.name
+
+    @app.get("/api/lodging-runs")
+    def lodging_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] == LODGING and run["status"] == "done"]
+
+    def find_lodging_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != LODGING or run["status"] != "done":
+            raise HTTPException(404, "Bu konaklama veri sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/lodging-runs/{identifier}")
+    def lodging_run(identifier: str):
+        """Region x window summary and monthly calendar medians, computed when read; nothing derived is stored."""
+        run = find_lodging_run(identifier)
+        order = [region["id"] for region in db.context(run["destination_id"]).canonical_regions]
+        with db.connect() as con:
+            summary = bookdirect_lodging.summarize(con, identifier, order)
+        if summary is None:
+            raise HTTPException(404, "Bu konaklama veri sürümünün özeti bulunamadı.")
+        return {"run": run, **summary}
+
+    @app.get("/api/lodging-runs/{identifier}/listings")
+    def lodging_listings(identifier: str, region_id: str):
+        find_lodging_run(identifier)
+        with db.connect() as con:
+            listings = bookdirect_lodging.region_listings(con, identifier, region_id)
+        if listings is None:
+            raise HTTPException(404, "Bu mahalle için konaklama araması yok.")
+        return {"region_id": region_id, "listings": listings}
+
+    @app.get("/api/lodging-runs/{identifier}/raw")
+    def raw_lodging_run(identifier: str):
+        run = find_lodging_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham konaklama manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"konaklama-{identifier[:8]}.json")
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

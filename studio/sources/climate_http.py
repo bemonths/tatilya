@@ -66,8 +66,11 @@ class Reader:
         temporary.write_text(json.dumps(self.manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         temporary.replace(self.path)
 
-    def get(self, url, *, suffix, note, content_types, params=None, allow_missing=False):
-        """Return (body bytes, final url), or (None, final url) for an accepted 404."""
+    def get(self, url, *, suffix, note, content_types, params=None, allow_missing=False, headers=None, missing=(404,)):
+        """Return (body bytes, final url), or (None, final url) for an accepted 404 (or another status listed in `missing`).
+
+        Extra request headers (for example an API client key) are sent but never written to the manifest.
+        """
         original = self.checked(url)
         if params:
             original = str(httpx.URL(original, params=params))
@@ -77,7 +80,7 @@ class Reader:
                 for hop in range(4):
                     check(self.canceled)
                     pause(self.request_gap, self.canceled)
-                    with self.client.stream("GET", current, follow_redirects=False, headers={"User-Agent": USER_AGENT}) as response:
+                    with self.client.stream("GET", current, follow_redirects=False, headers={**(headers or {}), "User-Agent": USER_AGENT}) as response:
                         chunks, size = [], 0
                         for part in response.iter_bytes():
                             check(self.canceled)
@@ -92,7 +95,7 @@ class Reader:
                                 raise SourceError(f"{self.label} yönlendirme sınırı aşıldı veya hedef eksik.")
                             current = self.checked(response.headers["location"], current)
                             continue
-                        if response.status_code == 404 and allow_missing:
+                        if response.status_code in missing and allow_missing:
                             return None, str(response.url)
                         if response.status_code == 429:
                             raise SourceError(f"{self.label} istek sınırına ulaştı (429). Daha sonra deneyin.")

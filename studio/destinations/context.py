@@ -10,4 +10,5 @@ class ConnectorContext:
     weather_anchors: tuple[dict, ...]
     climate_stations: tuple[dict, ...] = ()
     storm_corridor: dict | None = None
+    lodging: dict | None = None
 

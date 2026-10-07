@@ -68,6 +68,28 @@ def test_validator_accepts_partial_document_dates_quote_limit_and_unverified_row
     assert ref.problems([{**GOOD, "durum": "celiskili", "celiski_notu": "Other page says otherwise."}]) == []
 
 
+def test_superseded_rows_name_a_verified_replacement():
+    old = {**GOOD, "id": "eski", "durum": "yerine_gecildi", "celiski_notu": "Two pages disagreed.", "not": "Karar: yerine geçen: kural-cam."}
+    assert ref.problems([GOOD, old]) == []
+    assert ref.replaced_by(old) == "kural-cam" and ref.replaced_by(GOOD) is None
+    missing_note = ref.problems([GOOD, {**old, "not": "kural-cam daha yeni"}])
+    assert any("'yerine geçen: <kimlik>'" in problem for problem in missing_note), missing_note
+    unknown = ref.problems([GOOD, {**old, "not": "yerine geçen: yok-boyle"}])
+    assert any("(yok-boyle) tabloda doğrulanmış bir satır değil" in problem for problem in unknown), unknown
+    # The replacement must itself be verified, and a superseded row still needs its document hash and https address.
+    unverified = ref.problems([{**GOOD, "durum": "dogrulanamadi", "belge_sha256": ""}, old])
+    assert any("doğrulanmış bir satır değil" in problem for problem in unverified)
+    assert any("SHA-256'sı zorunlu" in problem for problem in ref.problems([GOOD, {**old, "belge_sha256": ""}]))
+    assert any("https ile başlamalı" in problem for problem in ref.problems([GOOD, {**old, "kaynak_url": "http://x"}]))
+
+
+def test_snapshot_names_the_replacing_row(tmp_path):
+    path = write(tmp_path / "r.csv", [GOOD, {**GOOD, "id": "eski", "durum": "yerine_gecildi", "not": "yerine geçen: kural-cam"}])
+    data = ref.snapshot(path, on=date(2026, 10, 8))
+    assert [row["replaced_by"] for row in data["rows"]] == [None, "kural-cam"]
+    assert data["statuses"]["yerine_gecildi"] == "yerine geçildi" and data["problems"] == []
+
+
 def test_duplicate_identifier():
     assert any("birden fazla" in p for p in ref.problems([GOOD, dict(GOOD)]))
 
@@ -106,9 +128,13 @@ def test_committed_30a_table_is_valid():
             assert row["celiski_notu"]
     # Conflicting facts come in pairs that name each other.
     conflicts = {row["id"]: row["celiski_notu"] for row in rows if row["durum"] == "celiskili"}
-    for pair in (("cankurtaran-swfd", "cankurtaran-vsw"), ("timpoochee-uzunluk-liste", "timpoochee-uzunluk-rehber"),
-                 ("ziyaretci-2025-ozet", "ziyaretci-2025-ekonomik-etki")):
+    for pair in (("timpoochee-uzunluk-liste", "timpoochee-uzunluk-rehber"),):
         assert pair[1] in conflicts[pair[0]] and pair[0] in conflicts[pair[1]]
+    # Resolved conflicts (GOREV-07) stay in the table and name the verified row that replaced them.
+    by_id = {row["id"]: row for row in rows}
+    for old, new in (("cankurtaran-swfd", "cankurtaran-2026"), ("cankurtaran-vsw", "cankurtaran-2026"),
+                     ("ziyaretci-2025-ekonomik-etki", "ziyaretci-2025-ozet")):
+        assert by_id[old]["durum"] == "yerine_gecildi" and ref.replaced_by(by_id[old]) == new and by_id[new]["durum"] == "dogrulandi"
 
 
 def test_tdt_collections_file_is_complete_and_consistent():

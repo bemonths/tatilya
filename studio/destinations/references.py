@@ -14,7 +14,9 @@ REQUIRED = ("id", "konu", "ifade", "kapsam", "kaynak_adi", "kaynak_sahibi", "kay
             "yeniden_kontrol_tarihi")
 TOPICS = {"plaj-kurallari": "Plaj kuralları", "guvenlik": "Güvenlik", "plaj-erisimi": "Plaj erişimi", "ulasim": "Ulaşım",
           "parklar": "Parklar", "kasirga-sezonu": "Kasırga sezonu", "sezon-maliyet": "Sezon ve maliyet", "genel": "Genel"}
-STATUSES = {"dogrulandi": "doğrulandı", "celiskili": "çelişkili", "dogrulanamadi": "doğrulanamadı"}
+STATUSES = {"dogrulandi": "doğrulandı", "celiskili": "çelişkili", "dogrulanamadi": "doğrulanamadı", "yerine_gecildi": "yerine geçildi"}
+# A superseded row stays in the table for the record; its note names the verified row that replaces it.
+REPLACED_BY = re.compile(r"yerine geçen: ([a-z0-9]+(?:-[a-z0-9]+)*)")
 CONFIDENCE = {"birincil": "birincil", "ikincil": "ikincil"}
 SCOPES = ("30A", "South Walton", "Walton County", "Florida", "Atlantik havzası")
 MAX_QUOTE_WORDS = 25
@@ -99,7 +101,7 @@ def problems(rows):
             found.append(f"{label}: belge tarihi YYYY, YYYY-AA veya YYYY-AA-GG biçiminde değil.")
         if row.get("belge_sha256") and not SHA_PATTERN.fullmatch(row["belge_sha256"]):
             found.append(f"{label}: SHA-256 64 küçük onaltılık karakter olmalı.")
-        if row.get("durum") in ("dogrulandi", "celiskili"):
+        if row.get("durum") in ("dogrulandi", "celiskili", "yerine_gecildi"):
             if not row.get("kaynak_url", "").startswith("https://"):
                 found.append(f"{label}: doğrulanmış satırın kaynak adresi https ile başlamalı.")
             if not row.get("belge_sha256"):
@@ -108,7 +110,23 @@ def problems(rows):
             found.append(f"{label}: çelişkili satırda çelişki notu zorunlu.")
         if len((row.get("kisa_alinti") or "").split()) > MAX_QUOTE_WORDS:
             found.append(f"{label}: kısa alıntı {MAX_QUOTE_WORDS} kelimeyi geçiyor.")
+    verified = {row.get("id") for row in rows if row.get("durum") == "dogrulandi"}
+    for number, row in enumerate(rows, 2):
+        if row.get("durum") != "yerine_gecildi":
+            continue
+        label = f"{number}. satır ({row.get('id') or 'kimliksiz'})"
+        match = REPLACED_BY.search(row.get("not") or "")
+        if not match:
+            found.append(f"{label}: yerine geçilen satırın notunda 'yerine geçen: <kimlik>' yazmalı.")
+        elif match.group(1) not in verified:
+            found.append(f"{label}: yerine geçen satır ({match.group(1)}) tabloda doğrulanmış bir satır değil.")
     return found
+
+
+def replaced_by(row):
+    """Identifier of the verified row that supersedes this one, or None."""
+    match = REPLACED_BY.search(row.get("not") or "") if row.get("durum") == "yerine_gecildi" else None
+    return match.group(1) if match else None
 
 
 def snapshot(path, on=None):
@@ -118,5 +136,6 @@ def snapshot(path, on=None):
     for row in rows:
         recheck = valid_day(row["yeniden_kontrol_tarihi"])
         row["overdue"] = bool(recheck and recheck < on)
+        row["replaced_by"] = replaced_by(row)
     return {"available": True, "file": path.name, "today": on.isoformat(), "topics": TOPICS, "statuses": STATUSES,
             "problems": problems(rows), "rows": rows}

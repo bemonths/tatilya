@@ -37,7 +37,7 @@ def test_migration_updates_only_exact_nws_defaults(tmp_path, notes, method, url,
         expected = list(before); expected[5] = expected_method; expected[7] = expected_notes
         assert list(after) == expected + ["30a",None]
         assert con.execute('SELECT * FROM source_history').fetchall() == history
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 9
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 10
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con:
         assert con.execute("SELECT * FROM sources WHERE id='nws'").fetchone() == before
@@ -61,7 +61,9 @@ def test_fresh_seed_methods_and_nws_description(tmp_path):
     assert sources[BEACH]['method'] == 'JSON'
     climate = {NORMALS_URL: 'API', WATER_URL: 'Dosya', STORMS_URL: 'Dosya'}
     assert {url: sources[url]['method'] for url in climate} == climate
-    assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH, "https://www.visitsouthwalton.com/listings/culinary-experiences/", "https://www.visitsouthwalton.com/neighborhoods/", *climate))
+    assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH, "https://www.visitsouthwalton.com/listings/culinary-experiences/", "https://www.visitsouthwalton.com/neighborhoods/", *climate,
+                                                                              "https://visitsouthwalton.bookdirect.net/"))
+    assert sources["https://visitsouthwalton.bookdirect.net/"]['method'] == 'JSON'
 
 
 def test_v2_chain_also_refreshes_default_beach_method(tmp_path):

@@ -8,13 +8,20 @@ from studio.sources.climate_normals import SOURCE_URL as NORMALS_URL
 from studio.sources.neighborhoods import SOURCE_URL as NEIGHBORHOOD_URL
 from studio.sources.storm_proximity import SOURCE_URL as STORMS_URL
 from studio.sources.water_temperature import SOURCE_URL as WATER_URL
+from studio.destinations.thirty_a import LODGING_CLONE_HOST
 
-# Built-in 30A sources added by migrations: v7 (neighborhoods) and v8 (three climate sources).
-ADDED_SOURCE_URLS = (NEIGHBORHOOD_URL, NORMALS_URL, WATER_URL, STORMS_URL)
+LODGING_URL = f"https://{LODGING_CLONE_HOST}/"
+
+# Built-in 30A sources added by migrations: v7 (neighborhoods), v8 (three climate sources) and v10 (Book>Direct lodging).
+ADDED_SOURCE_URLS = (NEIGHBORHOOD_URL, NORMALS_URL, WATER_URL, STORMS_URL, LODGING_URL)
 # Tables created by v8 and their rows in an upgraded 30A database (configuration only, no snapshots).
 V8_TABLES = {"destination_climate_stations": 3, "destination_storm_corridors": 1, "climate_normal_stations": 0,
              "climate_normal_values": 0, "water_temperature_stations": 0, "water_temperature_months": 0,
              "storm_corridor_snapshots": 0, "storm_passages": 0}
+# Tables created by v10 and their rows in an upgraded 30A database (lodging configuration only, no snapshots).
+V10_TABLES = {"destination_lodging_sources": 1, "destination_lodging_locations": 14, "destination_lodging_windows": 4,
+              "lodging_snapshots": 0, "lodging_windows": 0, "lodging_filters": 0, "lodging_listings": 0, "lodging_search_results": 0,
+              "lodging_calendars": 0, "lodging_rate_months": 0, "lodging_calendar_windows": 0}
 
 
 def without_added_sources(sources):

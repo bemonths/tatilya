@@ -147,7 +147,7 @@ test('neighborhood jobs and tabs route to the fourth domain',()=>{
   const tabs=collectionTabs('neighborhoods');
   assert.match(tabs,/href="#collect\/neighborhoods" aria-current="page">Mahalleler</);
   assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
-  assert.equal((tabs.match(/class="tab/g)||[]).length,6);
+  assert.equal((tabs.match(/class="tab/g)||[]).length,7);
 });
 test('neighborhoods list west to east by representative point',()=>{
   const ordered=westToEast([hood('Inlet Beach',-86.0),hood('Dune Allen',-86.25),hood('Seaside',-86.13),hood('Alpha',-86.13)]);
@@ -389,16 +389,17 @@ const ref=(id,konu,durum,extra={})=>({id,konu,durum,ifade:`Statement ${id}.`,deg
   kaynak_url:'https://example.gov/doc',belge_konumu:'Sec. 1',kisa_alinti:'quoted words',belge_tarihi:'2025',erisim_tarihi:'2026-10-07',belge_sha256:'a'.repeat(64),
   guven:'birincil',celiski_notu:'',yeniden_kontrol_tarihi:'2027-10-07',not:'',overdue:false,...extra});
 const TOPICS={'plaj-kurallari':'Plaj kuralları','guvenlik':'Güvenlik','parklar':'Parklar'};
-const STATUSES={dogrulandi:'doğrulandı',celiskili:'çelişkili',dogrulanamadi:'doğrulanamadı'};
+const STATUSES={dogrulandi:'doğrulandı',celiskili:'çelişkili',dogrulanamadi:'doğrulanamadı',yerine_gecildi:'yerine geçildi'};
 test('reference tab routes to the sixth collection tab',()=>{
   const tabs=collectionTabs('references');
   assert.match(tabs,/href="#collect\/references" aria-current="page">Referanslar</);
   assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
 });
 test('references group by topic order, count statuses and overdue rows, and filter',()=>{
-  const rows=[ref('b','guvenlik','celiskili',{overdue:true}),ref('a','plaj-kurallari','dogrulandi'),ref('c','parklar','dogrulanamadi',{ifade:'Grayton fee'}),ref('d','yeni-konu','dogrulandi')];
-  assert.deepEqual(groupByTopic(rows,TOPICS).map(g=>[g.label,g.rows.map(r=>r.id)]),[['Plaj kuralları',['a']],['Güvenlik',['b']],['Parklar',['c']],['yeni-konu',['d']]]);
-  assert.deepEqual(statusCounts(rows),{dogrulandi:2,celiskili:1,dogrulanamadi:1,overdue:1});
+  const rows=[ref('b','guvenlik','celiskili',{overdue:true}),ref('a','plaj-kurallari','dogrulandi'),ref('c','parklar','dogrulanamadi',{ifade:'Grayton fee'}),ref('d','yeni-konu','dogrulandi'),ref('e','guvenlik','yerine_gecildi',{replaced_by:'a'})];
+  assert.deepEqual(groupByTopic(rows,TOPICS).map(g=>[g.label,g.rows.map(r=>r.id)]),[['Plaj kuralları',['a']],['Güvenlik',['b','e']],['Parklar',['c']],['yeni-konu',['d']]]);
+  assert.deepEqual(statusCounts(rows),{dogrulandi:2,celiskili:1,dogrulanamadi:1,yerine_gecildi:1,overdue:1});
+  assert.deepEqual(filterReferences(rows,{status:'yerine_gecildi'}).map(r=>r.id),['e']);
   assert.deepEqual(filterReferences(rows,{status:'overdue'}).map(r=>r.id),['b']);
   assert.deepEqual(filterReferences(rows,{status:'dogrulandi',search:''}).map(r=>r.id),['a','d']);
   assert.deepEqual(filterReferences(rows,{search:'GRAYTON'}).map(r=>r.id),['c']);
@@ -412,6 +413,9 @@ test('reference rows link only https sources, escape text and mark overdue reche
   assert.match(html,/doğrulama için, videoda kullanılmaz/);
   const blank=referenceRow(ref('y','parklar','dogrulanamadi',{deger:'',birim:'',belge_sha256:'',kisa_alinti:''}),STATUSES);
   assert.match(blank,/<span class="muted">—<\/span>/);assert.doesNotMatch(blank,/SHA-256|null|undefined/);
+  const superseded=referenceRow(ref('z','guvenlik','yerine_gecildi',{replaced_by:'cankurtaran-2026'}),STATUSES);
+  assert.match(superseded,/Yerine geçen satır:<\/strong> cankurtaran-2026/);assert.match(superseded,/tag ">yerine geçildi/);
+  assert.doesNotMatch(referenceRow(ref('w','guvenlik','dogrulandi',{replaced_by:null}),STATUSES),/Yerine geçen/);
 });
 test('references screen shows counts, the video rule and an unavailable table',()=>{
   const body={innerHTML:'',querySelector(selector){return selector==='#reference-groups'?(this.groupsElement ??= {innerHTML:''}):null;}};
@@ -421,6 +425,7 @@ test('references screen shows counts, the video rule and an unavailable table',(
   screen.draw({querySelector:()=>body});
   assert.match(body.innerHTML,/<strong>1<\/strong><span class="metric-label">doğrulandı/);
   assert.match(body.innerHTML,/<strong>1<\/strong><span class="metric-label">yeniden kontrol/);
+  assert.match(body.innerHTML,/<strong>0<\/strong><span class="metric-label">yerine geçildi/);assert.match(VIDEO_RULE,/yerine geçildi/);
   assert.ok(body.innerHTML.includes(VIDEO_RULE.slice(0,40)));
   assert.match(body.groupsElement.innerHTML,/<h2>Plaj kuralları<\/h2><small>1 satır/);
   screen.snapshot={...screen.snapshot,problems:['2. satır: <bad>']};screen.draw({querySelector:()=>body});
@@ -429,3 +434,48 @@ test('references screen shows counts, the video rule and an unavailable table',(
   screen.draw({querySelector:()=>empty});
   assert.match(empty.innerHTML,/Referans tablosu yok<\/h2><p>Bu destinasyon için referans tablosu yok\./);
 });
+
+import {LodgingScreen, summaryCell, usd, percent, listingCategories, priceTag, regionMonthly, monthLabel, sourceCounts, bedroomText} from '../studio/web/lodging.js';
+test('lodging jobs and the tab route to the lodging screen',()=>{
+  assert.deepEqual(jobResultTarget({kind:'source_collection',result:{connector_name:'bookdirect-lodging'}}),{href:'#collect/lodging',label:'Konaklama verilerini aç'});
+  assert.match(collectionTabs('lodging'),/href="#collect\/lodging" aria-current="page">Konaklama</);
+});
+test('lodging cells keep missing prices and skipped windows visible',()=>{
+  assert.equal(usd(1234.4),'$1,234');assert.equal(usd(null),null);assert.equal(percent(0.05),'%5');assert.equal(percent(null),null);
+  assert.match(summaryCell({status:'skipped_past'}),/Geçmiş tarih; aranmadı/);
+  assert.match(summaryCell({status:'searched',listing_count:0}),/Aramada ilan görünmedi/);
+  const cell=summaryCell({status:'searched',listing_count:60,priced_count:3,priced_share:0.05,price_q1:225,price_median:250,price_q3:280});
+  assert.match(cell,/60 ilan/);assert.match(cell,/fiyatlı 3 \(%5\)/);assert.match(cell,/\$250<\/strong><small>gecelik ortanca · \$225–\$280/);
+  assert.match(summaryCell({status:'searched',listing_count:3,priced_count:0,priced_share:0,price_median:null}),/Fiyat bilgisi yok/);
+  assert.equal(sourceCounts({liste:1,canli:2}),'liste 1 · canlı 2 · takvim 0');
+  assert.match(bedroomText({bedrooms_known:0}),/Kaynakta yok/);
+  assert.match(bedroomText({bedrooms_known:2,listing_count:3,bedrooms_median:4.5,bedrooms_4_plus_share:0.5}),/ortanca 4,5 · 4\+ oda %50 <small>2\/3 ilanda/);
+});
+test('lodging listing helpers drop the default category and escape source text',()=>{
+  assert.equal(listingCategories({category_ids:[103,849],category_names:['All Lodging','<b>Homes</b>']},103),'&lt;b&gt;Homes&lt;/b&gt;');
+  assert.match(listingCategories({category_ids:[103],category_names:['All Lodging']},103),/Belirtilmemiş/);
+  assert.match(priceTag(undefined),/Bu pencerede görünmedi/);assert.match(priceTag({price:null}),/Fiyat yok/);
+  assert.match(priceTag({price:310,price_source:'canli',los:3}),/\$310<small>canlı · en az 3 gece/);
+  assert.deepEqual(regionMonthly([{region_id:'a',month:'2027-07'},{region_id:'b',month:'2027-07'}],'a'),[{region_id:'a',month:'2027-07'}]);
+  assert.equal(monthLabel('2027-07'),'Tem 2027');
+});
+test('lodging screen draws the region x window table with the scope label',()=>{
+  const nodes={};const node=()=>({innerHTML:'',textContent:'',addEventListener(){}});
+  const body={...node(),querySelector:selector=>nodes[selector] ??= node()};
+  const main={querySelector:selector=>selector==='#lodging-body'?body:(nodes[selector] ??= node())};
+  const screen=new LodgingScreen();
+  screen.snapshot={run:{id:'r1'},snapshot:{listing_count:64,request_count:120,searched_on:'2026-10-07',default_category_id:103},
+    windows:[{window_key:'fall',label:'Sonbahar 2026',checkin:'2026-10-17',checkout:'2026-10-24',nights:7,status:'searched'},
+             {window_key:'old',label:'<Eski>',checkin:'2026-01-01',checkout:'2026-01-08',nights:7,status:'skipped_past'}],
+    regions:[{region_id:'seaside',region_name:'Seaside',filters:['Seaside']}],
+    cells:[{region_id:'seaside',window_key:'fall',status:'searched',listing_count:60,priced_count:0,priced_share:0,price_median:null},
+           {region_id:'seaside',window_key:'old',status:'skipped_past',listing_count:0}],monthly:[],label:'2026-10-07 tarihinde yapılan aramada görünen ilanlar; tam envanter değildir.'};
+  screen.draw(main);
+  assert.match(body.innerHTML,/<strong>64<\/strong><span class="metric-label">benzersiz ilan/);
+  assert.match(body.innerHTML,/1 geçmiş pencere atlandı/);
+  assert.match(body.innerHTML,/tam envanter değildir/);
+  assert.match(body.innerHTML,/&lt;Eski&gt;<small>2026-01-01 → 2026-01-08 · 7 gece/);
+  assert.match(body.innerHTML,/data-lodging-region="seaside">Seaside<\/button>/);
+  assert.match(body.innerHTML,/60 ilan/);assert.match(body.innerHTML,/Geçmiş tarih; aranmadı/);
+});
+
