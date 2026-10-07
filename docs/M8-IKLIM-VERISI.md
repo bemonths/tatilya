@@ -1,6 +1,6 @@
 # M8 — İklim verisi: normaller, deniz suyu sıcaklığı, kasırga geçmişi
 
-Tarih: 7 Ekim 2026 · Görev: GÖREV-05 · Dal: `gorev-05-iklim` · Uygulama `0.8.0` · Şema `8`
+Tarih: 7 Ekim 2026 · Görevler: GÖREV-05 (paket), GÖREV-06 (kasırga evre kuralı) · Uygulama `0.9.0` · Şema `9`
 
 Bu belge ilk videonun "ne zaman gitmeli" sorusu için kurulan iklim paketini anlatır: üç toplayıcı, yapılandırma, hesap yöntemleri, veri modeli, arayüz, migration, testler, 7 Ekim 2026 sonuçları ve sınırlar. Kaynak keşfi: `docs/gorevler/GOREV-02/KAYNAK-KESFI.md` Alan 4 ve 5.
 
@@ -9,7 +9,8 @@ Bu belge ilk videonun "ne zaman gitmeli" sorusu için kurulan iklim paketini anl
 - Bu paket destinasyonun içinden ölçüm vermez. Her değer kaynağıyla, istasyon adıyla ve uzaklığıyla etiketlenir. "30A'nın iklimi" denmez; "30A'ya en yakın kıyı istasyonu Destin'in 1991–2020 normali" denir.
 - Hesapladığımız değerler (deniz suyu yıl-ay ve çok yıllı ortalamaları, °C/mm dönüşümleri, kasırga geçişleri, sayıları ve sınıfları) "NOAA verisinden bizim hesabımız" diye işaretlenir; NOAA ürünü değildir.
 - "En yakın kıyı istasyonu" ifadesi 7 Ekim 2026'da doğrulandı: NCEI arama API'sinde (`/access/services/search/v1/data`, `dataset=normals-monthly-1991-2020`, 30,0–30,9° K ve 85,5–86,7° B kutusu, 19 istasyon) **sıcaklık normali olan** istasyonlar içinde 30A kıyı koridoruna en yakını Destin–Fort Walton Beach Havalimanı'dır (20,5 km); ikinci NW Florida Beaches Intl Havalimanı (USW00073805, 21,7 km). Yalnız **yağış** normali olan iki gönüllü gözlem istasyonu daha yakındır: Panama City Beach 5.9 WNW (US1FLBY0010, 6,0 km) ve Freeport 3.4 S (US1FLWT0002, 14,0 km). Bunlar kullanılmadı (bkz. §10).
-- Dönemler farklıdır ve her yerde yazılır: normaller 1991–2020; deniz suyu 2005–2025 arasında dosyası bulunan yıllar; kasırga geçişleri bütün HURDAT2 sezonları (arayüz ve CSV'de dönem okuma anında seçilir, ilk video için 1991–2025).
+- Dönemler farklıdır ve her yerde yazılır: normaller 1991–2020; deniz suyu 2005–2025 arasında dosyası bulunan yıllar; kasırga geçişleri bütün HURDAT2 sezonları (arayüz ve CSV'de dönem okuma anında seçilir).
+- **Video dönemi (yönetici kararı, GÖREV-06):** videoda kasırga rakamları 1991–2025 dönemiyle verilir ve dönem açıkça söylenir.
 
 ## 2. Genel tasarım
 
@@ -85,25 +86,28 @@ Değişken kodları API'de ve NCEI'nin 1991–2020 aylık normal belgesinde doğ
 | Kaynak | [NOAA NHC](https://www.nhc.noaa.gov/data/) HURDAT2 Atlantik best track dosyası |
 | Dosya adı | Her sürümde değişir. Toplayıcı veri sayfasındaki `/data/hurdat/hurdat2-YYYY-YYYY-AAGGYY.txt` biçimindeki **tek** bağlantıyı okur (Pasifik dosyası `hurdat2-nepac-…` ve biçim PDF'leri eşleşmez); bağlantı yoksa veya birden fazlaysa çekim durur. Dosya adı ve URL çekim kaydına ve `storm_corridor_snapshots.hurdat_file` alanına yazılır. |
 | 30A koridoru ve yarıçaplar | §2'deki doğru parçası; 50 ve 100 deniz mili (92,6 / 185,2 km) |
-| Toplayıcı | `hurdat2-storm-proximity/1`, yöntem Dosya |
+| Toplayıcı | `hurdat2-storm-proximity/2` (GÖREV-06; yalnız tropikal ve subtropikal evreler), yöntem Dosya. `/1` çekimleri bütün evreleri sayıyordu; eski çekimler kendi sürümleriyle olduğu gibi kalır. |
 
 **Yöntem.**
 1. Başlık satırı (`AL011851, UNNAMED, 14,`) ve iz satırları ayrıştırılır; satır sayısı, koordinatlar ve zaman sırası denetlenir. Rüzgâr `-999` bilinmiyor demektir; sıfır sayılmaz.
 2. Ardışık iz noktaları arasında 1 saatlik doğrusal ara değerleme (enlem, boylam ve rüzgâr). 15:30 gibi sinoptik olmayan noktalar korunur; ara değerleme her noktada yeniden başlar. Rüzgârı bilinmeyen bir uçta ara değer de bilinmiyor kalır. Ara noktanın evresi (HURDAT2 durum kodu) bulunduğu aralığın başındaki noktanınkidir.
 3. Her saatlik noktanın koridor doğru parçasına en kısa büyük çember uzaklığı hesaplanır (uçların ötesinde en yakın uca uzaklık).
-4. Fırtına başına: bütün izdeki en yakın uzaklık (km ve deniz mili). Her yarıçap için: ize daire içinde ilk girilen saat (UTC) ve ayı; daire içindeki en yüksek sürekli rüzgâr (tam knot'a aşağı yuvarlanır, sınıf eşikleri tam knot olduğu için); bu rüzgâra göre sınıf **TD** < 34 kt, **TS** 34–63 kt, **HU** 64–95 kt, **MH** ≥ 96 kt (Saffir-Simpson 3 ve üstü); en yüksek rüzgârın olduğu andaki evre. Daireye birden fazla girip çıkan fırtına o yarıçapta bir kez sayılır.
-5. Bütün sezonlar saklanır; dönem seçimi okuma anında yapılır (arayüz, CSV).
+4. **Evre kuralı (yönetici kararı, GÖREV-06):** sayım ve sınıflandırma yalnız fırtınanın tropikal veya subtropikal olduğu evrelere göre yapılır. HURDAT2 durum kodlarından TD, TS, HU, SD ve SS kullanılır; EX (ekstratropikal), LO (alçak basınç), WV (tropikal dalga) ve DB (bozukluk) evrelerindeki noktalar daireye giriş, en yakın mesafe ve en yüksek rüzgâr hesabına girmez. Ara noktalar aralığın başındaki noktanın evresini taşır; bu yüzden bir TS noktasından sonraki EX noktasına kadar olan saatler TS sayılır, EX noktasının kendisi ve sonrası sayılmaz.
+5. Fırtına başına: tropikal/subtropikal noktalardaki en yakın uzaklık (km ve deniz mili). Her yarıçap için: ize daire içinde ilk girilen saat (UTC) ve ayı; daire içindeki en yüksek sürekli rüzgâr (tam knot'a aşağı yuvarlanır, sınıf eşikleri tam knot olduğu için); bu rüzgâra göre sınıf **TD** < 34 kt, **TS** 34–63 kt, **HU** 64–95 kt, **MH** ≥ 96 kt (Saffir-Simpson 3 ve üstü); en yüksek rüzgârın olduğu andaki evre. Daireye birden fazla girip çıkan fırtına o yarıçapta bir kez sayılır.
+6. Bir daireye **yalnız tropikal olmayan bir evrede** giren fırtına saklanmaya devam eder ama `non_tropical_only = 1` diye işaretlenir; bu satırda giriş, en yakın uzaklık ve rüzgâr o evrelerden ölçülür, sınıf boş kalır. İşaretli satırlar aylık sayımlara, sınıf tablolarına ve "en yakın geçen fırtınalar" listesine girmez; arayüz onları ayrı bir "sayılmayan" satırında adıyla ve evresiyle gösterir.
+7. Bütün sezonlar saklanır; dönem seçimi okuma anında yapılır (arayüz, CSV).
 
 **Sınırlar.**
 - Sınıf daire içindeki en yüksek rüzgâra göredir; karaya çıkış şiddeti değildir. Bir fırtına 100 deniz mili içinde MH, 50 içinde daha zayıf olabilir.
-- HURDAT2 tropikal olmayan evreleri de içerir (EX ekstratropikal, LO alçak basınç, WV dalga, DB bozukluk) ve subtropikal evreleri (SD, SS). Sınıf yalnız rüzgâra göredir; evre ayrıca saklanır ve gösterilir. 1991–2025'te 50 deniz mili içindeki 20 geçişin 5'inde en yüksek rüzgâr tropikal olmayan veya subtropikal bir evrede (EX 2, LO 2, SD 1). Bu evrelerin sayıma girip girmeyeceği yönetici kararıdır (§10).
+- Evre, HURDAT2'nin altı saatlik noktalarındaki durum kodudur; evrenin iki nokta arasında tam ne zaman değiştiği bilinmez. Kural gereği ara noktalar aralığın başındaki evreyi taşır.
+- `/1` sürümü (GÖREV-05) bütün evreleri sayıyordu; 1991–2025'te 50 deniz mili içindeki 20 geçişin 5'inde en yüksek rüzgâr tropikal olmayan veya subtropikal bir evredeydi (EX 2, LO 2, SD 1). `/2` ile değişen sayılar `docs/gorevler/GOREV-06/kasirga-v1-v2-fark.csv` içindedir.
 - Mesafe fırtına merkezinin izine göredir; rüzgâr alanı daha geniştir. "50 deniz mili içinden geçti" 30A'da kasırga koşulları yaşandı demek değildir; tersine daha uzaktan geçen bir fırtına da etkili olabilir.
 - Altı saatlik noktalar arasındaki gerçek iz bilinmez; doğrusal ara değerleme yaklaşıktır.
 - Erken dönem kayıtları (uydu gözlemi öncesi) daha belirsizdir; 1851–1990 sayıları sonraki dönemle doğrudan karşılaştırılmamalıdır.
 
 **Video dili örneği.** "NOAA'nın HURDAT2 kayıtlarına göre 1991–2025 arasında merkezi 30A kıyısına 50 deniz mili (93 km) içinden geçen ve bu daire içinde kasırga gücünde rüzgâra ulaşan beş fırtına oldu; bu sayım NOAA verisinden bizim hesabımızdır."
 
-## 6. Veri modeli (şema 8)
+## 6. Veri modeli (şema 8; şema 9'da `storm_passages.non_tropical_only`)
 
 | Tablo | Satır | Not |
 |---|---|---|
@@ -112,7 +116,7 @@ Değişken kodları API'de ve NCEI'nin 1991–2020 aylık normal belgesinde doğ
 | `water_temperature_stations` | çekim × istasyon | denenen ilk/son yıl, `years_found`, `years_missing` (JSON) |
 | `water_temperature_months` | çekim × istasyon × yıl × ay | `mean_c`, `observation_count`, `day_count` (1–31) |
 | `storm_corridor_snapshots` | çekim | koridor, yarıçaplar, HURDAT2 dosya adı, sistem sayısı, ilk/son sezon |
-| `storm_passages` | çekim × fırtına × yarıçap | ad, sezon, ilk giriş zamanı/ayı, en yakın km/deniz mili, en yüksek rüzgâr, sınıf, evre |
+| `storm_passages` | çekim × fırtına × yarıçap | ad, sezon, ilk giriş zamanı/ayı, en yakın km/deniz mili, en yüksek rüzgâr, sınıf, evre; şema 9'dan beri `non_tropical_only` (0/1; `/1` çekimlerinde 0) |
 
 Yabancı anahtarlar çekime (`source_runs`) ve istasyon satırlarına bağlıdır; enlem/boylam, ay, gün sayısı, sınıf ve JSON alanları `CHECK` kısıtlarıyla korunur.
 
@@ -133,13 +137,15 @@ Mevcut kurallarla: SQLite backup API ile `data/backups/studio-v7-<id>.sqlite3` y
 
 7 Ekim 2026: gerçek veritabanının `work/` kopyasında deneme (yalnız yeni tablolar ve 3 kaynak eklendi, eski satırlar aynı, `integrity_check` ok, `foreign_key_check` boş); ardından `data/` tam yedeği (`work/yedek/20261007-1533/`, 352 dosya) alınıp uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v7-ff556c8bc97447fca0bafa160eb7a9a7.sqlite3`) ve yalnız üç iklim toplayıcısı çalıştırıldı. Sayılar: `docs/gorevler/GOREV-05/RAPOR.md`.
 
+**v8 → v9 (GÖREV-06):** aynı kurallarla (yedek, tek transaction, `foreign_key_check`, geri alma) `storm_passages` tablosuna `non_tropical_only INTEGER NOT NULL DEFAULT 0 CHECK (0/1)` sütunu eklenir; mevcut satırlar değişmez.
+
 ## 9. Testler
 
-Canlı ağ yok; sentetik fixture'lar `tests/fixtures/climate/` (normal JSON'u, iki NDBC yıl dosyası, NHC veri sayfası, HURDAT2) ve `httpx.MockTransport`. Kasırga fixture'ı ekvator üzerinde bir test koridoru kullanır, (0, −87) → (0, −86); burada koridorun yanındaki bir noktanın uzaklığı tam olarak R × |enlem|'dir, beklenen değerler hesaptan bağımsızdır. `tests/test_climate.py` kapsamı: büyük çember ve doğru parçası uzaklığı (uçların ötesi dahil) ve profil uzaklıkları; HURDAT2 başlık/iz ayrıştırma ve yapı hataları; 1 saatlik ara değerleme (bilinmeyen rüzgâr, 15:30 noktası); yarıçap içi ilk giriş, en yakın uzaklık, sınıf, yeniden giriş, ay sınırı, rüzgârsız fırtına; sınıf eşikleri; aylık sayım ve dönem seçimi; güncel dosya adının sayfadan okunması, tek bağlantı kuralı; HTTP yönlendirme, 5xx/429/403, içerik türü ve boyut sınırları; normallerde eksik değişken (NULL), boş değer, özel değer, bayrak ve yıl sayısı saklama, yapı hataları, robots kuralına uygun yol; NDBC eksik değer işaretleri, 20 gün kuralı (19/20 gün sınırı), yıl dosyası 404, ham dosyaların SHA-256'sı, biçim hataları; iptal (başlangıçta, istekler arasında, API üzerinden); her toplayıcı için atomik geri alma; v7 → v8 migration, yedek, geri alma, kaynağın yinelenmemesi, yapılandırmanın üzerine yazılmaması; şema kısıtları; destinasyon yalıtımı (başka destinasyonun istasyonları ve koridoru karışmaz, yapılandırmasız destinasyon ağa çıkmaz). `tests/frontend.test.mjs`: sekme ve iş yönlendirmesi, birim dönüşümleri ve eksik değerin sıfır gösterilmemesi, bayrak özeti, kasırga sayımı ve en yakınlar, düğme durumları, destinasyon değişimi, tablo etiketleri ve karşılaştırma.
+Canlı ağ yok; sentetik fixture'lar `tests/fixtures/climate/` (normal JSON'u, iki NDBC yıl dosyası, NHC veri sayfası, HURDAT2) ve `httpx.MockTransport`. Kasırga fixture'ı ekvator üzerinde bir test koridoru kullanır, (0, −87) → (0, −86); burada koridorun yanındaki bir noktanın uzaklığı tam olarak R × |enlem|'dir, beklenen değerler hesaptan bağımsızdır. `tests/test_climate.py` kapsamı: büyük çember ve doğru parçası uzaklığı (uçların ötesi dahil) ve profil uzaklıkları; HURDAT2 başlık/iz ayrıştırma ve yapı hataları; 1 saatlik ara değerleme (bilinmeyen rüzgâr, 15:30 noktası); yarıçap içi ilk giriş, en yakın uzaklık, sınıf, yeniden giriş, ay sınırı, rüzgârsız fırtına; sınıf eşikleri; aylık sayım ve dönem seçimi; evre kuralı (evre sınırında ara değerleme, yalnız EX evresinde daireye giren fırtına, TD→EX geçişi, SD ve SS evrelerinin sayılması); v8 → v9 migration ve geri alma; güncel dosya adının sayfadan okunması, tek bağlantı kuralı; HTTP yönlendirme, 5xx/429/403, içerik türü ve boyut sınırları; normallerde eksik değişken (NULL), boş değer, özel değer, bayrak ve yıl sayısı saklama, yapı hataları, robots kuralına uygun yol; NDBC eksik değer işaretleri, 20 gün kuralı (19/20 gün sınırı), yıl dosyası 404, ham dosyaların SHA-256'sı, biçim hataları; iptal (başlangıçta, istekler arasında, API üzerinden); her toplayıcı için atomik geri alma; v7 → v8 migration, yedek, geri alma, kaynağın yinelenmemesi, yapılandırmanın üzerine yazılmaması; şema kısıtları; destinasyon yalıtımı (başka destinasyonun istasyonları ve koridoru karışmaz, yapılandırmasız destinasyon ağa çıkmaz). `tests/frontend.test.mjs`: sekme ve iş yönlendirmesi, birim dönüşümleri ve eksik değerin sıfır gösterilmemesi, bayrak özeti, kasırga sayımı ve en yakınlar, düğme durumları, destinasyon değişimi, tablo etiketleri ve karşılaştırma.
 
 ## 10. Açık konular (yönetici kararı)
 
-1. **Tropikal olmayan evreler.** Sayımlar yalnız rüzgâra göre; EX/LO/WV/DB evreleri dahil. Yalnız tropikal/subtropikal evreler sayılsın mı?
+1. ~~Tropikal olmayan evreler~~ — karar verildi (GÖREV-06): yalnız TD, TS, HU, SD, SS evreleri sayılır (§5).
 2. **Daha yakın yağış istasyonları.** Panama City Beach 5.9 WNW (US1FLBY0010, koridora 6,0 km, yalnız aylık yağış normali) ve Freeport 3.4 S (US1FLWT0002, 14,0 km) yağış için eklenebilir; değerlendirilmedi.
 3. **PCBF1'de 2009–2012 yıllık dosyaları yok (404).** Çok yıllı ortalamalar 13–16 yıldan hesaplanıyor. Aynı istasyonun NOS CO-OPS verisi veya NDBC'nin başka dosyaları bu boşluğu doldurabilir; değerlendirilmedi.
 4. **Nem.** Hazır bir bağıl nem normali yok (GÖREV-02); pakete eklenmedi.

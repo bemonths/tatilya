@@ -54,16 +54,18 @@ export function flagSummary(values, stationId) {
   });
 }
 /** Storms per first-entry month and class for one radius and season range; mirrors storm_proximity.monthly_counts. */
+/** Passages inside a radius only while extratropical, a low, wave or disturbance are kept but never counted. */
+export const counted=p=>!p.non_tropical_only;
 export function stormMonthlyCounts(passages, radius, from, to) {
   const table=Array.from({length:12},()=>({TD:0,TS:0,HU:0,MH:0,bilinmiyor:0}));
   for(const p of passages || []) {
-    if(p.radius_nmi!==radius || (from && p.season<from) || (to && p.season>to)) continue;
+    if(!counted(p) || p.radius_nmi!==radius || (from && p.season<from) || (to && p.season>to)) continue;
     table[p.first_entry_month-1][p.storm_class || "bilinmiyor"]++;
   }
   return table;
 }
 export function closestStorms(passages, radius, from, to, limit=10) {
-  return (passages || []).filter(p=>p.radius_nmi===radius && (!from || p.season>=from) && (!to || p.season<=to))
+  return (passages || []).filter(p=>counted(p) && p.radius_nmi===radius && (!from || p.season>=from) && (!to || p.season<=to))
     .sort((a,b)=>a.closest_km-b.closest_km || a.season-b.season || a.storm_id.localeCompare(b.storm_id)).slice(0,limit);
 }
 const stationName=station=>`${esc(station.label)} · ${esc(station.station_id)}`;
@@ -143,6 +145,10 @@ export class ClimateScreen {
     const total=counts.reduce((sum,row)=>sum+Object.values(row).reduce((a,b)=>a+b,0),0);
     const closest=closestStorms(storms.passages,radius,this.from,this.to);
     const period=`${this.from ?? c.first_season}–${this.to ?? c.last_season}`;
+    const v1=String(storms.run?.connector_version || "").endsWith("/1");
+    const excluded=(storms.passages || []).filter(p=>!counted(p) && p.radius_nmi===radius && (!this.from || p.season>=this.from) && (!this.to || p.season<=this.to));
+    const rule=v1?"Bu çekim eski kuralla (hurdat2-storm-proximity/1) yapıldı: fırtınanın bütün evreleri sayıldı; yeni çekim yalnız tropikal ve subtropikal evreleri sayar."
+      :"Yalnız fırtınanın tropikal veya subtropikal olduğu evreler sayılır (HURDAT2 durum kodları TD, TS, HU, SD, SS); EX, LO, WV ve DB evreleri daireye giriş, en yakın mesafe ve en yüksek rüzgâr hesabına girmez. İki iz noktası arasındaki saatlik noktalar aralığın başındaki noktanın evresini taşır.";
     return `<section class="library climate-block"><div class="library-title"><h2>Kasırga geçmişi · ${esc(radius)} deniz mili · ${esc(period)}</h2><small>${total} fırtına</small></div>
       <div class="climate-controls"><label class="climate-control">Yarıçap <select id="storm-radius" aria-label="Yarıçap">${c.radii_nmi.map(r=>`<option value="${esc(r)}" ${r===radius?"selected":""}>${esc(r)} deniz mili (${number(r*1.852,0)} km)</option>`).join("")}</select></label>
       <label class="climate-control">İlk sezon <input id="storm-from" type="number" min="${esc(c.first_season)}" max="${esc(c.last_season)}" value="${esc(this.from ?? "")}"></label>
@@ -151,6 +157,7 @@ export class ClimateScreen {
       <tbody>${counts.map((row,i)=>`<tr><th scope="row">${MONTHS[i]}</th>${STORM_CLASSES.map(([key])=>`<td>${row[key]||'<span class="muted">0</span>'}</td>`).join("")}<td><strong>${Object.values(row).reduce((a,b)=>a+b,0)}</strong></td></tr>`).join("")}</tbody></table></div>
       <h3 class="climate-subtitle">Koridora en yakın geçen fırtınalar</h3>
       <div class="table-scroll"><table class="climate-table"><thead><tr><th>FIRTINA</th><th>İLK GİRİŞ (UTC)</th><th>EN YAKIN MESAFE</th><th>DAİREDEKİ EN YÜKSEK RÜZGÂR</th><th>SINIF</th></tr></thead><tbody>${closest.length?closest.map(p=>`<tr><td><strong>${esc(p.name)}</strong> ${esc(p.season)}<div class="source-host">${esc(p.storm_id)}</div></td><td>${esc(p.first_entry_time.replace("T"," ").replace("Z",""))}</td><td>${number(p.closest_km)} km<small>${number(p.closest_nmi)} deniz mili</small></td><td>${p.max_wind_kt==null?'<span class="muted">Kaynakta yok</span>':`${esc(p.max_wind_kt)} kt`}${p.status_at_max?`<small>evre: ${esc(p.status_at_max)}</small>`:""}</td><td>${p.storm_class?esc(storms.class_labels[p.storm_class] || p.storm_class):'<span class="muted">Belirlenemedi</span>'}</td></tr>`).join(""):'<tr><td colspan="5">Bu yarıçap ve dönemde geçiş yok.</td></tr>'}</tbody></table></div>
-      <p class="source-stamp">Kaynak: NOAA NHC HURDAT2 Atlantik izleri, dosya ${esc(c.hurdat_file)} (${esc(c.first_season)}–${esc(c.last_season)}, ${esc(c.storm_count)} sistem). Koridor: ${esc(c.west_reference)} – ${esc(c.east_reference)}. NOAA verisinden bizim hesabımız: izler 1 saatlik doğrusal ara değerlemeyle sıklaştırılır; ay, fırtınanın daireye ilk girdiği ay (UTC); sınıf, daire içindeki en yüksek sürekli rüzgâr; her fırtına bir yarıçapta bir kez sayılır. Sınıf rüzgâra göredir; o andaki evre (ör. EX ekstratropikal) ayrıca gösterilir.</p></section>`;
+      ${excluded.length?`<p class="source-stamp">Sayılmayan: bu daireye yalnız tropikal olmayan bir evrede giren ${excluded.length} fırtına (${excluded.map(p=>`${esc(p.name)} ${esc(p.season)}, evre ${esc(p.status_at_max || "?")}`).join("; ")}).</p>`:""}
+      <p class="source-stamp">Kaynak: NOAA NHC HURDAT2 Atlantik izleri, dosya ${esc(c.hurdat_file)} (${esc(c.first_season)}–${esc(c.last_season)}, ${esc(c.storm_count)} sistem). Koridor: ${esc(c.west_reference)} – ${esc(c.east_reference)}. NOAA verisinden bizim hesabımız: izler 1 saatlik doğrusal ara değerlemeyle sıklaştırılır; ay, fırtınanın daireye ilk girdiği ay (UTC); sınıf, daire içindeki en yüksek sürekli rüzgâr; her fırtına bir yarıçapta bir kez sayılır. ${rule}</p></section>`;
   }
 }

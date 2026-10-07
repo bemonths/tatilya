@@ -21,7 +21,7 @@ from studio.app import create_app
 from studio.database import Database
 from studio.destinations import thirty_a
 from studio.migration_v7 import upgrade_v7
-from studio.migration_v8 import seed_destination_climate
+from studio.migration_v8 import seed_destination_climate, upgrade_v8
 from studio.sources import climate_http
 from studio.sources import climate_normals as cn
 from studio.sources import storm_proximity as sp
@@ -184,7 +184,8 @@ def test_hurdat2_parses_headers_and_track_lines():
     storms = sp.parse_hurdat2(HURDAT)
     assert [(s["storm_id"], s["name"], s["season"], len(s["fixes"])) for s in storms] == [
         ("AL012010", "ALPHA", 2010, 3), ("AL022011", "BRAVO", 2011, 3), ("AL032011", "CHARLIE", 2011, 3),
-        ("AL042011", "DELTA", 2011, 2), ("AL012012", "ECHO", 2012, 4), ("AL022012", "FOXTROT", 2012, 2), ("AL032012", "GOLF", 2012, 3)]
+        ("AL042011", "DELTA", 2011, 2), ("AL012012", "ECHO", 2012, 4), ("AL022012", "FOXTROT", 2012, 2), ("AL032012", "GOLF", 2012, 3),
+        ("AL042012", "HOTEL", 2012, 3), ("AL052012", "INDIA", 2012, 4), ("AL062012", "JULIETT", 2012, 3), ("AL072012", "KILO", 2012, 3)]
     alpha = storms[0]["fixes"]
     assert alpha[0] == (datetime(2010, 8, 1, 0, 0, tzinfo=timezone.utc), "TS", -3.0, -86.5, 40)
     assert alpha[1] == (datetime(2010, 8, 1, 6, 0, tzinfo=timezone.utc), "HU", 0.0, -86.5, 100)
@@ -230,9 +231,12 @@ def test_hourly_linear_interpolation():
     assert [p[3] for p in sp.hourly(mixed)] == [50, None, None]
 
 
+STAGE_STORMS = {"HOTEL", "INDIA", "JULIETT", "KILO"}
+
+
 def test_passages_first_entry_closest_distance_and_class():
     records = sp.passages(sp.parse_hurdat2(HURDAT), TEST_CORRIDOR, [50, 100])
-    found = by_key(records, "name", "radius_nmi")
+    found = by_key([r for r in records if r["name"] not in STAGE_STORMS], "name", "radius_nmi")
     # CHARLIE stays 2 degrees (222 km, 120 nmi) away; DELTA is far out in the Atlantic.
     assert sorted(found) == [("ALPHA", 50), ("ALPHA", 100), ("BRAVO", 50), ("BRAVO", 100), ("ECHO", 50), ("ECHO", 100),
                              ("FOXTROT", 50), ("FOXTROT", 100), ("GOLF", 100)]
@@ -254,8 +258,9 @@ def test_passages_first_entry_closest_distance_and_class():
     actual = {key: (r["first_entry_time"], r["first_entry_month"], r["max_wind_kt"], r["storm_class"], r["status_at_max"], r["closest_km"])
               for key, r in found.items()}
     assert actual == expected
+    assert {r["non_tropical_only"] for r in found.values()} == {0}
     for record in records:
-        assert record["closest_nmi"] == round(record["closest_km"] / KM_PER_NMI, 1) <= record["radius_nmi"]
+        assert record["closest_nmi"] == round(record["closest_km"] / KM_PER_NMI, 1)
         assert record["season"] == int(record["storm_id"][4:])
     assert found[("GOLF", 100)]["closest_nmi"] == 60.0
 
@@ -274,11 +279,58 @@ def test_monthly_counts_by_radius_and_season_range():
     records = sp.passages(sp.parse_hurdat2(HURDAT), TEST_CORRIDOR, [50, 100])
     def nonzero(table):
         return {month: {k: v for k, v in counts.items() if v} for month, counts in table.items() if any(counts.values())}
-    assert nonzero(sp.monthly_counts(records, 50)) == {7: {"TS": 1}, 8: {"MH": 1, "bilinmiyor": 1}, 9: {"TS": 1}}
-    assert nonzero(sp.monthly_counts(records, 100)) == {6: {"TS": 1}, 8: {"MH": 1, "bilinmiyor": 1}, 9: {"HU": 2}}
+    # INDIA (both radii) and JULIETT (50 nmi) were inside only while extratropical: kept, flagged, never counted.
+    assert nonzero(sp.monthly_counts(records, 50)) == {7: {"TS": 1}, 8: {"MH": 1, "TS": 1, "bilinmiyor": 1}, 9: {"TS": 1}, 11: {"TS": 1}}
+    assert nonzero(sp.monthly_counts(records, 100)) == {6: {"TS": 1}, 8: {"MH": 1, "TS": 1, "bilinmiyor": 1}, 9: {"HU": 2}, 10: {"TD": 1},
+                                                        11: {"TS": 1}}
     assert nonzero(sp.monthly_counts(records, 100, 2011, 2011)) == {9: {"HU": 1}}
-    assert nonzero(sp.monthly_counts(records, 100, 2012)) == {6: {"TS": 1}, 8: {"bilinmiyor": 1}, 9: {"HU": 1}}
-    assert sum(sum(c.values()) for c in sp.monthly_counts(records, 100).values()) == len({r["storm_id"] for r in records})
+    assert nonzero(sp.monthly_counts(records, 100, 2012)) == {6: {"TS": 1}, 8: {"TS": 1, "bilinmiyor": 1}, 9: {"HU": 1}, 10: {"TD": 1},
+                                                              11: {"TS": 1}}
+    counted = {r["storm_id"] for r in records if r["radius_nmi"] == 100 and not r["non_tropical_only"]}
+    assert sum(sum(c.values()) for c in sp.monthly_counts(records, 100).values()) == len(counted) == 8
+
+
+def stage_records(name):
+    storm, = (s for s in sp.parse_hurdat2(HURDAT) if s["name"] == name)
+    return storm, by_key(sp.passages([storm], TEST_CORRIDOR, [50, 100]), "radius_nmi")
+
+
+def test_interpolated_points_take_the_stage_of_the_interval_start():
+    storm, found = stage_records("HOTEL")
+    # TS fix at 00Z, EX fix at 06Z on the corridor: 01Z-05Z are TS, the 06Z fix and later are EX.
+    assert [p[4] for p in sp.hourly(storm["fixes"])] == ["TS"] * 6 + ["EX"] * 7
+    # The EX fix on the corridor (0 km) counts for nothing: closest is the last TS point, 0.35 degrees away.
+    assert found[(50,)]["closest_km"] == found[(100,)]["closest_km"] == round(0.35 * KM_PER_DEGREE, 1)
+    assert (found[(50,)]["first_entry_time"], found[(50,)]["max_wind_kt"], found[(50,)]["storm_class"]) == ("2012-08-15T04:00Z", 46, "TS")
+    assert (found[(100,)]["first_entry_time"], found[(100,)]["max_wind_kt"], found[(100,)]["status_at_max"]) == ("2012-08-15T02:00Z", 53, "TS")
+    assert {r["non_tropical_only"] for r in found.values()} == {0}
+
+
+def test_storm_inside_only_while_extratropical_is_kept_but_flagged():
+    _, found = stage_records("INDIA")
+    assert sorted(found) == [(50,), (100,)]
+    for record in found.values():
+        assert record["non_tropical_only"] == 1 and record["storm_class"] is None and record["status_at_max"] == "EX"
+        assert record["closest_km"] == round(0.2 * KM_PER_DEGREE, 1)
+    assert (found[(50,)]["first_entry_time"], found[(100,)]["first_entry_time"]) == ("2012-10-01T11:00Z", "2012-10-01T09:00Z")
+    assert all(not any(counts.values()) for counts in sp.monthly_counts(list(found.values()), 50).values())
+
+
+def test_depression_that_becomes_extratropical_counts_only_where_it_was_tropical():
+    _, found = stage_records("JULIETT")
+    tropical, flagged = found[(100,)], found[(50,)]
+    assert (tropical["non_tropical_only"], tropical["storm_class"], tropical["status_at_max"], tropical["max_wind_kt"]) == (0, "TD", "TD", 31)
+    assert tropical["first_entry_time"] == "2012-10-15T00:00Z" and tropical["closest_km"] == round((1.6 - 0.7 * 5 / 6) * KM_PER_DEGREE, 1)
+    assert (flagged["non_tropical_only"], flagged["storm_class"], flagged["status_at_max"]) == (1, None, "EX")
+    assert flagged["closest_km"] == round(0.2 * KM_PER_DEGREE, 1)
+
+
+def test_subtropical_depression_and_storm_stages_count():
+    _, found = stage_records("KILO")
+    assert (found[(50,)]["status_at_max"], found[(50,)]["max_wind_kt"], found[(50,)]["storm_class"]) == ("SD", 42, "TS")
+    assert (found[(100,)]["status_at_max"], found[(100,)]["max_wind_kt"], found[(100,)]["storm_class"]) == ("SS", 46, "TS")
+    assert found[(50,)]["closest_km"] == 0.0 and {r["non_tropical_only"] for r in found.values()} == {0}
+    assert sp.TROPICAL_STATUSES == {"TD", "TS", "HU", "SD", "SS"}
 
 
 # --- NHC collection --------------------------------------------------------------------------------
@@ -287,10 +339,12 @@ def test_storm_collection_reads_current_file_name_and_keeps_raw_files(tmp_path):
     mock = StormMock()
     result = run_storms(tmp_path, mock)
     assert mock.seen == ["/data/", f"/data/hurdat/{HURDAT_FILE}"]      # the Pacific file and the PDFs are never read
-    assert result.total_count == 7 and len(result.records) == 9
-    assert {k: result.metadata[k] for k in ("hurdat_file", "hurdat_url", "storm_count", "first_season", "last_season", "passages")} == {
-        "hurdat_file": HURDAT_FILE, "hurdat_url": f"https://www.nhc.noaa.gov/data/hurdat/{HURDAT_FILE}", "storm_count": 7,
-        "first_season": 2010, "last_season": 2012, "passages": {"50": 4, "100": 5}}
+    assert result.total_count == 11 and len(result.records) == 17
+    keys = ("hurdat_file", "hurdat_url", "storm_count", "first_season", "last_season", "passages", "non_tropical_only", "tropical_statuses")
+    assert {k: result.metadata[k] for k in keys} == {
+        "hurdat_file": HURDAT_FILE, "hurdat_url": f"https://www.nhc.noaa.gov/data/hurdat/{HURDAT_FILE}", "storm_count": 11,
+        "first_season": 2010, "last_season": 2012, "passages": {"50": 6, "100": 8}, "non_tropical_only": {"50": 2, "100": 1},
+        "tropical_statuses": ["HU", "SD", "SS", "TD", "TS"]}
     assert "bizim hesabımız" in result.metadata["scope"]
     corridor = result.related["corridor"]
     assert {k: corridor[k] for k in TEST_CORRIDOR} == TEST_CORRIDOR and corridor["hurdat_file"] == HURDAT_FILE
@@ -572,9 +626,11 @@ def test_api_runs_the_three_collectors_and_serves_latest_snapshots(tmp_path, mon
         assert len(buoy["months"]) == 4 and buoy["min_days"] == 20
         assert buoy["summary"]["PCBF1"][0] == {"month": 1, "mean_c": 17.0, "years_used": 2, "first_year": 2010, "last_year": 2011, "excluded_year_months": 0}
         assert storms["corridor"]["label"] == "Test corridor" and storms["corridor"]["hurdat_file"] == HURDAT_FILE
-        assert storms["corridor"]["radii_nmi"] == [50, 100] and storms["corridor"]["storm_count"] == 7
-        assert len(storms["passages"]) == 9 and storms["class_labels"]["MH"] == "büyük kasırga"
-        assert storms["run"]["record_count"] == 9 and storms["run"]["metadata"]["total_count"] == 7
+        assert storms["corridor"]["radii_nmi"] == [50, 100] and storms["corridor"]["storm_count"] == 11
+        assert len(storms["passages"]) == 17 and storms["class_labels"]["MH"] == "büyük kasırga"
+        assert sum(p["non_tropical_only"] for p in storms["passages"]) == 3 and storms["tropical_statuses"] == ["HU", "SD", "SS", "TD", "TS"]
+        assert storms["run"]["record_count"] == 17 and storms["run"]["metadata"]["total_count"] == 11
+        assert storms["run"]["connector_version"] == "hurdat2-storm-proximity/2"
         assert [run["id"] for run in client.get("/api/climate-runs").json()] == [jobs[k]["id"] for k in ("storms", "water", "normals")]
         assert [run["id"] for run in client.get("/api/bootstrap").json()["climate_runs"]] == [jobs[k]["id"] for k in ("storms", "water", "normals")]
         for key, job in jobs.items():
@@ -588,7 +644,7 @@ def test_api_runs_the_three_collectors_and_serves_latest_snapshots(tmp_path, mon
         second = start(client, sp.SOURCE_URL)
         assert client.get("/api/climate").json()["storms"]["run"]["id"] == second["id"]
         with db.connect() as con:
-            assert con.execute("SELECT COUNT(*) FROM storm_passages").fetchone()[0] == 18
+            assert con.execute("SELECT COUNT(*) FROM storm_passages").fetchone()[0] == 34
             assert con.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
@@ -647,7 +703,7 @@ def test_schema_constraints(tmp_path):
             "UPDATE destination_storm_corridors SET radii_nmi='{}'",
             "UPDATE destination_storm_corridors SET radii_nmi='broken'",
             "INSERT INTO destination_climate_stations VALUES ('missing','x','normals','X','X','X',0,0,0,'b',NULL,0,1)",
-            "INSERT INTO storm_passages VALUES ('missing','AL012010','A',2010,50,'2010-08-01T00:00Z',8,0,0,40,'TS',NULL)",
+            "INSERT INTO storm_passages VALUES ('missing','AL012010','A',2010,50,'2010-08-01T00:00Z',8,0,0,40,'TS',NULL,0)",
             "INSERT INTO water_temperature_months VALUES ('missing','X',2010,1,15,1,1)",
         ):
             with pytest.raises(sqlite3.IntegrityError):
@@ -678,7 +734,7 @@ def test_v7_to_v8_migration_adds_tables_configuration_and_sources_with_backup(tm
         rows_before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in tables_before}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 8
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 9
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert table_counts(con) == {**tables_before, **V8_TABLES, "sources": tables_before["sources"] + 3}
@@ -722,8 +778,75 @@ def test_v7_to_v8_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 8
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 9
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def make_v8(path):
+    make_v7(path)
+    with sqlite3.connect(path) as con:
+        con.row_factory = sqlite3.Row
+        con.execute("BEGIN IMMEDIATE"); upgrade_v8(con)
+
+
+def add_v1_storm_run(path):
+    """A hurdat2-storm-proximity/1 run as it exists in a schema 8 database."""
+    with sqlite3.connect(path) as con:
+        source, = con.execute("SELECT id FROM sources WHERE url=?", (sp.SOURCE_URL,)).fetchone()
+        con.execute("""INSERT INTO jobs (id,kind,title,status,progress,message,created_at,finished_at,result,log,source_id,destination_id)
+            VALUES ('old-storms','source_collection','old','done',100,'','old','old','{}','[]',?,'30a')""", (source,))
+        con.execute("""INSERT INTO source_runs (id,source_id,job_id,status,started_at,finished_at,connector_name,connector_version,
+            record_count,excluded_count,metadata,destination_id) VALUES ('old-storms',?,'old-storms','done','old','old',
+            'hurdat2-storm-proximity','hurdat2-storm-proximity/1',1,0,'{}','30a')""", (source,))
+        con.execute("""INSERT INTO storm_corridor_snapshots VALUES ('old-storms','30A kıyı koridoru',30.35,-86.26,'w',30.27,-85.99,'e',
+            '[50, 100]','hurdat2-1851-2025-092326.txt',1988,1851,2025)""")
+        con.execute("""INSERT INTO storm_passages VALUES ('old-storms','AL052005','DENNIS',2005,50,'2005-07-10T17:00Z',7,75.1,40.6,111,
+            'MH','HU')""")
+
+
+def test_v8_to_v9_migration_adds_stage_flag_and_keeps_old_runs(tmp_path):
+    path = tmp_path / "studio.sqlite3"; make_v8(path); add_v1_storm_run(path)
+    with sqlite3.connect(path) as con:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 8
+        before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
+    Database(path).initialize()
+    with sqlite3.connect(path) as con:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 9
+        assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
+        assert {t: rows for t, rows in after.items() if t != "storm_passages"} == {t: rows for t, rows in before.items() if t != "storm_passages"}
+        # The old v1 row keeps every value; the new column is 0 (v1 did not separate stages).
+        assert after["storm_passages"] == [row + (0,) for row in before["storm_passages"]]
+        with pytest.raises(sqlite3.IntegrityError):
+            con.execute("UPDATE storm_passages SET non_tropical_only=2")
+    backup, = (tmp_path / "backups").glob("*-v8-*.sqlite3")
+    with sqlite3.connect(backup) as con:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 8
+    db = Database(path)
+    assert db.source_run("old-storms")["connector_version"] == "hurdat2-storm-proximity/1"
+    record, = db.run_records("old-storms")
+    assert (record["name"], record["storm_class"], record["non_tropical_only"]) == ("DENNIS", "MH", 0)
+
+
+def test_v8_to_v9_failure_rolls_back_everything(tmp_path, monkeypatch):
+    from studio import database
+    path = tmp_path / "studio.sqlite3"; make_v8(path); add_v1_storm_run(path)
+    with sqlite3.connect(path) as con:
+        before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
+        columns = [row[1] for row in con.execute("PRAGMA table_info(storm_passages)")]
+    original = database.upgrade_v9
+    def fail(con): original(con); raise RuntimeError("after the new column")
+    with monkeypatch.context() as m:
+        m.setattr(database, "upgrade_v9", fail)
+        with pytest.raises(RuntimeError):
+            Database(path).initialize()
+    with sqlite3.connect(path) as con:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 8
+        assert [row[1] for row in con.execute("PRAGMA table_info(storm_passages)")] == columns
+        assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
+    Database(path).initialize()
+    with sqlite3.connect(path) as con:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 9
 
 
 @pytest.mark.parametrize("url,enabled", [(cn.SOURCE_URL, 0), ("https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals/", 1)])

@@ -366,3 +366,19 @@ test('climate tables label sources and our calculations, compare stations and fi
   assert.match(html,/Kasırga geçmişi · 100 deniz mili · 1851–2025/);assert.match(html,/WIDE/);
   assert.doesNotMatch(html,/null|undefined|NaN/);
 });
+test('storms inside a radius only in non-tropical stages are listed separately and never counted',()=>{
+  const passages=[passage('AL1','TROP',2000,50,9,'HU',30),passage('AL2','<EXTRA>',2001,50,10,null,5,{non_tropical_only:1,status_at_max:'EX'}),
+    passage('AL3','OLD',1950,50,8,null,4,{non_tropical_only:1,status_at_max:'LO'})];
+  assert.equal(stormMonthlyCounts(passages,50,1991,2025).flatMap(row=>Object.values(row)).reduce((a,b)=>a+b,0),1);
+  assert.deepEqual(closestStorms(passages,50,null,null).map(p=>p.name),['TROP']);
+  const storms={corridor:{radii_nmi:[50],first_season:1851,last_season:2025,hurdat_file:'f.txt',storm_count:3,west_reference:'W',east_reference:'E'},
+    class_labels:{HU:'kasırga'},passages,run:{connector_version:'hurdat2-storm-proximity/2'}};
+  const body={innerHTML:'',querySelector:()=>null};
+  const screen=new ClimateScreen();screen.snapshot={config:{stations:[]},normals:null,water:null,storms};screen.radius=50;screen.from=1991;screen.to=2025;
+  screen.draw({querySelector:()=>body});
+  assert.match(body.innerHTML,/Sayılmayan: bu daireye yalnız tropikal olmayan bir evrede giren 1 fırtına \(&lt;EXTRA&gt; 2001, evre EX\)/);
+  assert.doesNotMatch(body.innerHTML,/OLD 1950/);
+  assert.match(body.innerHTML,/Yalnız fırtınanın tropikal veya subtropikal olduğu evreler sayılır \(HURDAT2 durum kodları TD, TS, HU, SD, SS\)/);
+  storms.run.connector_version='hurdat2-storm-proximity/1';screen.draw({querySelector:()=>body});
+  assert.match(body.innerHTML,/Bu çekim eski kuralla \(hurdat2-storm-proximity\/1\) yapıldı/);
+});

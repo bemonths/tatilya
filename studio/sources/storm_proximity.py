@@ -1,9 +1,10 @@
 """NOAA NHC HURDAT2 (Atlantic best track) -> tropical cyclone passages near a destination's coastal corridor.
 
 Destination-independent: the corridor (a great-circle segment) and the radii come from SQLite configuration.
-Method: 1-hour linear interpolation between track points; per storm the closest distance to the corridor; per
-radius the first time the track enters the corridor buffer, and the highest wind while inside -> class.
-All counts derived from this table are our calculation from NOAA data, not an NHC product.
+Method: 1-hour linear interpolation between track points; only tropical and subtropical stages (TD, TS, HU, SD, SS)
+count: per storm the closest distance to the corridor; per radius the first time the track enters the corridor buffer,
+and the highest wind while inside -> class. A storm that was inside a radius only in other stages (EX, LO, WV, DB) is
+kept but flagged and stays out of every count. All counts are our calculation from NOAA data, not an NHC product.
 """
 import json
 import math
@@ -18,7 +19,7 @@ from .url_identity import https_source_identity
 SOURCE_URL = "https://www.nhc.noaa.gov/data/"
 HOSTS = frozenset({"www.nhc.noaa.gov"})
 SOURCE_IDENTITY = https_source_identity(SOURCE_URL, host_aliases={"www.nhc.noaa.gov": "www.nhc.noaa.gov"})
-CONNECTOR_VERSION = "hurdat2-storm-proximity/1"
+CONNECTOR_VERSION = "hurdat2-storm-proximity/2"
 # The Atlantic file is linked from the NHC data page; its name changes with every release.
 FILE_LINK = re.compile(r'href="(/data/hurdat/hurdat2-(\d{4})-(\d{4})-(\d{6})\.txt)"')
 HEADER = re.compile(r"[A-Z]{2}\d{6}")
@@ -27,6 +28,8 @@ STEP = timedelta(hours=1)
 # Saffir-Simpson based classes by the highest sustained wind (kt) while inside the radius.
 CLASSES = (("MH", 96), ("HU", 64), ("TS", 34), ("TD", 0))
 CLASS_LABELS = {"TD": "tropikal depresyon", "TS": "tropikal fırtına", "HU": "kasırga", "MH": "büyük kasırga"}
+# HURDAT2 status codes of tropical and subtropical stages (manager decision, GOREV-06). EX, LO, WV and DB never count.
+TROPICAL_STATUSES = frozenset({"TD", "TS", "HU", "SD", "SS"})
 
 
 def storm_class(wind):
@@ -96,8 +99,24 @@ def hourly(fixes):
     return points
 
 
+def summary(points, radius_km):
+    """First point inside the radius, highest known wind inside (with its stage) and the closest distance of the points."""
+    inside = [point for point in points if point[1] <= radius_km]
+    if not inside:
+        return None
+    winds = [(point[2], point[3]) for point in inside if point[2] is not None]
+    top = max(winds, key=lambda item: item[0]) if winds else (None, None)
+    # Floor keeps the stored wind and its class consistent (thresholds are whole knots).
+    return inside[0][0], math.floor(top[0]) if top[0] is not None else None, top[1]
+
+
 def passages(storms, corridor, radii_nmi):
-    """Per storm and radius: first entry into the corridor buffer, closest distance and highest wind inside."""
+    """Per storm and radius: first entry into the corridor buffer, closest distance and highest wind inside.
+
+    Only points whose stage is tropical or subtropical count; interpolated points carry the stage of the fix that
+    starts their interval. A storm inside a radius only in other stages is returned with non_tropical_only=1,
+    no class, and values measured on those other stages, so it stays visible but out of every count.
+    """
     segment = Segment((corridor["west_latitude"], corridor["west_longitude"]), (corridor["east_latitude"], corridor["east_longitude"]))
     largest = max(radii_nmi) * KM_PER_NMI
     results = []
@@ -106,27 +125,33 @@ def passages(storms, corridor, radii_nmi):
         if min(segment.distance_km(lat, lon) for _, _, lat, lon, _ in storm["fixes"]) > largest + 1500:
             continue
         points = [(time, segment.distance_km(lat, lon), wind, status) for time, lat, lon, wind, status in hourly(storm["fixes"])]
-        closest = min(distance for _, distance, _, _ in points)
+        tropical = [point for point in points if point[3] in TROPICAL_STATUSES]
         for radius in sorted(radii_nmi):
-            inside = [point for point in points if point[1] <= radius * KM_PER_NMI]
-            if not inside:
-                continue
-            winds = [(point[2], point[3]) for point in inside if point[2] is not None]
-            top = max(winds, key=lambda item: item[0]) if winds else (None, None)
-            # Floor keeps the stored wind and its class consistent (thresholds are whole knots).
-            max_wind = math.floor(top[0]) if top[0] is not None else None
+            radius_km = radius * KM_PER_NMI
+            found = summary(tropical, radius_km)
+            flagged = found is None
+            if flagged:
+                found = summary(points, radius_km)
+                if found is None:
+                    continue
+            entry, max_wind, status = found
+            closest = min(point[1] for point in (points if flagged else tropical))
             results.append({"storm_id": storm["storm_id"], "name": storm["name"], "season": storm["season"], "radius_nmi": radius,
-                            "first_entry_time": inside[0][0].strftime("%Y-%m-%dT%H:%MZ"), "first_entry_month": inside[0][0].month,
+                            "first_entry_time": entry.strftime("%Y-%m-%dT%H:%MZ"), "first_entry_month": entry.month,
                             "closest_km": round(closest, 1), "closest_nmi": round(closest / KM_PER_NMI, 1),
-                            "max_wind_kt": max_wind, "storm_class": storm_class(max_wind), "status_at_max": top[1]})
+                            "max_wind_kt": max_wind, "storm_class": None if flagged else storm_class(max_wind),
+                            "status_at_max": status, "non_tropical_only": int(flagged)})
     return results
 
 
 def monthly_counts(records, radius, first_season=None, last_season=None):
-    """Storms per first-entry month and class for one radius and an optional season range (each storm once)."""
+    """Storms per first-entry month and class for one radius and an optional season range (each storm once).
+
+    Records flagged non_tropical_only never count.
+    """
     table = {month: {"TD": 0, "TS": 0, "HU": 0, "MH": 0, "bilinmiyor": 0} for month in range(1, 13)}
     for record in records:
-        if record["radius_nmi"] != radius:
+        if record["radius_nmi"] != radius or record.get("non_tropical_only"):
             continue
         if (first_season and record["season"] < first_season) or (last_season and record["season"] > last_season):
             continue
@@ -167,13 +192,17 @@ def collect(raw_path, progress, canceled, *, corridor, client=None):
         seasons = [storm["season"] for storm in storms]
         metadata = {"hurdat_file": file_name, "hurdat_url": f"https://www.nhc.noaa.gov{path}", "storm_count": len(storms),
                     "first_season": min(seasons), "last_season": max(seasons), "radii_nmi": list(radii),
-                    "passages": {str(radius): sum(r["radius_nmi"] == radius for r in records) for radius in radii},
-                    "scope": "NOAA NHC HURDAT2 Atlantik izleri; koridor mesafesi, ilk giriş ve sınıf bizim hesabımızdır."}
+                    "passages": {str(radius): sum(r["radius_nmi"] == radius and not r["non_tropical_only"] for r in records) for radius in radii},
+                    "non_tropical_only": {str(radius): sum(r["radius_nmi"] == radius and r["non_tropical_only"] for r in records) for radius in radii},
+                    "tropical_statuses": sorted(TROPICAL_STATUSES),
+                    "scope": "NOAA NHC HURDAT2 Atlantik izleri; yalnız tropikal ve subtropikal evreler (TD, TS, HU, SD, SS) sayılır; "
+                             "koridor mesafesi, ilk giriş ve sınıf bizim hesabımızdır."}
         related = {"corridor": {**{key: corridor[key] for key in ("label", "west_latitude", "west_longitude", "west_reference",
                                                                      "east_latitude", "east_longitude", "east_reference")},
                                 "radii_nmi": list(radii), "hurdat_file": file_name, "storm_count": len(storms),
                                 "first_season": min(seasons), "last_season": max(seasons)}}
-        progress(95, f"{len(storms)} fırtınadan {len({r['storm_id'] for r in records})} tanesi koridora {max(radii)} deniz mili içinden geçti.")
+        counted = {r["storm_id"] for r in records if not r["non_tropical_only"]}
+        progress(95, f"{len(storms)} fırtınadan {len(counted)} tanesi tropikal/subtropikal evrede koridora {max(radii)} deniz mili içinden geçti.")
         return CollectionResult(records, len(storms), 0, None, metadata, related)
     finally:
         if owns:
@@ -187,6 +216,7 @@ class StormProximityConnector:
     method = "Dosya"
     diff_enabled = False
     diff_reason = "Kasırga geçişleri her HURDAT2 sürümünden yeniden hesaplanan geçmiş kayıtlardır; sürümler arası kayıt farkı özeti gösterilmiyor."
+    tropical_statuses = TROPICAL_STATUSES
 
     def supports(self, source):
         return https_source_identity(source["url"], host_aliases={"www.nhc.noaa.gov": "www.nhc.noaa.gov"}) == SOURCE_IDENTITY
@@ -204,10 +234,10 @@ class StormProximityConnector:
                  corridor["hurdat_file"], corridor["storm_count"], corridor["first_season"], corridor["last_season"]))
         for record in records:
             con.execute("""INSERT INTO storm_passages (run_id,storm_id,name,season,radius_nmi,first_entry_time,first_entry_month,
-                closest_km,closest_nmi,max_wind_kt,storm_class,status_at_max) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                closest_km,closest_nmi,max_wind_kt,storm_class,status_at_max,non_tropical_only) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (run_id, record["storm_id"], record["name"], record["season"], record["radius_nmi"], record["first_entry_time"],
                  record["first_entry_month"], record["closest_km"], record["closest_nmi"], record["max_wind_kt"],
-                 record["storm_class"], record["status_at_max"]))
+                 record["storm_class"], record["status_at_max"], record.get("non_tropical_only", 0)))
 
     def read_records(self, con, run_id):
         return [dict(row) for row in con.execute(
@@ -221,4 +251,5 @@ class StormProximityConnector:
         corridor = dict(row) if row else None
         if corridor:
             corridor["radii_nmi"] = json.loads(corridor["radii_nmi"])
-        return {"corridor": corridor, "passages": self.read_records(con, run_id), "class_labels": CLASS_LABELS}
+        return {"corridor": corridor, "passages": self.read_records(con, run_id), "class_labels": CLASS_LABELS,
+                "tropical_statuses": sorted(TROPICAL_STATUSES)}
