@@ -54,4 +54,8 @@ Başlık, açıklama, makale, video ve görselleri dışa aktar. Çerçevesiz uy
 
 ## Konaklama envanteri — v0.7 keşif aşaması
 
-Book>Direct public JSON araması doğrulandı; aynı konumun bütün sayfaları farklı tarihlerde farklı kayıt kimlikleri döndürüyor. 3 Ekim'deki ikinci keşfin kararı C: public tarihsiz tam unit/provider inventory yolu hâlâ bulunamadı. Bundle, clone config, sitemap/dizinler ve resmi parent/child modeli incelendi; güncel resmi yönerge accommodation yönetiminin Extranet'ten Book>Direct'e geçtiğini belirtiyor. Tam/tarihten bağımsız envanter şartı korunuyor. Schema 7, lodging connector veya yeni ekran eklenmedi; uygulama v0.6.0 olarak kalır. [M6 keşif ve kanıt](M6-KONAKLAMA-KAYNAK-KEŞFİ.md).
+Book>Direct public JSON araması doğrulandı; aynı konumun bütün sayfaları farklı tarihlerde farklı kayıt kimlikleri döndürüyor. 3 Ekim'deki ikinci keşfin kararı C: public tarihsiz tam unit/provider inventory yolu hâlâ bulunamadı. Bundle, clone config, sitemap/dizinler ve resmi parent/child modeli incelendi; güncel resmi yönerge accommodation yönetiminin Extranet'ten Book>Direct'e geçtiğini belirtiyor. Tam/tarihten bağımsız envanter şartı korunuyor. Schema 7, lodging connector veya yeni ekran eklenmedi; uygulama v0.6.0 olarak kalır. [M6 keşif ve kanıt](M6-KONAKLAMA-KAYNAK-KEŞFİ.md). 7 Ekim 2026 yönetici kararıyla tam envanter şartı kaldırıldı; konaklama tarihli arama anlık görüntüleri olarak modellenecek.
+
+## Mahalle verisi ve plaj–mahalle eşlemesi — v0.7.0
+
+GÖREV-03 (7 Ekim 2026, `gorev-03-mahalleler` dalı): Visit South Walton mahalle dizini için 30A'ya özel toplayıcı, şema 7 ve Veri toplama → Mahalleler sekmesi; 53 plaj erişimini mahallelere bağlayan, yöntemi etiketli (resmî rehber / program türetimi) ayrı eşleme katmanı ve plaj ekranında mahalle etiketi ile filtre. Gerçek DB'nin kopyasında v6 → v7 denemesi yapıldı. main'e alma kararı yöneticinindir. [M7 kapsam, yöntem ve doğrulama](M7-MAHALLE-VERISI.md).

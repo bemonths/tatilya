@@ -2,9 +2,9 @@
 
 > **Bu dosya projenin ana devir-teslim belgesidir.**
 >
-> Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`, `M3`, `M4`, `M5`, `M6`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
+> Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M7`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmıştır.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, 7 Ekim 2026'da GÖREV-03 (v0.7.0) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
@@ -13,19 +13,18 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` |
-| Stable commit | `a938367a280ef799597d5d90dc39ef34a26a6fcb` |
-| Stable tag | `v0.6.0` |
-| Stable uygulama sürümü | `0.6.0` |
-| Stable SQLite şeması | `6` |
-| Aktif araştırma branch'i | `v0.7-lodging-inventory` |
-| Aktif branch HEAD | `23905962126ba9f00f7f8b6223c67c9633e70c2c` |
-| Aktif branch durumu | Yalnız dokümantasyon/kanıt; uygulama ve DB hâlâ v0.6.0 / şema 6 |
-| Son CI | Başarılı |
-| Test tabanı | 289 Python testi + 19 frontend testi |
-| Mevcut gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini |
+| Stable branch | `main` @ `62d6b7b431669ca44a705b1c85f24f9df72bd6ca` (v0.6.0 kodu + GÖREV-01/02 ve konaklama keşif belgeleri) |
+| Stable tag | `v0.6.0` → `a938367a280ef799597d5d90dc39ef34a26a6fcb` |
+| Stable uygulama sürümü / şema | `0.6.0` / `6` |
+| Aktif geliştirme dalı | `gorev-03-mahalleler` — **v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** |
+| Aktif dal durumu | Uygulama `0.7.0`, SQLite şema `7`; main'e alınmadı, tag yok; main'e alma kararı yöneticinin |
+| Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
+| Son CI | main @ 62d6b7b başarılı; görev dalının sonucu `docs/gorevler/GOREV-03/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 390 Python testi + 29 frontend testi (main/v0.6.0: 289 + 19) |
+| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini; görev dalında ayrıca mahalle dizini |
+| Plaj–mahalle eşlemesi | Görev dalında ayrı, gözden geçirilebilir katman: `studio/destinations/thirty_a_beach_neighborhoods.csv` (9 resmî rehber + 44 program türetimi) |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
-| Konaklama durumu | Book>Direct date-filtered search doğrulandı; tarihten bağımsız tam unit/provider inventory bulunamadı |
+| Konaklama durumu | Book>Direct tarihli arama doğrulandı; tam envanter şartı 7 Ekim 2026'da kaldırıldı, konaklama tarihli arama anlık görüntüleri olarak modellenecek (henüz kodlanmadı) |
 
 ## 2. Projenin amacı
 
@@ -142,7 +141,8 @@ Destination-scoped temel yapılar:
 - Job/run hangi destinasyon için üretildiyse provenance bunu korur.
 - Diff başka destinasyondaki run ile karşılaştırmaz.
 - NWS connector generic'tir.
-- South Walton Beaches ve Restaurants connector'ları 30A'ya özeldir.
+- South Walton Beaches, Restaurants ve Neighborhoods connector'ları 30A'ya özeldir.
+- Profil varlıkları (ör. plaj–mahalle eşleme dosyası) `studio/destinations/` altında destinasyon profiliyle durur; generic çekirdeğe gömülmez.
 
 Frontend seçimi server-global değildir. Seçim `localStorage["studio.destination_id"]` ile tutulur. Destination değişince eski async cevapların yeni ekrana yazılması engellenir.
 
@@ -263,6 +263,27 @@ Alanlar:
 
 Gerçek kullanıcı snapshot'ında 138 restoran ve 141 restoran-bölge ilişkisi korunmuştur. Bunlar kaynak değişebileceği için sabit test sayısı değildir.
 
+### 9.4 Mahalleler (v0.7.0, `gorev-03-mahalleler` dalında)
+
+Kaynak: `https://www.visitsouthwalton.com/neighborhoods/`  
+Connector: `south-walton-neighborhoods`  
+Yöntem: HTML içindeki JSON dizin + mahalle sayfaları  
+Scope: 30A-specific · Şema 7 tablo: `neighborhood_records` · diff etkin (kaynak kimliği)
+
+Kapsam: 13 canonical mahalle; kaynak adı birebir veya açık yazım tablosuyla bağlanır; Miramar Beach, Seascape ve Sandestin kapsam dışı. Hedef mahallelerden biri yoksa çekim başarısız olur.
+
+Alanlar: 24 haneli kaynak kimliği, permalink, ad, canonical bölge, kısa tanıtım cümlesi, temsilî nokta (enlem/boylam — **mahalle merkezi değil, kaynağın temsilî noktası**), kaynak etiketleri, kayıt bazında `modified`, sayfa tanıtım metni (yoksa NULL). Kaynak metinleri iç araştırma kanıtıdır; videoda aynen kullanılmaz, kendi cümlelerimizle ve atıfla kullanılır.
+
+7 Ekim 2026 canlı denemesinde 16 dizin kaydından 13 mahalle kaydedildi, 3'ü kapsam dışı sayıldı; bu sayılar sabit kabul kriteri değildir. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
+
+### 9.5 Plaj erişimi–mahalle eşlemesi (v0.7.0, `gorev-03-mahalleler` dalında)
+
+Plaj kaynağında mahalle alanı yoktur. Eşleme, plaj toplayıcısından ve `beach_records`'tan ayrı, 30A'ya özel, gözden geçirilebilir bir katmandır: `studio/destinations/thirty_a_beach_neighborhoods.csv` (sütunlar: `external_id, plaj_adi, bolge_id, yontem, kaynak, not, belirsiz`). Dosyayı `tools/plaj_mahalle_esleme.py` üretir; dosya commit edilir, uygulama yalnız okur ve yeniden hesaplamaz.
+
+Yöntem sırası: (1) resmî park ve ulaşım rehberindeki (2023-05-04) 9 eşleme olduğu gibi — `resmi_rehber`; (2) kalan erişimler için mahalle temsilî noktalarına boylam farkıyla en yakın mahalle — `turetim_en_yakin_mahalle_noktasi`, kaynak = mahalle çekiminin run kimliği; Alys Beach ve Rosemary Beach'e (rehber: halka açık plaj erişimi yok) hiçbir erişim atanmaz; en yakın iki aday arasındaki fark 0,003°'den küçükse `belirsiz=evet`. Doğrulamada türetme 9 resmî eşlemenin 8'inde aynı sonucu verdi.
+
+Video dili: "resmî rehber" eşlemeleri kaynak gösterilerek söylenebilir; "program türetimi" eşlemeleri yalnız yaklaşık konum bilgisidir. Plaj ekranı her erişimde mahalle ve yöntem etiketini gösterir, mahalleye göre filtreler; dosyada olmayan kimlik "eşlenmemiş" görünür.
+
 ## 10. Konaklama — şu an nerede kaldık?
 
 Branch: `v0.7-lodging-inventory`  
@@ -298,7 +319,7 @@ Visit South Walton sitemap'i ve 11 public listing directory incelendi. Statik pr
 
 Bu kaynak ileride tarih/misafir/rate/availability/minimum stay gibi snapshot tabanlı fiyat-müsaitlik katmanında değerlendirilebilir.
 
-Tam envanter için yeni, deterministik bir public/read/export sözleşmesi bulunmadan schema 7 lodging connector geliştirilmemelidir.
+Tam envanter için yeni, deterministik bir public/read/export sözleşmesi bulunmadan "tam envanter" iddiasıyla bir lodging connector geliştirilmemelidir. (Şema 7 artık v0.7.0 mahalle verisine aittir; konaklamayla ilgisi yoktur.)
 
 Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
@@ -306,15 +327,13 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: `main @ a938367a280ef799597d5d90dc39ef34a26a6fcb`  
-Tag: `v0.6.0`
+Stable kod: tag `v0.6.0` → `a938367a280ef799597d5d90dc39ef34a26a6fcb` (uygulama 0.6.0, şema 6).  
+main: `62d6b7b431669ca44a705b1c85f24f9df72bd6ca` — v0.6.0 koduna ek olarak konaklama keşif belgeleri ve GÖREV-01/02 belgeleri; 7 Ekim 2026'da fast-forward ile alındı, CI başarılı.
 
-Tag doğrudan bu commit'e işaret eder.
-
-Son v0.7 docs commit CI:
-- 289 Python testi geçti
-- 19 frontend testi geçti
-- GitHub Actions başarılı
+Aktif dal `gorev-03-mahalleler` (v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi):
+- 390 Python testi ve 29 frontend testi geçti
+- uygulama 0.7.0, şema 7
+- main'e alınmadı, tag oluşturulmadı
 
 Bilinen non-blocking uyarılar:
 - Starlette TestClient / httpx deprecation warning
@@ -349,6 +368,8 @@ v0.6 migration doğrulamasında raporlanan örnek sayılar:
 
 Bunlar yalnız o doğrulama anının snapshot'ıdır.
 
+v0.7 (şema 6 → 7) migration denemesi 7 Ekim 2026'da gerçek DB'nin salt okunur kopyasında yapıldı: yukarıdaki satır sayılarının hepsi korundu, `sources` 8 → 9 oldu (yalnız "South Walton · Mahalleler" kaynağı eklendi), boş `neighborhood_records` tablosu oluştu, `foreign_key_check` boş döndü ve yedek alındı. Gerçek `data/` klasörüne dokunulmadı; gerçek DB, kullanıcı v0.7.0'ı ilk açtığında kendi yedeğini alarak yükselecek.
+
 ## 13. Geliştirme çalışma biçimi
 
 1. Proje yöneticisi (ayrı bir Claude sohbeti) görevi `GÖREV-NN` numarasıyla yazar.
@@ -380,7 +401,7 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 - Restoran menü/fiyat enrichment
 - Scheduler
 - Otomatik entity matching
-- Region polygon mapping
+- Region polygon mapping (plaj–mahalle eşlemesi nokta/boylam yöntemiyle ayrı katmandadır; mahalle sınırı yoktur)
 - AI evidence-pack / konu seçimi
 - Makale/senaryo
 - Görsel plan
@@ -400,7 +421,7 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 9. Test fixture'ları canlı web'e bağımlı yapma.
 10. Canlı smoke sonuçlarını sabit production/test sayısı haline getirme.
 11. Görev metni (yönetici kararı) açıkça istemedikçe görev dalını main'e merge etme.
-12. v0.7 lodging konusunda date-filtered sonucu “tam inventory” diye modelleme.
+12. Konaklama konusunda date-filtered sonucu “tam inventory” diye modelleme.
 
 ## 16. Devir dokümanı indeksi
 
@@ -422,9 +443,10 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M4-RESTORAN-VERISI.md`
 - `docs/M5-DESTINASYON-KATMANI.md`
 - `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
+- `docs/M7-MAHALLE-VERISI.md`
 
 ---
 
-**Son güncelleme:** 3 Ekim 2026  
+**Son güncelleme:** 7 Ekim 2026  
 **Stable:** v0.6.0  
-**Aktif araştırma:** v0.7 lodging inventory discovery / sonuç C
+**Aktif geliştirme:** `gorev-03-mahalleler` — v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi (yönetici incelemesinde)

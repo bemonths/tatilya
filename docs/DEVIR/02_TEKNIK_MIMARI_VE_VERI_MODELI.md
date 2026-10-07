@@ -318,6 +318,12 @@ Alanlar:
 
 Description nullable'dır.
 
+### Neighborhoods (v0.7.0, şema 7)
+
+- neighborhood_records: kaynak kimliği, permalink, ad, canonical_region_id, nullable summary, temsilî nokta (mahalle merkezi değil), tags (JSON dizi), nullable source_modified, nullable page_intro
+
+Plaj–mahalle eşlemesi tablo değildir; `beach_records.canonical_region_id` NULL kalır.
+
 ## Migration stratejisi
 
 Şema yükseltmeden önce:
@@ -329,7 +335,7 @@ Description nullable'dır.
 
 Stable şema: `6`.
 
-v0.7 lodging discovery sırasında schema 7 oluşturulmadı.
+v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
 ## API'nin ana grupları
 
@@ -346,6 +352,8 @@ Domain:
 - `/api/collections` (beach uyumluluk)
 - `/api/weather-runs`
 - `/api/restaurant-runs`
+- `/api/neighborhood-runs` (v0.7.0)
+- `/api/beach-neighborhoods` (v0.7.0; profil dosyasındaki plaj–mahalle eşlemesi, salt okunur)
 
 Liste endpoint'leri destination-filtered'dır.
 

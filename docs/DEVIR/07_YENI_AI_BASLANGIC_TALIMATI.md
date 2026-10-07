@@ -39,26 +39,29 @@ C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an
 ## Stable
 
 ```text
-main
-a938367a280ef799597d5d90dc39ef34a26a6fcb
-v0.6.0
-schema 6
+tag v0.6.0 -> a938367a280ef799597d5d90dc39ef34a26a6fcb
+app 0.6.0 / schema 6
+main -> 62d6b7b431669ca44a705b1c85f24f9df72bd6ca (v0.6.0 kodu + belgeler)
 ```
 
 ## Aktif branch
 
 ```text
-v0.7-lodging-inventory
-23905962126ba9f00f7f8b6223c67c9633e70c2c
+gorev-03-mahalleler
+v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi
+app 0.7.0 / schema 7
 ```
 
-Aktif branch yalnız lodging keşif belgeleri içeriyor; app ve DB değiştirilmedi.
+main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir.
 
 ## Çalışan connector'lar
 
 - south-walton-beaches
 - nws-weather
 - south-walton-restaurants
+- south-walton-neighborhoods (görev dalında, v0.7.0)
+
+Plaj erişimi–mahalle eşlemesi connector değildir; `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasında duran, yöntemi etiketli ayrı bir katmandır (`docs/M7-MAHALLE-VERISI.md`).
 
 ## Mevcut lodging sonucu
 
@@ -69,7 +72,7 @@ Tam date-independent:
 - provider inventory yok.
 
 Karar:
-date-filtered search'i full inventory diye kodlama.
+date-filtered search'i full inventory diye kodlama. 7 Ekim 2026 yönetici kararıyla tam envanter şartı kaldırıldı; konaklama tarihli arama anlık görüntüleri olarak modellenecek.
 
 ## Veri ilkeleri
 

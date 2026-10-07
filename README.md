@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.6.0**. Genel kaynak toplama altyapısı, plaj, NWS hava ve restoran toplayıcıları hazır. Housing Atlas'tan bağımsız bir projedir.
+30A veri ve içerik üretim uygulaması · **v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi**. Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları ile plaj erişimlerini mahallelere bağlayan, yöntemi etiketli eşleme katmanı hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
 
 ## Açılış
 
@@ -23,11 +23,11 @@ Kayıtlar bu projenin `data/` klasöründeki SQLite veritabanında, ham kaynakla
 
 ## Veri temeli ve yükseltme
 
-Toplama işleri artık source_id ile izlenir; başarılı, başarısız ve iptal edilmiş çekimler genel source_runs yapısında saklanır. İşler panelinde kaynak adı görünür. Eski plaj ekranı, indirmeler ve veri sürümleri çalışmaya devam eder. Üç gerçek connector **BeachesConnector**, **WeatherConnector** ve **RestaurantsConnector** olarak kayıtlıdır; başka kaynak için yalnızca URL eklemek yeterli değildir.
+Toplama işleri artık source_id ile izlenir; başarılı, başarısız ve iptal edilmiş çekimler genel source_runs yapısında saklanır. İşler panelinde kaynak adı görünür. Eski plaj ekranı, indirmeler ve veri sürümleri çalışmaya devam eder. Dört gerçek connector **BeachesConnector**, **WeatherConnector**, **RestaurantsConnector** ve **NeighborhoodsConnector** olarak kayıtlıdır; başka kaynak için yalnızca URL eklemek yeterli değildir.
 
-v0.1/v0.2/v0.3/v0.4/v0.5 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 6'ya tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
+v0.1–v0.6 veritabanı açılırken önce `data/backups/` içine SQLite yedeği alınır, ardından şema 7'ye tek transaction ile yükseltilir. Kullanıcı kaynakları, geçmiş plaj sürümleri ve ham dosyalar korunur. Eski başarısız işlerde kaynak bilgisi yoksa tahmin edilmez. Yükseltmeden sonra eski uygulama sürümünü aynı veritabanına karşı çalıştırmayın; geri dönüş gerekiyorsa kapalı uygulamada yükseltme öncesi yedeğin ayrı kopyasını kullanın.
 
-13 canonical bölge kimliği ve entities/entity_sources tabloları yalnızca temel seviyede hazırdır. Otomatik entity matching, region polygon mapping ve mahalle tahmini yoktur. Claude/OpenAI, Playwright, scheduler ve içerik üretimi henüz uygulanmadı.
+13 canonical bölge kimliği ve entities/entity_sources tabloları yalnızca temel seviyede hazırdır. Otomatik entity matching ve region polygon mapping yoktur; toplayıcılar adres veya koordinattan mahalle tahmin etmez. Plaj erişimlerinin mahallesi yalnız ayrı ve gözden geçirilebilir eşleme dosyasından gelir ([M7](docs/M7-MAHALLE-VERISI.md)). Claude/OpenAI, Playwright, scheduler ve içerik üretimi henüz uygulanmadı.
 
 ## Belgeler
 
@@ -41,6 +41,7 @@ v0.1/v0.2/v0.3/v0.4/v0.5 veritabanı açılırken önce `data/backups/` içine S
 - [Plaj veri kaynağının kapsamı ve kontrolleri](docs/M2-VERI-TOPLAMA.md)
 - [Hava verisi](docs/M3-HAVA-VERISI.md)
 - [Restoran dizini ve kapsamı](docs/M4-RESTORAN-VERISI.md)
+- [Mahalle verisi ve plaj–mahalle eşlemesi](docs/M7-MAHALLE-VERISI.md)
 
 ## Geliştirme
 
@@ -60,7 +61,7 @@ Beklenmeyen hataların teknik mesajları yaygın parola/token/API anahtarı ve U
 
 ## NWS hava verisi · v0.4
 
-**Veri toplama → Hava → Hava verilerini topla** ile üç örnek noktanın güncel NWS tahminlerini ve aktif uyarılarını ayrı bir çekim olarak saklayın. Kaynak kütüphanesinde National Weather Service **API · bağlı / Toplayıcı hazır** görünür. Veri toplama içindeki Plaj/Hava/Restoranlar sekmeleri ve İşler panelindeki sonuç bağlantıları ilgili domain'i açar.
+**Veri toplama → Hava → Hava verilerini topla** ile üç örnek noktanın güncel NWS tahminlerini ve aktif uyarılarını ayrı bir çekim olarak saklayın. Kaynak kütüphanesinde National Weather Service **API · bağlı / Toplayıcı hazır** görünür. Veri toplama içindeki Plaj/Hava/Restoranlar/Mahalleler sekmeleri ve İşler panelindeki sonuç bağlantıları ilgili domain'i açar.
 
 Batı / Orta / Doğu seçimi, Visit South Walton kaynağındaki 53 kıyı erişiminin boylam sıralamasına dayanır. Noktalar canonical mahalle merkezleri değildir. Tam koordinat/provenance ve NWS akışı: [Hava verisi sözleşmesi](docs/M3-HAVA-VERISI.md).
 
@@ -88,3 +89,9 @@ Mevcut şema 5 kaynak onarımı: uygulama açılışında restoran URL’sinin w
 ## Destinasyon katmanı · v0.6
 
 30A ilk production destinasyonudur. Global seçici kaynakları, bölgeleri, işleri ve veri geçmişini destinasyona göre yükler. NWS yapılandırılmış hava noktalarını kullanır; South Walton connector’ları yalnız 30A’ya bağlanır. Aynı URL veya bölge adı farklı destinasyonlarda bulunabilir. Kaynak kimlikleri ve geçmiş snapshot’lar korunur. İkinci production destinasyonu eklenmedi. Tasarım, migration ve yeni destinasyon ekleme akışı: [M5 destinasyon katmanı](docs/M5-DESTINASYON-KATMANI.md).
+
+## Mahalle verisi ve plaj–mahalle eşlemesi · v0.7.0
+
+**Veri toplama → Mahalleler → Mahalle verilerini topla** ile [Visit South Walton mahalle dizini](https://www.visitsouthwalton.com/neighborhoods/) ve her mahallenin sayfası okunur. 13 canonical mahalle kaynak adıyla birebir (veya açık yazım tablosuyla) bağlanır; Miramar Beach, Seascape ve Sandestin kapsam dışıdır; hedef mahallelerden biri yoksa çekim başarısız olur. Kaynak kimliği, permalink, kısa tanıtım, temsilî nokta (mahalle merkezi değildir), kaynak etiketleri, kayıt değişiklik zamanı ve sayfa tanıtım metni (yoksa boş) saklanır. Sürüm seçimi, fark özeti, batıdan doğuya liste ve ayrıntı paneli vardır. Kaynak metinleri iç araştırma kanıtıdır; videoda aynen kullanılmaz.
+
+Plaj ekranında her erişimin yanında mahalle ve yöntem etiketi görünür: **resmî rehber** (Visit South Walton park ve ulaşım rehberi, 2023-05-04; kaynak gösterilerek söylenebilir) veya **program türetimi** (mahalle temsilî noktalarına boylam farkıyla en yakın mahalle; yalnız yaklaşık konum). Yakın iki aday için “belirsiz”, dosyada olmayan yeni kimlikler için “eşlenmemiş” yazar; mahalleye göre filtrelenebilir. Eşleme `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır, `tools/plaj_mahalle_esleme.py` ile üretilir ve uygulama çalışırken yeniden hesaplanmaz. Ayrıntılar ve doğrulama: [M7](docs/M7-MAHALLE-VERISI.md).

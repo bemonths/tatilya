@@ -3,33 +3,31 @@
 ## Stable durum
 
 ```text
-main
-a938367a280ef799597d5d90dc39ef34a26a6fcb
-v0.6.0
+tag v0.6.0 -> a938367a280ef799597d5d90dc39ef34a26a6fcb
+app 0.6.0
 schema 6
+main -> 62d6b7b431669ca44a705b1c85f24f9df72bd6ca
 ```
 
-`v0.6.0` tag'i doğrudan bu commit'e işaret eder.
+`v0.6.0` tag'i doğrudan a938367'ye işaret eder. main, 7 Ekim 2026'da GÖREV-03 Adım 1 ile `62d6b7b`'ye fast-forward edildi: v0.6.0 koduna ek olarak konaklama keşif belgeleri (`v0.7-lodging-inventory`) ve GÖREV-01/02 belgeleri. Kod ve şema main'de hâlâ 0.6.0 / 6. main CI: success.
 
 ## Aktif branch
 
 ```text
-v0.7-lodging-inventory
-23905962126ba9f00f7f8b6223c67c9633e70c2c
+gorev-03-mahalleler
+v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi
+app 0.7.0
+schema 7
 ```
 
-Bu branch:
-- main'in üzerine yalnız lodging discovery doküman/kanıt çalışması ekler,
-- app version hâlâ 0.6.0,
-- schema hâlâ 6,
-- production DB'ye lodging veri eklemedi,
-- main'e merge edilmedi.
-
-Son Actions: success.
+Bu dal:
+- mahalle toplayıcısını (`south-walton-neighborhoods`) ve şema 7'yi ekler,
+- plaj erişimi–mahalle eşleme katmanını ekler,
+- main'e alınmadı, tag yok; karar yöneticinin.
 
 Test:
-- 289 Python
-- 19 frontend
+- 390 Python
+- 29 frontend
 
 ---
 
@@ -148,6 +146,8 @@ User manual v0.6 smoke:
 
 ## v0.7 — Lodging inventory discovery
 
+Dal adı `v0.7-lodging-inventory`; yalnız belge/kanıt. Aşağıdaki v0.7.0 uygulama sürümüyle ilgisi yoktur.
+
 ### İlk discovery commit
 
 `318d73644f761b6a89e7d49d5de9a77f71d00381`
@@ -203,6 +203,24 @@ Yapılmadı:
 
 Book>Direct'i price/availability snapshot için ileride değerlendirmek mümkün.
 
+> **7 Ekim 2026 yönetici kararı:** Tarihten bağımsız tam konaklama envanteri şartı kaldırıldı. Konaklama, belirli tarihler için yapılan Book>Direct aramalarının etiketli anlık görüntüleri olarak modellenecek ve hiçbir yerde tam envanter diye adlandırılmayacak (ayrıntı: `CALISMA_MANTIGI.md` §10). Henüz kodlanmadı.
+
+## v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi
+
+Dal: `gorev-03-mahalleler` (GÖREV-03, 7 Ekim 2026). Uygulama 0.7.0, şema 7. main'e alınmadı; tag yok.
+
+Önemli:
+- `south-walton-neighborhoods/1`: Visit South Walton mahalle dizini (gömülü JSON) + mahalle sayfaları; 30A'ya özel
+- 13 canonical mahalle, birebir ad veya açık yazım tablosu; Miramar Beach, Seascape, Sandestin kapsam dışı; eksik hedef mahalle çekimi durdurur
+- kaynak kimliği, permalink, kısa tanıtım, temsilî nokta (mahalle merkezi değil), etiketler, kayıt `modified`, sayfa tanıtım metni (nullable)
+- `neighborhood_records`, v6 → v7 migration (yedek, tek transaction, foreign_key_check, rollback)
+- Veri toplama → Mahalleler sekmesi; kimliğe göre diff
+- plaj erişimi–mahalle eşleme dosyası `studio/destinations/thirty_a_beach_neighborhoods.csv`: 9 resmî rehber + 44 program türetimi (boylam farkıyla en yakın temsilî nokta; Alys Beach ve Rosemary Beach'e erişim atanmaz; 2 belirsiz)
+- doğrulama: türetme 9 resmî eşlemenin 8'inde aynı (fark: Walton Dunes - 8)
+- plaj ekranında mahalle + yöntem etiketi, mahalle filtresi, “eşlenmemiş”
+
+Canlı deneme (geçici klasör): 16 dizin kaydı → 13 mahalle, 3 kapsam dışı; 14 ham yanıt; ikinci çekim farkı 13 aynı. Gerçek DB kopyasında v6 → v7 denemesi başarılı. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`, `docs/gorevler/GOREV-03/RAPOR.md`.
+
 ---
 
 ## Kullanıcı DB snapshot korunma örneği
@@ -223,21 +241,13 @@ v0.6 migration verification sırasında raporlanan:
 
 Bu tablo tarihsel doğrulama snapshot'ıdır; production invariant değildir.
 
+v0.7 (şema 7) migration denemesi, 7 Ekim 2026, gerçek DB'nin salt okunur kopyası: yukarıdaki sayılar aynen korundu; `sources` 8 → 9 (yalnız mahalle kaynağı eklendi); yeni `neighborhood_records` boş; `foreign_key_check` boş; 3 plaj, 2 hava ve 1 restoran sürümü API'de görünür kaldı.
+
 ---
 
-## Şu anda açık kritik research blocker
+## Konaklama: açık konu
 
-**Tam/tarihten bağımsız lodging inventory.**
-
-İhtiyaç:
-- supported public inventory/export/read path,
-- stable IDs,
-- deterministic enumeration,
-- complete pagination,
-- clear provider/unit semantics,
-- 30A scope mapping.
-
-Bunlar bulunmadan “lodging inventory connector” yapılmamalıdır.
+3 Ekim'deki blocker, tam/tarihten bağımsız lodging inventory idi. 7 Ekim 2026 yönetici kararıyla bu şart kaldırıldı: konaklama tarihli arama anlık görüntüleri olarak modellenecek. Tam envanter iddiası taşıyan bir “lodging inventory connector” yine yapılmamalıdır.
 
 ---
 
@@ -247,13 +257,13 @@ Stable ürün:
 **v0.6.0**
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants**
+**beach + weather + restaurants**; görev dalında ayrıca **neighborhoods + plaj–mahalle eşlemesi** (v0.7.0)
 
-Aktif fakat kodlanmamış research:
-**lodging inventory**
+Kodlanmamış:
+**lodging** (tarihli arama anlık görüntüleri olarak planlandı)
 
 Yanlış sonraki adım:
-**Book>Direct date search'i full inventory diye kodlamak**
+**Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-ya tam inventory kaynağı bulmak, ya lodging'i bekletip başka veri domain'ine geçmek.
+v0.7.0 yönetici incelemesinden ve main'e alma kararından sonra stable olur; sıradaki domain'i yönetici seçer.
