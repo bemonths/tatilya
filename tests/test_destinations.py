@@ -58,7 +58,7 @@ def test_fresh_profile_and_scoped_unique_constraints(client):
         assert client.post('/api/sources',json=payload(destination_id=destination,url=weather.SOURCE_URL)).status_code==409
 
 
-@pytest.mark.parametrize('endpoint',['bootstrap','sources','jobs','collections','source-runs','weather-runs','restaurant-runs','neighborhood-runs','events'])
+@pytest.mark.parametrize('endpoint',['bootstrap','sources','jobs','collections','source-runs','weather-runs','restaurant-runs','neighborhood-runs','beach-neighborhoods','events'])
 @pytest.mark.parametrize('destination',['missing','disabled-coast'])
 def test_unknown_or_disabled_is_not_silent_default(client,endpoint,destination):
     assert client.get(f'/api/{endpoint}?destination_id={destination}').status_code==404

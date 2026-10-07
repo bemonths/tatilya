@@ -11,3 +11,5 @@
 .restaurant-toolbar {flex-wrap:wrap;}
 .restaurant-toolbar .search-wrap {flex-basis:100%;}
 #restaurant-detail {overflow-wrap:anywhere;}
+#neighborhood-detail{overflow-wrap:anywhere}.neighborhood-intro summary{cursor:pointer;font-size:11px;color:var(--muted);margin-bottom:10px}.neighborhood-intro p{font-size:12px;line-height:1.65}
+.mapping-cell{min-width:130px}.mapping-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mapping-tags .tag{font-size:9px;padding:2px 6px}

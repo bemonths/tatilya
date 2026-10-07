@@ -139,7 +139,7 @@ for(const [Screen,field,label,connector] of [[BeachScreen,'collections','plaj','
   });
 }
 
-import {NeighborhoodScreen, westToEast, introParagraphs, sourcePageLink} from '../studio/web/neighborhoods.js';
+import {NeighborhoodScreen, westToEast, introParagraphs, sourcePageLink, sourceStamp} from '../studio/web/neighborhoods.js';
 
 const hood=(name,longitude,extra={})=>({external_id:`${name}-id`,name,longitude,latitude:30.3,canonical_region_id:name.toLowerCase(),canonical_region_name:name,tags:[],summary:null,page_intro:null,page_url:'https://www.visitsouthwalton.com/neighborhoods/x/',source_modified:null,...extra});
 test('neighborhood jobs and tabs route to the fourth domain',()=>{
@@ -154,7 +154,10 @@ test('neighborhoods list west to east by representative point',()=>{
   assert.deepEqual(ordered.map(r=>r.name),['Dune Allen','Alpha','Seaside','Inlet Beach']);
 });
 test('intro paragraphs escape source text and keep a missing intro visible',()=>{
-  assert.equal(introParagraphs('First <b>.\n\nSecond.'),'<p>First &lt;b&gt;.</p><p>Second.</p>');
+  assert.equal(introParagraphs('First <b>.\n\nSecond.'),'<details class="neighborhood-intro"><summary>Sayfadaki tanıtım metni · 2 paragraf</summary><p>First &lt;b&gt;.</p><p>Second.</p></details>');
+  assert.equal(sourceStamp('2025-05-09T16:26:46+0000'),'2025-05-09 16:26:46 UTC');
+  assert.equal(sourceStamp('2025-05-09T16:26:46-0500'),'2025-05-09 16:26:46-0500');
+  assert.equal(sourceStamp(null),'Belirtilmemiş');assert.equal(sourceStamp('<x>'),'&lt;x&gt;');
   for(const missing of [null,'','  \n\n ']) assert.match(introParagraphs(missing),/tanıtım metni bulunamadı/);
   assert.match(sourcePageLink('https://www.visitsouthwalton.com/neighborhoods/seaside/'),/target="_blank" rel="noopener noreferrer"/);
   for(const url of [null,'http://www.visitsouthwalton.com/','javascript:alert(1)','bad']) assert.equal(sourcePageLink(url),'');
@@ -194,4 +197,53 @@ test('neighborhood screen never shows another destination runs',()=>{
   const screen=new NeighborhoodScreen();screen.selectedRun='old';screen.selectedRecord='old';screen.snapshot={records:['old']};screen.sequence=4;
   resetDestinationState({},[screen]);
   assert.equal(screen.selectedRun,null);assert.equal(screen.snapshot,null);assert.equal(screen.sequence,5);
+});
+
+import {UNMAPPED, beachMapping, beachNeighborhood, mappingCell, mappingDetail, mappingNote, filterBeaches} from '../studio/web/collection.js';
+
+const layer={available:true,rows:[
+  {external_id:'official',region_id:'seagrove',region_name:'Seagrove',method:'resmi_rehber',method_label:'resmî rehber',source:'https://www.visitsouthwalton.com/blog/guide-beach-parking-transportation/ (yayın 2023-05-04)',note:'başlık: Seagrove',ambiguous:false},
+  {external_id:'derived',region_id:'seaside',region_name:'<Seaside>',method:'turetim_en_yakin_mahalle_noktasi',method_label:'program türetimi',source:'4473ae75f66b40d49c75f5fa2444c6db',note:'En yakın temsilî nokta',ambiguous:true}]};
+const access=(external_id,extra={})=>({external_id,name:`${external_id} access`,address:'1 Test Rd',city:'Santa Rosa Beach',access_type:'neighborhood',features:[],latitude:30.3,longitude:-86.1,...extra});
+test('beach mapping labels official, derived, ambiguous and unmapped accesses',()=>{
+  const mapping=beachMapping(layer);
+  assert.equal(beachMapping({available:false,rows:layer.rows}).size,0);assert.equal(beachMapping(undefined).size,0);
+  assert.deepEqual(beachNeighborhood(access('unknown'),mapping),{regionId:UNMAPPED,label:'eşlenmemiş',method:null,ambiguous:false,row:null});
+  const official=mappingCell(beachNeighborhood(access('official'),mapping));
+  assert.match(official,/Seagrove/);assert.match(official,/tag green">resmî rehber/);assert.doesNotMatch(official,/belirsiz/);
+  const derived=mappingCell(beachNeighborhood(access('derived'),mapping));
+  assert.match(derived,/&lt;Seaside&gt;/);assert.match(derived,/program türetimi/);assert.match(derived,/belirsiz/);
+  assert.match(mappingCell(beachNeighborhood(access('unknown'),mapping)),/eşlenmemiş/);
+});
+test('beach mapping detail links only the official guide and keeps derived provenance as a run id',()=>{
+  const mapping=beachMapping(layer);
+  const official=mappingDetail(beachNeighborhood(access('official'),mapping));
+  assert.match(official,/href="https:\/\/www\.visitsouthwalton\.com\/blog\/guide-beach-parking-transportation\/" target="_blank" rel="noopener noreferrer"/);
+  const derived=mappingDetail(beachNeighborhood(access('derived'),mapping));
+  assert.match(derived,/Mahalle çekimi 4473ae75f66b40d49c75f5fa2444c6db/);assert.doesNotMatch(derived,/<a /);assert.match(derived,/<dd>evet<\/dd>/);
+  assert.match(mappingDetail(beachNeighborhood(access('unknown'),mapping)),/eşlenmemiş/);
+  assert.match(mappingNote(layer),/yalnız yaklaşık konumdur/);
+  assert.equal(mappingNote({available:false,reason:'<broken>'}),'&lt;broken&gt;');
+});
+test('beach neighborhood filter combines with existing filters and selects unmapped accesses',()=>{
+  const mapping=beachMapping(layer);
+  const records=[access('official'),access('derived',{features:['parking']}),access('unknown')];
+  assert.deepEqual(filterBeaches(records,{neighborhood:'seaside'},mapping).map(r=>r.external_id),['derived']);
+  assert.deepEqual(filterBeaches(records,{neighborhood:UNMAPPED},mapping).map(r=>r.external_id),['unknown']);
+  assert.deepEqual(filterBeaches(records,{neighborhood:'seaside',feature:'toilets'},mapping),[]);
+  assert.equal(filterBeaches(records,{},mapping).length,3);
+  assert.deepEqual(filterBeaches(records,{search:' official '},mapping).map(r=>r.external_id),['official']);
+});
+test('beach rows show the mapping column and an unmapped access stays visible',()=>{
+  const elements=Object.fromEntries(['#beach-count','#beach-rows','#beach-detail'].map(id=>[id,{innerHTML:'',textContent:''}]));
+  const screen=new BeachScreen();
+  screen.data={beach_connector:{feature_labels:{}}};screen.mapping=beachMapping(layer);
+  screen.snapshot={records:[access('official'),access('unknown')],run:{fetched_at:'2026-10-07T12:00:00Z',source_url:'https://www.visitsouthwalton.com/beach-bay-access-locations/'}};
+  screen.rows({querySelector:id=>elements[id]});
+  const rows=elements['#beach-rows'].innerHTML;
+  assert.match(rows,/class="mapping-cell">Seagrove/);assert.match(rows,/eşlenmemiş/);
+  assert.match(elements['#beach-detail'].innerHTML,/Mahalle eşlemesi/);
+  screen.neighborhood=UNMAPPED;screen.rows({querySelector:id=>elements[id]});
+  assert.equal(elements['#beach-count'].textContent,'1 / 2 kayıt');
+  assert.match(elements['#beach-detail'].innerHTML,/Bu erişim eşleme dosyasında yok/);
 });

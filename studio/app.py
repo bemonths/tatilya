@@ -18,7 +18,7 @@ from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
 from .sources import beaches, neighborhoods, weather
 from .sources.registry import DEFAULT_REGISTRY
-from .destinations import DEFAULT_DESTINATION_ID
+from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping
 
 WEB = Path(__file__).parent / "web"
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "data"
@@ -93,6 +93,7 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "neighborhood_runs": neighborhood_runs(destination_id),
                 "neighborhood_connector": {"name": neighborhoods.NeighborhoodsConnector.name, "method": "HTML",
                                            "source_url": neighborhoods.SOURCE_URL, "scope": neighborhoods.SCOPE},
+                "beach_neighborhoods": beach_neighborhoods(destination_id),
                 "weather_connector": {"name": "nws-weather", "method": "API", "anchors": context.weather_anchors,
                                       "provenance": {"scope":"Destinasyonda yapılandırılmış hava örnek noktaları."}},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
@@ -212,6 +213,19 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(db.path.parent.resolve()) or not path.is_file():
             raise HTTPException(404, "Ham kaynak dosyası bulunamadı.")
         return FileResponse(path, media_type="text/plain", filename=f"30a-ham-kaynak-{identifier[:8]}.html.txt")
+
+    @app.get("/api/beach-neighborhoods")
+    def beach_neighborhoods(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Committed, reviewable mapping layer from the destination profile; never recomputed here."""
+        selected(destination_id)
+        path = getattr(PROFILES.get(destination_id), "BEACH_NEIGHBORHOOD_MAPPING", None)
+        if path is None:
+            return {"available": False, "reason": "Bu destinasyon için plaj–mahalle eşleme dosyası yok.", "rows": []}
+        try:
+            rows = beach_mapping.load(path, db.context(destination_id).canonical_regions)
+        except beach_mapping.MappingError as exc:
+            return {"available": False, "reason": str(exc), "rows": []}
+        return {"available": True, "file": path.name, "methods": beach_mapping.METHOD_LABELS, "rows": rows}
 
     @app.get("/api/weather-runs")
     def weather_runs(destination_id: str = DEFAULT_DESTINATION_ID):

@@ -1,4 +1,6 @@
 """First-install and migration defaults; SQLite owns runtime configuration."""
+from pathlib import Path
+
 METADATA = {"id": "30a", "name": "30A", "subtitle": "South Walton, Florida"}
 REGIONS = (
     ("dune-allen", "Dune Allen"), ("gulf-place", "Gulf Place"),
@@ -32,6 +34,10 @@ SEEDS = [
 NEIGHBORHOOD_ALIASES = {"Blue Mountain": "Blue Mountain Beach", "Watercolor": "WaterColor", "Watersound": "WaterSound"}
 # South Walton neighborhoods outside the 30A scope, as in the restaurant directory rule.
 NEIGHBORHOOD_EXCLUDED = ("Miramar Beach", "Seascape", "Sandestin")
+
+# Reviewed beach access -> neighborhood layer, generated once by tools/plaj_mahalle_esleme.py and
+# committed; the app only reads it. Method and validation: docs/M7-MAHALLE-VERISI.md.
+BEACH_NEIGHBORHOOD_MAPPING = Path(__file__).with_name("thirty_a_beach_neighborhoods.csv")
 
 ANCHOR_PROVENANCE = {
     "source_url": "https://www.visitsouthwalton.com/beach-bay-access-locations/",

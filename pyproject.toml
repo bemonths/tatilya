@@ -16,7 +16,7 @@ test = ["pytest>=8,<10", "httpx>=0.27,<1"]
 include = ["studio*"]
 
 [tool.setuptools.package-data]
-studio = ["web/*"]
+studio = ["web/*", "destinations/*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
