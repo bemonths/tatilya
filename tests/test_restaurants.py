@@ -21,7 +21,7 @@ from studio.sources.base import SourceError, CollectionCanceled, CollectionResul
 from studio.sources.registry import DEFAULT_REGISTRY
 from tests.test_beaches import finished
 from tests.test_weather import make_v3, snapshot_tables, NWSMock
-from tests.legacy import make_legacy_db
+from tests.legacy import make_legacy_db, without_v7_snapshot
 
 FIXTURES = Path(__file__).parent / 'fixtures/restaurants'
 DETAIL = (FIXTURES / 'detail.html').read_text(encoding='utf-8-sig')
@@ -105,7 +105,7 @@ def test_registry_and_fresh_seed(tmp_path):
         assert DEFAULT_REGISTRY.for_source(source).diff_enabled
         assert data['restaurant_runs'] == []
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 6
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 7
 
 
 @pytest.mark.parametrize('version', [1, 2, 3, 4])
@@ -116,7 +116,7 @@ def test_upgrade_chain(tmp_path, version):
     else: make_legacy_db(path, version)
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 7
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         assert con.execute('SELECT COUNT(*) FROM restaurant_records').fetchone()[0] == 0
         assert con.execute('SELECT COUNT(*) FROM restaurant_regions').fetchone()[0] == 0
@@ -169,7 +169,7 @@ def test_v4_preserves_beach_weather_entities_and_raw(tmp_path):
     raw = {str(p.relative_to(tmp_path)):p.read_bytes() for p in tmp_path.rglob('*.html')}
     weather_raw = (tmp_path/'weather.json').read_bytes()
     db.initialize()
-    with sqlite3.connect(path) as con: assert snapshot(con) == before
+    with sqlite3.connect(path) as con: assert without_v7_snapshot(snapshot(con)) == before
     backup, = (tmp_path/'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con: assert snapshot(con) == before
     assert all((tmp_path/name).read_bytes() == body for name,body in raw.items())
@@ -503,7 +503,7 @@ def test_nullable_description_published_to_db_api_and_metadata(tmp_path, monkeyp
         assert snapshot['run']['metadata']['description_missing_count'] == 1
         assert snapshot['run']['record_count'] == 2
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 6
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 7
             description_column = next(row for row in con.execute('PRAGMA table_info(restaurant_records)') if row['name'] == 'description')
             assert description_column['notnull'] == 0
             assert con.execute('SELECT COUNT(*) FROM restaurant_records WHERE run_id=? AND description IS NULL', (job['id'],)).fetchone()[0] == 1

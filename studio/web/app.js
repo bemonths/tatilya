@@ -3,6 +3,7 @@ import {api, esc, host, date, setDestination, destinationRevision, destinationPa
 import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen} from "./restaurants.js";
+import {NeighborhoodScreen} from "./neighborhoods.js";
 import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 
@@ -18,8 +19,10 @@ const weatherScreen=new WeatherScreen();
 let lastWeatherId=null;
 let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
-const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen};
-const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants"};
+let lastNeighborhoodId=null;
+const neighborhoodScreen=new NeighborhoodScreen();
+const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen};
+const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods"};
 
 function toast(text) {
   if(!text) return;
@@ -54,6 +57,7 @@ function render() {
   beachScreen.invalidate();
   weatherScreen.invalidate();
   restaurantScreen.invalidate();
+  neighborhoodScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
@@ -117,7 +121,7 @@ function renderRows() {
 function renderPlanned() {
   const step = state.data.steps.find(step=>step.id===state.page);
   const plan = roadmap[state.page];
-  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ile plaj, hava ve restoran verisi toplama kullanılabilir.")}
+  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ile plaj, hava, restoran ve mahalle verisi toplama kullanılabilir.")}
     <section class="planned-hero"><span class="tag warm">Planlanan aşama · Henüz bağlı değil</span><h2>${esc(plan.headline)}</h2><p>${esc(plan.description)}</p><a class="return-link" href="#sources">← Kaynak kütüphanesine dön</a></section>
     <div class="planned-grid">${plan.cards.map(([label,title,description])=>`<section class="planned-card"><span class="eyebrow">${esc(label)}</span><h3>${esc(title)}</h3><p>${esc(description)}</p></section>`).join("")}</div></div>`;
 }
@@ -130,7 +134,7 @@ function reportStale(report) {
 function renderQuality() {
   const completed = state.data.jobs.find(job=>job.kind==="catalog_audit" && job.status==="done" && job.result);
   const report = completed?.result;
-  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları ve restoranların kimlik, mahalle ve detay alanları doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
+  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları, restoranların kimlik, mahalle ve detay alanları ve mahallelerin kimlik, ad ve sayfa eşleşmesi doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
     (report ? `<section class="quality-result">${reportStale(report)?'<div class="stale-notice">Kaynak kayıtları bu kontrolden sonra değişti. Güncel sonuç için kontrolü yeniden çalıştır.</div>':""}
       <div class="quality-summary"><span class="eyebrow">SON KATALOG KONTROLÜ · ${esc(date(completed.finished_at))}</span><h2 style="margin-top:10px">${report.checked} kayıt incelendi · ${report.needs_attention} kayıtta eksik bilgi</h2><p>${esc(report.scope)}</p></div>
       ${report.findings.map(finding=>`<div class="quality-row"><strong>${esc(finding.name)}</strong><span>${finding.issues.length?finding.issues.map(esc).join(" "):"Kayıt bilgileri tamam."}</span></div>`).join("")}</section>` :
@@ -140,7 +144,7 @@ function renderQuality() {
 function renderSettings() {
   $("#main").innerHTML = pageHeading("Çalışma alanı bilgisi", "30A Studio’nun sürümü ve kayıt konumu.") +
     `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">Destinasyonların kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
-    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj, hava ve restoran verisi hazır</h2><p>Kaynak kütüphanesi, gerçek plaj, restoran ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
+    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj, hava, restoran ve mahalle verisi hazır</h2><p>Kaynak kütüphanesi, gerçek plaj, restoran, mahalle ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir. Plaj erişimleri, gözden geçirilebilir bir eşleme dosyasıyla mahallelere bağlanır.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
 }
 
 function renderJobResultLink(job) {
@@ -161,6 +165,9 @@ function updateAuditButtons() {
   const restaurantSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-restaurants");
   const restaurantBusy=state.data.jobs.some(j=>j.source_id===restaurantSource?.id && active(j));
   document.querySelectorAll('[data-action="collect-restaurants"]').forEach(button=>{button.disabled=!restaurantSource || restaurantBusy;button.textContent=restaurantBusy?"Toplama sürüyor…":"↓ Restoran verilerini topla";});
+  const neighborhoodSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-neighborhoods");
+  const neighborhoodBusy=state.data.jobs.some(j=>j.source_id===neighborhoodSource?.id && active(j));
+  document.querySelectorAll('[data-action="collect-neighborhoods"]').forEach(button=>{button.disabled=!neighborhoodSource || neighborhoodBusy;button.textContent=neighborhoodBusy?"Toplama sürüyor…":"↓ Mahalle verilerini topla";});
   const busy = state.data.jobs.some(job=>job.kind==="catalog_audit" && active(job));
   document.querySelectorAll('[data-action="audit"]').forEach(button=>{
     button.disabled=busy || !state.data.sources.some(source=>source.enabled);
@@ -256,6 +263,7 @@ $("#main").addEventListener("click", async event=>{
         if(state.page==="quality") renderQuality();
         break;
       }
+      case "collect-neighborhoods":
       case "collect-restaurants":
       case "collect-weather":
       case "collect-beaches": {
@@ -290,8 +298,8 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen]);
-  lastCollectionId=lastWeatherId=lastRestaurantId=null;
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen]);
+  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=null;
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';
   $("#jobs-content").innerHTML='';
@@ -314,6 +322,7 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastCollectionId=state.data.collections[0]?.id || null;
     lastWeatherId=state.data.weather_runs[0]?.id || null;
     lastRestaurantId=state.data.restaurant_runs?.[0]?.id || null;
+    lastNeighborhoodId=state.data.neighborhood_runs?.[0]?.id || null;
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
     events=new EventSource(`/api/${destinationPath("events")}`);
@@ -332,6 +341,14 @@ async function start(destinationId=storedDestination(localStorage)) {
           state.data.restaurant_runs=await api("restaurant-runs");lastRestaurantId=restaurantLatest.id;restaurantScreen.selectedRun=null;
           if(location.hash==="#collect/restaurants") render();
           toast("Restoran verileri kaydedildi. Restoranlar sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
+      const neighborhoodLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-neighborhoods");
+      if(neighborhoodLatest && neighborhoodLatest.id!==lastNeighborhoodId) {
+        try {
+          state.data.neighborhood_runs=await api("neighborhood-runs");lastNeighborhoodId=neighborhoodLatest.id;neighborhoodScreen.selectedRun=null;
+          if(location.hash==="#collect/neighborhoods") render();
+          toast("Mahalle verileri kaydedildi. Mahalleler sekmesinden inceleyebilirsin.");
         } catch(error) {toast(error.message);}
       }
       const weatherLatest=state.data.jobs.find(job=>job.kind==="source_collection" && job.status==="done" && job.result?.connector_name===state.data.weather_connector.name);

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from studio.app import create_app
 from studio.database import Database, Conflict
 from studio.destinations.thirty_a import ANCHORS
-from studio.sources import beaches, restaurants, weather
+from studio.sources import beaches, neighborhoods, restaurants, weather
 from studio.sources.registry import DEFAULT_REGISTRY
 from studio.migrations import upgrade_v5
 from tests.test_restaurants import make_v4
@@ -38,11 +38,11 @@ def client(tmp_path):
 
 def test_fresh_profile_and_scoped_unique_constraints(client):
     db=client.app.state.db
-    assert len(db.sources())==7
+    assert len(db.sources())==8
     assert len(db.context().canonical_regions)==13 and len(db.context().weather_anchors)==3
     assert db.context().destination['name']=='30A'
     with db.connect() as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0]==6
+        assert con.execute('PRAGMA user_version').fetchone()[0]==7
         assert not con.execute('PRAGMA foreign_key_check').fetchall()
         con.execute("INSERT INTO regions VALUES ('30a-downtown','Downtown','30a',99)")
         with pytest.raises(sqlite3.IntegrityError):
@@ -58,7 +58,7 @@ def test_fresh_profile_and_scoped_unique_constraints(client):
         assert client.post('/api/sources',json=payload(destination_id=destination,url=weather.SOURCE_URL)).status_code==409
 
 
-@pytest.mark.parametrize('endpoint',['bootstrap','sources','jobs','collections','source-runs','weather-runs','restaurant-runs','events'])
+@pytest.mark.parametrize('endpoint',['bootstrap','sources','jobs','collections','source-runs','weather-runs','restaurant-runs','neighborhood-runs','events'])
 @pytest.mark.parametrize('destination',['missing','disabled-coast'])
 def test_unknown_or_disabled_is_not_silent_default(client,endpoint,destination):
     assert client.get(f'/api/{endpoint}?destination_id={destination}').status_code==404
@@ -90,7 +90,7 @@ def test_bootstrap_lists_audit_and_job_constraints_isolated(client):
     assert data['selected_destination']['id']=='test-coast'
     assert len(data['sources'])==1 and len(data['jobs'])==1
     assert [r['name'] for r in data['canonical_regions']]==['Downtown']
-    assert data['collections']==data['restaurant_runs']==data['weather_runs']==[]
+    assert data['collections']==data['restaurant_runs']==data['weather_runs']==data['neighborhood_runs']==[]
     assert all(j['id']!=job['id'] for j in client.get('/api/jobs').json())
     a=db.add_job(destination_id='30a');b=db.add_job(destination_id='test-coast')
     assert a!=b
@@ -98,7 +98,7 @@ def test_bootstrap_lists_audit_and_job_constraints_isolated(client):
     db.update_job(a,status='done');db.update_job(b,status='done')
 
 
-@pytest.mark.parametrize('module,connector',[(beaches,beaches.BeachesConnector()),(restaurants,restaurants.RestaurantsConnector())])
+@pytest.mark.parametrize('module,connector',[(beaches,beaches.BeachesConnector()),(restaurants,restaurants.RestaurantsConnector()),(neighborhoods,neighborhoods.NeighborhoodsConnector())])
 def test_specific_connector_never_binds_other_destination(client,module,connector):
     assert connector.supports({'url':module.SOURCE_URL,'destination_id':'30a'})
     assert not connector.supports({'url':module.SOURCE_URL,'destination_id':'test-coast'})
@@ -188,7 +188,7 @@ def test_v5_migration_preserves_old_fields_backup_and_rollback(tmp_path,monkeypa
         assert not con.execute("SELECT name FROM sqlite_master WHERE name='destinations'").fetchall()
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0]==6
+        assert con.execute('PRAGMA user_version').fetchone()[0]==7
         row=con.execute("SELECT * FROM sources WHERE id='archived'").fetchone()
         assert row[:len(before)]==before and row[-2:]==('30a','seaside')
         assert con.execute("SELECT destination_id FROM entities WHERE id='entity'").fetchone()[0]=='30a'

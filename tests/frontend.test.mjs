@@ -138,3 +138,60 @@ for(const [Screen,field,label,connector] of [[BeachScreen,'collections','plaj','
     assert.ok(!main.innerHTML.includes('old-run'));
   });
 }
+
+import {NeighborhoodScreen, westToEast, introParagraphs, sourcePageLink} from '../studio/web/neighborhoods.js';
+
+const hood=(name,longitude,extra={})=>({external_id:`${name}-id`,name,longitude,latitude:30.3,canonical_region_id:name.toLowerCase(),canonical_region_name:name,tags:[],summary:null,page_intro:null,page_url:'https://www.visitsouthwalton.com/neighborhoods/x/',source_modified:null,...extra});
+test('neighborhood jobs and tabs route to the fourth domain',()=>{
+  assert.deepEqual(jobResultTarget({kind:'source_collection',result:{connector_name:'south-walton-neighborhoods'}}),{href:'#collect/neighborhoods',label:'Mahalle verilerini aç'});
+  const tabs=collectionTabs('neighborhoods');
+  assert.match(tabs,/href="#collect\/neighborhoods" aria-current="page">Mahalleler</);
+  assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
+  assert.equal((tabs.match(/class="tab/g)||[]).length,4);
+});
+test('neighborhoods list west to east by representative point',()=>{
+  const ordered=westToEast([hood('Inlet Beach',-86.0),hood('Dune Allen',-86.25),hood('Seaside',-86.13),hood('Alpha',-86.13)]);
+  assert.deepEqual(ordered.map(r=>r.name),['Dune Allen','Alpha','Seaside','Inlet Beach']);
+});
+test('intro paragraphs escape source text and keep a missing intro visible',()=>{
+  assert.equal(introParagraphs('First <b>.\n\nSecond.'),'<p>First &lt;b&gt;.</p><p>Second.</p>');
+  for(const missing of [null,'','  \n\n ']) assert.match(introParagraphs(missing),/tanıtım metni bulunamadı/);
+  assert.match(sourcePageLink('https://www.visitsouthwalton.com/neighborhoods/seaside/'),/target="_blank" rel="noopener noreferrer"/);
+  for(const url of [null,'http://www.visitsouthwalton.com/','javascript:alert(1)','bad']) assert.equal(sourcePageLink(url),'');
+});
+test('neighborhood detail shows source fields, null placeholders and the representative-point note',()=>{
+  const elements=Object.fromEntries(['#neighborhood-count','#neighborhood-rows','#neighborhood-detail'].map(id=>[id,{innerHTML:'',textContent:''}]));
+  const screen=new NeighborhoodScreen();
+  screen.snapshot={records:[hood('Seaside',-86.13,{tags:['Walkable','<Tag>'],summary:'Short <line>',page_intro:'One.\n\nTwo.'}),hood('Dune Allen',-86.25)],run:{fetched_at:'2026-10-07T12:00:00Z'}};
+  screen.rows({querySelector:id=>elements[id]});
+  assert.equal(elements['#neighborhood-count'].textContent,'2 kayıt');
+  assert.ok(elements['#neighborhood-rows'].innerHTML.indexOf('Dune Allen')<elements['#neighborhood-rows'].innerHTML.indexOf('Seaside'));
+  let html=elements['#neighborhood-detail'].innerHTML;
+  assert.match(html,/Dune Allen/);assert.match(html,/<p>Belirtilmemiş<\/p>/);assert.match(html,/Etiket listelenmemiş/);
+  assert.match(html,/tanıtım metni bulunamadı/);assert.match(html,/mahalle merkezi değildir/);
+  assert.doesNotMatch(html,/null|undefined/);
+  screen.selectedRecord='Seaside-id';screen.rows({querySelector:id=>elements[id]});
+  html=elements['#neighborhood-detail'].innerHTML;
+  assert.match(html,/Short &lt;line&gt;/);assert.match(html,/&lt;Tag&gt;/);assert.match(html,/<p>One\.<\/p><p>Two\.<\/p>/);
+  assert.ok(!html.includes('<Tag>'));
+});
+test('bound neighborhood source enables collection and a running job disables it',()=>{
+  const source={id:'hoods',destination_id:'30a',name:'South Walton · Mahalleler',url:'https://www.visitsouthwalton.com/neighborhoods/',enabled:1,connector:{name:'south-walton-neighborhoods',method:'HTML'}};
+  const main={innerHTML:''};
+  new NeighborhoodScreen().render(main,{selected_destination:{id:'30a',name:'30A'},neighborhood_runs:[],sources:[source],jobs:[],canonical_regions:[{}],neighborhood_connector:{scope:'Scope.'}},(title,description,actions)=>actions);
+  assert.match(main.innerHTML,/<button[^>]*data-action="collect-neighborhoods"[^>]*>↓ Mahalle verilerini topla<\/button>/);
+  assert.doesNotMatch(main.innerHTML.match(/<button[^>]*data-action="collect-neighborhoods"[^>]*>/)[0],/disabled/);
+  assert.match(main.innerHTML,/İlk mahalle çekimi hazır/);assert.match(main.innerHTML,/videoda aynen kullanılmaz/);
+  const busy={innerHTML:''};
+  new NeighborhoodScreen().render(busy,{selected_destination:{id:'30a',name:'30A'},neighborhood_runs:[],sources:[source],jobs:[{id:'j',destination_id:'30a',source_id:'hoods',status:'running'}]},(title,description,actions)=>actions);
+  assert.match(busy.innerHTML,/disabled>Toplama sürüyor…/);
+});
+test('neighborhood screen never shows another destination runs',()=>{
+  const data={selected_destination:{id:'other',name:'Other'},sources:[{id:'source',destination_id:'30a',enabled:1,connector:{name:'south-walton-neighborhoods'}}],jobs:[],neighborhood_runs:[{id:'old-run',destination_id:'30a'}]};
+  const main={innerHTML:''};new NeighborhoodScreen().render(main,data,(_title,description)=>description);
+  assert.match(main.innerHTML,/Bu destinasyon için mahalle kaynağı bağlı değil/);
+  assert.ok(!main.innerHTML.includes('old-run'));
+  const screen=new NeighborhoodScreen();screen.selectedRun='old';screen.selectedRecord='old';screen.snapshot={records:['old']};screen.sequence=4;
+  resetDestinationState({},[screen]);
+  assert.equal(screen.selectedRun,null);assert.equal(screen.snapshot,null);assert.equal(screen.sequence,5);
+});

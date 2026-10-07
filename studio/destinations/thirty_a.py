@@ -23,7 +23,15 @@ SEEDS = [
      "30A koridorundaki batı, orta ve doğu örnek noktaları için NWS tahminleri ve aktif hava uyarıları. Forecast, saatlik forecast ve aktif alert verileri api.weather.gov üzerinden toplanır.", "API"),
     ("30A · Bölge rehberi", "https://30a.com/", "Genel",
      "Yerel içerik ve konu keşfi. Otomatik veri toplama henüz bağlı değil.", "Belirlenecek"),
+    ("South Walton · Mahalleler", "https://www.visitsouthwalton.com/neighborhoods/", "Genel",
+     "Visit South Walton mahalle dizini. 13 kanonik 30A mahallesinin kaynak kimliği, temsilî noktası, etiketleri ve tanıtım metinleri toplanır; Miramar Beach, Seascape ve Sandestin kapsam dışıdır. Metinler iç araştırma kanıtıdır, videoda aynen kullanılmaz.", "HTML"),
 ]
+
+# Visit South Walton spells a few neighborhoods differently from the canonical regions.
+# Only these exact spellings are accepted; names are never inferred from addresses or coordinates.
+NEIGHBORHOOD_ALIASES = {"Blue Mountain": "Blue Mountain Beach", "Watercolor": "WaterColor", "Watersound": "WaterSound"}
+# South Walton neighborhoods outside the 30A scope, as in the restaurant directory rule.
+NEIGHBORHOOD_EXCLUDED = ("Miramar Beach", "Seascape", "Sandestin")
 
 ANCHOR_PROVENANCE = {
     "source_url": "https://www.visitsouthwalton.com/beach-bay-access-locations/",

@@ -15,7 +15,7 @@ from studio.migrations import upgrade_v3
 from studio.sources import beaches, weather
 from studio.sources.base import CollectionCanceled, SourceError
 from studio.sources.registry import DEFAULT_REGISTRY, ConnectorRegistry
-from tests.legacy import make_legacy_db
+from tests.legacy import make_legacy_db, without_v7_snapshot
 from tests.test_beaches import HEADERS, finished
 
 
@@ -100,14 +100,14 @@ def test_anchors_exact_and_registry_metadata(tmp_path):
         ('central', 30.3167, -86.12845, '5c81a5acf836f90dc03cccca'),
         ('east', 30.2713, -85.99579, '5c81a6a2f836f9166348e961')]
     assert 'mahalle merkezleri değildir' in ANCHOR_PROVENANCE['scope']
-    assert len(DEFAULT_REGISTRY.connectors) == 3
+    assert len(DEFAULT_REGISTRY.connectors) == 4
     with TestClient(create_app(tmp_path)) as client:
         for rows in (client.get('/api/sources').json(), client.get('/api/bootstrap').json()['sources']):
             s = next(s for s in rows if s['url'] == weather.SOURCE_URL)
             assert s['connector'] == {'name': 'nws-weather', 'version': 'nws-weather/1', 'method': 'API'}
             beach = next(s for s in rows if s['url'] == beaches.SOURCE_URL)
             assert beach['connector']['method'] == 'JSON'
-        assert client.get('/api/health').json()['version'] == '0.6.0'
+        assert client.get('/api/health').json()['version'] == '0.7.0'
 
 
 def test_full_collection_counts_nulls_dedupe_provenance_and_raw(tmp_path):
@@ -318,9 +318,9 @@ def test_v3_migration_preserves_every_table_and_raw_with_backup(tmp_path):
     raw = (tmp_path / 'raw/old-success/source.html').read_bytes()
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 7
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
-        assert snapshot_tables(con) == before
+        assert without_v7_snapshot(snapshot_tables(con)) == before
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con:
         assert con.execute('PRAGMA user_version').fetchone()[0] == 3
@@ -336,7 +336,7 @@ def test_fresh_and_legacy_upgrade_chains(tmp_path, version):
     if version: make_legacy_db(path, version)
     db = Database(path); db.initialize()
     with db.connect() as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 6
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 7
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         for table in ('weather_locations', 'weather_forecast_periods', 'weather_alerts', 'weather_alert_anchors'):
             assert con.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0

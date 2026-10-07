@@ -4,6 +4,19 @@ import sqlite3
 from pathlib import Path
 
 from studio.sources.beaches import SOURCE_URL
+from studio.sources.neighborhoods import SOURCE_URL as NEIGHBORHOOD_URL
+
+
+def without_v7_source(sources):
+    """v7 adds exactly one built-in 30A neighborhood source; every older source row must stay unchanged."""
+    url = lambda source: source["url"] if isinstance(source, dict) else source[2]
+    added = [source for source in sources if url(source) == NEIGHBORHOOD_URL]
+    assert len(added) == 1, added
+    return [source for source in sources if url(source) != NEIGHBORHOOD_URL]
+
+
+def without_v7_snapshot(snapshot):
+    return {**snapshot, "sources": without_v7_source(snapshot["sources"])}
 
 
 def make_legacy_db(path, version=2):

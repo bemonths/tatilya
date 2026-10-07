@@ -16,7 +16,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import beaches, weather
+from .sources import beaches, neighborhoods, weather
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID
 
@@ -90,6 +90,9 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "collections": db.collections(destination_id), "weather_runs": weather_runs(destination_id),
                 "restaurant_runs": restaurant_runs(destination_id),
                 "restaurant_connector": {"name": "south-walton-restaurants", "method": "HTML"},
+                "neighborhood_runs": neighborhood_runs(destination_id),
+                "neighborhood_connector": {"name": neighborhoods.NeighborhoodsConnector.name, "method": "HTML",
+                                           "source_url": neighborhoods.SOURCE_URL, "scope": neighborhoods.SCOPE},
                 "weather_connector": {"name": "nws-weather", "method": "API", "anchors": context.weather_anchors,
                                       "provenance": {"scope":"Destinasyonda yapılandırılmış hava örnek noktaları."}},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
@@ -260,6 +263,32 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham restoran manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-restoran-{identifier[:8]}.json")
+
+    @app.get("/api/neighborhood-runs")
+    def neighborhood_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id)
+                if run["connector_name"] == neighborhoods.NeighborhoodsConnector.name and run["status"] == "done"]
+
+    def find_neighborhood_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != neighborhoods.NeighborhoodsConnector.name or run["status"] != "done":
+            raise HTTPException(404, "Bu mahalle veri sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/neighborhood-runs/{identifier}")
+    def neighborhood_run(identifier: str):
+        run = find_neighborhood_run(identifier)
+        return {"run": run, "records": db.run_records(identifier), "diff": db.run_diff(identifier)}
+
+    @app.get("/api/neighborhood-runs/{identifier}/raw")
+    def raw_neighborhood_run(identifier: str):
+        run = find_neighborhood_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham mahalle manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"30a-mahalle-{identifier[:8]}.json")
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

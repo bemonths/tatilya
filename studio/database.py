@@ -9,7 +9,9 @@ from pathlib import Path
 from .destinations import DEFAULT_PROFILE, DEFAULT_DESTINATION_ID
 from .destinations.context import ConnectorContext
 from .migration_v6 import upgrade_v6
+from .migration_v7 import upgrade_v7
 SEEDS = DEFAULT_PROFILE.SEEDS
+SCHEMA_VERSION = 7
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -44,25 +46,27 @@ class Database:
         with self.connect() as con:
             con.execute("PRAGMA journal_mode=WAL")
             version = con.execute("PRAGMA user_version").fetchone()[0]
-            if version > 6:
+            if version > SCHEMA_VERSION:
                 raise RuntimeError("Bu veri dosyası daha yeni bir uygulama sürümüne ait.")
-            if version == 6:
+            if version == SCHEMA_VERSION:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5):
+            if version in (1, 2, 3, 4, 5, 6):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5):
+            if version in (3, 4, 5, 6):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
                     upgrade_v5(con)
-                upgrade_v6(con)
+                if version < 6:
+                    upgrade_v6(con)
+                upgrade_v7(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -111,6 +115,7 @@ class Database:
             upgrade_v4(con)
             upgrade_v5(con)
             upgrade_v6(con)
+            upgrade_v7(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
