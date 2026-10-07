@@ -174,4 +174,6 @@ Testler sentetik fixture ve `MockTransport` kullanır; canlı ağ yoktur (`tests
 
 7 Ekim 2026'da (GÖREV-04) gerçek veritabanı, `data/` klasörünün tam yedeği alındıktan sonra uygulamanın normal kullanımıyla v7'ye yükseltildi ve dört toplayıcı çalıştırıldı; mahalle verisinin ilk gerçek sürümü `3d1cbe8d5efc4e0fbae432786d57be23`. Ayrıntılar: [GÖREV-04 raporu](gorevler/GOREV-04/RAPOR.md).
 
-![Plaj ekranında v2 eşlemesi — Seagrove filtresi, ilçe alt bölüm verisi](gorevler/GOREV-04/plaj-ekrani-esleme-v2.png)
+7 Ekim 2026'da (GÖREV-05) gerçek veritabanı şema 8'e yükseltildi ve yalnız iklim toplayıcıları çalıştı; plaj ve mahalle verisi değişmedi. Aşağıdaki görüntü v3 eşlemesini gerçek veritabanının `work/` altındaki kopyasıyla gösterir: Seagrove filtresi, listede “ilçe alt bölüm verisi (bitişik)”, ayrıntıda “komşu erişimlerle tutarlı” (Headland Ave). v2 görüntüsü: [GÖREV-04](gorevler/GOREV-04/plaj-ekrani-esleme-v2.png).
+
+![Plaj ekranında v3 eşlemesi — Seagrove filtresi, bitişik ve komşu etiketleri](gorevler/GOREV-05/plaj-ekrani-esleme-v3.png)

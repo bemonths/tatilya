@@ -172,6 +172,10 @@ Henüz otomatik entity matching yoktur.
 
 NWS gibi generic connector'ların destination'a göre kullanacağı koordinatlar.
 
+### destination_climate_stations / destination_storm_corridors (şema 8)
+
+İklim connector'larının destination'a göre kullanacağı istasyonlar (`kind`: normals / water_temperature; kimlik, ad, rol, koordinat, koridora uzaklık ve uzaklık tanımı, ilk yıl) ve kasırga kıyı koridoru (batı/doğu uç noktaları ve referansları, yarıçaplar). 30A değerleri profilden v8 migration'ıyla bir kez yazılır.
+
 ## ConnectorContext
 
 Runtime source of truth SQLite'tır.
@@ -180,6 +184,8 @@ Runtime source of truth SQLite'tır.
 - destination
 - canonical_regions
 - weather_anchors
+- climate_stations (şema 8)
+- storm_corridor (şema 8)
 
 taşır.
 
@@ -203,15 +209,18 @@ ve metadata:
 - raw_filename
 - method
 - diff_enabled
+- isteğe bağlı `diff_reason` (kayıt farkı kapalıysa API'de gösterilen gerekçe)
 
 ### Generic / destination-specific ayrımı
 
 Generic:
 - `nws-weather`
+- `ncei-climate-normals`, `ndbc-water-temperature`, `hurdat2-storm-proximity` (şema 8)
 
 Destination-specific:
 - `south-walton-beaches`
 - `south-walton-restaurants`
+- `south-walton-neighborhoods`
 
 Specific connector `destination_id=30a` olmadan bağlanmaz.
 
@@ -324,6 +333,14 @@ Description nullable'dır.
 
 Plaj–mahalle eşlemesi tablo değildir; `beach_records.canonical_region_id` NULL kalır.
 
+### Climate (v0.8.0, şema 8; `gorev-05-iklim` dalı)
+
+- climate_normal_stations, climate_normal_values: istasyon × ay × değişken; nullable value, unit, completeness_flag, measurement_flag, years
+- water_temperature_stations (denenen yıllar, dosyası bulunan/olmayan yıllar), water_temperature_months (yıl-ay ortalaması °C, ölçüm sayısı, gün sayısı); ham ölçümler tabloda değil, ham dosyalarda
+- storm_corridor_snapshots (koridor, yarıçaplar, HURDAT2 dosya adı), storm_passages (fırtına × yarıçap: ilk giriş zamanı/ayı, en yakın uzaklık, daire içi en yüksek rüzgâr, sınıf, evre)
+
+Ayrıntı: `docs/M8-IKLIM-VERISI.md`.
+
 ## Migration stratejisi
 
 Şema yükseltmeden önce:
@@ -333,7 +350,7 @@ Plaj–mahalle eşlemesi tablo değildir; `beach_records.canonical_region_id` NU
 - `PRAGMA foreign_key_check`,
 - hata halinde rollback.
 
-Stable şema: `7` (v0.7.0; v0.6.0 şema 6 idi).
+Stable şema: `7` (v0.7.0 ve main; v0.6.0 şema 6 idi). `gorev-05-iklim` dalında şema `8`: v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler; gerçek DB 7 Ekim 2026'da şema 8'e yükseltildi.
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
@@ -354,6 +371,7 @@ Domain:
 - `/api/restaurant-runs`
 - `/api/neighborhood-runs` (v0.7.0)
 - `/api/beach-neighborhoods` (v0.7.0; profil dosyasındaki plaj–mahalle eşlemesi, salt okunur)
+- `/api/climate-runs`, `/api/climate`, `/api/climate-runs/{id}/raw` (v0.8.0; iklim çekimleri, yapılandırma ve son anlık görüntüler, ham manifest)
 
 Liste endpoint'leri destination-filtered'dır.
 

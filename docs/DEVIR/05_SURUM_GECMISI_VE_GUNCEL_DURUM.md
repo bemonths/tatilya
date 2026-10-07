@@ -4,30 +4,30 @@
 
 ```text
 tag v0.7.0 -> 7f25e3ce947c69fef999f7f4454a79608008fcad
+main -> a7e38f25b28b8b72157d1f5eb3aa74058cfeebcf
 app 0.7.0
 schema 7
-main -> 7f25e3ce947c69fef999f7f4454a79608008fcad
 ```
 
-7 Ekim 2026'da GÖREV-04 Adım 1 ile main `7f25e3c`'ye fast-forward edildi ve bu commit'e açıklamalı `v0.7.0` etiketi konuldu ("v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi"). main CI: success. Önceki stable `v0.6.0` → `a938367`; aynı gün daha önce main `62d6b7b`'ye (GÖREV-01/02 ve konaklama keşif belgeleri) alınmıştı.
+7 Ekim 2026'da GÖREV-04 Adım 1 ile main `7f25e3c`'ye fast-forward edildi ve bu commit'e açıklamalı `v0.7.0` etiketi konuldu ("v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi"). Aynı gün GÖREV-05 Adım 1 ile main `a7e38f2`'ye (GÖREV-04: eşleme v2, test bekleme düzeltmesi, gerçek veri güncelleme kuralı) fast-forward edildi; yeni etiket konmadı; main CI: success. Önceki stable `v0.6.0` → `a938367`.
 
 ## Aktif branch
 
 ```text
-gorev-04-esleme-v2
-app 0.7.0
-schema 7
+gorev-05-iklim
+app 0.8.0
+schema 8
 ```
 
 Bu dal:
-- plaj–mahalle eşlemesini Walton County alt bölüm poligonlarıyla yeniden kurar (v2),
-- test bekleme yardımcılarını sağlamlaştırır,
-- gerçek veriyi güncelleme kuralını belgeler,
+- plaj–mahalle eşlemesini v3 olarak kilitler (bitişik alt bölüm ≤ 30 m ve komşu erişimlerle tutarlılık),
+- iklim paketini ekler: NCEI 1991–2020 normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (üç generic toplayıcı, destinasyon yapılandırması SQLite'ta),
+- şema 8 (v7 → v8 migration) ve Veri toplama → İklim sekmesi,
 - main'e alınmadı; karar yöneticinin.
 
 Test:
-- 408 Python
-- 30 frontend
+- 479 Python
+- 37 frontend
 
 ---
 
@@ -245,11 +245,32 @@ v0.7 (şema 7) migration denemesi, 7 Ekim 2026, gerçek DB'nin salt okunur kopya
 
 Gerçek DB güncellemesi, 7 Ekim 2026 (GÖREV-04): `data/` tam yedeği alındıktan sonra uygulama gerçek klasörle açıldı (v6 → v7, uygulama yedeği alındı) ve plaj, NWS, restoran, mahalle toplayıcıları çalıştı. Sonra: 10 source_runs, 212 beach_records, 9 weather_locations, 1530 forecast rows, 276 restaurant_records, 282 restaurant_regions, 13 neighborhood_records; `integrity_check` ok, `foreign_key_check` boş.
 
+v0.8 (şema 8) migration denemesi, 7 Ekim 2026, gerçek DB'nin `work/` kopyası: eski satırların hepsi aynı; yalnız 8 yeni tablo, 3 iklim istasyonu ve 1 koridor yapılandırması, `sources` 9 → 12; `integrity_check` ok, `foreign_key_check` boş.
+
+Gerçek DB güncellemesi, 7 Ekim 2026 (GÖREV-05): `data/` tam yedeği (`work/yedek/20261007-1533/`) alındıktan sonra uygulama gerçek klasörle açıldı (v7 → v8, uygulama yedeği alındı) ve yalnız üç iklim toplayıcısı çalıştı. Sonra: 12 sources, 16 jobs, 13 source_runs, 2 climate_normal_stations, 168 climate_normal_values, 1 water_temperature_stations, 182 water_temperature_months, 1 storm_corridor_snapshots, 227 storm_passages; eski tablolar aynı; `integrity_check` ok, `foreign_key_check` boş. Şema 8 dosyasını main'deki 0.7.0 açmaz ("daha yeni sürüme ait").
+
 ---
 
 ## GÖREV-04 — plaj–mahalle eşlemesi v2 (dal)
 
 Dal: `gorev-04-esleme-v2`. Walton County `EnerGov_Additional/FeatureServer/13` "Subdivision Boundaries" katmanıyla nokta-poligon sorgusu; yöntem sırası resmi_rehber → ilce_alt_bolum (yalnız içindeki poligonlar, açık ad tablosu) → turetim_en_yakin_mahalle_noktasi. Sonuç: 9 resmî rehber, 6 ilçe alt bölüm verisi, 38 program türetimi; doğrulama: ilçe yöntemi 9 resmî eşlemenin 1'inde aynı, 8'inde sonuçsuz, farklı yok. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`, `docs/gorevler/GOREV-04/RAPOR.md`.
+
+---
+
+## GÖREV-05 — eşleme v3 ve iklim paketi (dal)
+
+Dal: `gorev-05-iklim`, uygulama 0.8.0, şema 8.
+
+Eşleme v3 (ayrı commit): yöntem sırası resmi_rehber → ilce_alt_bolum → ilce_alt_bolum_yakin (≤ 30 m) → komsu_tutarliligi → turetim_en_yakin_mahalle_noktasi. Sonuç: 9 resmî rehber, 6 ilçe, 16 ilçe (bitişik), 13 komşu, 9 türetim; belirsiz yok; resmî rehberle çelişki 1 (Winston Lane - 4). Yeni yöntemler 9 resmî eşlemenin hiçbirinde farklı sonuç vermedi. v2 → v3: 29 satır, 11'inde mahalle değişti. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
+
+İklim paketi:
+- `ncei-climate-normals/1`: NCEI veri API'si, `normals-monthly-1991-2020`, yedi değişken, bayraklar ve yıl sayıları; 30A: Destin (kıyı referansı) ve DeFuniak Springs (iç kesim)
+- `ndbc-water-temperature/1`: PCBF1 yıllık stdmet dosyaları, WTMP, yıl-ay ortalamaları; çok yıllı ortalamaya ≥ 20 günlü yıl-aylar
+- `hurdat2-storm-proximity/1`: güncel HURDAT2 dosyası, 1 saatlik ara değerleme, 30A kıyı koridoruna 50/100 deniz mili, ilk giriş ayı ve sınıf
+- tablolar: `destination_climate_stations`, `destination_storm_corridors`, `climate_normal_stations`, `climate_normal_values`, `water_temperature_stations`, `water_temperature_months`, `storm_corridor_snapshots`, `storm_passages`
+- üç toplayıcıda kayıt farkı kapalı, gerekçesi API'de
+
+Canlı deneme (geçici klasör) ve gerçek DB (7 Ekim 2026): 168 normal değeri (0 eksik), 182 yıl-ay deniz suyu ortalaması (dosyası bulunan 17 yıl; 2009–2012 404), HURDAT2 `hurdat2-1851-2025-092326.txt` 1.988 sistem, 50 deniz mili içinde 79, 100 içinde 148 geçiş. Ayrıntı: `docs/M8-IKLIM-VERISI.md`, `docs/gorevler/GOREV-05/RAPOR.md`.
 
 ---
 
@@ -262,10 +283,10 @@ Dal: `gorev-04-esleme-v2`. Walton County `EnerGov_Additional/FeatureServer/13` "
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi**
+**v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** (main etiketin önünde: eşleme v2)
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants + neighborhoods** ve plaj–mahalle eşlemesi (main'de v1, `gorev-04-esleme-v2` dalında v2)
+**beach + weather + restaurants + neighborhoods** ve plaj–mahalle eşlemesi (v0.7.0'da v1, main'de v2, `gorev-05-iklim` dalında v3); görev dalında ayrıca **iklim** (normaller, deniz suyu sıcaklığı, kasırga geçişleri)
 
 Kodlanmamış:
 **lodging** (tarihli arama anlık görüntüleri olarak planlandı)
@@ -274,4 +295,4 @@ Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-eşleme v2 yönetici incelemesinden sonra main'e alınır; sıradaki domain'i yönetici seçer.
+`gorev-05-iklim` yönetici incelemesinden sonra main'e alınır; iklim açık konuları (`docs/M8-IKLIM-VERISI.md` §10) ve sıradaki domain'i yönetici seçer.

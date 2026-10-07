@@ -26,7 +26,7 @@ Kaynağın söylemediği şey yazılmaz. Eksik alan NULL kalır; kaynakta listel
 
 ## Mimari sınır
 
-Generic çekirdek (kaynak → job → source_run → ham dosya → atomik yazım akışı, `jobs.py`, `database.py`, NWS connector'ı) destinasyondan bağımsızdır. 30A'ya özel davranış `studio/destinations/thirty_a.py` profilinde (ve yanındaki profil dosyalarında, ör. plaj–mahalle eşlemesi) veya 30A'ya bağlı connector'larda (`south-walton-beaches`, `south-walton-restaurants`, `south-walton-neighborhoods`) kalır; generic çekirdeğe gömülmez. Yeni bir davranış eklerken önce "bu generic mi, yoksa destinasyona özel mi?" diye sor.
+Generic çekirdek (kaynak → job → source_run → ham dosya → atomik yazım akışı, `jobs.py`, `database.py`, NWS connector'ı ve iklim connector'ları `ncei-climate-normals`, `ndbc-water-temperature`, `hurdat2-storm-proximity`) destinasyondan bağımsızdır; iklim istasyonları, kıyı koridoru ve yarıçaplar SQLite'taki destinasyon yapılandırmasından gelir. 30A'ya özel davranış `studio/destinations/thirty_a.py` profilinde (ve yanındaki profil dosyalarında, ör. plaj–mahalle eşlemesi) veya 30A'ya bağlı connector'larda (`south-walton-beaches`, `south-walton-restaurants`, `south-walton-neighborhoods`) kalır; generic çekirdeğe gömülmez. Yeni bir davranış eklerken önce "bu generic mi, yoksa destinasyona özel mi?" diye sor.
 
 ## Ortam
 

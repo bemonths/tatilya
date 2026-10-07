@@ -22,7 +22,7 @@ let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
 let lastNeighborhoodId=null;
 const neighborhoodScreen=new NeighborhoodScreen();
-// Three climate collectors can finish in any order, so refresh on any newly finished climate job.
+// The three climate jobs can be queued together; refresh on every newly finished one, not only the newest.
 let climateDoneIds=new Set();
 const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status==="done" && Object.values(CLIMATE_CONNECTORS).includes(j.result?.connector_name)).map(j=>j.id);
 const climateScreen=new ClimateScreen();

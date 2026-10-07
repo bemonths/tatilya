@@ -2,9 +2,9 @@
 
 > **Bu dosya projenin ana devir-teslim belgesidir.**
 >
-> Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M7`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
+> Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M8`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, 7 Ekim 2026'da GÖREV-03 (v0.7.0) ile güncellenmiştir.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 7 Ekim 2026'da GÖREV-05 (eşleme v3 ve iklim paketi) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
@@ -13,17 +13,17 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` @ `7f25e3ce947c69fef999f7f4454a79608008fcad` |
-| Stable tag | `v0.7.0` → `7f25e3c` — **v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** (önceki: `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.7.0` / `7` |
-| Aktif geliştirme dalı | `gorev-04-esleme-v2` — plaj–mahalle eşlemesi v2 (ilçe alt bölüm poligonları), test bekleme düzeltmesi, gerçek veri güncelleme kuralı |
-| Aktif dal durumu | Uygulama `0.7.0`, şema `7` (şema değişmedi); main'e alınmadı; karar yöneticinin |
+| Stable branch | `main` @ `a7e38f25b28b8b72157d1f5eb3aa74058cfeebcf` (GÖREV-04 eşleme v2; 7 Ekim 2026'da GÖREV-05 Adım 1 ile fast-forward) |
+| Stable tag | `v0.7.0` → `7f25e3c` — **v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi** (önceki: `v0.6.0` → `a938367`). main etiketin önündedir (eşleme v2 commit'leri); yeni etiket konmadı. |
+| Stable uygulama sürümü / şema | `0.7.0` / `7` (main ve `v0.7.0`) |
+| Aktif geliştirme dalı | `gorev-05-iklim` — plaj–mahalle eşlemesi v3 ve iklim paketi (NCEI normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri) |
+| Aktif dal durumu | Uygulama `0.8.0`, şema `8`; main'e alınmadı; karar yöneticinin |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main @ 7f25e3c başarılı; görev dalının sonucu `docs/gorevler/GOREV-04/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 408 Python testi + 30 frontend testi (main/v0.7.0: 390 + 29) |
-| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini |
-| Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. main'de v1 (9 resmî rehber + 44 program türetimi); görev dalında v2 (9 resmî rehber + 6 ilçe alt bölüm verisi + 38 program türetimi) |
-| Gerçek veritabanı | 7 Ekim 2026'da (GÖREV-04) tam yedekten sonra normal kullanımla şema 7'ye yükseltildi; dört toplayıcı çalıştı |
+| Son CI | main @ a7e38f2 başarılı; görev dalının sonucu `docs/gorevler/GOREV-05/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 479 Python testi + 37 frontend testi (main: 408 + 30; v0.7.0: 390 + 29) |
+| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini; görev dalında ayrıca NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri |
+| Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, main'de v2 (9 resmî rehber + 6 ilçe alt bölüm verisi + 38 program türetimi); görev dalında v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi) |
+| Gerçek veritabanı | 7 Ekim 2026'da (GÖREV-05) tam yedekten sonra normal kullanımla şema 8'e yükseltildi ve yalnız üç iklim toplayıcısı çalıştı (GÖREV-04'te şema 7 ve dört toplayıcı). Şema 8 dosyasını main'deki 0.7.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-05-iklim` dalından çalıştırılır. |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
 | Konaklama durumu | Book>Direct tarihli arama doğrulandı; tam envanter şartı 7 Ekim 2026'da kaldırıldı, konaklama tarihli arama anlık görüntüleri olarak modellenecek (henüz kodlanmadı) |
 
@@ -142,6 +142,7 @@ Destination-scoped temel yapılar:
 - Job/run hangi destinasyon için üretildiyse provenance bunu korur.
 - Diff başka destinasyondaki run ile karşılaştırmaz.
 - NWS connector generic'tir.
+- İklim connector'ları (`ncei-climate-normals`, `ndbc-water-temperature`, `hurdat2-storm-proximity`) generic'tir; istasyonlar, kıyı koridoru ve yarıçaplar `destination_climate_stations` ve `destination_storm_corridors` tablolarından gelir.
 - South Walton Beaches, Restaurants ve Neighborhoods connector'ları 30A'ya özeldir.
 - Profil varlıkları (ör. plaj–mahalle eşleme dosyası) `studio/destinations/` altında destinasyon profiliyle durur; generic çekirdeğe gömülmez.
 
@@ -166,9 +167,10 @@ Connector şu sorumlulukları taşır:
 `ConnectorContext` runtime'da destination'a ait:
 - destination kaydı,
 - canonical regions,
-- weather anchors
+- weather anchors,
+- iklim istasyonları ve kasırga kıyı koridoru (şema 8)
 
-gibi yapılandırmayı taşır.
+gibi yapılandırmayı taşır. Kayıt farkı kapalı connector'lar gerekçeyi isteğe bağlı `diff_reason` alanıyla verir.
 
 Yeni domain connector'ı mümkün olduğunca generic `source_collection → job → run → raw → atomic publish` akışını kullanmalıdır.
 
@@ -277,13 +279,23 @@ Alanlar: 24 haneli kaynak kimliği, permalink, ad, canonical bölge, kısa tanı
 
 7 Ekim 2026 canlı denemesinde 16 dizin kaydından 13 mahalle kaydedildi, 3'ü kapsam dışı sayıldı; bu sayılar sabit kabul kriteri değildir. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
-### 9.5 Plaj erişimi–mahalle eşlemesi (v1: v0.7.0; v2: `gorev-04-esleme-v2` dalında)
+### 9.5 Plaj erişimi–mahalle eşlemesi (v1: v0.7.0; v2: main; v3: `gorev-05-iklim` dalında)
 
 Plaj kaynağında mahalle alanı yoktur. Eşleme, plaj toplayıcısından ve `beach_records`'tan ayrı, 30A'ya özel, gözden geçirilebilir bir katmandır: `studio/destinations/thirty_a_beach_neighborhoods.csv` (sütunlar: `external_id, plaj_adi, bolge_id, yontem, kaynak, not, belirsiz`). Dosyayı `tools/plaj_mahalle_esleme.py` üretir; dosya commit edilir, uygulama yalnız okur ve yeniden hesaplamaz.
 
-v2 yöntem sırası: (1) resmî park ve ulaşım rehberindeki (2023-05-04) 9 eşleme olduğu gibi — `resmi_rehber`; (2) erişim noktası Walton County "Subdivision Boundaries" poligonlarından birinin içindeyse ve alt bölüm adı açık ad tablosuyla tek bir mahalleye bağlanıyorsa — `ilce_alt_bolum`; (3) kalan erişimler için mahalle temsilî noktalarına boylam farkıyla en yakın mahalle — `turetim_en_yakin_mahalle_noktasi`, kaynak = mahalle çekiminin run kimliği; en yakın iki aday arasındaki fark 0,003°'den küçükse `belirsiz=evet`. Alys Beach ve Rosemary Beach'e (rehber: halka açık plaj erişimi yok) hiçbir erişim atanmaz; ilçe verisi oraya düşürürse satır "resmî rehberle çelişki" diye işaretlenir. Yakın (içinde olmayan) alt bölüm poligonları kaydedilir ama atamada kullanılmaz. Ayrıntı ve doğrulama: `docs/M7-MAHALLE-VERISI.md`.
+v3 yöntem sırası (yönetici kararıyla kilitlendi): (1) resmî park ve ulaşım rehberindeki (2023-05-04) 9 eşleme olduğu gibi — `resmi_rehber`; (2) erişim noktası Walton County "Subdivision Boundaries" poligonlarından birinin içindeyse ve alt bölüm adı açık ad tablosuyla tek bir mahalleye bağlanıyorsa — `ilce_alt_bolum`; (3) nokta böyle bir poligonun içinde değil ama ad tablosunda bir mahalleye bağlanan ve 30 m veya daha yakın poligonlar tek bir mahalle gösteriyorsa — `ilce_alt_bolum_yakin` (tabloda olmayan bir poligonun içinde olmak engel değil; 30 m içinde farklı mahalleler varsa sonuç yok; 30–75 m kullanılmaz); (4) batıdaki ve doğudaki en yakın kaynaklı erişim (1–3) aynı mahalledeyse o mahalle — `komsu_tutarliligi` (zincirleme yok); (5) kalanlar için mahalle temsilî noktalarına boylam farkıyla en yakın mahalle — `turetim_en_yakin_mahalle_noktasi`, kaynak = mahalle çekiminin run kimliği; en yakın iki aday arasındaki fark 0,003°'den küçükse `belirsiz=evet`. Alys Beach ve Rosemary Beach'e (rehber: halka açık plaj erişimi yok) hiçbir yöntem erişim atamaz; ilçe verisi oraya düşürürse satır "resmî rehberle çelişki" diye işaretlenir (v3'te 1: Winston Lane - 4). Sonuç: 9 resmî, 6 ilçe, 16 ilçe (bitişik), 13 komşu, 9 türetim; belirsiz yok. Ayrıntı ve doğrulama: `docs/M7-MAHALLE-VERISI.md`.
 
-Video dili: "resmî rehber" ve "ilçe alt bölüm verisi" eşlemeleri kaynak gösterilerek söylenebilir (ikincisi "Walton County subdivision verisine göre"); "program türetimi" eşlemeleri yalnız yaklaşık konum bilgisidir. Plaj ekranı her erişimde mahalle ve yöntem etiketini gösterir, mahalleye göre filtreler; dosyada olmayan kimlik "eşlenmemiş" görünür.
+Video dili: "resmî rehber", "ilçe alt bölüm verisi" ve "ilçe alt bölüm verisi (bitişik)" eşlemeleri kaynak gösterilerek söylenebilir ("Walton County subdivision verisine göre"); "komşu erişimlerle tutarlı" ve "program türetimi" eşlemeleri yalnız yaklaşık konum bilgisidir. Plaj ekranı her erişimde mahalle ve yöntem etiketini gösterir, mahalleye göre filtreler; dosyada olmayan kimlik "eşlenmemiş" görünür.
+
+### 9.6 İklim paketi (`gorev-05-iklim`, uygulama 0.8.0, şema 8)
+
+Üç generic toplayıcı; destinasyona özel istasyon, koridor ve yarıçaplar SQLite'tan (30A için profil + v8 migration):
+
+- `ncei-climate-normals` — NCEI 1991–2020 aylık normalleri, anahtarsız veri API'si (`/access/services/data/v1`; robots.txt `/data*` yolunu kapattığı için yalnız bu yol). 30A: Destin–Fort Walton Beach Havalimanı (kıyı referansı, sıcaklık normali olan istasyonlar içinde 30A kıyı koridoruna en yakın, 20,5 km) ve DeFuniak Springs (iç kesim karşılaştırması, 44,1 km). Yedi değişken; tamlık/ölçüm bayrakları ve yıl sayıları saklanır; eksik değer NULL.
+- `ndbc-water-temperature` — NDBC tarihî yıllık dosyalarından PCBF1 (Panama City Beach, NOS 8729210) su sıcaklığı; yıl-ay ortalaması, ölçüm ve gün sayısı; çok yıllı aylık ortalamaya yalnız en az 20 günü ölçümlü yıl-aylar girer; 404 yıllar kaydedilir; ham ölçümler veritabanına yazılmaz.
+- `hurdat2-storm-proximity` — NHC HURDAT2 (güncel dosya adı veri sayfasından okunur), 1 saatlik ara değerleme, programdaki en batı ve en doğu plaj erişimi arasındaki koridora en yakın uzaklık, 50 ve 100 deniz mili içinde ilk giriş ayı ve daire içindeki en yüksek rüzgâra göre sınıf (TD/TS/HU/MH); bütün sezonlar saklanır, dönem okuma anında seçilir.
+
+Hesapladığımız değerler "NOAA verisinden bizim hesabımız" diye etiketlenir; "30A'nın iklimi" denmez. Veri toplama → İklim sekmesi. Ayrıntı, yöntem, sınırlar ve açık konular: `docs/M8-IKLIM-VERISI.md`.
 
 ## 10. Konaklama — şu an nerede kaldık?
 
@@ -328,11 +340,11 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve tag `v0.7.0` → `7f25e3ce947c69fef999f7f4454a79608008fcad` (uygulama 0.7.0, şema 7; 7 Ekim 2026'da fast-forward ve açıklamalı etiket; main CI başarılı). Önceki stable: `v0.6.0` → `a938367`.
+Stable tag `v0.7.0` → `7f25e3ce947c69fef999f7f4454a79608008fcad` (uygulama 0.7.0, şema 7). main 7 Ekim 2026'da GÖREV-05 Adım 1 ile `a7e38f25b28b8b72157d1f5eb3aa74058cfeebcf`'e (GÖREV-04, eşleme v2) fast-forward edildi; main CI başarılı; yeni etiket konmadı. Önceki stable: `v0.6.0` → `a938367`.
 
-Aktif dal `gorev-04-esleme-v2`:
-- 408 Python testi ve 30 frontend testi geçti; tam takım art arda 5 kez ve 3 eşzamanlı çalıştırmada geçti
-- plaj–mahalle eşlemesi v2, test bekleme yardımcıları, gerçek veri güncelleme kuralı
+Aktif dal `gorev-05-iklim`:
+- 479 Python testi ve 37 frontend testi geçti
+- plaj–mahalle eşlemesi v3; iklim paketi (üç toplayıcı, şema 8, İklim sekmesi); uygulama 0.8.0
 - main'e alınmadı
 
 Bilinen non-blocking uyarılar:
@@ -374,6 +386,8 @@ v0.7 (şema 6 → 7) migration denemesi 7 Ekim 2026'da gerçek DB'nin salt okunu
 
 Gerçek DB, 7 Ekim 2026'da (GÖREV-04) `data/` klasörünün tam yedeği (`work/yedek/20261007-1318/`) alındıktan sonra uygulamanın normal kullanımıyla şema 7'ye yükseltildi (uygulama yedeği `data/backups/studio-v6-0940e8b1e88246ad87f5c25771e8addf.sqlite3`) ve dört toplayıcı çalıştırıldı. Sonrasında `integrity_check` ok, `foreign_key_check` boş; ayrıntılı sayılar `docs/gorevler/GOREV-04/RAPOR.md` içinde.
 
+v0.8 (şema 7 → 8) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski satırların hepsi korundu, yalnız 8 yeni tablo, 30A iklim yapılandırması (3 istasyon, 1 koridor) ve 3 kaynak eklendi; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-05) `data/` tam yedeği (`work/yedek/20261007-1533/`, 352 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v7-ff556c8bc97447fca0bafa160eb7a9a7.sqlite3`) ve yalnız üç iklim toplayıcısı çalıştırıldı: 168 normal değeri, 182 yıl-ay deniz suyu ortalaması, 227 fırtına geçişi; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-05/RAPOR.md`.
+
 ## 13. Geliştirme çalışma biçimi
 
 1. Proje yöneticisi (ayrı bir Claude sohbeti) görevi `GÖREV-NN` numarasıyla yazar.
@@ -395,8 +409,8 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 
 - Tam lodging inventory connector
 - Lodging rates / availability history
-- Historical climate (NOAA/NCEI)
-- Deniz suyu sıcaklığı / koşullar
+- Deniz koşulları (dalga, akıntı, bayrak geçmişi); iklim normalleri, deniz suyu sıcaklığı ve kasırga geçmişi `gorev-05-iklim` dalında var
+- Nem normali (hazır bir kaynak bulunamadı)
 - Yakıt fiyatı
 - Overture/POI enrichment
 - Etkinlik connector
@@ -405,7 +419,7 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 - Restoran menü/fiyat enrichment
 - Scheduler
 - Otomatik entity matching
-- Region polygon mapping (plaj–mahalle eşlemesi nokta/boylam yöntemiyle ayrı katmandadır; mahalle sınırı yoktur)
+- Mahalle sınırı poligonları (plaj–mahalle eşlemesi ilçe alt bölüm poligonları, komşuluk ve boylam yöntemleriyle ayrı katmandadır; mahalle sınırı yoktur)
 - AI evidence-pack / konu seçimi
 - Makale/senaryo
 - Görsel plan
@@ -448,9 +462,11 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M5-DESTINASYON-KATMANI.md`
 - `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 - `docs/M7-MAHALLE-VERISI.md`
+- `docs/M8-IKLIM-VERISI.md`
 
 ---
 
 **Son güncelleme:** 7 Ekim 2026  
 **Stable:** v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi  
-**Aktif geliştirme:** `gorev-04-esleme-v2` — plaj–mahalle eşlemesi v2 (yönetici incelemesinde)
+**main:** `a7e38f2` (eşleme v2)  
+**Aktif geliştirme:** `gorev-05-iklim` — eşleme v3 ve iklim paketi, uygulama 0.8.0, şema 8 (yönetici incelemesinde)

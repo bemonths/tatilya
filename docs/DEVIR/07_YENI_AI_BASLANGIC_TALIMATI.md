@@ -40,19 +40,19 @@ C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an
 
 ```text
 tag v0.7.0 -> 7f25e3ce947c69fef999f7f4454a79608008fcad
+main -> a7e38f25b28b8b72157d1f5eb3aa74058cfeebcf (eşleme v2; etiketin önünde)
 app 0.7.0 / schema 7
-main -> 7f25e3ce947c69fef999f7f4454a79608008fcad
 ```
 
 ## Aktif branch
 
 ```text
-gorev-04-esleme-v2
-plaj–mahalle eşlemesi v2 (ilçe alt bölüm verisi)
-app 0.7.0 / schema 7
+gorev-05-iklim
+plaj–mahalle eşlemesi v3 ve iklim paketi (NCEI normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri)
+app 0.8.0 / schema 8
 ```
 
-main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir. Gerçek veritabanı yalnız görev metni açıkça isterse ve normal kullanımla, önce `data/` tam yedeği alınarak güncellenir (CLAUDE.md).
+main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgeleriydi ve main'e alındı; adı v0.7.0 ile ilgili değildir. Gerçek veritabanı yalnız görev metni açıkça isterse ve normal kullanımla, önce `data/` tam yedeği alınarak güncellenir (CLAUDE.md). Gerçek veritabanı 7 Ekim 2026'dan beri şema 8'dir; main'deki 0.7.0 onu açmaz, uygulama bu dal main'e alınana kadar `gorev-05-iklim` dalından çalıştırılır.
 
 ## Çalışan connector'lar
 
@@ -60,6 +60,7 @@ main'e alınmadı; karar yöneticinin. Eski `v0.7-lodging-inventory` dalı yaln�
 - nws-weather
 - south-walton-restaurants
 - south-walton-neighborhoods (v0.7.0)
+- ncei-climate-normals, ndbc-water-temperature, hurdat2-storm-proximity (v0.8.0, `gorev-05-iklim`; generic, yapılandırma SQLite'ta; `docs/M8-IKLIM-VERISI.md`)
 
 Plaj erişimi–mahalle eşlemesi connector değildir; `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasında duran, yöntemi etiketli ayrı bir katmandır (`docs/M7-MAHALLE-VERISI.md`).
 
