@@ -163,13 +163,13 @@ def test_duplicate_job_and_late_canceled_result_cannot_publish(tmp_path, monkeyp
     entered, release = threading.Event(), threading.Event()
     def held_collector(path, progress, canceled):
         entered.set()
-        assert release.wait(3)
+        assert release.wait(30)
         return beaches.parse_page(page(point()))
     monkeypatch.setattr(beaches, "collect", held_collector)
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         try:
             identifier = run_job(client)
-            assert entered.wait(2)
+            assert entered.wait(30)
             source = next(source for source in client.get("/api/sources").json() if source["url"] == beaches.SOURCE_URL)
             assert client.post("/api/jobs", json={"kind": "beach_collection", "source_id": source["id"]}).status_code == 409
             assert client.post(f"/api/jobs/{identifier}/cancel").json()["status"] == "canceled"
@@ -185,7 +185,8 @@ def test_unsupported_source_is_never_fetched(tmp_path, monkeypatch):
         pytest.fail("Desteklenmeyen kaynak için toplayıcı çalışmamalı")
     monkeypatch.setattr(beaches, "collect", unexpected)
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
-        source = next(source for source in client.get("/api/sources").json() if source["url"] != beaches.SOURCE_URL)
+        # Pick a source without a connector explicitly; list order depends on millisecond seed stamps.
+        source = next(source for source in client.get("/api/sources").json() if source["connector"] is None)
         assert client.post("/api/jobs", json={"kind": "beach_collection", "source_id": source["id"]}).status_code == 409
         assert client.post("/api/jobs", json={"kind": "beach_collection"}).status_code == 422
         assert client.post("/api/jobs", json={"kind": "beach_collection", "source_id": "missing"}).status_code == 409

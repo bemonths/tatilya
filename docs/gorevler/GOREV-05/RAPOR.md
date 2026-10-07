@@ -10,7 +10,9 @@ Altı adımın hepsi tamamlandı. main `a7e38f2`'ye taşındı (etiket konmadı)
 |---|---|
 | `645e040` | Adım 2: eşleme v3 (ayrı commit) |
 | `f5362ab` | Adım 3–5: iklim paketi, şema 8, İklim sekmesi, testler |
-| son commit | belgeler (M8, M7, ana belgeler), bu teslim klasörü |
+| `fdc7607` | belgeler (M8, M7, ana belgeler), bu teslim klasörü |
+| `3ac526b` | GitHub'da başarısız test adlarını görünür yapan test ayarı |
+| son commit | iki kararsız testin düzeltmesi ve raporun CI bölümü |
 
 ## Adım 1 — main ve yeni dal
 
@@ -62,7 +64,11 @@ Ayrıntılı yöntem, veri modeli ve sınırlar: [M8-IKLIM-VERISI.md](../../M8-I
 - Python: 408 → **479**; frontend: 30 → **37**. Adım 2 ile 415 + 31 oldu; iklim paketi 64 Python ve 6 frontend testi ekledi. Mevcut testler şema 8'e, 12 kaynağa ve 0.8.0'a göre güncellendi (davranışları değişmedi).
 - İklim testleri: değişken eksikliği (NULL), boş ve özel değerler, bayrak ve yıl sayısı saklama; NDBC eksik değer işaretleri ve 20 gün kuralı (19/20 gün sınırı); yıl dosyası 404 ve hiç dosya olmaması; HURDAT2 başlık ve iz satırları, yapı hataları; ara değerleme; mesafe hesabı (ekvatordaki test koridorunda beklenen değerler hesaptan bağımsız); yarıçap içi ilk giriş, ay sınırı, yeniden giriş ve sınıf; güncel dosya adının okunması; HTTP sınırları; iptal; her toplayıcı için atomik geri alma; v7 → v8 geçişi, yedek ve geri alma; destinasyon yalıtımı; şema kısıtları; arayüz yardımcıları.
 - Testler canlı ağa bağlanmıyor.
-- CI: main @ `a7e38f2` başarılı (`37616103259`); dal @ `645e040` başarılı (`37617433517`); dal @ `f5362ab` başarılı (`37621670802`). Son belge commit'inin sonucu GitHub Actions'ta.
+- CI: main @ `a7e38f2` başarılı (`37616103259`); dal @ `645e040` başarılı (`37617433517`); dal @ `f5362ab` başarılı (`37621670802`); dal @ `fdc7607` (belgeler) **başarısız** (`37623562964`, pytest adımı); dal @ `3ac526b` başarılı (`37624672327`). Son commit'in sonucu GitHub Actions'ta.
+- `fdc7607`'deki hata kod değişikliğinden değil, ara sıra düşen iki testten kaynaklanıyordu (GitHub iş günlüğü oturum açmadan okunamadığı için yerelde tekrar çalıştırılarak bulundu):
+  1. Yeni iklim testi "API üzerinden iptal", işin ikinci isteğe 3 sn içinde ulaşmasını bekliyordu; Windows'ta ölçümde iki istek arasında 3,3 sn'lik duraklama görüldü. Aynı kalıptaki 2–3 sn'lik bekleme sınırları dört test dosyasında 30 sn'ye çıkarıldı (GÖREV-04'teki `finished()` düzeltmesiyle aynı ilke; geçen testte bekleme hemen biter).
+  2. Eski bir plaj testi ("desteklenmeyen kaynak hiç çekilmez"), kaynak listesindeki ilk plaj dışı kaynağın toplayıcısı olmadığını varsayıyordu. Liste kayıt anının milisaniye damgasına ve ada göre sıralandığı için damga sınırı denk geldiğinde restoran veya hava kaynağı seçiliyordu (yeni veritabanıyla 200 denemede 3); v8 ile kaynak sayısı artınca bu olasılık arttı. Test artık toplayıcısı olmayan kaynağı açıkça seçiyor.
+  - Düzeltmeden sonra bu dört test dosyası yerelde art arda 30 kez, tam takım 8 kez hatasız geçti. Ayrıca GitHub'da başarısız testlerin adları artık oturum gerektirmeyen "annotation" olarak da yazılıyor (`tests/conftest.py`).
 
 ## Adım 6 — Canlı deneme, geçiş denemesi ve gerçek veritabanı
 
@@ -127,6 +133,7 @@ Yeni [M8-IKLIM-VERISI.md](../../M8-IKLIM-VERISI.md). M7'ye v3 bölümü ve yeni 
 5. **Profildeki Destin uzaklığı ilk yazımda 20,6 km'ydi;** profil değerlerini hesapla karşılaştıran test bunu yakaladı (doğrusu 20,5 km). Gerçek veritabanına girmeden düzeltildi.
 6. **Gerçek veritabanı artık şema 8.** main'deki 0.7.0 bu dosyayı "daha yeni bir uygulama sürümüne ait" diyerek açmıyor (veriye dokunmadan durur). Bu dal main'e alınana kadar uygulama `gorev-05-iklim` dalından çalıştırılmalı.
 7. Deniz suyu ortalamasının yöntemi denetlendi: düz aylık ortalama yerine günlük ortalamaların ortalaması alınsaydı aylık değerler en fazla 0,01 °C değişirdi.
+8. Belge commit'inde (`fdc7607`) GitHub testleri bir kez düştü; nedeni ara sıra düşen iki testti ve düzeltildi (ayrıntı "Testler ve CI" bölümünde).
 
 ## Yöneticinin karar vermesi gereken konular
 

@@ -122,13 +122,13 @@ def test_cancellation_and_restart_keep_runs_consistent(tmp_path, monkeypatch):
     entered, release = threading.Event(), threading.Event()
     def delayed(path, progress, canceled):
         entered.set()
-        assert release.wait(3)
+        assert release.wait(30)
         return fake_collector(page(point()))(path, progress, canceled)
     monkeypatch.setattr(beaches, "collect", delayed)
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         try:
             job = client.post("/api/jobs", json={"kind": "source_collection", "source_id": source_id(client)}).json()
-            assert entered.wait(2)
+            assert entered.wait(30)
             assert client.post(f"/api/jobs/{job['id']}/cancel").status_code == 200
         finally:
             release.set()

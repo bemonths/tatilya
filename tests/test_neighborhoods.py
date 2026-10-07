@@ -423,14 +423,14 @@ def test_cancel_job_through_api_publishes_nothing(tmp_path, monkeypatch):
     release = threading.Event(); entered = threading.Event(); base = SiteMock()
     def handler(request):
         if request.url.path != '/neighborhoods/':
-            entered.set(); release.wait(3)
+            entered.set(); release.wait(30)
         return base(request)
     install_mock(monkeypatch, handler)
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         source = next(s for s in client.get('/api/sources').json() if s['url'] == n.SOURCE_URL)
         identifier = client.post('/api/jobs', json={'kind': 'source_collection', 'source_id': source['id']}).json()['id']
         try:
-            assert entered.wait(3)
+            assert entered.wait(30)
             assert client.post(f'/api/jobs/{identifier}/cancel').json()['status'] == 'canceled'
         finally:
             release.set()
