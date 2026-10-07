@@ -355,6 +355,8 @@ Yapılmaması gerekenler:
 3. count/FK kontrolleri yapılır,
 4. sonra gerçek DB açılır.
 
+**Gerçek veriyi güncelleme kuralı (7 Ekim 2026, GÖREV-04):** Kullanıcı uygulamayı kendisi kullanmaz. Gerçek veritabanı yalnız görev metni açıkça istediğinde ve yalnız uygulamanın normal kullanımıyla (uygulamayı gerçek veri klasörüyle açmak, arayüz veya API üzerinden toplayıcı çalıştırmak) değişir. Bundan önce uygulama kapalıyken `data/` klasörünün tamamı `work/yedek/<YYYYMMDD-HHMM>/` altına kopyalanır. `data/` içindeki dosyalar elle değiştirilmez, silinmez, taşınmaz.
+
 v0.6 migration doğrulamasında raporlanan örnek sayılar:
 - 8 sources
 - 4 source_history
