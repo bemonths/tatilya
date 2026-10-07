@@ -83,6 +83,7 @@ Bu yüzden yeni geliştirmelerde şu ayrım korunur:
 11. Dynamic search sonucu “tam inventory” diye adlandırılmaz.
 12. Kaynak keşfinde öncelik: API → structured JSON → HTML → public network endpoint → gerekiyorsa browser automation.
 13. Playwright varsayılan değildir; HTTP/JSON ile çözülüyorsa kullanılmaz.
+14. Düzenli çalışan veri toplayıcılar robots.txt kurallarına uyar. Belirli bir resmî belgenin (rapor, yönetmelik PDF'i gibi) kaynak göstermek için tek seferlik elle alınması toplayıcı sayılmaz; URL, erişim tarihi ve SHA-256 ile kaydedilir. Programatik kullanım için yayımlanmış API'ler kendi kullanım koşullarıyla kullanılır. (7 Ekim 2026 yönetici kararı)
 
 Ayrıntı: `docs/DEVIR/03_VERI_KAYNAKLARI_VE_DOGRULAMA.md`.
 

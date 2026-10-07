@@ -34,7 +34,7 @@ Tarihsel iklim, current conditions/observation station, scheduler ve Claude/Open
 
 ## Aşama 4 — Konu, rakip ve brief · Plan
 
-Claude CLI bağlantısını bağımsız sağlayıcı olarak ekle. Önce sınırlı bir test görevi, ardından doğrulanmış veri paketiyle konu önerisi. Rakip kayıtları, konu seçimi, kaynaklı brief ve kullanıcı onayı. Hesapları test edilmiş fonksiyonlarla yap.
+Claude CLI bağlantısını bağımsız sağlayıcı olarak ekle. Önce sınırlı bir test görevi, ardından doğrulanmış veri paketiyle konu önerisi. Rakip kayıtları, konu seçimi, kaynaklı brief ve yönetici onayı (kullanıcı makale aşamasında devreye girer). Hesapları test edilmiş fonksiyonlarla yap.
 
 ## Aşama 5 — Makale ve kaynak denetimi
 

@@ -99,7 +99,7 @@ keşif
 → commit/push
 → CI
 → review
-→ manual acceptance
+→ yönetici kabulü (main'e alma kararı görev metniyle)
 → main
 → tag
 ```
@@ -145,7 +145,7 @@ Kaynak araştırması istiyorsa:
 - gerekli durumlarda public frontend/network sözleşmesini incele,
 - bulamadığın şeyi bulmuş gibi davranma.
 
-Sonra kullanıcıya:
+Sonra yöneticiye, görev raporu (`docs/gorevler/GOREV-NN/RAPOR.md`) üzerinden:
 - ne bulundu,
 - ne kanıtlanmadı,
 - hangi kararın gerektiği
