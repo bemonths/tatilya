@@ -4,6 +4,9 @@ import sqlite3
 import pytest
 
 from studio.database import Database
+from studio.sources.climate_normals import SOURCE_URL as NORMALS_URL
+from studio.sources.storm_proximity import SOURCE_URL as STORMS_URL
+from studio.sources.water_temperature import SOURCE_URL as WATER_URL
 from tests.test_weather import make_v3
 from tests.legacy import make_legacy_db
 
@@ -34,7 +37,7 @@ def test_migration_updates_only_exact_nws_defaults(tmp_path, notes, method, url,
         expected = list(before); expected[5] = expected_method; expected[7] = expected_notes
         assert list(after) == expected + ["30a",None]
         assert con.execute('SELECT * FROM source_history').fetchall() == history
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 7
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 8
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con:
         assert con.execute("SELECT * FROM sources WHERE id='nws'").fetchone() == before
@@ -56,7 +59,9 @@ def test_fresh_seed_methods_and_nws_description(tmp_path):
     sources = {s['url']: s for s in db.sources()}
     assert sources[NWS]['method'] == 'API' and sources[NWS]['notes'] == NEW_NOTE
     assert sources[BEACH]['method'] == 'JSON'
-    assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH, "https://www.visitsouthwalton.com/listings/culinary-experiences/", "https://www.visitsouthwalton.com/neighborhoods/"))
+    climate = {NORMALS_URL: 'API', WATER_URL: 'Dosya', STORMS_URL: 'Dosya'}
+    assert {url: sources[url]['method'] for url in climate} == climate
+    assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH, "https://www.visitsouthwalton.com/listings/culinary-experiences/", "https://www.visitsouthwalton.com/neighborhoods/", *climate))
 
 
 def test_v2_chain_also_refreshes_default_beach_method(tmp_path):

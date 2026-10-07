@@ -10,8 +10,9 @@ from .destinations import DEFAULT_PROFILE, DEFAULT_DESTINATION_ID
 from .destinations.context import ConnectorContext
 from .migration_v6 import upgrade_v6
 from .migration_v7 import upgrade_v7
+from .migration_v8 import upgrade_v8
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -52,21 +53,23 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6):
+            if version in (1, 2, 3, 4, 5, 6, 7):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6):
+            if version in (3, 4, 5, 6, 7):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
                     upgrade_v5(con)
                 if version < 6:
                     upgrade_v6(con)
-                upgrade_v7(con)
+                if version < 7:
+                    upgrade_v7(con)
+                upgrade_v8(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -116,6 +119,7 @@ class Database:
             upgrade_v5(con)
             upgrade_v6(con)
             upgrade_v7(con)
+            upgrade_v8(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -133,7 +137,10 @@ class Database:
         with self.connect() as con:
             regions=tuple(dict(r) for r in con.execute("SELECT * FROM regions WHERE destination_id=? ORDER BY sort_order,id",(identifier,)))
             anchors=tuple({**dict(r), "source_beach_external_id":r["provenance_external_id"] or "", "source_beach_name":r["provenance_name"] or ""} for r in con.execute("SELECT * FROM destination_weather_anchors WHERE destination_id=? AND enabled=1 ORDER BY sort_order,anchor_key",(identifier,)))
-        return ConnectorContext(destination,regions,anchors)
+            stations=tuple(dict(r) for r in con.execute("SELECT * FROM destination_climate_stations WHERE destination_id=? AND enabled=1 ORDER BY sort_order,station_key",(identifier,)))
+            row=con.execute("SELECT * FROM destination_storm_corridors WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
+            corridor={**dict(row),"radii_nmi":json.loads(row["radii_nmi"])} if row else None
+        return ConnectorContext(destination,regions,anchors,stations,corridor)
 
     def sources(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
@@ -293,7 +300,8 @@ class Database:
                 return {"available": False, "reason": "Başarılı bir sürüm seçin."}
             connector = self.registry.by_name(run["connector_name"])
             if connector and not getattr(connector, "diff_enabled", True):
-                return {"available": False, "reason": "Bu veri türünde kayan tahmin penceresi kullanıldığı için kayıt farkı özeti gösterilmiyor."}
+                return {"available": False, "reason": getattr(connector, "diff_reason",
+                        "Bu veri türünde kayan tahmin penceresi kullanıldığı için kayıt farkı özeti gösterilmiyor.")}
             previous = con.execute("""SELECT id,connector_version FROM source_runs WHERE source_id=? AND connector_name=?
                 AND destination_id=? AND status='done' AND rowid<? ORDER BY rowid DESC LIMIT 1""",
                 (run["source_id"], run["connector_name"],run["destination_id"], run["sequence"])).fetchone()

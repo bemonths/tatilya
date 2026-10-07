@@ -8,4 +8,6 @@ class ConnectorContext:
     destination: dict
     canonical_regions: tuple[dict, ...]
     weather_anchors: tuple[dict, ...]
+    climate_stations: tuple[dict, ...] = ()
+    storm_corridor: dict | None = None
 

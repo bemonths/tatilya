@@ -12,7 +12,7 @@ from studio.regions import REGIONS
 from studio.sources import beaches
 from studio.sources.base import CollectionResult
 from studio.sources.registry import ConnectorRegistry, DEFAULT_REGISTRY
-from tests.legacy import make_legacy_db, without_v7_source
+from tests.legacy import make_legacy_db, without_added_sources
 from tests.test_beaches import HEADERS, point, page, fake_collector, finished
 from tests.test_studio import payload
 
@@ -39,7 +39,7 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
         record_before = tuple(con.execute("SELECT * FROM beach_records").fetchone())
         job_before = dict(con.execute("SELECT * FROM jobs WHERE id='old-success'").fetchone())
     db.initialize()
-    assert without_v7_source(db.sources()) == sources_before
+    assert without_added_sources(db.sources()) == sources_before
     run = db.source_run("old-success")
     assert run["source_id"] == "source-a" and run["job_id"] == "old-success"
     assert run["connector_version"] == "south-walton-beaches/1"
@@ -50,7 +50,7 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
     assert db.source_run("old-failed")["metadata"]["source_identity_unknown"]
     assert db.source_run("old-canceled")["status"] == "canceled"
     with db.connect() as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 7
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 8
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert [tuple(row) for row in con.execute("SELECT * FROM source_history")] == history_before
         assert tuple(con.execute("SELECT * FROM beach_records").fetchone()) == (*record_before, "Santa Rosa Beach", None)
@@ -66,7 +66,7 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
         assert con.execute("PRAGMA user_version").fetchone()[0] == 2
         assert con.execute("SELECT COUNT(*) FROM beach_records").fetchone()[0] == 1
     db.initialize()
-    assert len(db.source_runs()) == 3 and without_v7_source(db.sources()) == sources_before
+    assert len(db.source_runs()) == 3 and without_added_sources(db.sources()) == sources_before
     assert len(list((tmp_path / "backups").glob("*.sqlite3"))) == 1
 
 
@@ -303,7 +303,7 @@ def test_source_job_dedup_is_per_source_and_source_snapshot_is_checked(tmp_path)
 
 
 def test_generic_unsupported_source_and_registry_constraints(tmp_path):
-    assert len(DEFAULT_REGISTRY.connectors) == 4
+    assert len(DEFAULT_REGISTRY.connectors) == 7
     with pytest.raises(ValueError, match="benzersiz"):
         ConnectorRegistry([TestConnector(), TestConnector()])
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:

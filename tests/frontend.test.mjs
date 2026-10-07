@@ -147,7 +147,7 @@ test('neighborhood jobs and tabs route to the fourth domain',()=>{
   const tabs=collectionTabs('neighborhoods');
   assert.match(tabs,/href="#collect\/neighborhoods" aria-current="page">Mahalleler</);
   assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
-  assert.equal((tabs.match(/class="tab/g)||[]).length,4);
+  assert.equal((tabs.match(/class="tab/g)||[]).length,5);
 });
 test('neighborhoods list west to east by representative point',()=>{
   const ordered=westToEast([hood('Inlet Beach',-86.0),hood('Dune Allen',-86.25),hood('Seaside',-86.13),hood('Alpha',-86.13)]);
@@ -273,4 +273,96 @@ test('v3 labels: adjacent county mappings are sourced, neighbour consistency is 
   assert.match(detail,/<p>komşu erişimler aaaaaaaaaaaaaaaaaaaaaaaa ve bbbbbbbbbbbbbbbbbbbbbbbb<\/p>/);
   assert.doesNotMatch(detail,/Mahalle çekimi/);
   assert.match(mappingNote({available:true,rows:[]}),/“komşu erişimlerle tutarlı” ve “program türetimi” yalnız yaklaşık konumdur/);
+});
+
+import {ClimateScreen, CLIMATE_CONNECTORS, number, fToC, inToMm, normalCell, waterCell, flagSummary, stormMonthlyCounts, closestStorms} from '../studio/web/climate.js';
+
+const climateSource=(key,extra={})=>({id:`src-${key}`,destination_id:'30a',name:`Source ${key}`,enabled:1,connector:{name:CLIMATE_CONNECTORS[key],method:key==='normals'?'API':'Dosya'},...extra});
+const passage=(storm_id,name,season,radius_nmi,first_entry_month,storm_class,closest_km,extra={})=>({storm_id,name,season,radius_nmi,first_entry_month,storm_class,closest_km,closest_nmi:closest_km/1.852,first_entry_time:`${season}-0${Math.min(first_entry_month,9)}-01T00:00Z`,max_wind_kt:storm_class?70:null,status_at_max:'HU',...extra});
+test('climate jobs and tabs route to the fifth domain',()=>{
+  for(const name of Object.values(CLIMATE_CONNECTORS)) assert.deepEqual(jobResultTarget({kind:'source_collection',result:{connector_name:name}}),{href:'#collect/climate',label:'İklim verilerini aç'});
+  const tabs=collectionTabs('climate');
+  assert.match(tabs,/href="#collect\/climate" aria-current="page">İklim</);
+  assert.equal((tabs.match(/aria-current="page"/g)||[]).length,1);
+});
+test('climate cells keep source units, add our metric conversion and never turn missing into zero',()=>{
+  assert.equal(number(90),'90,0');assert.equal(number(null),null);assert.equal(number(4.524,2),'4,52');
+  assert.equal(fToC(212),100);assert.equal(inToMm(1),25.4);
+  assert.equal(normalCell({value:90,unit:'°F'}),'90,0 °F<small>32,2 °C</small>');
+  assert.equal(normalCell({value:4.52,unit:'inç'}),'4,52 inç<small>115 mm</small>');
+  assert.equal(normalCell({value:0,unit:'gün'}),'0,0 gün');
+  for(const missing of [null,undefined,{value:null,unit:'°F'}]) assert.match(normalCell(missing),/Kaynakta yok/);
+  assert.equal(waterCell({mean_c:21.3}),'21,3 °C<small>70,3 °F</small>');
+  assert.match(waterCell({mean_c:null}),/20 günlük veri yok/);
+});
+test('flag summary lists published flags, measurement flags by month, year counts and missing months',()=>{
+  const values=[{station_id:'A',element:'MLY-TMAX-NORMAL',month:1,value:60,completeness_flag:'R',measurement_flag:null,years:19},
+    {station_id:'A',element:'MLY-TMAX-NORMAL',month:11,value:70,completeness_flag:'S',measurement_flag:'<X>',years:22},
+    {station_id:'A',element:'MLY-PRCP-NORMAL',month:2,value:null,completeness_flag:null,measurement_flag:null,years:null},
+    {station_id:'B',element:'MLY-TMAX-NORMAL',month:1,value:60,completeness_flag:'P',measurement_flag:null,years:10}];
+  const lines=flagSummary(values,'A');
+  assert.equal(lines[0],'Ort. en yüksek: tamlık R/S · ölçüm bayrağı &lt;X&gt; (Kasım) · 19–22 yıl');
+  assert.equal(lines[3],'Yağış: tamlık yok · 1 ay kaynakta yok');
+  assert.ok(!lines.join('').includes(' P'));
+});
+test('storm monthly counts filter radius and seasons, count each passage once and keep unknown wind separate',()=>{
+  const passages=[passage('AL1','A',1990,50,8,'HU',20),passage('AL2','B',1995,50,8,'MH',10),passage('AL2','B',1995,100,7,'MH',10),
+    passage('AL3','C',2005,50,9,null,40),passage('AL4','D',2020,50,9,'TS',5),passage('AL5','E',2026,50,6,'TD',1)];
+  const table=stormMonthlyCounts(passages,50,1991,2025);
+  assert.deepEqual(table[7],{TD:0,TS:0,HU:0,MH:1,bilinmiyor:0});
+  assert.deepEqual(table[8],{TD:0,TS:1,HU:0,MH:0,bilinmiyor:1});
+  assert.equal(table.flatMap(row=>Object.values(row)).reduce((a,b)=>a+b,0),3);
+  assert.deepEqual(stormMonthlyCounts(passages,100,null,null)[6],{TD:0,TS:0,HU:0,MH:1,bilinmiyor:0});
+  assert.deepEqual(closestStorms(passages,50,1991,2025).map(p=>p.name),['D','B','C']);
+  assert.deepEqual(closestStorms(passages,50,null,null,2).map(p=>p.name),['E','D']);
+});
+test('climate screen shows three collectors, disables a running one and never shows another destination runs',()=>{
+  const sources=['normals','water','storms'].map(key=>climateSource(key));
+  const main={innerHTML:''};
+  new ClimateScreen().render(main,{selected_destination:{id:'30a',name:'30A'},climate_runs:[],sources,jobs:[{id:'j',destination_id:'30a',source_id:'src-water',status:'running'}]},(title,description,actions='')=>description+actions);
+  assert.match(main.innerHTML,/<button class="primary" data-action="collect-climate-normals" >↓ İklim normallerini topla<\/button>/);
+  assert.match(main.innerHTML,/data-action="collect-water-temperature" disabled>Toplama sürüyor…/);
+  assert.match(main.innerHTML,/data-action="collect-storms" >↓ Kasırga izlerini topla/);
+  assert.match(main.innerHTML,/İlk iklim çekimi hazır/);assert.match(main.innerHTML,/bizim hesabımız/);
+  const other={innerHTML:''};
+  new ClimateScreen().render(other,{selected_destination:{id:'other',name:'Other'},climate_runs:[{id:'old-run',destination_id:'30a',connector_name:'ncei-climate-normals'}],sources,jobs:[]},(_title,description)=>description);
+  assert.match(other.innerHTML,/Bu destinasyon için iklim kaynağı bağlı değil/);
+  assert.ok(!other.innerHTML.includes('old-run'));
+  const screen=new ClimateScreen();screen.snapshot={};screen.compare='x';screen.radius=50;screen.sequence=3;
+  resetDestinationState({},[screen]);
+  assert.equal(screen.snapshot,null);assert.equal(screen.compare,'');assert.equal(screen.radius,null);assert.equal(screen.sequence,4);
+});
+test('climate tables label sources and our calculations, compare stations and filter storms',()=>{
+  const months=Array.from({length:12},(_,i)=>i+1);
+  const values=['C','I'].flatMap(id=>months.flatMap(month=>[
+    {station_id:id,month,element:'MLY-TMAX-NORMAL',value:month===7?(id==='C'?90:92.3):70,unit:'°F',completeness_flag:'R',measurement_flag:null,years:19},
+    {station_id:id,month,element:'MLY-PRCP-NORMAL',value:id==='C' && month===2?null:4,unit:'inç',completeness_flag:'R',measurement_flag:null,years:22}]));
+  const summary=months.map(month=>({month,mean_c:month===5?24.6:null,years_used:month===5?17:0,first_year:month===5?2005:null,last_year:month===5?2025:null,excluded_year_months:0}));
+  const snapshot={config:{stations:[{station_id:'C',kind:'normals',distance_basis:'Koridora uzaklık'},{station_id:'I',kind:'normals',distance_basis:'Koridora uzaklık'},{station_id:'W',kind:'water_temperature',distance_basis:'Koridora uzaklık'}]},
+    normals:{stations:[{station_id:'C',label:'Coast <Airport>',role:'kıyı referansı',distance_km:20.5},{station_id:'I',label:'Inland',role:'iç kesim karşılaştırması',distance_km:44.1}],values},
+    water:{stations:[{station_id:'W',label:'Buoy',distance_km:12.9,first_year:2005,last_year:2025,years_found:[2005],years_missing:[2006]}],summary:{W:summary},min_days:20},
+    storms:{corridor:{radii_nmi:[50,100],first_season:1851,last_season:2025,hurdat_file:'hurdat2-1851-2025-092326.txt',storm_count:1988,west_reference:'West',east_reference:'East'},class_labels:{HU:'kasırga',MH:'büyük kasırga',TS:'tropikal fırtına',TD:'tropikal depresyon'},
+      passages:[passage('AL142018','<Michael>',2018,50,10,'MH',56.4),passage('AL011980','OLD',1980,50,8,'HU',30),passage('AL012000','WIDE',2000,100,9,'TS',150)]}};
+  const body={innerHTML:'',querySelector:()=>null};
+  const screen=new ClimateScreen();screen.snapshot=snapshot;screen.radius=50;screen.from=1991;screen.to=2025;
+  screen.draw({querySelector:()=>body});
+  let html=body.innerHTML;
+  assert.match(html,/Aylık tablo · Coast &lt;Airport&gt;/);assert.match(html,/90,0 °F<small>32,2 °C<\/small>/);
+  assert.match(html,/Kaynakta yok/);assert.doesNotMatch(html,/class="climate-compare"/);
+  assert.match(html,/24,6 °C<small>76,3 °F<\/small><\/td><td>17<small>2005–2025<\/small>/);
+  assert.match(html,/kıyı referansı Coast &lt;Airport&gt; · C; Koridora uzaklık: 20,5 km/);
+  assert.match(html,/°C ve mm dönüşümleri bizim hesabımız/);
+  assert.match(html,/Buoy · W ölçümlerinden hesaplanan aylık ortalama; NOAA verisinden bizim hesabımız/);
+  assert.match(html,/dosyası olmayan yıllar: 2006/);
+  assert.match(html,/R temsilî \(en az 10 yıl; eksik aylar çevredeki istasyonlardan tahminle doldurulmuş\)/);
+  assert.match(html,/X sıfır olmayan değer sıfıra yuvarlandı/);
+  assert.match(html,/Kasırga geçmişi · 50 deniz mili · 1991–2025<\/h2><small>1 fırtına<\/small>/);
+  assert.match(html,/&lt;Michael&gt;<\/strong> 2018/);assert.doesNotMatch(html,/OLD|WIDE|<Michael>/);
+  assert.match(html,/büyük kasırga/);assert.match(html,/dosya hurdat2-1851-2025-092326\.txt/);assert.match(html,/NOAA verisinden bizim hesabımız: izler 1 saatlik/);
+  screen.compare='I';screen.radius=100;screen.from=null;screen.to=null;screen.draw({querySelector:()=>body});
+  html=body.innerHTML;
+  assert.match(html,/<div class="climate-compare">Inland: 92,3 °F<small>33,5 °C<\/small><\/div>/);
+  assert.match(html,/Karşılaştırma: iç kesim karşılaştırması Inland · I, 44,1 km/);
+  assert.match(html,/Kasırga geçmişi · 100 deniz mili · 1851–2025/);assert.match(html,/WIDE/);
+  assert.doesNotMatch(html,/null|undefined|NaN/);
 });

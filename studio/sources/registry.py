@@ -2,6 +2,9 @@ from .beaches import BeachesConnector
 from .weather import WeatherConnector
 from .restaurants import RestaurantsConnector
 from .neighborhoods import NeighborhoodsConnector
+from .climate_normals import ClimateNormalsConnector
+from .water_temperature import WaterTemperatureConnector
+from .storm_proximity import StormProximityConnector
 
 
 class ConnectorRegistry:
@@ -20,4 +23,5 @@ class ConnectorRegistry:
         return next((connector for connector in self.connectors if connector.name == name), None)
 
 
-DEFAULT_REGISTRY = ConnectorRegistry([BeachesConnector(), WeatherConnector(), RestaurantsConnector(), NeighborhoodsConnector()])
+DEFAULT_REGISTRY = ConnectorRegistry([BeachesConnector(), WeatherConnector(), RestaurantsConnector(), NeighborhoodsConnector(),
+                                     ClimateNormalsConnector(), WaterTemperatureConnector(), StormProximityConnector()])

@@ -4,7 +4,7 @@ CATEGORIES = ["Genel", "Konaklama", "Yeme içme", "Plaj", "Ulaşım", "Aktivite"
 from .regions import REGIONS as CANONICAL_REGIONS
 
 REGIONS = ["Tüm 30A", *(name for _, name in CANONICAL_REGIONS)]
-METHODS = ["Belirlenecek", "HTML", "JSON", "API", "PDF", "Playwright"]
+METHODS = ["Belirlenecek", "HTML", "JSON", "API", "Dosya", "PDF", "Playwright"]
 CADENCES = ["Günlük", "Haftalık", "Aylık", "Gerektiğinde"]
 
 from .destinations.thirty_a import SEEDS

@@ -16,7 +16,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import beaches, neighborhoods, weather
+from .sources import beaches, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping
 
@@ -94,6 +94,10 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "neighborhood_connector": {"name": neighborhoods.NeighborhoodsConnector.name, "method": "HTML",
                                            "source_url": neighborhoods.SOURCE_URL, "scope": neighborhoods.SCOPE},
                 "beach_neighborhoods": beach_neighborhoods(destination_id),
+                "climate_runs": climate_runs(destination_id),
+                "climate_connectors": {"normals": climate_normals.ClimateNormalsConnector.name,
+                                       "water": water_temperature.WaterTemperatureConnector.name,
+                                       "storms": storm_proximity.StormProximityConnector.name},
                 "weather_connector": {"name": "nws-weather", "method": "API", "anchors": context.weather_anchors,
                                       "provenance": {"scope":"Destinasyonda yapılandırılmış hava örnek noktaları."}},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
@@ -303,6 +307,39 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham mahalle manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-mahalle-{identifier[:8]}.json")
+
+    CLIMATE = {climate_normals.ClimateNormalsConnector.name: "normals", water_temperature.WaterTemperatureConnector.name: "water",
+               storm_proximity.StormProximityConnector.name: "storms"}
+
+    @app.get("/api/climate-runs")
+    def climate_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] in CLIMATE and run["status"] == "done"]
+
+    @app.get("/api/climate")
+    def climate(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Configuration and the latest successful snapshot of each climate connector for one destination."""
+        selected(destination_id)
+        context = db.context(destination_id)
+        result = {"config": {"stations": list(context.climate_stations), "corridor": context.storm_corridor},
+                  "normals": None, "water": None, "storms": None}
+        for run in climate_runs(destination_id):
+            key = CLIMATE[run["connector_name"]]
+            if result[key] is None:
+                with db.connect() as con:
+                    result[key] = {"run": run, **registry.by_name(run["connector_name"]).read_snapshot(con, run["id"])}
+        return result
+
+    @app.get("/api/climate-runs/{identifier}/raw")
+    def raw_climate_run(identifier: str):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] not in CLIMATE or run["status"] != "done":
+            raise HTTPException(404, "Bu iklim veri sürümü bulunamadı.")
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham iklim manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"30a-iklim-{identifier[:8]}.json")
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

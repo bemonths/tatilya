@@ -4,19 +4,29 @@ import sqlite3
 from pathlib import Path
 
 from studio.sources.beaches import SOURCE_URL
+from studio.sources.climate_normals import SOURCE_URL as NORMALS_URL
 from studio.sources.neighborhoods import SOURCE_URL as NEIGHBORHOOD_URL
+from studio.sources.storm_proximity import SOURCE_URL as STORMS_URL
+from studio.sources.water_temperature import SOURCE_URL as WATER_URL
+
+# Built-in 30A sources added by migrations: v7 (neighborhoods) and v8 (three climate sources).
+ADDED_SOURCE_URLS = (NEIGHBORHOOD_URL, NORMALS_URL, WATER_URL, STORMS_URL)
+# Tables created by v8 and their rows in an upgraded 30A database (configuration only, no snapshots).
+V8_TABLES = {"destination_climate_stations": 3, "destination_storm_corridors": 1, "climate_normal_stations": 0,
+             "climate_normal_values": 0, "water_temperature_stations": 0, "water_temperature_months": 0,
+             "storm_corridor_snapshots": 0, "storm_passages": 0}
 
 
-def without_v7_source(sources):
-    """v7 adds exactly one built-in 30A neighborhood source; every older source row must stay unchanged."""
+def without_added_sources(sources):
+    """Migrations add exactly one source per built-in URL; every older source row must stay unchanged."""
     url = lambda source: source["url"] if isinstance(source, dict) else source[2]
-    added = [source for source in sources if url(source) == NEIGHBORHOOD_URL]
-    assert len(added) == 1, added
-    return [source for source in sources if url(source) != NEIGHBORHOOD_URL]
+    for added in ADDED_SOURCE_URLS:
+        assert sum(url(source) == added for source in sources) == 1, added
+    return [source for source in sources if url(source) not in ADDED_SOURCE_URLS]
 
 
-def without_v7_snapshot(snapshot):
-    return {**snapshot, "sources": without_v7_source(snapshot["sources"])}
+def without_added_snapshot(snapshot):
+    return {**snapshot, "sources": without_added_sources(snapshot["sources"])}
 
 
 def make_legacy_db(path, version=2):

@@ -27,6 +27,12 @@ SEEDS = [
      "Yerel içerik ve konu keşfi. Otomatik veri toplama henüz bağlı değil.", "Belirlenecek"),
     ("South Walton · Mahalleler", "https://www.visitsouthwalton.com/neighborhoods/", "Genel",
      "Visit South Walton mahalle dizini. 13 kanonik 30A mahallesinin kaynak kimliği, temsilî noktası, etiketleri ve tanıtım metinleri toplanır; Miramar Beach, Seascape ve Sandestin kapsam dışıdır. Metinler iç araştırma kanıtıdır, videoda aynen kullanılmaz.", "HTML"),
+    ("NOAA NCEI · İklim normalleri 1991–2020", "https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals", "Hava",
+     "Destinasyonun iklim istasyonları için 1991–2020 aylık normalleri: ortalama, en yüksek ve en düşük sıcaklık, yağış, yağışlı gün, sıcak ve donlu gün sayıları; bayraklarıyla. 30A için kıyı referansı Destin, iç kesim karşılaştırması DeFuniak Springs.", "API"),
+    ("NOAA NDBC · Deniz suyu sıcaklığı", "https://www.ndbc.noaa.gov/", "Hava",
+     "Yapılandırılmış istasyonun tarihî yıllık ölçüm dosyalarından aylık deniz suyu sıcaklığı ortalamaları (bizim hesabımız). 30A için PCBF1 (Panama City Beach).", "Dosya"),
+    ("NOAA NHC · HURDAT2 kasırga izleri", "https://www.nhc.noaa.gov/data/", "Hava",
+     "Atlantik best track dosyasından destinasyonun kıyı koridoruna yakın geçen tropikal siklonlar (bizim hesabımız): ilk giriş ayı, en yakın mesafe, daire içindeki en yüksek rüzgâr ve sınıf.", "Dosya"),
 ]
 
 # Visit South Walton spells a few neighborhoods differently from the canonical regions.
@@ -57,3 +63,22 @@ ANCHORS = (
     {"anchor_key": "east", "label": "Doğu 30A", "source_beach_name": "Lupine - 1",
      "source_beach_external_id": "5c81a6a2f836f9166348e961", "latitude": 30.2713, "longitude": -85.99579},
 )
+
+# Climate configuration for the destination-independent climate connectors (copied into SQLite by migration v8).
+# Distances: shortest great-circle distance to the 30A coastal corridor, i.e. the segment between the westernmost
+# and easternmost beach accesses in the program (computed with studio.sources.geo.Segment, rounded to 0.1 km).
+CLIMATE_DISTANCE_BASIS = "30A kıyı koridoruna (programdaki en batı ve en doğu plaj erişimi arasındaki doğru parçası) en kısa kuş uçuşu uzaklık"
+CLIMATE_STATIONS = (
+    {"station_key": "coastal", "kind": "normals", "station_id": "USW00053853", "label": "Destin–Fort Walton Beach Havalimanı",
+     "role": "kıyı referansı", "latitude": 30.4, "longitude": -86.4717, "distance_km": 20.5, "first_year": None},
+    {"station_key": "inland", "kind": "normals", "station_id": "USC00082220", "label": "DeFuniak Springs",
+     "role": "iç kesim karşılaştırması", "latitude": 30.7244, "longitude": -86.0939, "distance_km": 44.1, "first_year": None},
+    {"station_key": "water", "kind": "water_temperature", "station_id": "PCBF1", "label": "Panama City Beach (NOS 8729210)",
+     "role": "deniz suyu sıcaklığı", "latitude": 30.213, "longitude": -85.88, "distance_km": 12.9, "first_year": 2005},
+)
+STORM_CORRIDOR = {
+    "label": "30A kıyı koridoru",
+    "west_latitude": 30.35548, "west_longitude": -86.2638, "west_reference": "Stallworth Preserve (5c81ab02f836f9166348e96c)",
+    "east_latitude": 30.2713, "east_longitude": -85.99579, "east_reference": "Lupine - 1 (5c81a6a2f836f9166348e961)",
+    "radii_nmi": (50, 100),
+}

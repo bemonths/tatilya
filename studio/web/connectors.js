@@ -21,11 +21,14 @@ export function domainTarget(name, beachName="south-walton-beaches") {
   const targets={[beachName]:{href:"#collect",label:"Plaj verilerini aç"},
     "nws-weather":{href:"#collect/weather",label:"Hava verilerini aç"},
     "south-walton-restaurants":{href:"#collect/restaurants",label:"Restoran verilerini aç"},
-    "south-walton-neighborhoods":{href:"#collect/neighborhoods",label:"Mahalle verilerini aç"}};
+    "south-walton-neighborhoods":{href:"#collect/neighborhoods",label:"Mahalle verilerini aç"},
+    "ncei-climate-normals":{href:"#collect/climate",label:"İklim verilerini aç"},
+    "ndbc-water-temperature":{href:"#collect/climate",label:"İklim verilerini aç"},
+    "hurdat2-storm-proximity":{href:"#collect/climate",label:"İklim verilerini aç"}};
   return Object.hasOwn(targets,name)?targets[name]:null;
 }
 
 export function collectionTabs(selected="beaches") {
   if(typeof selected==="boolean") selected=selected?"weather":"beaches";
-  return `<nav class="filter-row" aria-label="Veri türü">${[["beaches","#collect","Plaj erişimleri"],["weather","#collect/weather","Hava"],["restaurants","#collect/restaurants","Restoranlar"],["neighborhoods","#collect/neighborhoods","Mahalleler"]].map(([id,href,label])=>`<a class="tab ${selected===id?"active":""}" href="${href}" ${selected===id?'aria-current="page"':""}>${label}</a>`).join("")}</nav>`;
+  return `<nav class="filter-row" aria-label="Veri türü">${[["beaches","#collect","Plaj erişimleri"],["weather","#collect/weather","Hava"],["restaurants","#collect/restaurants","Restoranlar"],["neighborhoods","#collect/neighborhoods","Mahalleler"],["climate","#collect/climate","İklim"]].map(([id,href,label])=>`<a class="tab ${selected===id?"active":""}" href="${href}" ${selected===id?'aria-current="page"':""}>${label}</a>`).join("")}</nav>`;
 }

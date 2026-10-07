@@ -20,6 +20,7 @@ from studio.sources.registry import DEFAULT_REGISTRY
 from tests.test_beaches import HEADERS, finished
 from tests.test_destinations import add_destination, make_v5
 from tests.test_studio import payload
+from tests.legacy import ADDED_SOURCE_URLS, V8_TABLES
 
 FIXTURES = Path(__file__).parent / 'fixtures/neighborhoods'
 INDEX = (FIXTURES / 'index.html').read_text(encoding='utf-8')
@@ -351,7 +352,7 @@ def test_fresh_seed_binds_connector_and_bootstrap(tmp_path):
         assert 'temsilî noktası' in data['neighborhood_connector']['scope']
         assert DEFAULT_REGISTRY.for_source(source).diff_enabled
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 7
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 8
             assert con.execute('SELECT COUNT(*) FROM sources WHERE url=?', (n.SOURCE_URL,)).fetchone()[0] == 1
 
 
@@ -499,15 +500,17 @@ def test_v6_to_v7_migration_adds_table_and_source_with_backup(tmp_path):
         sources_before = con.execute('SELECT * FROM sources ORDER BY rowid').fetchall()
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 7
+        # The upgrade chain continues to v8 (climate); v7's own additions are checked here.
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 8
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         tables_after = {row[0]: con.execute(f'SELECT COUNT(*) FROM "{row[0]}"').fetchone()[0]
                         for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert tables_after == {**tables_before, 'neighborhood_records': 0, 'sources': tables_before['sources'] + 1}
+        assert tables_after == {**tables_before, 'neighborhood_records': 0, **V8_TABLES,
+                                'sources': tables_before['sources'] + len(ADDED_SOURCE_URLS)}
         sources_after = con.execute('SELECT * FROM sources ORDER BY rowid').fetchall()
         assert sources_after[:len(sources_before)] == sources_before
         name, url, category, notes, method = next(seed for seed in SEEDS if seed[1] == n.SOURCE_URL)
-        added = sources_after[-1]
+        added = next(row for row in sources_after if row[2] == n.SOURCE_URL)
         assert added[1:10] == (name, url, category, 'Tüm 30A', method, 'Haftalık', notes, 1, 1)
         assert added[12:] == ('30a', None)
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
@@ -536,7 +539,7 @@ def test_v6_to_v7_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM {table} ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 7
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 8
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
 
 

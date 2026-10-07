@@ -4,6 +4,7 @@ import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen} from "./restaurants.js";
 import {NeighborhoodScreen} from "./neighborhoods.js";
+import {ClimateScreen, CLIMATE_ACTIONS, CLIMATE_BUTTONS, CLIMATE_CONNECTORS} from "./climate.js";
 import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 
@@ -21,8 +22,13 @@ let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
 let lastNeighborhoodId=null;
 const neighborhoodScreen=new NeighborhoodScreen();
-const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen};
-const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods"};
+// Three climate collectors can finish in any order, so refresh on any newly finished climate job.
+let climateDoneIds=new Set();
+const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status==="done" && Object.values(CLIMATE_CONNECTORS).includes(j.result?.connector_name)).map(j=>j.id);
+const climateScreen=new ClimateScreen();
+const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/climate":climateScreen};
+const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods",
+  ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
 
 function toast(text) {
   if(!text) return;
@@ -58,6 +64,7 @@ function render() {
   weatherScreen.invalidate();
   restaurantScreen.invalidate();
   neighborhoodScreen.invalidate();
+  climateScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
@@ -168,6 +175,11 @@ function updateAuditButtons() {
   const neighborhoodSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-neighborhoods");
   const neighborhoodBusy=state.data.jobs.some(j=>j.source_id===neighborhoodSource?.id && active(j));
   document.querySelectorAll('[data-action="collect-neighborhoods"]').forEach(button=>{button.disabled=!neighborhoodSource || neighborhoodBusy;button.textContent=neighborhoodBusy?"Toplama sürüyor…":"↓ Mahalle verilerini topla";});
+  for(const [action,key] of Object.entries(CLIMATE_ACTIONS)) {
+    const climateSource=state.data.sources.find(s=>s.enabled && s.connector?.name===CLIMATE_CONNECTORS[key]);
+    const climateBusy=state.data.jobs.some(j=>j.source_id===climateSource?.id && active(j));
+    document.querySelectorAll(`[data-action="${action}"]`).forEach(button=>{button.disabled=!climateSource || climateBusy;button.textContent=climateBusy?"Toplama sürüyor…":CLIMATE_BUTTONS[key];});
+  }
   const busy = state.data.jobs.some(job=>job.kind==="catalog_audit" && active(job));
   document.querySelectorAll('[data-action="audit"]').forEach(button=>{
     button.disabled=busy || !state.data.sources.some(source=>source.enabled);
@@ -263,6 +275,9 @@ $("#main").addEventListener("click", async event=>{
         if(state.page==="quality") renderQuality();
         break;
       }
+      case "collect-climate-normals":
+      case "collect-water-temperature":
+      case "collect-storms":
       case "collect-neighborhoods":
       case "collect-restaurants":
       case "collect-weather":
@@ -298,8 +313,8 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen]);
-  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=null;
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,climateScreen]);
+  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';
   $("#jobs-content").innerHTML='';
@@ -323,6 +338,7 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastWeatherId=state.data.weather_runs[0]?.id || null;
     lastRestaurantId=state.data.restaurant_runs?.[0]?.id || null;
     lastNeighborhoodId=state.data.neighborhood_runs?.[0]?.id || null;
+    climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
     events=new EventSource(`/api/${destinationPath("events")}`);
@@ -349,6 +365,14 @@ async function start(destinationId=storedDestination(localStorage)) {
           state.data.neighborhood_runs=await api("neighborhood-runs");lastNeighborhoodId=neighborhoodLatest.id;neighborhoodScreen.selectedRun=null;
           if(location.hash==="#collect/neighborhoods") render();
           toast("Mahalle verileri kaydedildi. Mahalleler sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
+      const climateFinished=climateDone(state.data.jobs);
+      if(climateFinished.some(id=>!climateDoneIds.has(id))) {
+        try {
+          state.data.climate_runs=await api("climate-runs");climateFinished.forEach(id=>climateDoneIds.add(id));climateScreen.snapshot=null;
+          if(location.hash==="#collect/climate") render();
+          toast("İklim verileri kaydedildi. İklim sekmesinden inceleyebilirsin.");
         } catch(error) {toast(error.message);}
       }
       const weatherLatest=state.data.jobs.find(job=>job.kind==="source_collection" && job.status==="done" && job.result?.connector_name===state.data.weather_connector.name);
