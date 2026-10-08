@@ -330,7 +330,8 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,climateScreen,referencesScreen]);
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen]);
+  lodgingScreen.agency=agencyPrices;   // the reset rebuilds each screen from its constructor; the price section is attached again
   lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=lastAgencyId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';

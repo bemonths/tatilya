@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {connectorState, jobResultTarget, collectionTabs} from '../studio/web/connectors.js';
 import {weatherDate, WeatherScreen} from '../studio/web/weather.js';
@@ -532,6 +533,18 @@ test('agency section draws the price table, bedroom medians and company results'
   assert.match(body.innerHTML,/Geçmiş tarih; sorulmadı/);assert.match(body.innerHTML,/5\+ oda: \$3,339 \(1\)/);
   assert.match(body.innerHTML,/&lt;Benchmark&gt;<small>benchmark30a.com/);assert.match(body.innerHTML,/site reddetti; durduruldu<\/span><small>Site reddetti/);
   assert.match(body.innerHTML,/şirket sitesi sayfayı bulamadı \(404\) 100/);
+});
+test('the lodging screen keeps drawing its price section after a destination reset',()=>{
+  const calls=[];const agency={render:(target,data)=>calls.push([target,data.agency_runs]),invalidate(){}};
+  const screen=new LodgingScreen(agency);
+  const nodes={};const main={innerHTML:'',querySelector:selector=>nodes[selector] ??= {id:selector,innerHTML:'',addEventListener(){}}};
+  const data={sources:[{enabled:1,connector:{name:'bookdirect-lodging'},id:'s'}],jobs:[],lodging_runs:[],agency_runs:['a'],selected_destination:null,lodging_connector:{config:null}};
+  screen.render(main,data,()=>'');
+  assert.equal(calls.length,1);assert.equal(calls[0][0].id,'#agency-prices');assert.deepEqual(calls[0][1],['a']);
+  resetDestinationState({}, [screen]);
+  assert.equal(screen.agency,null);                                  // why app.js attaches the section again after a reset
+  const source=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  assert.match(source,/resetDestinationState\(state,\[[^\]]*agencyPrices[^\]]*\]\);\s*lodgingScreen\.agency=agencyPrices;/);
 });
 test('jobs panel names the site waiting for the user verification',async()=>{
   const {readFileSync}=await import('node:fs');
