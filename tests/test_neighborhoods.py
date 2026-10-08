@@ -352,7 +352,7 @@ def test_fresh_seed_binds_connector_and_bootstrap(tmp_path):
         assert 'temsilî noktası' in data['neighborhood_connector']['scope']
         assert DEFAULT_REGISTRY.for_source(source).diff_enabled
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 10
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 11
             assert con.execute('SELECT COUNT(*) FROM sources WHERE url=?', (n.SOURCE_URL,)).fetchone()[0] == 1
 
 
@@ -501,7 +501,7 @@ def test_v6_to_v7_migration_adds_table_and_source_with_backup(tmp_path):
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         # The upgrade chain continues to v8 (climate) and v10 (lodging); v7's own additions are checked here.
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 10
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 11
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         tables_after = {row[0]: con.execute(f'SELECT COUNT(*) FROM "{row[0]}"').fetchone()[0]
                         for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -539,7 +539,7 @@ def test_v6_to_v7_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM {table} ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 10
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 11
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
 
 

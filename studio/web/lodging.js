@@ -53,6 +53,14 @@ export function priceTag(window) {
   if(window.price==null) return '<span class="muted">Fiyat yok</span>';
   return `${usd(window.price)}<small>${esc(SOURCE_LABELS[window.price_source] || window.price_source)}${window.los?` · en az ${window.los} gece`:""}</small>`;
 }
+/** The rental company's own listing page (https or http as published); anything else stays plain text. */
+export function companyLink(url) {
+  try {
+    const parsed=new URL(url);
+    if(["https:","http:"].includes(parsed.protocol)) return `<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Şirketin ilan sayfası · ${esc(parsed.hostname.replace(/^www\./,""))} ↗</a>`;
+  } catch { /* plain text below */ }
+  return esc(url || "");
+}
 export function regionMonthly(monthly, regionId) {
   return (monthly || []).filter(row=>row.region_id===regionId);
 }
@@ -155,7 +163,8 @@ export class LodgingScreen {
       <p>Tür: ${listingCategories(listing,def)}<br>Yatak odası ${listing.bedrooms==null?"—":plain(listing.bedrooms)} · banyo ${listing.bathrooms==null?"—":plain(listing.bathrooms)} · kapasite ${listing.sleeps==null?"—":`${listing.sleeps} kişi`}</p>
       <p>Olanaklar (kaynakta listelenen): ${listing.amenities.length?listing.amenities.map(esc).join(", "):'<span class="muted">listelenmemiş</span>'}</p>
       <p>Rezervasyon sistemi: ${esc(listing.res_engine || "belirtilmemiş")}<br>${live}</p>
-      <p>Fiyat takvimi: ${listing.calendar?.status==="read"?`${listing.calendar.priced_days} fiyatlı gün (${esc(listing.calendar.requested_from)} → ${esc(listing.calendar.requested_to)})`:"kaynak takvim vermedi"}</p>
+      ${listing.url?`<p>${companyLink(listing.url)}</p>`:'<p class="muted">Kaynakta şirket ilan sayfası yok</p>'}
+      <p>Fiyat takvimi: ${listing.hide_rate_calendar?"kaynakta gizli (istenmedi)":listing.calendar?.status==="read"?`${listing.calendar.priced_days} fiyatlı gün (${esc(listing.calendar.requested_from)} → ${esc(listing.calendar.requested_to)})`:"kaynak takvim vermedi"}</p>
       ${listing.months.length?`<table class="lodging-table"><thead><tr><th>AY</th><th>FİYATLI GÜN</th><th>EN DÜŞÜK</th><th>ORTANCA</th><th>EN YÜKSEK</th><th>EN SIK MİN. GECE</th></tr></thead><tbody>${listing.months.map(m=>`<tr><td>${esc(monthLabel(m.month))}</td><td>${m.priced_days}</td><td>${usd(m.min_rate)}</td><td>${usd(m.median_rate)}</td><td>${usd(m.max_rate)}</td><td>${m.common_los ?? "—"}</td></tr>`).join("")}</tbody></table>`:""}`;
   }
 }

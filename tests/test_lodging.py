@@ -57,7 +57,8 @@ def inventory():
     seaside[2]["lodging"].update(live_rates_enabled=True)
     seaside[3]["lodging"].update(live_rates_enabled=True)
     return {2565: seaside,
-            62711: [lodging(2001, "Seagrove house", 62711, bedrooms=5, sleeps=12), lodging(2002, "Shared listing", 62711, bedrooms=4, sleeps=10)],
+            62711: [lodging(2001, "Seagrove house", 62711, bedrooms=5, sleeps=12, hidden=1, url="https://agency.example/rentals/2001", toll_free="(850)555-0101"),
+                    lodging(2002, "Shared listing", 62711, bedrooms=4, sleeps=10)],
             2439: [lodging(2002, "Shared listing", 62711, bedrooms=4, sleeps=10),
                    lodging(2003, "Seagrove Beach hotel", 2439, bedrooms=None, sleeps=None, categories=(103, 246))],
             62708: [lodging(3001, "Dune Allen condo", 62708, bedrooms=0, sleeps=2, categories=(103, 851), rate="")],
@@ -341,10 +342,14 @@ def test_calendar_is_read_once_per_listing_and_summarized_by_month(tmp_path):
     mock = BookDirectMock()
     result = run(tmp_path, mock)
     calendar_calls = [r for r in mock.seen if r.url.path.endswith("/rates.json")]
-    assert len(calendar_calls) == len(result.records) == len({r.url.path for r in calendar_calls})
+    hidden = {r["lodging_id"] for r in result.records if r["hide_rate_calendar"]}
+    assert hidden == {2001} and result.metadata["calendars_skipped_hidden"] == 1 and result.metadata["calendars_read"] == len(result.records) - 1
+    assert len(calendar_calls) == len(result.records) - 1 == len({r.url.path for r in calendar_calls})
+    assert not any(r.url.path.endswith("/lodgings/2001/rates.json") for r in calendar_calls)     # hidden calendar is not asked
     assert calendar_calls[0].url.params["checkin"] == "20261007" and calendar_calls[0].url.params["checkout"] == "20271007"
     calendars = {c["lodging_id"]: c for c in result.related["calendars"]}
-    assert calendars[1004]["status"] == "unavailable" and calendars[1000]["priced_days"] == 365 and calendars[2001]["priced_days"] == 0
+    assert calendars[1004]["status"] == "unavailable" and calendars[1000]["priced_days"] == 365 and calendars[2002]["priced_days"] == 0
+    assert 2001 not in calendars and not any(c["lodging_id"] == 2001 for c in result.related["calendar_windows"])
     months = {(m["lodging_id"], m["month"]): m for m in result.related["months"]}
     assert months[(1000, "2026-10")] == {"lodging_id": 1000, "month": "2026-10", "priced_days": 25, "min_rate": 200.0, "median_rate": 200.0,
                                          "max_rate": 200.0, "common_los": 4}
@@ -393,7 +398,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         db = client.app.state.db
         source = next(s for s in client.get("/api/sources").json() if s["url"] == URL)
         connector = DEFAULT_REGISTRY.by_name("bookdirect-lodging")
-        assert source["connector"] == {"name": "bookdirect-lodging", "version": "bookdirect-lodging/1", "method": "JSON"}
+        assert source["connector"] == {"name": "bookdirect-lodging", "version": "bookdirect-lodging/2", "method": "JSON"}
         job = start(client)
         assert job["status"] == "done", job["message"]
         assert db.run_diff(job["id"]) == {"available": False, "reason": connector.diff_reason}
@@ -428,7 +433,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         assert first["calendar"]["status"] == "read" and first["months"][0]["month"] == "2026-10"
         assert client.get(f"/api/lodging-runs/{job['id']}/listings?region_id=nowhere").status_code == 404
         raw = client.get(f"/api/lodging-runs/{job['id']}/raw")
-        assert raw.status_code == 200 and json.loads(raw.content)["connector"] == "bookdirect-lodging/1"
+        assert raw.status_code == 200 and json.loads(raw.content)["connector"] == "bookdirect-lodging/2"
         assert client.get("/api/lodging-runs/missing").status_code == 404
         with db.connect() as con:
             assert con.execute("PRAGMA foreign_key_check").fetchall() == []
@@ -502,7 +507,7 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, "sources": len(before["sources"]) + 1}
@@ -536,7 +541,7 @@ def test_v9_to_v10_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
 
 
 def test_v10_never_duplicates_an_existing_lodging_source_or_overwrites_configuration(tmp_path):
@@ -599,3 +604,25 @@ def test_quartiles_and_price_priority():
     pending = {**row, "average_rate": 250.0, "average_rate_usd": 250.0, "live_average_rate_usd": 310.0}
     assert bl.price_of({**pending, "live_liveness": 0}, None) == (310.0, "canli")
     assert bl.price_of({**pending, "live_liveness": 1}, None) == (250.0, "liste")
+
+
+def test_listing_keeps_the_company_page_and_phones(tmp_path):
+    result = run(tmp_path)
+    listings = {r["lodging_id"]: r for r in result.records}
+    assert listings[2001]["url"] == "https://agency.example/rentals/2001" and listings[2001]["toll_free"] == "(850)555-0101"
+    assert listings[1000]["url"] == "https://example.com/rental" and listings[1000]["phone"] is None
+    assert bl.web_url("javascript:alert(1)") is None and bl.web_url("") is None and bl.web_url("https://a.example/x y") is None
+
+
+def test_v10_to_v11_migration_adds_listing_link_columns(tmp_path):
+    from studio.migration_v11 import upgrade_v11
+    path = tmp_path / "studio.sqlite3"
+    db = Database(path); db.initialize()
+    with sqlite3.connect(path) as con:
+        columns = [row[1] for row in con.execute("PRAGMA table_info(lodging_listings)")]
+        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 11
+        with pytest.raises(sqlite3.OperationalError):
+            con.execute("BEGIN IMMEDIATE"); upgrade_v11(con)                     # columns already exist; the transaction rolls back
+        con.rollback()
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
+

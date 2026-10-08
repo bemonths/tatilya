@@ -18,7 +18,7 @@ from datetime import date, datetime, timedelta, timezone
 from .base import CollectionCanceled, CollectionResult, SourceError
 from .climate_http import Reader, check, make_client, pause
 
-CONNECTOR_VERSION = "bookdirect-lodging/1"
+CONNECTOR_VERSION = "bookdirect-lodging/2"
 API_HOST = "admin.bookdirect.net"
 FRONT_SUFFIX = ".bookdirect.net"
 BASE_HREF = re.compile(r'<base\s+href="(/[0-9A-Za-z_./-]*)"')
@@ -134,6 +134,12 @@ def text(value):
     return value.strip() or None if isinstance(value, str) else None
 
 
+def web_url(value):
+    """The listing's own page as published (the rental company's site); anything that is not an http(s) URL stays NULL."""
+    value = text(value)
+    return value if value and len(value) <= 2048 and re.match(r"https?://[^\s]+$", value) else None
+
+
 def int_list(value, label):
     if value is None:
         return []
@@ -201,6 +207,7 @@ def parse_listing(item, clone):
                "sleeps": number(record.get("sleeps"), "kapasite", integer=True),
                "amenities": [clone["amenities"].get(a, f"bilinmeyen olanak {a}") for a in amenities],
                "res_engine": text(record.get("res_engine")), "source_location_id": number(record.get("location_id"), "konum", integer=True),
+               "url": web_url(record.get("url")), "phone": text(record.get("phone")), "toll_free": text(record.get("toll_free")),
                "hide_rate_calendar": int(bool(record.get("hide_rate_calendar"))), "live_rates_enabled": int(bool(live_enabled))}
     min_stays = record.get("min_stays")
     result = {"lodging_id": identifier, "average_rate": number(record.get("average_rate"), "ortalama fiyat"),
@@ -355,10 +362,12 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
 
         calendars, months, calendar_windows = [], [], []
         start, end = today, today + timedelta(days=CALENDAR_DAYS)
-        ordered = sorted(listings)
+        # The front end shows no rate calendar for listings with hide_rate_calendar; those are not asked (GOREV-08).
+        ordered = [lodging_id for lodging_id in sorted(listings) if not listings[lodging_id]["hide_rate_calendar"]]
+        hidden_calendars = len(listings) - len(ordered)
         for index, lodging_id in enumerate(ordered):
             if index % 10 == 0:
-                progress(55 + int(40 * index / len(ordered)), f"Fiyat takvimleri okunuyor ({index}/{len(ordered)}).")
+                progress(55 + int(40 * index / max(1, len(ordered))), f"Fiyat takvimleri okunuyor ({index}/{len(ordered)}).")
             body = call(f"/lodgings/{lodging_id}/rates.json", f"rates-{lodging_id}",
                         {"per_page": CALENDAR_DAYS, "checkin": start.strftime("%Y%m%d"), "checkout": end.strftime("%Y%m%d"), "locale": "en"},
                         missing=CALENDAR_MISSING)
@@ -387,11 +396,12 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
                     "skipped_past_windows": [w["window_key"] for w in windows if w["status"] == "skipped_past"],
                     "location_filters": [{"location_id": f[0], "location_name": f[1], "region_id": f[2]} for f in filters],
                     "unmapped_locations": unmapped, "search_rows": len(results), "listing_count": len(listings),
-                    "live_rate_requests": live_requests, "request_count": request_count, "priced": priced, "scope": SCOPE}
+                    "live_rate_requests": live_requests, "request_count": request_count, "priced": priced,
+                    "calendars_read": len(calendars), "calendars_skipped_hidden": hidden_calendars, "scope": SCOPE}
         progress(97, f"{len(listings)} benzersiz ilan, {len(results)} arama satırı ve {len(calendars)} fiyat takvimi kaydediliyor.")
         related = {"snapshot": snapshot, "windows": window_rows, "filters": filter_rows, "results": list(results.values()),
                    "calendars": calendars, "months": months, "calendar_windows": calendar_windows}
-        return CollectionResult([listings[i] for i in ordered], len(listings), len(unmapped), None, metadata, related)
+        return CollectionResult([listings[i] for i in sorted(listings)], len(listings), len(unmapped), None, metadata, related)
     finally:
         try:
             reader.flush()
@@ -646,12 +656,12 @@ class BookDirectLodgingConnector:
             VALUES (?,?,?,?,?,?,?,?)""", [(run_id, f["window_key"], f["location_id"], f["location_name"], f["region_id"], f["region_name"],
                                            f["total_count"], f["page_count"]) for f in related["filters"]])
         con.executemany("""INSERT INTO lodging_listings (run_id,lodging_id,title,category_ids,category_names,address,city,state,zip_code,latitude,
-            longitude,bedrooms,bathrooms,sleeps,amenities,res_engine,source_location_id,hide_rate_calendar,live_rates_enabled)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            longitude,bedrooms,bathrooms,sleeps,amenities,res_engine,source_location_id,hide_rate_calendar,live_rates_enabled,url,phone,toll_free)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, r["lodging_id"], r["title"], json.dumps(r["category_ids"]), json.dumps(r["category_names"], ensure_ascii=False), r["address"],
               r["city"], r["state"], r["zip_code"], r["latitude"], r["longitude"], r["bedrooms"], r["bathrooms"], r["sleeps"],
               json.dumps(r["amenities"], ensure_ascii=False), r["res_engine"], r["source_location_id"], r["hide_rate_calendar"],
-              r["live_rates_enabled"]) for r in records])
+              r["live_rates_enabled"], r["url"], r["phone"], r["toll_free"]) for r in records])
         con.executemany("""INSERT INTO lodging_search_results (run_id,window_key,location_id,lodging_id,position,average_rate,average_rate_usd,los,
             liveness,live_rates_enabled,min_stays,live_status,live_average_rate_usd,live_los,live_liveness,live_attempts)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",

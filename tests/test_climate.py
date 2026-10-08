@@ -734,7 +734,7 @@ def test_v7_to_v8_migration_adds_tables_configuration_and_sources_with_backup(tm
         rows_before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in tables_before}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         # The chain continues to v10, which adds the lodging configuration and its source.
@@ -780,7 +780,7 @@ def test_v7_to_v8_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
@@ -813,7 +813,7 @@ def test_v8_to_v9_migration_adds_stage_flag_and_keeps_old_runs(tmp_path):
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         unchanged = lambda tables: {t: rows for t, rows in tables.items() if t not in ("storm_passages", "sources")}
@@ -851,7 +851,7 @@ def test_v8_to_v9_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
 
 
 @pytest.mark.parametrize("url,enabled", [(cn.SOURCE_URL, 0), ("https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals/", 1)])

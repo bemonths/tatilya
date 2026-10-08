@@ -435,7 +435,7 @@ test('references screen shows counts, the video rule and an unavailable table',(
   assert.match(empty.innerHTML,/Referans tablosu yok<\/h2><p>Bu destinasyon için referans tablosu yok\./);
 });
 
-import {LodgingScreen, summaryCell, usd, percent, listingCategories, priceTag, regionMonthly, monthLabel, sourceCounts, bedroomText} from '../studio/web/lodging.js';
+import {LodgingScreen, summaryCell, usd, percent, listingCategories, priceTag, regionMonthly, monthLabel, sourceCounts, bedroomText, companyLink} from '../studio/web/lodging.js';
 test('lodging jobs and the tab route to the lodging screen',()=>{
   assert.deepEqual(jobResultTarget({kind:'source_collection',result:{connector_name:'bookdirect-lodging'}}),{href:'#collect/lodging',label:'Konaklama verilerini aç'});
   assert.match(collectionTabs('lodging'),/href="#collect\/lodging" aria-current="page">Konaklama</);
@@ -478,4 +478,8 @@ test('lodging screen draws the region x window table with the scope label',()=>{
   assert.match(body.innerHTML,/data-lodging-region="seaside">Seaside<\/button>/);
   assert.match(body.innerHTML,/60 ilan/);assert.match(body.innerHTML,/Geçmiş tarih; aranmadı/);
 });
-
+test('company listing links open only http(s) addresses and escape text',()=>{
+  assert.match(companyLink('https://www.360blue.com/rentals/x'),/href="https:\/\/www.360blue.com\/rentals\/x"[^>]*>Şirketin ilan sayfası · 360blue.com ↗<\/a>/);
+  assert.equal(companyLink('javascript:alert(1)'),'javascript:alert(1)');
+  assert.equal(companyLink('<b>'),'&lt;b&gt;');
+});
