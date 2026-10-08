@@ -478,7 +478,7 @@ class VacationRentalsRouter:
     sends_guests = True
 
     def parse_page(self, html, url):
-        unit = re.search(r"unitId['\"]?\s*[:=]\s*['\"]([0-9]+-[0-9]+|[0-9]+)['\"]", html) or re.search(r"/vacation-rentals/rental/([0-9]+-[0-9]+)/", url)
+        unit = re.search(r"unitId['\"]?\s*[:=]\s*['\"]([0-9]+-[0-9]+|[0-9]+|[0-9a-f]{24})['\"]", html) or re.search(r"/vacation-rentals/rental/([0-9]+-[0-9]+)/", url)
         router = re.search(r"['\"](https?://[^'\"]+/vacation-rentals)['\"]\s*\+\s*['\"]/router/['\"]", html)
         if not unit or "/vacation-rentals/router/" not in html and not router:
             return None

@@ -285,6 +285,10 @@ def test_streamline_and_router_pages():
     router = aa.VacationRentalsRouter().parse_page(ROUTER_PAGE, "https://www.router.example/vacation-rentals/rental/3151-268932/")
     assert router["site_id"] == "3151-268932" and router["router_url"] == "https://www.router.example/vacation-rentals/router/"
     assert aa.VacationRentalsRouter().parse_page("<html>results</html>", "https://www.router.example/vacation-rentals/results/") is None
+    hex_page = ("<script>data() { return { unitId: '698b6be5d6ce100012cd93a8', maxGuests: 10 } }; "
+                "axios.post('https://www.vacay.example/vacation-rentals' + '/router/', {call: 'getPrice'})</script>")
+    hexed = aa.VacationRentalsRouter().parse_page(hex_page, "https://www.vacay.example/vacation-rentals/rental/bmb---we-are-on/")
+    assert hexed["site_id"] == "698b6be5d6ce100012cd93a8" and hexed["router_url"] == "https://www.vacay.example/vacation-rentals/router/"
 
 
 def test_money_and_stay_messages():
