@@ -241,6 +241,44 @@ def test_an_image_reading_for_another_image_is_not_used(tmp_path):
     assert board["status"] == "image_unread" and "okuması yok" in board["message"] and not any(i["name"] == "Old Sandwich" for i in items)
 
 
+def test_photos_menus_without_prices_and_text_pdfs_without_prices(tmp_path):
+    photo, wine = b"\xff\xd8\xff a plate of pasta", b"\xff\xd8\xff wine list, no prices"
+    steam = make_pdf(["CHOOSE YOUR SHELLFISH", "extra 2.00/lb to steam", "MILD butter, hot sauce, old bay seasoning on every order",
+                      "SPICY same as mild but with a kick of cayenne and lemon", "LEMON GARLIC lemon juice, butter, garlic greek seasoning",
+                      "SIDES new potatoes, corn on the cob, smoked sausage link", "DESSERTS key lime pie, banana pudding, chocolate lush"])
+    pages = {"/": '<title>Plain Cafe</title><h1>Plain Cafe</h1><a href="/m/menu-photo.jpg">Menu photo</a> <a href="/m/menu-wine.jpg">Wine menu</a>'
+                  ' <a href="/m/steam-menu.pdf">Steam menu</a>'}
+    def handler(request):
+        path = request.url.path
+        if path in pages:
+            return httpx.Response(200, text=pages[path], headers={"content-type": "text/html"})
+        body = {"/m/menu-photo.jpg": photo, "/m/menu-wine.jpg": wine, "/m/steam-menu.pdf": steam}.get(path)
+        if body is None:
+            return httpx.Response(404, text="<h1>Not found</h1>", headers={"content-type": "text/html"})
+        return httpx.Response(200, content=body, headers={"content-type": "application/pdf" if path.endswith(".pdf") else "image/jpeg"})
+    base = {"external_id": "/listing/plain/", "section": "", "name": "", "price_text": "", "price": "", "price_rule": "", "okundu": "2026-10-08"}
+    readings = [{**base, "menu_url": "https://plain.example/m/menu-photo.jpg", "raw_sha256": hashlib.sha256(photo).hexdigest(),
+                 "menu_type": "menü değil", "menu_title": ""},
+                {**base, "menu_url": "https://plain.example/m/menu-wine.jpg", "raw_sha256": hashlib.sha256(wine).hexdigest(),
+                 "menu_type": "drinks", "menu_title": "Wine List"}]
+    result = run(tmp_path, [restaurant("plain", "Plain Cafe", "https://plain.example/")], handler, readings=readings)
+    _, _, menus, items = related(result, "/listing/plain/")
+    by_file = {m["url"].rsplit("/", 1)[-1]: m for m in menus}
+    assert "menu-photo.jpg" not in by_file and items == []                      # a reviewed photo is not a menu
+    assert (by_file["menu-wine.jpg"]["status"], by_file["menu-wine.jpg"]["method"], by_file["menu-wine.jpg"]["menu_type"]) == (
+        "no_items", "görüntüden okundu", "drinks") and "fiyat yazmıyor" in by_file["menu-wine.jpg"]["message"]
+    assert (by_file["steam-menu.pdf"]["status"], by_file["steam-menu.pdf"]["method"]) == ("no_items", "PDF metni")   # text, but no prices
+
+
+def test_curly_quoted_names_pizza_pies_and_drinks_menus():
+    items = rs.parse_menu([("p", "Kids Menu"), ("p", "“Horn Island” Chicken Fingers 13"), ("p", "“Ship Island” Bowtie Pasta & Sauce 10")])
+    assert [(i["name"], i["price"]) for i in items] == [("“Horn Island” Chicken Fingers", 13.0), ("“Ship Island” Bowtie Pasta & Sauce", 10.0)]
+    assert rs.classify("amici 30A signature neapolitan pizza pies", SECTIONS) == "ana_yemek" and rs.classify("Pies", SECTIONS) == "tatli"
+    assert rs.classify("little amici's (ages 12 and under)", SECTIONS) == "cocuk" and rs.classify("dessert cocktails", SECTIONS) == "icecek"
+    assert rs.item_class({"section": "Frozen", "name": "Cookie Colada"}, "drinks", SECTIONS) == ("icecek", "menu")
+    assert rs.item_class({"section": "Frozen", "name": "Cookie Colada"}, "general", SECTIONS) == ("diger", "section")
+
+
 def test_one_site_failing_does_not_stop_the_others_and_cancel_stops_all(tmp_path, monkeypatch):
     original = rs.RestaurantRun.structured
     def explode(self, document, html):

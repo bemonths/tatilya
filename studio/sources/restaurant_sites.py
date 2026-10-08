@@ -240,6 +240,7 @@ class Fetcher:
 
 # --- Page text, links and structured data ------------------------------------------------------------------------------------
 
+JS_BUILT = re.compile(r"__NEXT_DATA__|data-reactroot|id=\"root\"></div>|id=\"app\"></div>|ng-app|wix-thunderbolt|popmenu|toasttab", re.I)
 HEADING_CLASS = re.compile(r'class="[^"]*(?:menu[-_ ]?section[-_ ]?(?:title|name|header|heading)|section[-_ ]?(?:title|header|heading)|'
                            r'category[-_ ]?(?:title|name|header|heading)|group[-_ ]?(?:title|name)|menu-title|menu-heading)[^"]*"', re.I)
 
@@ -425,7 +426,7 @@ def hours_from_lines(lines):
 # --- Menus -----------------------------------------------------------------------------------------------------------------
 
 PRICE_TOKEN = r"\$?\s?\d{1,3}(?:\.\d{1,2})?"
-ITEM_LINE = re.compile(r"^(?P<name>(?:[A-Za-z\"'(¡¿#&½]|\d+(?:/\d+)?\s?(?:oz|lb|pc|piece|dozen|doz)?\.?\s?[A-Za-z])[^$]{1,90}?)\s*(?:[.\-–—…·:|]{2,}\s*|\s[-–—|:]\s|\s)"
+ITEM_LINE = re.compile(r"^(?P<name>(?:[A-Za-z\"'(¡¿#&½“‘]|\d+(?:/\d+)?\s?(?:oz|lb|pc|piece|dozen|doz)?\.?\s?[A-Za-z])[^$]{1,90}?)\s*(?:[.\-–—…·:|]{2,}\s*|\s[-–—|:]\s|\s)"
                        r"(?P<prices>\$?\s?\d{1,3}(?:\.\d{1,2})?(?:\s*(?:/|\||or|,|-)\s*\$?\s?\d{1,3}(?:\.\d{1,2})?){0,3}\+?)\s*$")
 PRICE_ONLY = re.compile(r"^(?:[A-Za-z ]{0,12}\s)?\$?\s?\d{1,3}(?:\.\d{1,2})?(?:\s*(?:/|\||or|,|-)\s*(?:[A-Za-z ]{0,12}\s)?\$?\s?\d{1,3}(?:\.\d{1,2})?){0,3}\+?$")
 SIZE_PRICES = re.compile(r"^(?P<name>.+?)\s+(?P<sizes>(?:(?:cup|bowl|half|full|small|large|reg(?:ular)?|single|double|glass|bottle|\d+\s?(?:pc|oz|piece|ct)s?|"
@@ -586,7 +587,8 @@ def classify(section, table):
 
 def item_class(item, kind, table):
     """(class, basis) of a menu item: its section heading by the table ('section'); when the heading gives no class (no heading,
-    or one the table does not know), the item's own name by the same table ('name'). Items of a kids menu are 'cocuk'."""
+    or one the table does not know), the item's own name by the same table ('name'). Items of a kids menu are 'cocuk'; items of a
+    drinks menu that neither heading nor name classifies are 'icecek'."""
     klass, basis = classify(item.get("section"), table), "section"
     if klass == "diger":
         by_name = classify(item.get("name"), [row for row in table if not (len(row) == 3 and row[2])])
@@ -594,6 +596,8 @@ def item_class(item, kind, table):
             klass, basis = by_name, "name"
     if kind == "kids" and klass in ("ana_yemek", "diger"):
         klass, basis = "cocuk", "menu"
+    elif kind == "drinks" and klass == "diger":
+        klass, basis = "icecek", "menu"
     return klass, basis
 
 
@@ -659,6 +663,7 @@ class RestaurantRun:
         self.read_pages = []           # (document, lines) of every HTML page read for this restaurant
         self.schema_menus = []         # menu urls the structured data names
         self.needs_browser = None      # 'challenge' (verification page) or 'render' (menus built with JavaScript): read again in a browser
+        self.js_menus = False
 
     def get(self, url, note):
         document = self.fetcher.get(url, restaurant=self.restaurant["external_id"], note=note)
@@ -720,7 +725,8 @@ class RestaurantRun:
                 self.structured(page, page.text)
         self.read_menus(menu_targets, home)
         self.text_facts()
-        if not any(m["status"] == "read" for m in self.menus) and (not self.menus or any(m["status"] == "no_items" for m in self.menus)):
+        if not any(m["status"] == "read" for m in self.menus) and (self.js_menus or any(m["status"] == "no_items" and m["platform"] for m in self.menus)
+                                                                  or not self.menus and len(flat) < 600):
             self.needs_browser = self.needs_browser or "render"
         return self
 
@@ -793,6 +799,8 @@ class RestaurantRun:
                         queue.extend(sub + [(l, t) for l, t in images if t.split("#")[0] not in seen])
                         continue
                     self.add_menu(target, label or title, home, document, "no_items", "Sayfada fiyatlı menü kalemi bulunamadı.", title=title)
+                    if len(" ".join(t for _, t in lines)) < 1500 or JS_BUILT.search(html):
+                        self.js_menus = True          # a menu page with little text: probably drawn by JavaScript
                 else:
                     self.add_menu(target, label or title, home, document, "no_items",
                                   "Platform sayfası tarayıcı çalıştırmadan fiyat göstermiyor.", platform=platform, title=title)
@@ -803,9 +811,14 @@ class RestaurantRun:
                     self.add_menu(target, label, home, document, "error", f"PDF açılamadı: {type(exc).__name__}", fmt="pdf")
                     continue
                 items = parse_menu(lines)
+                text = " ".join(t for _, t in lines)
                 if items:
                     self.add_menu(target, label, home, document, "read", None, items=items, method="PDF metni", fmt="pdf",
                                   text=" ".join(t for _, t in lines[:40]))
+                elif len(text) >= 200 and not any(r["raw_sha256"] == document.sha256 for r in self.readings):
+                    # the PDF has a text layer but no prices in it: there is nothing for a reader to add
+                    self.add_menu(target, label, home, document, "no_items", "PDF metninde fiyatlı menü kalemi bulunamadı.", method="PDF metni",
+                                  fmt="pdf", text=text[:400])
                 else:
                     self.image_or_unread(target, label, home, document, "pdf")
             elif document.kind == "image":
@@ -816,19 +829,29 @@ class RestaurantRun:
     def menu_images(self, html, base):
         images = []
         for match in re.finditer(r'(?is)<img\b[^>]*?src\s*=\s*["\']([^"\']+)["\'][^>]*>', html):
-            if re.search(r"menu", match.group(0), re.I) and re.search(r"\.(jpe?g|png|webp)(?:\?|$)", match.group(1), re.I):
+            name = urlsplit(urljoin(base, html_module.unescape(match.group(1)))).path.rsplit("/", 1)[-1]
+            if (re.search(r"menu", name, re.I) and not re.search(r"logo|icon|favicon|banner", name, re.I)
+                    and re.search(r"\.(jpe?g|png|webp)(?:\?|$)", match.group(1), re.I)):
                 alt = re.search(r'alt\s*=\s*["\']([^"\']*)', match.group(0), re.I)
                 images.append((clean(alt.group(1)) if alt else "menu image", urljoin(base, html_module.unescape(match.group(1)))))
         return images[:4]
 
     def image_or_unread(self, target, label, home, document, fmt):
         rows = [r for r in self.readings if r["raw_sha256"] == document.sha256]
-        if rows:
+        if rows and all((r.get("menu_type") or "").strip() == "menü değil" for r in rows):
+            return                                # a reviewer saw this image: a photo or a logo, not a menu
+        rows = [r for r in rows if (r.get("menu_type") or "").strip() != "menü değil"]
+        priced = [r for r in rows if (r.get("name") or "").strip()]
+        if priced:
             items = [{"section": r["section"] or None, "name": r["name"], "price_text": r["price_text"],
                       "price": float(r["price"]) if r.get("price") not in (None, "") else None,
-                      "price_rule": r.get("price_rule") or ("market" if not r.get("price") else "single")} for r in rows]
+                      "price_rule": r.get("price_rule") or ("market" if not r.get("price") else "single")} for r in priced]
             self.add_menu(target, label or rows[0].get("menu_title"), home, document, "read", None, items=items, method="görüntüden okundu",
                           fmt=fmt, menu_kind=rows[0].get("menu_type") or None)
+        elif rows:
+            # a reviewer read the image: it is a menu, but it prints no prices (a row with an empty name says so)
+            self.add_menu(target, label or rows[0].get("menu_title"), home, document, "no_items", "Görüntü okundu; menüde fiyat yazmıyor.",
+                          method="görüntüden okundu", fmt=fmt, menu_kind=rows[0].get("menu_type") or None)
         else:
             reason = ("Görüntü menü; gözden geçirme dosyasında bu görüntünün okuması yok." if fmt == "image" else
                       "PDF'te metin yok (taranmış görüntü); gözden geçirme dosyasında okuması yok.")
@@ -927,7 +950,7 @@ BLOCKED = re.compile(r"Sorry, you have been blocked|You are unable to access|Att
 DOCUMENT_PATH = re.compile(r"\.(?:pdf|jpe?g|png|webp|gif)(?:$|\?)", re.I)
 BROWSER_GAP = 3.0               # seconds between two browser page loads on the same host
 PROTECTED_GAP = 6.0             # the same on a site that answered plain HTTP with a verification page
-VERIFY_TIMEOUT = 15 * 60
+VERIFY_TIMEOUT = 5 * 60          # a verification page the user does not complete in time skips that restaurant
 
 
 class BrowserPages:
@@ -1032,7 +1055,7 @@ class PlaywrightSession:
                 return self.request(url)
             raise httpx.NetworkError(str(exc)[:200]) from exc
         try:
-            self.page.wait_for_load_state("networkidle", timeout=12_000)
+            self.page.wait_for_load_state("networkidle", timeout=5_000)
         except Exception:
             pass
         return self.current()
