@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlencode
 
-CHALLENGE = re.compile(r"Just a moment\.\.\.|cf-chl-|/cdn-cgi/challenge-platform|Verify you are human|Checking your browser before|"
+CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf-chl-|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate|Verify you are human|Checking your browser before|"
                        r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold", re.I)
 BLOCKED = re.compile(r"Sorry, you have been blocked|You are unable to access", re.I)
 FETCH = """async ({url, method, headers, body}) => {

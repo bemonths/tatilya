@@ -337,6 +337,28 @@ def test_a_verification_page_is_read_again_in_the_browser_and_the_user_wait_is_s
     assert any(e["note"].endswith("(tarayıcı)") for e in manifest["responses"]) and any(e["status"] == 403 for e in manifest["responses"])
 
 
+def test_an_ordinary_page_behind_cloudflare_is_not_a_verification_page(tmp_path):
+    normal = ("<html><head><title>Coast Grill</title></head><body><h1>Coast Grill</h1><script>(function(){var a=document.createElement('script');"
+              "a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.head.appendChild(a)})();</script></body></html>")
+    challenge = ("<html><head><title>Just a moment...</title></head><body><script>window._cf_chl_opt={cType:'managed'};</script>"
+                 "<script src='/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=1'></script></body></html>")
+    assert rs.CHALLENGE.search(normal) is None and rs.CHALLENGE.search(challenge)
+    from studio.sources import agency_rates, browser_verification
+    assert agency_rates.CHALLENGE.search(normal) is None and browser_verification.CHALLENGE.search(normal) is None
+    assert agency_rates.CHALLENGE.search(challenge) and browser_verification.CHALLENGE.search(challenge)
+
+    class Normal(StandInSession):
+        def current(self):
+            self.looks += 1
+            return 200, self.url, "text/html", normal.encode()
+
+    session, waits = Normal({}), []
+    store = rs.RawStore(tmp_path / "raw" / "manifest.json")
+    pages = rs.BrowserPages(store, lambda: False, waiting=waits.append, opener=lambda profile: session)
+    document = pages.get("https://coast.example/", restaurant="/listing/coast/", note="site-home")
+    assert (document.status, session.looks, waits) == (200, 1, []) and "coast.example" not in pages.protected
+
+
 # --- Storage, API and migration -----------------------------------------------------------------------------------------------
 
 def site_mock(request):

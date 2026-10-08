@@ -944,7 +944,9 @@ def read_reviewed(path, key):
     return grouped
 
 
-CHALLENGE = re.compile(r"Just a moment\.\.\.|cf-chl-|/cdn-cgi/challenge-platform|Verify you are human|Checking your browser before|"
+# The interstitial verification page only: ordinary pages of Cloudflare sites also load /cdn-cgi/challenge-platform/scripts/jsd/...,
+# which is not a verification page and must not make the browser pass wait.
+CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf-chl-|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate|Verify you are human|Checking your browser before|"
                        r"Checking if the site connection is secure", re.I)
 BLOCKED = re.compile(r"Sorry, you have been blocked|You are unable to access|Attention Required! \| Cloudflare|Edge IP Restricted", re.I)
 DOCUMENT_PATH = re.compile(r"\.(?:pdf|jpe?g|png|webp|gif)(?:$|\?)", re.I)
