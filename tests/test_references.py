@@ -168,7 +168,7 @@ def test_api_serves_the_table_for_30a_only(tmp_path, monkeypatch):
         other = client.get("/api/references?destination_id=test-coast").json()
         assert other == {"available": False, "reason": "Bu destinasyon için referans tablosu yok.", "rows": []}
         assert client.get("/api/references?destination_id=missing").status_code == 404
-        monkeypatch.setattr(ref, "today", lambda: date(2027, 10, 8))
+        monkeypatch.setattr(ref, "today", lambda: date(2027, 10, 9))     # a day after the latest re-check date (GÖREV-08 rows)
         assert all(row["overdue"] for row in client.get("/api/references").json()["rows"])
 
 
