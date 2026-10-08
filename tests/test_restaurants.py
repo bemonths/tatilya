@@ -208,6 +208,16 @@ def test_filters_identity_pagination_and_details():
     assert record['regions']==[{'source_neighborhood':n,'canonical_region_id':r.REGION_MAP[n]} for n in ['Dune Allen','Gulf Place']]
 
 
+def test_city_line_without_zip_code_is_city_and_state():
+    # Canopy Road Café (GÖREV-01): "Inlet Beach, FL" was stored as the second address line with city and state empty.
+    html = DETAIL.replace('10 Coast Lane</br>Suite 2<br>Santa Rosa Beach, FL 32459<br>', '13063 US-98<br>Inlet Beach, FL<br>')
+    record = r.parse_detail(html, '/listing/coast-table/', ['Inlet Beach'])
+    assert [record[k] for k in ('address_line_1', 'address_line_2', 'city', 'state', 'postal_code')] == ['13063 US-98', None, 'Inlet Beach', 'FL', None]
+    other = DETAIL.replace('Santa Rosa Beach, FL 32459', 'Santa Rosa Beach FL')       # no comma: not a city line, kept as written
+    assert r.parse_detail(other, '/listing/coast-table/', ['Seaside'])['address_line_2'] == 'Suite 2 Santa Rosa Beach FL'
+    assert r.RestaurantsConnector.version == 'south-walton-restaurants/2'
+
+
 def test_optional_fields_null():
     record=r.parse_detail(MINIMAL,'/listing/minimal/',['Seaside'])
     assert all(record[k] is None for k in ('address_line_1','address_line_2','city','state','postal_code','phone','email','website_url'))

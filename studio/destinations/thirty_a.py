@@ -35,6 +35,10 @@ SEEDS = [
      "Atlantik best track dosyasından destinasyonun kıyı koridoruna yakın geçen tropikal siklonlar (bizim hesabımız): ilk giriş ayı, en yakın mesafe, daire içindeki en yüksek rüzgâr ve sınıf.", "Dosya"),
     ("South Walton · Konaklama (Book>Direct)", "https://visitsouthwalton.bookdirect.net/", "Konaklama",
      "Visit South Walton'ın resmî Stay ön yüzünün kullandığı Book>Direct aramaları: yapılandırılmış tarih pencerelerinde her mahalle filtresinde görünen ilanlar, türleri, büyüklükleri ve kaynağın verdiği fiyat alanları; ilan başına aylık fiyat takvimi özeti. Tarihli arama anlık görüntüsüdür, tam envanter değildir.", "JSON"),
+    ("Restoranlar · İşletme siteleri", "https://www.visitsouthwalton.com/listings/culinary-experiences/?kaynak=isletme-siteleri", "Yeme içme",
+     "Son restoran dizini çekimindeki restoranların kendi siteleri (ve yayımladıkları menü/sipariş platformu sayfaları): site durumu, menüler ve "
+     "menü fiyatları, çalışma saatleri, rezervasyon, çocuk menüsü, açık hava oturma, manzara ve köpek kabulü; her değer kaynak url'si, erişim "
+     "zamanı ve ham kopyanın SHA-256'sıyla. Yorum ve puan platformları kullanılmaz; sitenin söylemediği bilgi bilinmiyor kalır.", "HTML"),
     ("Kiralama şirketleri · Konaklama fiyatları", "https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri", "Konaklama",
      "Son Book>Direct çekimindeki ilanların şirket bağlantısıyla, yapılandırılmış kiralama şirketlerinin kendi sitelerinde her tarih penceresi için sorulan müsaitlik ve fiyat: kira, temizlik ve diğer ücretler, vergiler, genel toplam, en az gece ve giriş günü kuralı (site hangilerini gösteriyorsa). Eşleme yalnız bağlantıyla yapılır; tam envanter değildir.", "HTML"),
 ]
@@ -150,6 +154,11 @@ AGENCY_SITE_OPTIONS = {
     "alysbeach.com": {"inventory": {"source": "platform", "origin": "https://vacation.alysbeach.com"}, "own_region_id": "alys-beach",
                       "own_city": "Alys Beach"},
 }
+# Reviewed files read by the restaurant-sites collector (GÖREV-09): the official site found by a web search for restaurants whose
+# directory entry has no working website (accepted only when the site shows the same address or phone), and menu items read by a
+# person from image menus or text-less PDFs, each tied to the document's SHA-256.
+RESTAURANT_SITE_OVERRIDES = Path(__file__).with_name("thirty_a_restaurant_sites.csv")
+MENU_READINGS = Path(__file__).with_name("thirty_a_menu_readings.csv")
 # Added by migration v12: the seasonal fall window (Fall 2026 became a last-minute window once queried in October 2026).
 LODGING_WINDOWS_V12 = (("fall-2027", "Sonbahar 2027", "2027-10-16", "2027-10-23"),)
 STORM_CORRIDOR = {

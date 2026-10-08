@@ -14,6 +14,7 @@ from .url_identity import https_source_identity
 from ..destinations.thirty_a import REGIONS
 
 SOURCE_URL = 'https://www.visitsouthwalton.com/listings/culinary-experiences/'
+VERSION = 'south-walton-restaurants/2'      # /2: a city line without a ZIP code is parsed as city and state
 HOSTS = {'www.visitsouthwalton.com', 'visitsouthwalton.com'}
 SOURCE_HOST_ALIASES = {host: 'visitsouthwalton.com' for host in HOSTS}
 SOURCE_IDENTITY = https_source_identity(SOURCE_URL, host_aliases=SOURCE_HOST_ALIASES)
@@ -157,7 +158,8 @@ def parse_detail(content,url,neighborhoods):
     lines=[clean(v) for v in ''.join(address).splitlines() if clean(v)]
     city=state=postal=None
     if lines:
-        match=re.fullmatch(r'(.+?),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)',lines[-1])
+        # The city line, with or without a ZIP code ("Inlet Beach, FL" is published without one).
+        match=re.fullmatch(r'(.+?),\s*([A-Z]{2})(?:\s+(\d{5}(?:-\d{4})?))?',lines[-1])
         if match:city,state,postal=match.groups();lines.pop()
     phone=email=website=None
     for link in hero.find('a'):
@@ -191,7 +193,7 @@ def pause(seconds,canceled):
 class Reader:
     def __init__(self,client,path,canceled):
         self.client,self.path,self.canceled=client,path,canceled
-        self.manifest={'connector':'south-walton-restaurants/1','source_url':SOURCE_URL,'responses':[]}
+        self.manifest={'connector':VERSION,'source_url':SOURCE_URL,'responses':[]}
     def save(self,requested,response,body,kind,neighborhood):
         sequence=len(self.manifest['responses'])+1
         relative=f"{'detail' if kind=='detail' else 'listing'}/{sequence:04d}.html"
@@ -288,7 +290,7 @@ def collect(raw_path,progress,canceled,*,client=None,regions=None):
 
 
 class RestaurantsConnector:
-    name='south-walton-restaurants';version='south-walton-restaurants/1';method='HTML';diff_enabled=True
+    name='south-walton-restaurants';version=VERSION;method='HTML';diff_enabled=True
     raw_filename='manifest.json'
     def supports(self,source):
         return source.get('destination_id') == '30a' and https_source_identity(source['url'], host_aliases=SOURCE_HOST_ALIASES) == SOURCE_IDENTITY

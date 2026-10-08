@@ -72,7 +72,7 @@ test('restaurant detail renders missing description and keeps null-safe search',
 });
 
 test('bound existing restaurant source enables collection regardless of display name or URL spelling',()=>{
-  const source={id:'legacy-food',name:'My source',url:'https://visitsouthwalton.com/listings/culinary-experiences',enabled:1,method:'HTML',connector:{name:'south-walton-restaurants',version:'south-walton-restaurants/1',method:'HTML'}};
+  const source={id:'legacy-food',name:'My source',url:'https://visitsouthwalton.com/listings/culinary-experiences',enabled:1,method:'HTML',connector:{name:'south-walton-restaurants',version:'south-walton-restaurants/2',method:'HTML'}};
   assert.equal(connectorState(source).method,'HTML · bağlı');
   assert.equal(connectorState(source).label,'Toplayıcı hazır');
   const main={innerHTML:''};
@@ -565,4 +565,29 @@ test('agency v2 cells name the match method, own inventory and published rents a
   const own=ownTable([{title:'103 <North>',address:'103 North Charles Street',bedrooms:4,company:'Alys',domain:'alysbeach.com',page_url:'https://vacation.alysbeach.com/vrp/unit/x',quotes:{w:{status:'priced',total:14768.32}}}],[{window_key:'w',label:'Kış'}]);
   assert.match(own,/Şirketin kendi envanteri/);assert.match(own,/103 &lt;North&gt;/);assert.match(own,/\$14,768<small>toplam/);
   assert.equal(ownTable([],[]),'');
+});
+import {levelCell, reservationCell, kidsCell, factLine, siteDetail, regionSummary, filterRestaurants as filterWithSites, SITE_CONNECTOR} from '../studio/web/restaurants.js';
+test('restaurant business-site cells keep unknown values unknown and label our price level',()=>{
+  assert.equal(SITE_CONNECTOR,'restaurant-sites');
+  assert.match(levelCell({price_level:'$$$',main:{median:34,count:5}}),/<strong>\$\$\$<\/strong><small>ana yemek ortancası \$34 · 5 kalem/);
+  assert.match(levelCell({price_level:null,main:{count:3}}),/hesaplanmadı \(3 ana yemek fiyatı\)/);
+  assert.match(levelCell({price_level:null,main:{count:0}}),/bilinmiyor/);
+  assert.match(reservationCell({reservation:'online',reservation_platform:'OpenTable'}),/çevrim içi<small>OpenTable/);
+  assert.match(reservationCell({}),/bilinmiyor/);assert.match(kidsCell({kids_menu:'yes'}),/evet/);assert.match(kidsCell(undefined),/bilinmiyor/);
+  const hours=factLine('hours',{value:'stated',detail:'Mon - Thu 11am - 9pm',data:{Mon:'11:00–21:00'},source_url:'https://x.example/contact',fetched_at:'2026-10-08T10:00:00Z',method:'sayfa metni',raw_sha256:'abcdef1234567890'});
+  assert.match(hours,/işletmenin sitesinde yazan/);assert.match(hours,/<td>Mon<\/td><td>11:00–21:00<\/td>/);assert.match(hours,/sayfa metni · SHA-256 abcdef1234/);
+  assert.match(factLine('dog_friendly',undefined),/bilinmiyor/);
+  const records=[{external_id:'a',name:'A',source_neighborhoods:[],cuisines:[],meals_served:[]},{external_id:'b',name:'B',source_neighborhoods:[],cuisines:[],meals_served:[]}];
+  const sites={a:{price_level:'$$',reservation:'online',kids_menu:'yes'},b:{price_level:null}};
+  assert.deepEqual(filterWithSites(records,{level:'$$'},sites).map(r=>r.name),['A']);
+  assert.deepEqual(filterWithSites(records,{level:'none'},sites).map(r=>r.name),['B']);
+  assert.deepEqual(filterWithSites(records,{reservation:'none',kids:'none'},sites).map(r=>r.name),['B']);
+  const detail=siteDetail({site_status:'working',site_url:'https://x.example/',final_url:'https://x.example/',site_source:'review',price_level:'$$',main:{median:18,min:12,max:30,count:9},
+    main_menu_id:1,menus:[{menu_id:1,url:'https://x.example/menu',title:'Dinner',menu_type:'dinner',format:'pdf',status:'read',item_count:20,method:'PDF metni'}],
+    items:[{menu_id:1,section_class:'ana_yemek',name:'Grouper <b>',section:'ENTREES',price_text:'$28',price_rule:'single'}],facts:{}},'Fiyat seviyesi bizim sınıflamamızdır');
+  assert.match(detail,/resmî site \(web aramasıyla bulundu\)/);assert.match(detail,/akşam menüsünden/);assert.match(detail,/Grouper &lt;b&gt;/);
+  assert.match(detail,/fiyat seviyesi bu menüden/);assert.match(detail,/bizim sınıflamamızdır/);
+  const summary=regionSummary({level_note:'n',hours_note:'h',regions:[{region_name:'Seaside',restaurant_count:12,levels:{'$':1,'$$':5,'$$$':2,'$$$$':0},median_of_medians:21.5,online_reservation:4,kids_menu:6,no_information:3}]});
+  assert.match(summary,/<td>Seaside<\/td><td>12<\/td><td>1<\/td><td>5<\/td><td>2<\/td><td>0<\/td><td>\$21\.50<\/td><td>4<\/td><td>6<\/td><td>3<\/td>/);
+  assert.equal(regionSummary(null),'');
 });

@@ -12,4 +12,5 @@ class ConnectorContext:
     storm_corridor: dict | None = None
     lodging: dict | None = None
     agency: dict | None = None
+    restaurants: dict | None = None
 

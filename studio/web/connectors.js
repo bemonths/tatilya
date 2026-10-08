@@ -21,6 +21,7 @@ export function domainTarget(name, beachName="south-walton-beaches") {
   const targets={[beachName]:{href:"#collect",label:"Plaj verilerini aç"},
     "nws-weather":{href:"#collect/weather",label:"Hava verilerini aç"},
     "south-walton-restaurants":{href:"#collect/restaurants",label:"Restoran verilerini aç"},
+    "restaurant-sites":{href:"#collect/restaurants",label:"Restoran bilgilerini aç"},
     "south-walton-neighborhoods":{href:"#collect/neighborhoods",label:"Mahalle verilerini aç"},
     "bookdirect-lodging":{href:"#collect/lodging",label:"Konaklama verilerini aç"},
     "agency-lodging-rates":{href:"#collect/lodging",label:"Konaklama fiyatlarını aç"},

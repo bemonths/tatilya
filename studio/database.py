@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .destinations import DEFAULT_PROFILE, DEFAULT_DESTINATION_ID
+from .destinations import DEFAULT_PROFILE, DEFAULT_DESTINATION_ID, PROFILES
 from .destinations.context import ConnectorContext
 from .migration_v6 import upgrade_v6
 from .migration_v7 import upgrade_v7
@@ -167,7 +167,22 @@ class Database:
             agency={"sites":sites} if sites else None
             if agency and "lodging_listings" in inputs:
                 agency["input"]=self.lodging_input(con,identifier)
-        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency)
+            profile=PROFILES.get(identifier)
+            restaurants={"site_overrides":getattr(profile,"RESTAURANT_SITE_OVERRIDES",None),"menu_readings":getattr(profile,"MENU_READINGS",None)}
+            if "restaurant_records" in inputs:
+                restaurants["input"]=self.restaurant_input(con,identifier)
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants)
+
+    @staticmethod
+    def restaurant_input(con, destination_id):
+        """Restaurants of the destination's latest successful directory run (name, website, phone, address); None without one."""
+        run=con.execute("""SELECT id FROM source_runs WHERE destination_id=? AND connector_name='south-walton-restaurants' AND status='done'
+            ORDER BY rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+        if not run:
+            return None
+        rows=[dict(r) for r in con.execute("""SELECT external_id,name,website_url,phone,address_line_1,city FROM restaurant_records
+            WHERE run_id=? ORDER BY name,external_id""",(run["id"],))]
+        return {"run_id":run["id"],"restaurants":rows}
 
     @staticmethod
     def lodging_input(con, destination_id):

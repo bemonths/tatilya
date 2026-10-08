@@ -38,7 +38,7 @@ def client(tmp_path):
 
 def test_fresh_profile_and_scoped_unique_constraints(client):
     db=client.app.state.db
-    assert len(db.sources())==13
+    assert len(db.sources())==14
     assert len(db.context().canonical_regions)==13 and len(db.context().weather_anchors)==3
     assert db.context().destination['name']=='30A'
     with db.connect() as con:

@@ -303,7 +303,7 @@ def test_source_job_dedup_is_per_source_and_source_snapshot_is_checked(tmp_path)
 
 
 def test_generic_unsupported_source_and_registry_constraints(tmp_path):
-    assert len(DEFAULT_REGISTRY.connectors) == 9
+    assert len(DEFAULT_REGISTRY.connectors) == 10
     with pytest.raises(ValueError, match="benzersiz"):
         ConnectorRegistry([TestConnector(), TestConnector()])
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:

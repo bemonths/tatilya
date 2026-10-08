@@ -35,7 +35,7 @@ UNSAFE = [
 def test_restaurant_source_variants_bind(url):
     connector = DEFAULT_REGISTRY.for_source({'destination_id':'30a','url': url})
     assert connector.name == 'south-walton-restaurants'
-    assert connector.version == 'south-walton-restaurants/1'
+    assert connector.version == 'south-walton-restaurants/2'
     assert connector.method == 'HTML'
 
 
@@ -79,7 +79,7 @@ def test_existing_v5_repairs_defaults_binds_api_and_collects(tmp_path, monkeypat
     monkeypatch.setattr(r,'REQUEST_GAP',0); install_mock(monkeypatch,DirectoryMock())
     with TestClient(create_app(tmp_path)) as client:
         source = next(s for s in client.get('/api/sources').json() if s['id'] == before['id'])
-        assert source.pop('connector') == {'name':'south-walton-restaurants','version':'south-walton-restaurants/1','method':'HTML'}
+        assert source.pop('connector') == {'name':'south-walton-restaurants','version':'south-walton-restaurants/2','method':'HTML'}
         assert source == {**before,'method':'HTML','notes':RESTAURANT_NOTE}
         assert db.sources() == [{**s,'method':'HTML','notes':RESTAURANT_NOTE} if s['id']==before['id'] else s for s in all_before]
         response = client.post('/api/jobs',json={'kind':'source_collection','source_id':before['id']},headers={'X-Studio-Request':'1'})

@@ -16,7 +16,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
+from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
@@ -90,6 +90,8 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "collections": db.collections(destination_id), "weather_runs": weather_runs(destination_id),
                 "restaurant_runs": restaurant_runs(destination_id),
                 "restaurant_connector": {"name": "south-walton-restaurants", "method": "HTML"},
+                "restaurant_site_runs": restaurant_site_runs(destination_id),
+                "restaurant_site_connector": {"name": restaurant_sites.RestaurantSitesConnector.name, "method": "HTML/PDF"},
                 "neighborhood_runs": neighborhood_runs(destination_id),
                 "neighborhood_connector": {"name": neighborhoods.NeighborhoodsConnector.name, "method": "HTML",
                                            "source_url": neighborhoods.SOURCE_URL, "scope": neighborhoods.SCOPE},
@@ -299,6 +301,48 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham restoran manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-restoran-{identifier[:8]}.json")
+
+    SITES = restaurant_sites.RestaurantSitesConnector.name
+
+    @app.get("/api/restaurant-site-runs")
+    def restaurant_site_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] == SITES and run["status"] == "done"]
+
+    def find_restaurant_site_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != SITES or run["status"] != "done":
+            raise HTTPException(404, "Bu işletme sitesi veri sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/restaurant-site-runs/{identifier}")
+    def restaurant_site_run(identifier: str):
+        """Per restaurant price level, main-dish median, reservation and kids menu, and the neighborhood summary; computed when read."""
+        run = find_restaurant_site_run(identifier)
+        regions = db.context(run["destination_id"]).canonical_regions
+        with db.connect() as con:
+            summary = restaurant_sites.summarize(con, identifier, [r["id"] for r in regions], {r["id"]: r["name"] for r in regions})
+        if summary is None:
+            raise HTTPException(404, "Bu sürümün özeti bulunamadı.")
+        return {"run": run, **summary}
+
+    @app.get("/api/restaurant-site-runs/{identifier}/restaurant")
+    def restaurant_site_detail(identifier: str, external_id: str):
+        find_restaurant_site_run(identifier)
+        with db.connect() as con:
+            detail = restaurant_sites.restaurant_detail(con, identifier, external_id)
+        if detail is None:
+            raise HTTPException(404, "Bu restoran bu sürümde yok.")
+        return detail
+
+    @app.get("/api/restaurant-site-runs/{identifier}/raw")
+    def raw_restaurant_site_run(identifier: str):
+        run = find_restaurant_site_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham işletme sitesi manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"30a-isletme-siteleri-{identifier[:8]}.json")
 
     @app.get("/api/neighborhood-runs")
     def neighborhood_runs(destination_id: str = DEFAULT_DESTINATION_ID):

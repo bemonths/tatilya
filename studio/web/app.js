@@ -2,7 +2,7 @@ import {destinationOptions, storedDestination, persistDestination, resetDestinat
 import {api, esc, host, date, setDestination, destinationRevision, destinationPath} from "./api.js";
 import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
-import {RestaurantScreen} from "./restaurants.js";
+import {RestaurantScreen, SITE_CONNECTOR} from "./restaurants.js";
 import {NeighborhoodScreen} from "./neighborhoods.js";
 import {LodgingScreen, LODGING_CONNECTOR} from "./lodging.js";
 import {AgencyPrices, AGENCY_CONNECTOR} from "./agency.js";
@@ -25,7 +25,7 @@ let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
 let lastNeighborhoodId=null;
 const neighborhoodScreen=new NeighborhoodScreen();
-let lastLodgingId=null, lastAgencyId=null;
+let lastLodgingId=null, lastAgencyId=null, lastSiteId=null;
 const agencyPrices=new AgencyPrices();
 const lodgingScreen=new LodgingScreen(agencyPrices);
 // The three climate jobs can be queued together; refresh on every newly finished one, not only the newest.
@@ -34,7 +34,7 @@ const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status=
 const climateScreen=new ClimateScreen();
 const referencesScreen=new ReferencesScreen();
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
-const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,
+const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
 
 function toast(text) {
@@ -181,6 +181,9 @@ function updateAuditButtons() {
   const restaurantSource=state.data.sources.find(s=>s.enabled && s.connector?.name==="south-walton-restaurants");
   const restaurantBusy=state.data.jobs.some(j=>j.source_id===restaurantSource?.id && active(j));
   document.querySelectorAll('[data-action="collect-restaurants"]').forEach(button=>{button.disabled=!restaurantSource || restaurantBusy;button.textContent=restaurantBusy?"Toplama sürüyor…":"↓ Restoran verilerini topla";});
+  const siteSource=state.data.sources.find(s=>s.enabled && s.connector?.name===SITE_CONNECTOR);
+  const siteBusy=state.data.jobs.some(j=>j.source_id===siteSource?.id && active(j));
+  document.querySelectorAll('[data-action="collect-restaurant-sites"]').forEach(button=>{button.disabled=!siteSource || siteBusy;button.textContent=siteBusy?"Siteler okunuyor…":"↓ İşletme sitelerinden bilgi topla";});
   const lodgingSource=state.data.sources.find(s=>s.enabled && s.connector?.name===LODGING_CONNECTOR);
   const lodgingBusy=state.data.jobs.some(j=>j.source_id===lodgingSource?.id && active(j));
   document.querySelectorAll('[data-action="collect-lodging"]').forEach(button=>{button.disabled=!lodgingSource || lodgingBusy;button.textContent=lodgingBusy?"Toplama sürüyor…":"↓ Konaklama aramalarını topla";});
@@ -296,6 +299,7 @@ $("#main").addEventListener("click", async event=>{
       case "collect-neighborhoods":
       case "collect-lodging":
       case "collect-agency-rates":
+      case "collect-restaurant-sites":
       case "collect-restaurants":
       case "collect-weather":
       case "collect-beaches": {
@@ -332,7 +336,7 @@ async function start(destinationId=storedDestination(localStorage)) {
   const ticket=setDestination(destinationId);
   resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen]);
   lodgingScreen.agency=agencyPrices;   // the reset rebuilds each screen from its constructor; the price section is attached again
-  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=lastAgencyId=null;climateDoneIds=new Set();
+  lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=lastAgencyId=lastSiteId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';
   $("#jobs-content").innerHTML='';
@@ -358,6 +362,7 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastNeighborhoodId=state.data.neighborhood_runs?.[0]?.id || null;
     lastLodgingId=state.data.lodging_runs?.[0]?.id || null;
     lastAgencyId=state.data.agency_runs?.[0]?.id || null;
+    lastSiteId=state.data.restaurant_site_runs?.[0]?.id || null;
     climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
@@ -377,6 +382,14 @@ async function start(destinationId=storedDestination(localStorage)) {
           state.data.restaurant_runs=await api("restaurant-runs");lastRestaurantId=restaurantLatest.id;restaurantScreen.selectedRun=null;
           if(location.hash==="#collect/restaurants") render();
           toast("Restoran verileri kaydedildi. Restoranlar sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
+      const siteLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name===SITE_CONNECTOR);
+      if(siteLatest && siteLatest.id!==lastSiteId) {
+        try {
+          state.data.restaurant_site_runs=await api("restaurant-site-runs");lastSiteId=siteLatest.id;restaurantScreen.siteSummary=null;
+          if(location.hash==="#collect/restaurants") render();
+          toast("İşletme sitelerinden restoran bilgileri kaydedildi. Restoranlar sekmesinden inceleyebilirsin.");
         } catch(error) {toast(error.message);}
       }
       const neighborhoodLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-neighborhoods");
