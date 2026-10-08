@@ -13,6 +13,7 @@ when the site says it. Every stored value keeps its page url, access time, raw S
 sequential and REQUEST_GAP seconds apart; several restaurants are read side by side; one site's failure never stops the others.
 Derived numbers (main-dish medians, price level) are computed when read and labelled as ours.
 """
+import base64
 import csv
 import gzip
 import hashlib
@@ -31,6 +32,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 import httpx
 
 from .base import CollectionCanceled, CollectionResult, SourceError
+from .browser_verification import FINAL_WAIT_SECONDS, GRACE_SECONDS, host_key, mark_hosts
 from .climate_http import check, pause
 
 CONNECTOR_VERSION = "restaurant-sites/1"
@@ -985,26 +987,36 @@ CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/chall
 BLOCKED = re.compile(r"Sorry, you have been blocked|You are unable to access|Attention Required! \| Cloudflare|Edge IP Restricted", re.I)
 DOCUMENT_PATH = re.compile(r"\.(?:pdf|jpe?g|png|webp|gif)(?:$|\?)", re.I)
 BROWSER_GAP = 3.0               # seconds between two browser page loads on the same host
-PROTECTED_GAP = 6.0             # the same on a site that answered plain HTTP with a verification page
-VERIFY_TIMEOUT = 5 * 60          # a verification page the user does not complete in time skips that restaurant
+PROTECTED_GAP = 6.0             # the same on a site that showed a verification page
+VERIFY_TIMEOUT = FINAL_WAIT_SECONDS   # the one wait at the end of the run for the sites left for the user (15 min)
+
+
+class VerificationDeferred(Exception):
+    """The page still shows a verification page after the grace period: the restaurant is read again at the end of the run."""
+
+    def __init__(self, host, url):
+        super().__init__(host)
+        self.host, self.url = host, url
 
 
 class BrowserPages:
-    """The second pass: pages rendered in the computer's Chrome (or Edge) with a persistent profile in a visible window, one page
-    at a time. Used for sites that answer plain HTTP with a verification page and for menus a site or platform builds with
-    JavaScript. A verification page is left to the user (the job shows which site waits); a block page stops that site."""
+    """The second pass: pages rendered in the computer's own browser (studio.sources.browser_verification: installed Chrome started
+    as an ordinary application, one persistent profile, reached over CDP), one page at a time. Used for sites that showed a
+    verification page (now or in an earlier run), sites that refused plain HTTP and menus built with JavaScript. A verification
+    page that does not clear within the grace period leaves the restaurant for the end of the run; a block page stops that site."""
 
-    def __init__(self, store, canceled, waiting=None, profile=None, opener=None):
+    def __init__(self, store, canceled, waiting=None, profile=None, opener=None, grace=None):
         self.store, self.canceled, self.waiting = store, canceled, waiting
         self.profile = profile
-        self.opener = opener                     # tests inject a stand-in: opener() -> object with goto(url) and request(url)
+        self.opener = opener                     # tests inject a stand-in: opener(profile) -> object with goto, current, request, wait_all
+        self.grace = GRACE_SECONDS if grace is None else grace
         self.session = None
         self.last = {}
         self.protected = set()
 
     def start(self):
         if self.session is None:
-            self.session = (self.opener or PlaywrightSession)(self.profile)
+            self.session = (self.opener or CdpPages)(self.profile)
         return self.session
 
     def close(self):
@@ -1030,7 +1042,7 @@ class BrowserPages:
                 text = body.decode("utf-8", errors="replace")[:40000]
                 if CHALLENGE.search(text):
                     self.protected.add(host)
-                    status, final, content_type, body = self.wait_for_user(session, host, url)
+                    status, final, content_type, body = self.grace_period(session, host, url)
                 elif BLOCKED.search(text):
                     raise SourceError(f"Site engel sayfası gösterdi ({host}).")
         finally:
@@ -1039,50 +1051,33 @@ class BrowserPages:
                                         body=body, note=f"{note} (tarayıcı)")
         return Document(url, final, status, content_type, body, digest, stamp, f"{note} (tarayıcı)")
 
-    def wait_for_user(self, session, host, url):
-        """Most verification pages clear by themselves in a real browser; otherwise the user completes it in the window."""
-        deadline, announced = time.monotonic() + VERIFY_TIMEOUT, False
-        try:
-            while True:
-                check(self.canceled)
-                status, final, content_type, body = session.current()
-                text = body.decode("utf-8", errors="replace")[:40000]
-                if BLOCKED.search(text):
-                    raise SourceError(f"Site engel sayfası gösterdi ({host}).")
-                if not CHALLENGE.search(text):
-                    return 200 if status in (403, 503, None) else status, final, content_type, body
-                if time.monotonic() > deadline:
-                    raise SourceError(f"Doğrulama süresinde tamamlanmadı ({host}).")
-                if not announced and time.monotonic() > deadline - VERIFY_TIMEOUT + 20 and self.waiting:
-                    self.waiting(host)
-                    announced = True
-                pause(3.0, self.canceled)
-        finally:
-            if announced and self.waiting:
-                self.waiting(None)
+    def grace_period(self, session, host, url):
+        """Most verification pages clear by themselves in a real browser; one that does not is left for the end of the run."""
+        deadline = time.monotonic() + self.grace
+        while True:
+            check(self.canceled)
+            status, final, content_type, body = session.current()
+            text = body.decode("utf-8", errors="replace")[:40000]
+            if BLOCKED.search(text):
+                raise SourceError(f"Site engel sayfası gösterdi ({host}).")
+            if not CHALLENGE.search(text):
+                return 200 if status in (403, 503, None) else status, final, content_type, body
+            if time.monotonic() >= deadline:
+                raise VerificationDeferred(host, url)
+            pause(2.0, self.canceled)
+
+    def wait_all(self, sites, timeout):
+        """The one end-of-run wait: sites {host: url} open in tabs, the job lists them once; returns the hosts that opened."""
+        return self.start().wait_all(sites, self.canceled, timeout, self.waiting)
 
 
-class PlaywrightSession:
-    """One visible Chrome/Edge window with a persistent profile; pages are loaded with the browser's own navigation."""
+class CdpPages:
+    """One tab of the computer's own browser (see BrowserPages); pages load with the browser's own navigation."""
 
     def __init__(self, profile):
-        from playwright.sync_api import sync_playwright
-        from .browser_verification import profile_root
-        self.playwright = sync_playwright().start()
-        root = Path(profile) if profile else profile_root() / "restoranlar"
-        root.mkdir(parents=True, exist_ok=True)
-        self.context = None
-        for channel in ("chrome", "msedge"):
-            try:
-                self.context = self.playwright.chromium.launch_persistent_context(str(root), channel=channel, headless=False, no_viewport=True,
-                                                                                 locale="en-US")
-                break
-            except Exception:
-                self.context = None
-        if self.context is None:
-            self.playwright.stop()
-            raise SourceError("Görünür tarayıcı (Chrome/Edge) açılamadı.")
-        self.page = self.context.pages[0] if self.context.pages else self.context.new_page()
+        from .browser_verification import ChromeSession
+        self.session = ChromeSession(profile)
+        self.page = self.session.new_page()
         self.response = None
 
     def goto(self, url):
@@ -1091,6 +1086,8 @@ class PlaywrightSession:
         except Exception as exc:
             if "Download is starting" in str(exc):
                 return self.request(url)
+            if WINDOW_CLOSED.search(f"{type(exc).__name__} {exc}"):
+                raise
             raise httpx.NetworkError(str(exc)[:200]) from exc
         try:
             self.page.wait_for_load_state("networkidle", timeout=5_000)
@@ -1104,28 +1101,61 @@ class PlaywrightSession:
         return status, self.page.url, content_type, self.page.content().encode("utf-8")
 
     def request(self, url):
-        response = self.context.request.get(url, timeout=60_000)
-        return response.status, response.url, response.headers.get("content-type"), response.body()
+        """A document (PDF, image) from inside the page with the browser's fetch; when the page may not read it (another origin
+        without CORS), the browser opens it in a tab of its own."""
+        from .browser_verification import FETCH
+        try:
+            answer = self.page.evaluate(FETCH, {"url": url, "method": "GET", "headers": {}, "body": None})
+            return answer["status"], answer["url"] or url, answer["headers"].get("content-type"), base64.b64decode(answer["body"])
+        except Exception:
+            pass
+        tab = self.session.new_page()
+        try:
+            response = tab.goto(url, wait_until="load", timeout=60_000)
+            if response is None:
+                raise httpx.NetworkError("Belge açılamadı.")
+            return response.status, response.url, response.headers.get("content-type"), response.body()
+        except httpx.HTTPError:
+            raise
+        except Exception as exc:
+            raise httpx.NetworkError(str(exc)[:200]) from exc
+        finally:
+            try:
+                tab.close()
+            except Exception:
+                pass
+
+    def wait_all(self, sites, canceled, timeout, waiting):
+        from .browser_verification import wait_for_user
+        tabs = {}
+        for host, url in sites.items():
+            tab = self.session.new_page()
+            try:
+                tab.goto(url, wait_until="domcontentloaded", timeout=60_000)
+            except Exception:
+                pass
+            tabs[host] = tab
+        try:
+            return wait_for_user(tabs, canceled, timeout, waiting)
+        finally:
+            for tab in tabs.values():
+                try:
+                    tab.close()
+                except Exception:
+                    pass
 
     def close(self):
-        try:
-            self.context.close()
-        except Exception:
-            pass                                  # the window may already be closed (by the user)
-        finally:
-            self.playwright.stop()
+        self.session.close()
 
 
 def browser_available():
-    try:
-        import playwright.sync_api  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    from .browser_verification import available
+    return available()
 
 
 WINDOW_CLOSED = re.compile(r"TargetClosedError|has been closed|Browser closed|Connection closed", re.I)
-BROWSER_REASONS = {"challenge": "doğrulama sayfası", "render": "JavaScript ile çizilen menü", "refused": "düz HTTP isteği reddedildi"}
+BROWSER_REASONS = {"challenge": "doğrulama sayfası", "render": "JavaScript ile çizilen menü", "refused": "düz HTTP isteği reddedildi",
+                   "known": "daha önce doğrulama gösteren site"}
 KNOWN_STATUS = {"working": 3, "not_found": 2, "closed_permanently": 2, "closed_season": 2, "other_business": 2, "social_login": 1, "no_site": 1,
                 "unreachable": 0}
 
@@ -1141,9 +1171,11 @@ def better(second, first):
 def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None):
     """Read every restaurant's own site once (its pages, menus and documents) and return the facts with their provenance.
 
-    First pass: plain HTTP, several restaurants side by side. Second pass (when a browser is available): the restaurants whose site
-    answered with a verification page or whose menus did not show prices without JavaScript, one at a time in the visible browser;
-    the second reading replaces the first only when it read more."""
+    First pass: plain HTTP, several restaurants side by side; a site that showed a verification page in an earlier run (browser_hosts)
+    is not asked with plain HTTP at all. Second pass (when the computer's browser is available): those sites, the ones answering
+    with a verification page or refusing plain HTTP and the ones whose menus did not show prices without JavaScript, one at a time;
+    the second reading replaces the first only when it read more. A site still verifying after the grace period is left for the
+    end: then the waiting sites open in tabs, the job lists them once and waits VERIFY_TIMEOUT for the user."""
     restaurants = (config.get("input") or {}).get("restaurants") if config else None
     if not restaurants:
         raise SourceError("Önce restoran dizini toplanmalı: işletme siteleri son restoran çekimindeki kayıtlardan okunur.")
@@ -1155,12 +1187,21 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
     client = client or httpx.Client(timeout=httpx.Timeout(30, connect=15), verify=True)
     fetcher = Fetcher(client, store, pacer, canceled)
     done, lock, last = [0], threading.Lock(), [0.0]
+    browser_hosts = {host_key(h) for h in config.get("browser_hosts") or ()}
+    marks = {}
     progress(1, f"{len(restaurants)} restoranın kendi sitesi okunacak.")
 
     def one(restaurant):
         run = RestaurantRun(fetcher, restaurant, overrides.get(restaurant["external_id"]), readings.get(restaurant["external_id"], []), sections)
+        url = (run.override or {}).get("site_url") or restaurant.get("website_url")
         try:
-            run.run()
+            if url and host_key(url) in browser_hosts:
+                # showed a verification page before: read only with the browser, never with plain HTTP
+                run.site.update({"site_url": url, "site_source": "review" if run.override else "directory", "site_status": "unreachable",
+                                 "status_note": "Daha önce doğrulama sayfası gösteren site; düz HTTP isteği yapılmadı."})
+                run.needs_browser = "known"
+            else:
+                run.run()
         except CollectionCanceled:
             raise
         except Exception as exc:          # one site's failure never stops the others
@@ -1184,11 +1225,19 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                 raise error
         runs = [f.result() for f in futures]
         store.flush()
+        for run in runs:
+            if run.needs_browser == "challenge":
+                marks[host_key(run.site["final_url"] or run.site["site_url"])] = {
+                    "host": host_key(run.site["final_url"] or run.site["site_url"]), "url": run.site["final_url"] or run.site["site_url"],
+                    "reason": "doğrulama sayfası"}
         second = [index for index, run in enumerate(runs) if run.needs_browser]
         if second and browser is not False and (browser is not None or browser_available()):
             pages = browser if browser is not None and not isinstance(browser, bool) else BrowserPages(store, canceled, waiting)
             if pages.store is None:
                 pages.store = store
+            if pages.waiting is None:
+                pages.waiting = waiting
+            deferred = []
             try:
                 for count, index in enumerate(second, 1):
                     check(canceled)
@@ -1199,6 +1248,10 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                         retry.run()
                     except CollectionCanceled:
                         raise
+                    except VerificationDeferred as wait:
+                        marks[host_key(wait.url)] = {"host": host_key(wait.url), "url": wait.url, "reason": "doğrulama sayfası"}
+                        deferred.append((index, wait.host, wait.url))
+                        continue
                     except Exception as exc:
                         if WINDOW_CLOSED.search(f"{type(exc).__name__} {exc}"):
                             # the browser window was closed: the rest keep their first (plain HTTP) reading
@@ -1214,6 +1267,30 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                         runs[index] = retry
                     else:
                         first.site["status_note"] = f"{first.site['status_note'] or ''} Tarayıcıyla okuma daha fazla bilgi vermedi.".strip()
+                if deferred:
+                    hosts = {}
+                    for _, host, url in deferred:
+                        hosts.setdefault(host, url)
+                    progress(96, f"Doğrulama bekleyen siteler: {', '.join(sorted(hosts))}.")
+                    cleared = pages.wait_all(hosts, VERIFY_TIMEOUT)
+                    for index, host, _ in deferred:
+                        first = runs[index]
+                        if host not in cleared:
+                            first.site["status_note"] = (f"{first.site['status_note'] or ''} Doğrulama sayfası {VERIFY_TIMEOUT // 60} dk içinde "
+                                                         f"tamamlanmadı ({host}); tarayıcıyla okunamadı.").strip()
+                            continue
+                        retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections)
+                        try:
+                            retry.run()
+                        except CollectionCanceled:
+                            raise
+                        except Exception as exc:
+                            first.site["status_note"] = (f"{first.site['status_note'] or ''} Doğrulamadan sonra tarayıcıyla okuma başarısız: "
+                                                         f"{type(exc).__name__}: {str(exc)[:120]}").strip()
+                            continue
+                        if better(retry, first):
+                            retry.site["status_note"] = (f"{retry.site['status_note'] or ''} Sayfalar doğrulamadan sonra tarayıcıyla okundu.").strip()
+                            runs[index] = retry
             finally:
                 if isinstance(pages, BrowserPages):
                     pages.close()
@@ -1225,12 +1302,13 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
         statuses = {s: sum(x["site_status"] == s for x in sites) for s in SITE_STATUSES}
         snapshot = {"restaurant_run_id": config["input"]["run_id"], "checked_on": datetime.now(timezone.utc).date().isoformat(),
                     "request_count": store.count, "restaurant_count": len(sites)}
+        hosts = sorted(marks.values(), key=lambda m: m["host"])
         metadata = {**snapshot, "site_statuses": statuses, "menu_count": len(menus), "menus_read": sum(m["status"] == "read" for m in menus),
                     "item_count": len(items), "fact_count": len(facts), "overrides": len(overrides),
-                    "readings": sum(len(v) for v in readings.values())}
+                    "readings": sum(len(v) for v in readings.values()), "browser_hosts": hosts}
         progress(97, f"{len(sites)} restoran, {len(menus)} menü ve {len(items)} menü kalemi kaydediliyor.")
         return CollectionResult(sites, len(sites), statuses["no_site"], None, metadata,
-                                {"snapshot": snapshot, "facts": facts, "menus": menus, "items": items})
+                                {"snapshot": snapshot, "facts": facts, "menus": menus, "items": items, "browser_hosts": hosts})
     finally:
         try:
             store.flush()
@@ -1354,7 +1432,7 @@ class RestaurantSitesConnector:
     def collect(self, source, raw_path, progress, canceled, *, context, waiting=None):
         if not context.restaurants:
             raise SourceError("Bu destinasyon için restoran yapılandırması yok.")
-        return collect(raw_path, progress, canceled, config=context.restaurants, waiting=waiting)
+        return collect(raw_path, progress, canceled, config={**context.restaurants, "browser_hosts": context.browser_hosts}, waiting=waiting)
 
     def store_records(self, con, run_id, records, related=None):
         snapshot = related["snapshot"]
@@ -1376,6 +1454,7 @@ class RestaurantSitesConnector:
             price_rule,method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, i["external_id"], i["menu_id"], i["position"], i["section"], i["section_class"], i["class_basis"], i["name"], i["price_text"],
               i["price"], i["price_rule"], i["method"]) for i in related["items"]])
+        mark_hosts(con, related.get("browser_hosts", []), CONNECTOR_VERSION)
 
     def read_records(self, con, run_id):
         return [dict(r) for r in con.execute("SELECT * FROM restaurant_sites WHERE run_id=? ORDER BY name, external_id", (run_id,))]

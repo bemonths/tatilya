@@ -13,4 +13,5 @@ class ConnectorContext:
     lodging: dict | None = None
     agency: dict | None = None
     restaurants: dict | None = None
+    browser_hosts: tuple[str, ...] = ()        # hosts read only with the computer's browser (they once showed a verification page)
 

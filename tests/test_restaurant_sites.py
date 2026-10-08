@@ -392,6 +392,76 @@ def test_a_closed_browser_window_keeps_the_first_reading_and_the_run_completes(t
         assert site["site_status"] == "unreachable" and "Tarayıcı penceresi kapandığı için" in site["status_note"]
 
 
+class Verifying(StandInSession):
+    """guarded.example keeps its verification page until the user completes it during the end-of-run wait (when `clear`)."""
+
+    def __init__(self, pages, clear):
+        super().__init__(pages)
+        self.clear, self.verified, self.order = clear, False, []
+
+    def goto(self, url):
+        self.url = url
+        self.order.append(("goto", httpx.URL(url).host))
+        return self.current()
+
+    def current(self):
+        self.looks += 1
+        if "guarded.example" in self.url and not self.verified:
+            return 403, self.url, "text/html", b"<title>Just a moment...</title>"
+        body = self.pages.get(httpx.URL(self.url).path, "<h1>?</h1>")
+        return 200, self.url, "text/html", body.encode()
+
+    def wait_all(self, sites, canceled, timeout, waiting):
+        self.order.append(("wait_all", tuple(sorted(sites)), timeout))
+        if waiting:
+            waiting(", ".join(sorted(sites)))
+            waiting(None)
+        self.verified = self.clear
+        return set(sites) if self.clear else set()
+
+
+def test_a_site_still_verifying_is_left_for_the_end_one_wait_then_read_or_skipped_and_marked(tmp_path, monkeypatch):
+    monkeypatch.setattr(rs, "pause", lambda seconds, canceled: None)
+    pages = {"/": "<title>Guarded Grill</title><h1>Guarded Grill</h1><a href='/menu'>Menu</a>", "/menu": "<h2>ENTREES</h2><p>Fish 20</p>"}
+    def handler(request):
+        if request.url.host == "render.example":
+            return httpx.Response(200, text="<title>Render</title><div id=\"root\"></div><a href='/menu'>Menu</a>", headers={"content-type": "text/html"})
+        return Sites()(request)
+    rows = [restaurant("guarded", "Guarded Grill", "https://guarded.example/"), restaurant("render", "Render Cafe", "https://render.example/")]
+    for clear in (True, False):
+        session, waits = Verifying({**pages, "/menu": pages["/menu"]}, clear), []
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+            browser = rs.BrowserPages(None, lambda: False, waiting=waits.append, opener=lambda profile: session, grace=0)
+            result = rs.collect(tmp_path / str(clear) / "raw" / "manifest.json", lambda *a: None, lambda: False, config=config(rows, tmp_path / str(clear)),
+                                client=client, browser=browser)
+        waited = [i for i, e in enumerate(session.order) if e[0] == "wait_all"]
+        assert len(waited) == 1 and session.order[waited[0]][1:] == (("guarded.example",), 15 * 60)
+        assert ("goto", "render.example") in session.order[:waited[0]]           # the other restaurants are read before the wait
+        assert waits == ["guarded.example", None]
+        site, _, _, items = related(result, "/listing/guarded/")
+        if clear:
+            assert site["site_status"] == "working" and [i["name"] for i in items] == ["Fish"]
+        else:
+            assert site["site_status"] == "unreachable" and "15 dk içinde tamamlanmadı" in site["status_note"]
+        assert [m["host"] for m in result.related["browser_hosts"]] == ["guarded.example"]
+
+
+def test_a_known_browser_host_is_never_asked_with_plain_http(tmp_path):
+    session = StandInSession({"/": "<title>Guarded Grill</title><h1>Guarded Grill</h1><a href='/menu'>Menu</a>", "/menu": "<h2>ENTREES</h2><p>Fish 20</p>"})
+    session.looks = 1                                         # no verification page this time: the profile kept the cookie
+    def handler(request):
+        if request.url.host == "guarded.example":
+            pytest.fail(f"plain HTTP to {request.url}")
+        return Sites()(request)
+    rows = [restaurant("guarded", "Guarded Grill", "https://guarded.example/")]
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        browser = rs.BrowserPages(None, lambda: False, opener=lambda profile: session)
+        result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False,
+                            config={**config(rows, tmp_path), "browser_hosts": ("guarded.example",)}, client=client, browser=browser)
+    site, _, _, items = related(result, "/listing/guarded/")
+    assert site["site_status"] == "working" and [i["name"] for i in items] == ["Fish"] and "daha önce doğrulama gösteren site" in site["status_note"]
+
+
 def test_a_verification_page_is_read_again_in_the_browser_and_the_user_wait_is_shown(tmp_path, monkeypatch):
     monkeypatch.setattr(rs, "VERIFY_TIMEOUT", 60)
     monkeypatch.setattr(rs, "pause", lambda seconds, canceled: None)
@@ -412,7 +482,7 @@ def test_a_verification_page_is_read_again_in_the_browser_and_the_user_wait_is_s
 
 def test_each_connector_names_its_own_verification_wait():
     from studio.sources import agency_rates
-    assert (rs.RestaurantSitesConnector.verify_minutes, agency_rates.AgencyRatesConnector.verify_minutes) == (5, 15)
+    assert (rs.RestaurantSitesConnector.verify_minutes, agency_rates.AgencyRatesConnector.verify_minutes) == (15, 15)   # the one end-of-run wait
 
 
 def test_an_ordinary_page_behind_cloudflare_is_not_a_verification_page(tmp_path):

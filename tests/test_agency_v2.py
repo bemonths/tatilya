@@ -374,6 +374,109 @@ def test_protected_sites_use_the_browser_six_seconds_apart_one_at_a_time_and_sto
     assert rows[3]["page_status"] == "not_queried" and "durduruldu" in rows[3]["message"]
 
 
+class Waiter:
+    """A browser stand-in with the end-of-run wait: `clear` are the sites the user verifies during the wait."""
+
+    def __init__(self, handler, challenged, clear):
+        self.handler, self.challenged, self.clear = handler, set(challenged), set(clear)
+        self.events = []
+
+    def __call__(self, domain, url, canceled, timeout):
+        self.events.append(("open", domain, timeout))
+        return None if domain in self.challenged else Browser(self.handler)
+
+    def wait_all(self, sites, canceled, timeout, waiting=None):
+        self.events.append(("wait_all", tuple(sorted(sites)), timeout))
+        if waiting:
+            waiting(", ".join(sorted(sites)))
+            waiting(None)
+        self.challenged -= self.clear
+        return set(sites) & self.clear
+
+
+def test_a_site_waiting_for_verification_is_left_for_the_end_and_one_wait_covers_it(tmp_path, monkeypatch):
+    monkeypatch.setattr(ar, "PROTECTED_GAP", 0)
+    mock = NewSites()
+    sites = [site("guard.example", "track", protected=1), site("guard2.example", "track", protected=1)]
+    listings = [bd(1, "https://www.guard.example/rentals/1"), bd(2, "https://www.guard2.example/rentals/2")]
+    waiter, waits = Waiter(mock, {"guard.example"}, {"guard.example"}), []
+    result = run(tmp_path, mock, sites, listings, verifier=waiter, waiting=waits.append)
+    assert waiter.events == [("open", "guard.example", 20), ("open", "guard2.example", 20),
+                             ("wait_all", ("guard.example",), 15 * 60), ("open", "guard.example", 20)]     # the waiting site goes last
+    assert waits == ["guard.example", None]
+    companies = {c["domain"]: c for c in result.related["companies"]}
+    assert companies["guard.example"]["status"] == "done" and companies["guard.example"]["matched_count"] == 1
+    assert {(q["lodging_id"], q["window_key"]) for q in result.related["quotes"]} == {(1, "winter"), (1, "fall-2027"), (2, "winter"), (2, "fall-2027")}
+    assert [m["host"] for m in result.related["browser_hosts"]] == ["guard.example"]
+
+    skipped = run(tmp_path / "b", NewSites(), sites, listings, verifier=Waiter(NewSites(), {"guard.example"}, set()))
+    companies = {c["domain"]: c for c in skipped.related["companies"]}
+    assert (companies["guard.example"]["status"], companies["guard.example"]["verification"]) == ("verification_timeout", "timeout")
+    assert companies["guard2.example"]["status"] == "done"
+    rows = {r["lodging_id"]: r for r in skipped.records}
+    assert rows[1]["page_status"] == "not_queried" and "süresinde tamamlanmadı" in rows[1]["message"]
+
+
+def test_a_host_marked_once_is_read_only_with_the_browser_and_the_mark_is_kept(tmp_path, monkeypatch):
+    monkeypatch.setattr(ar, "PROTECTED_GAP", 0)
+    from studio.sources import browser_verification as bv
+    db = Database(tmp_path / "studio.sqlite3"); db.initialize()
+    with db.connect() as con:
+        bv.mark_hosts(con, [{"host": "www.guard.example", "url": "https://www.guard.example/rentals/1", "reason": "doğrulama sayfası"}], "test")
+    with db.connect() as con:
+        bv.mark_hosts(con, [{"host": "guard.example", "url": "https://www.guard.example/rentals/2", "reason": "doğrulama sayfası"}], "test")
+        row = dict(con.execute("SELECT * FROM browser_hosts").fetchone())
+    assert db.context("30a").browser_hosts == ("guard.example",) and row["url"].endswith("/rentals/2") and row["first_seen_at"] <= row["last_seen_at"]
+    mock, opened = NewSites(), []
+    def verifier(domain, url, canceled, timeout):
+        opened.append(domain)
+        return Browser(mock)
+    config = {"sites": [site("guard.example", "track")], "windows": WINDOWS, "browser_hosts": db.context("30a").browser_hosts,
+              "input": {"run_id": "lodging-run", "searched_on": "2026-10-07", "listings": [bd(1, "https://www.guard.example/rentals/1")]}}
+    with httpx.Client(transport=httpx.MockTransport(lambda request: pytest.fail(f"plain HTTP to {request.url}"))) as client:
+        result = ar.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False, config=config, client=client, verifier=verifier,
+                            today=TODAY)
+    assert opened == ["guard.example"] and result.related["companies"][0]["protected"] == 1
+    manifest = json.loads((tmp_path / "raw" / "manifest.json").read_text(encoding="utf-8"))
+    assert {e["transport"] for e in manifest["responses"]} == {"browser"}
+
+
+def test_the_browser_is_started_like_an_ordinary_application_and_reused(tmp_path, monkeypatch):
+    from studio.sources import browser_verification as bv
+    command = bv.launch_command("C:/Chrome/chrome.exe", tmp_path / "profile")
+    assert command == ["C:/Chrome/chrome.exe", f"--user-data-dir={tmp_path / 'profile'}", "--remote-debugging-port=0"]
+    assert not any(flag.startswith(("--enable-automation", "--disable-blink-features", "--headless", "--remote-debugging-pipe",
+                                    "--disable-extensions", "--no-sandbox", "--user-agent", "--lang")) for flag in command)
+    assert bv.profile_root().name == "30a-studio" and bv.profile_root().parent.name == "tarayici-profili"
+    monkeypatch.setattr(bv, "find_browser", lambda: tmp_path / "chrome.exe")
+    profile, spawned = tmp_path / "profile", []
+    def spawn(cmd):
+        spawned.append(cmd)
+        (profile / "DevToolsActivePort").write_text("9555\n/devtools/browser/abc\n", encoding="utf-8")
+    endpoint, launched = bv.ensure_browser(profile, spawn=spawn, check=lambda url: url == "http://127.0.0.1:9555", wait=2)
+    assert (endpoint, launched) == ("http://127.0.0.1:9555", True) and spawned[0][1:] == [f"--user-data-dir={profile}", "--remote-debugging-port=0"]
+    endpoint, launched = bv.ensure_browser(profile, spawn=spawn, check=lambda url: True, wait=2)
+    assert (endpoint, launched) == ("http://127.0.0.1:9555", False) and len(spawned) == 1        # an open browser is reused, never opened twice
+
+
+def test_the_end_of_run_wait_lists_the_sites_once_and_times_out(monkeypatch):
+    from studio.sources import browser_verification as bv
+    class Page:
+        def __init__(self, looks):
+            self.looks = list(looks)
+        def title(self):
+            return ""
+        def content(self):
+            return self.looks.pop(0) if len(self.looks) > 1 else self.looks[0]
+    challenge, normal = "<title>Just a moment...</title>", "<title>Grill</title><h1>Grill</h1>"
+    clock = iter(range(0, 10_000, 100))
+    monkeypatch.setattr(bv.time, "monotonic", lambda: next(clock))
+    waits = []
+    cleared = bv.wait_for_user({"a.example": Page([challenge, normal]), "b.example": Page([challenge])}, lambda: False, 900, waits.append,
+                               sleep=lambda s: None)
+    assert cleared == {"a.example"} and waits == ["a.example, b.example", None]
+
+
 def test_a_block_page_stops_a_protected_company_before_any_request(tmp_path):
     from studio.sources.browser_verification import SiteBlocked
     def verifier(domain, url, canceled, timeout):

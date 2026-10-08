@@ -171,7 +171,8 @@ class Database:
             restaurants={"site_overrides":getattr(profile,"RESTAURANT_SITE_OVERRIDES",None),"menu_readings":getattr(profile,"MENU_READINGS",None)}
             if "restaurant_records" in inputs:
                 restaurants["input"]=self.restaurant_input(con,identifier)
-        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants)
+            browser_hosts=tuple(r[0] for r in con.execute("SELECT host FROM browser_hosts ORDER BY host"))
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts)
 
     @staticmethod
     def restaurant_input(con, destination_id):

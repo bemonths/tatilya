@@ -1,6 +1,6 @@
 """v11 -> v12: rental company prices by link, address, location and own inventory (agency-lodging-rates/2), the Fall 2027
-window, restaurant facts from the businesses' own websites (restaurant-sites/1) and the National Weather Service source's
-method default.
+window, restaurant facts from the businesses' own websites (restaurant-sites/1), the hosts read only with the computer's browser
+(browser_hosts: once a site showed a human-verification page) and the National Weather Service source's method default.
 
 The caller owns the backup and the single transaction; any failure rolls everything back. Existing agency runs keep their rows:
 their matched listings were matched by link (match_method 'link', link_status = page_status) and their quotes were asked for two
@@ -132,6 +132,11 @@ SCHEMA = f"""
         PRIMARY KEY(run_id,lodging_id,window_key),
         FOREIGN KEY(run_id,lodging_id) REFERENCES agency_rate_listings(run_id,lodging_id),
         FOREIGN KEY(run_id,window_key) REFERENCES agency_rate_windows(run_id,window_key)
+    );
+    CREATE TABLE browser_hosts (
+        host TEXT PRIMARY KEY CHECK(host = lower(host) AND instr(host, '.') > 1 AND host NOT LIKE 'www.%'),
+        url TEXT CHECK(url IS NULL OR url LIKE 'http%'), reason TEXT NOT NULL, marked_by TEXT NOT NULL,
+        first_seen_at TEXT NOT NULL, last_seen_at TEXT NOT NULL
     );
 """
 OLD_NWS_NOTE = "Hava verisi için başlangıç kaynağı. Bölge koordinatları ve veri uçları sonraki aşamada belirlenecek."

@@ -30,7 +30,8 @@ V11_TABLES = {"job_waits": 0, "destination_agency_sites": 24, "agency_rate_snaps
               "agency_rate_companies": 0, "agency_rate_listings": 0, "agency_rate_quotes": 0}
 # Tables created by v12 (empty in an upgraded database).
 V12_TABLES = {"agency_rate_own_listings": 0, "agency_rate_own_quotes": 0, "agency_rate_published": 0, "restaurant_site_snapshots": 0,
-              "restaurant_sites": 0, "restaurant_facts": 0, "restaurant_menus": 0, "restaurant_menu_items": 0}
+              "restaurant_sites": 0, "restaurant_facts": 0, "restaurant_menus": 0, "restaurant_menu_items": 0,
+              "browser_hosts": 0}
 
 
 def without_added_sources(sources):

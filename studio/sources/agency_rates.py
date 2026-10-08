@@ -13,10 +13,12 @@ homes Book>Direct does not show read from its own list ("own inventory"); they a
 publishes a seasonal rent range instead of a working price display has it stored apart as a published rent, never as a quote.
 
 Requests to one company are sequential and spaced; a few companies are read side by side. A protected company (e.g. behind
-Cloudflare) is read only through a visible browser with a persistent profile, at most one at a time, PROTECTED_GAP seconds apart,
-and stops at its first refusal (403/429/block page) without retrying. When a site shows a human-verification page, the
-configured verifier opens it in a visible browser, the job shows which site waits for the user, and after the user completes it
-the same browser session continues. Nobody here solves it.
+Cloudflare), and any company whose host once showed a verification page (browser_hosts), is read only through the computer's own
+browser (studio.sources.browser_verification: the installed Chrome started as an ordinary application with one persistent
+profile, reached over CDP), at most one at a time, PROTECTED_GAP seconds apart, and stops at its first refusal (403/429/block
+page) without retrying. A site still showing a verification page after a short grace period is left for the end: when every
+other company is done, the waiting sites are opened in tabs, the job lists them once and waits up to VERIFY_TIMEOUT for the user;
+a site still not verified then is skipped and recorded. Nobody here solves a verification.
 """
 import gzip
 import hashlib
@@ -35,6 +37,7 @@ import httpx
 from .agency_adapters import ADAPTERS, DEFAULT_GUESTS, AdapterError
 from .agency_matching import address_match, json_ld_unit, location_match, normalize_address, same_rooms
 from .base import CollectionCanceled, CollectionResult, SourceError
+from .browser_verification import GRACE_SECONDS, host_key, mark_hosts
 from .bookdirect_lodging import is_front_host, quartiles
 from .climate_http import check, pause
 
@@ -117,6 +120,14 @@ def guests_for(site, bedrooms, sleeps):
 
 
 class VerificationNeeded(Exception):
+    def __init__(self, url):
+        super().__init__(url)
+        self.url = url
+
+
+class CompanyDeferred(Exception):
+    """The company's site shows a verification page: it is left for the end of the run."""
+
     def __init__(self, url):
         super().__init__(url)
         self.url = url
@@ -312,7 +323,8 @@ def site_options(site):
 
 
 def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None):
-    """Ask every configured company site the price of every future window for each listing tied to it (and for its own inventory)."""
+    """Ask every configured company site the price of every future window for each listing tied to it (and for its own inventory).
+    Companies whose site waits for a human verification are read last, after one shared wait (see the module text)."""
     if not config or not config.get("sites"):
         raise SourceError("Bu destinasyon için kiralama şirketi yapılandırması yok.")
     lodging = config.get("input")
@@ -324,6 +336,10 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     if not active:
         raise SourceError("Bütün tarih pencereleri geçmişte kaldı; yapılandırmaya yeni tarihler eklenmeli.")
     sites = {site["domain"]: site_options(site) for site in config["sites"] if site["enabled"]}
+    browser_hosts = {host_key(h) for h in config.get("browser_hosts") or ()}
+    for site in sites.values():
+        if any(host_key(h) in browser_hosts for h in (site["domain"], *site["aliases"])):
+            site["protected"], site["browser_host"] = 1, True       # once showed a verification page: browser only
     unknown = sorted({site["adapter"] for site in sites.values()} - set(ADAPTERS))
     if unknown:
         raise SourceError(f"Yapılandırmada bilinmeyen uyarlayıcı: {', '.join(unknown)}.")
@@ -349,7 +365,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     owns = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(45, connect=15), verify=True)
     shared = Shared(store=store, client=client, canceled=canceled, verifier=verifier, waiting=waiting, active=active, everyone=everyone,
-                    tracker=Progress(progress, sum(max(1, len(groups[d])) for d in order)))
+                    tracker=Progress(progress, sum(max(1, len(groups[d])) for d in order)), marks={})
     progress(1, f"{len(order)} kiralama şirketinin sitesi için {sum(len(groups[d]) for d in order)} ilan sorgulanacak.")
     try:
         with ThreadPoolExecutor(max_workers=WORKERS, thread_name_prefix="30a-agency") as pool:
@@ -362,6 +378,10 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                 raise error
         store.flush()
         runs = [future.result() for future in futures]
+        deferred = [index for index, run in enumerate(runs) if run.deferred]
+        if deferred:
+            runs = finish_deferred(shared, runs, deferred)
+            store.flush()
         companies = [run.result for run in runs]
         quotes = [q for run in runs for q in run.quotes]
         own_rows = [r for run in runs for r in run.own_rows]
@@ -377,10 +397,11 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                     "match_methods": {m: sum(r["match_method"] == m for r in listings.values()) for m in MATCH_METHODS},
                     "priced_listings": len(priced), "quote_count": len(quotes), "own_listings": len(own_rows),
                     "own_priced": len({(q["domain"], q["site_listing_id"]) for q in own_quotes if q["status"] == "priced"}),
-                    "published_rents": len(published), "companies": companies, "scope": SCOPE}
+                    "published_rents": len(published), "companies": companies, "scope": SCOPE,
+                    "browser_hosts": sorted(shared.marks.values(), key=lambda m: m["host"])}
         progress(97, f"{len(listings)} ilan, {len(quotes)} fiyat sorgusu, kendi envanterinden {len(own_rows)} ev ve {len(order)} şirket sonucu kaydediliyor.")
         related = {"snapshot": snapshot, "windows": windows_rows, "companies": companies, "quotes": quotes, "own_listings": own_rows,
-                   "own_quotes": own_quotes, "published": published}
+                   "own_quotes": own_quotes, "published": published, "browser_hosts": metadata["browser_hosts"]}
         return CollectionResult([listings[i] for i in sorted(listings)], len(listings), statuses["no_url"] + statuses["no_adapter"], None,
                                 metadata, related)
     finally:
@@ -390,6 +411,41 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
             pass
         if owns:
             client.close()
+
+
+def finish_deferred(shared, runs, deferred):
+    """The end of the run for the companies whose site waited for a verification: their sites are opened in tabs, the job lists
+    them once and waits up to VERIFY_TIMEOUT; the verified ones are then read (one at a time), the others skipped and recorded."""
+    sites = {runs[i].site["domain"]: runs[i].deferred for i in deferred}
+    progress = shared.tracker
+    progress.step(0, f"Doğrulama bekleyen siteler: {', '.join(sorted(sites))}.")
+    if shared.verifier is not None and hasattr(shared.verifier, "wait_all"):
+        cleared = shared.verifier.wait_all(sites, shared.canceled, VERIFY_TIMEOUT, shared.waiting)
+        final_timeout = GRACE_SECONDS
+    else:
+        cleared, final_timeout = set(sites), VERIFY_TIMEOUT       # a plain verifier waits per site
+        if shared.waiting:
+            shared.waiting(", ".join(sorted(sites)))
+    try:
+        for index in deferred:
+            check(shared.canceled)
+            first = runs[index]
+            domain = first.site["domain"]
+            for row in first.members:          # the first attempt's partial rows are dropped; the company is read again
+                row.update({"page_status": "not_queried", "page_url": None, "http_status": None, "site_listing_id": None, "message": None,
+                            "link_status": None, "match_method": None, "match_note": None})
+            again = CompanyRun(shared, first.site, first.members, final_timeout=final_timeout)
+            if domain not in cleared:
+                again.skip("verification_timeout", "timeout", "Kullanıcı doğrulaması süresinde tamamlanmadı; şirket atlandı.")
+            else:
+                again.run()
+                if again.deferred:
+                    again.skip("verification_timeout", "timeout", "Kullanıcı doğrulaması süresinde tamamlanmadı; şirket atlandı.")
+            runs[index] = again
+    finally:
+        if shared.waiting and not hasattr(shared.verifier, "wait_all"):
+            shared.waiting(None)
+    return runs
 
 
 class Shared:
@@ -404,8 +460,10 @@ class CompanyRun:
     """One company: link phase, then (when configured) the company's own list for address/location matches and own inventory,
     then published rents. Any failure here is recorded on the company and never stops the others."""
 
-    def __init__(self, shared, site, members):
+    def __init__(self, shared, site, members, final_timeout=None):
         self.shared, self.site, self.members = shared, site, members
+        self.final_timeout = final_timeout      # None: the first round (a verification page is left for the end)
+        self.deferred = None
         self.adapter = ADAPTERS[site["adapter"]]
         self.protected = bool(site["protected"])
         self.session = SiteSession(shared.store, site["domain"], HttpTransport(shared.client), shared.canceled,
@@ -423,32 +481,30 @@ class CompanyRun:
     # --- browser and verification ---------------------------------------------------------------------------------------
 
     def open_browser(self, url):
-        """The visible browser for this company; the job shows the wait while a verification page is on screen."""
+        """The computer's browser for this company (one tab). A verification page still on screen after the grace period leaves the
+        company for the end of the run; at the end the user has had the one shared wait."""
         shared, domain = self.shared, self.site["domain"]
         if shared.verifier is None:
             self.result["verification"] = "unavailable"
             raise CompanyStopped("verification_unavailable",
-                                 "Site doğrulama ekranı gösterdi veya korumalı; görünür tarayıcı bu bilgisayarda kullanılamıyor.")
+                                 "Site doğrulama ekranı gösterdi veya korumalı; bu bilgisayarda tarayıcı kullanılamıyor.")
+        timeout = GRACE_SECONDS if self.final_timeout is None else self.final_timeout
         with shared.verify_lock:
             try:
-                opener = getattr(shared.verifier, "open", None)
-                if opener is not None:
-                    browser = opener(domain, url, shared.canceled, VERIFY_TIMEOUT, shared.waiting)
-                else:
-                    if shared.waiting:
-                        shared.waiting(domain)
-                    try:
-                        browser = shared.verifier(domain, url, shared.canceled, VERIFY_TIMEOUT)
-                    finally:
-                        if shared.waiting:
-                            shared.waiting(None)
+                browser = shared.verifier(domain, url, shared.canceled, timeout)
             except CollectionCanceled:
                 raise
             except Exception as exc:
                 if type(exc).__name__ == "SiteBlocked":
                     raise CompanyStopped("stopped_blocked", f"Site engel sayfası gösterdi ({exc}); şirket durduruldu, yeniden denenmedi.") from None
+                if type(exc).__name__ == "BrowserUnavailable":
+                    self.result["verification"] = "unavailable"
+                    raise CompanyStopped("verification_unavailable", f"Tarayıcı kullanılamıyor: {exc}") from None
                 raise
         if browser is None:
+            if self.final_timeout is None:
+                shared.marks[self.site["domain"]] = {"host": self.site["domain"], "url": url, "reason": "doğrulama sayfası"}
+                raise CompanyDeferred(url)
             self.result["verification"] = "timeout"
             raise CompanyStopped("verification_timeout", "Kullanıcı doğrulaması süresinde tamamlanmadı; şirket atlandı.")
         self.browser = browser
@@ -461,6 +517,7 @@ class CompanyRun:
             except VerificationNeeded as need:
                 if self.browser is not None:
                     raise CompanyStopped("stopped_blocked", "Doğrulamadan sonra site yine doğrulama ekranı gösterdi; şirket durduruldu.") from None
+                self.shared.marks[self.site["domain"]] = {"host": self.site["domain"], "url": need.url, "reason": "doğrulama sayfası"}
                 self.open_browser(need.url)
                 self.result["verification"] = "completed"
 
@@ -487,6 +544,9 @@ class CompanyRun:
                         self.own_inventory(units)
                 if hasattr(self.adapter, "published"):
                     self.published_rents()
+        except CompanyDeferred as wait:
+            self.deferred = wait.url
+            self.result["status"], self.result["message"] = "verification_timeout", "Doğrulama bekleniyor; şirket sona bırakıldı."
         except CompanyStopped as stop:
             self.result["status"], self.result["message"] = stop.status, stop.message
             for row in members:
@@ -506,7 +566,19 @@ class CompanyRun:
                             "priced_count": sum(q["status"] == "priced" for q in self.quotes), "request_count": self.session.requests,
                             "own_count": len(self.own_rows),
                             "match_counts": {m: sum(r["match_method"] == m for r in members) for m in MATCH_METHODS}})
-        shared.tracker.step(0, f"{site['company']}: bitti ({self.result['status']}).")
+        if not self.deferred:
+            shared.tracker.step(0, f"{site['company']}: bitti ({self.result['status']}).")
+        else:
+            shared.tracker.step(0, f"{site['company']}: doğrulama bekliyor, sona bırakıldı.")
+        return self
+
+    def skip(self, status, verification, message):
+        """A deferred company the user did not verify: nothing is read, the rows say why."""
+        self.result.update({"status": status, "verification": verification, "message": message, "matched_count": 0, "quote_count": 0,
+                            "priced_count": 0, "request_count": 0, "own_count": 0, "match_counts": {m: 0 for m in MATCH_METHODS}})
+        for row in self.members:
+            row["message"] = message
+        self.deferred = None
         return self
 
     def quote_once(self, info, window, guests):
@@ -944,7 +1016,8 @@ class AgencyRatesConnector:
         if lodging["clone_host"] != source_host(source["url"]):
             raise SourceError("Kaynağın Book>Direct adresi destinasyonun konaklama yapılandırmasıyla uyuşmuyor.")
         verifier = self.verifier_factory() if self.verifier_factory else default_verifier()
-        return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"]}, verifier=verifier, waiting=waiting)
+        return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "browser_hosts": context.browser_hosts},
+                       verifier=verifier, waiting=waiting)
 
     def store_records(self, con, run_id, records, related=None):
         snapshot = related["snapshot"]
@@ -977,6 +1050,7 @@ class AgencyRatesConnector:
             basis,source_url,raw_sha256) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, p["lodging_id"], p["window_key"], p["season_start"], p["season_end"], p["rate_text"], p["rate_period"], p["rent_low"],
               p["rent_high"], p["basis"], p["source_url"], json.dumps(p["raw_sha256"])) for p in related.get("published", [])])
+        mark_hosts(con, related.get("browser_hosts", []), CONNECTOR_VERSION)
 
     def read_records(self, con, run_id):
         return [decode_listing(r) for r in con.execute("SELECT * FROM agency_rate_listings WHERE run_id=? ORDER BY title, lodging_id", (run_id,))]
@@ -986,6 +1060,7 @@ class AgencyRatesConnector:
 
 
 def default_verifier():
-    """The visible-browser verifier when Playwright is installed; None otherwise (a verification page then skips that company)."""
+    """The computer's browser when Playwright and Chrome/Edge are installed; None otherwise (a verification page then skips that
+    company)."""
     from .browser_verification import BrowserVerifier, available
     return BrowserVerifier() if available() else None

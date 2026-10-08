@@ -470,8 +470,10 @@ def test_verification_waits_for_the_user_then_continues_in_the_same_session(tmp_
     sites = SITES + [{"domain": "challenge.example", "company": "Guarded", "adapter": "track", "enabled": 1}]
     result = run(tmp_path, sites=sites, verifier=verifier, waiting=lambda site: events.append(("waiting", site)),
                  listings=[listing(80, "https://www.challenge.example/rentals/194"), listing(81, "https://www.challenge.example/rentals/195")])
-    assert opened == [("challenge.example", "https://www.challenge.example/rentals/194", 15 * 60)]
-    assert events == [("waiting", "challenge.example"), ("verifier", "challenge.example"), ("waiting", None)]
+    assert opened == [("challenge.example", "https://www.challenge.example/rentals/194", 20)]      # cleared within the grace period
+    assert events == [("verifier", "challenge.example")]                                            # no wait for the user
+    assert result.related["browser_hosts"] == [{"host": "challenge.example", "url": "https://www.challenge.example/rentals/194",
+                                                "reason": "doğrulama sayfası"}]
     company = result.related["companies"][0]
     assert (company["status"], company["verification"]) == ("done", "completed") and browser.closed
     assert quotes_of(result)[(80, "winter")]["total"] == 3339.16 and quotes_of(result)[(81, "winter")]["status"] == "restricted"
@@ -617,7 +619,8 @@ def test_job_shows_which_site_waits_for_verification(tmp_path, monkeypatch):
         assert tl.start(client)["status"] == "done"
         job = tl.start(client, url=AGENCY_URL)
         assert job["status"] == "done"
-        assert seen[0][0] == "challenge.example" and "Kullanıcı doğrulaması bekleniyor: challenge.example" in seen[0][1] and "(en çok 15 dk)" in seen[0][1]
+        assert seen[0][0] is None                                     # the grace look: the site is left for the end
+        assert seen[1][0] == "challenge.example" and "Kullanıcı doğrulaması bekleniyor: challenge.example" in seen[1][1] and "(en çok 15 dk)" in seen[1][1]
         assert db.job(job["id"])["waiting_for"] is None and any("Doğrulama beklemesi bitti" in e["text"] for e in db.job(job["id"])["log"])
         summary = client.get(f"/api/agency-rate-runs/{job['id']}").json()
         assert summary["companies"][0]["status"] == "verification_timeout"
