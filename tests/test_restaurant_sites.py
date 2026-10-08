@@ -347,7 +347,10 @@ def test_an_ordinary_page_behind_cloudflare_is_not_a_verification_page(tmp_path)
               "a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.head.appendChild(a)})();</script></body></html>")
     challenge = ("<html><head><title>Just a moment...</title></head><body><script>window._cf_chl_opt={cType:'managed'};</script>"
                  "<script src='/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=1'></script></body></html>")
-    assert rs.CHALLENGE.search(normal) is None and rs.CHALLENGE.search(challenge)
+    turnstile = ("<html><head><title>Contact - Coast Grill</title></head><body><form><div id='cf-chl-widget-a1b2c'><iframe "
+                 "src='https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv/x'></iframe></div>"
+                 "<label>Verify you are human</label></form></body></html>")          # a contact form's Turnstile box
+    assert rs.CHALLENGE.search(normal) is None and rs.CHALLENGE.search(turnstile) is None and rs.CHALLENGE.search(challenge)
     from studio.sources import agency_rates, browser_verification
     assert agency_rates.CHALLENGE.search(normal) is None and browser_verification.CHALLENGE.search(normal) is None
     assert agency_rates.CHALLENGE.search(challenge) and browser_verification.CHALLENGE.search(challenge)

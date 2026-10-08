@@ -404,7 +404,7 @@ def test_one_refused_listing_page_is_not_a_site_block_or_a_verification(tmp_path
     assert "ana sayfası normal yanıt veriyor" in rows[90]["message"] and rows[91]["site_listing_id"] == "77"
     assert result.related["companies"][0]["status"] == "done"
     assert not ar.CHALLENGE.search('<div class="bt-alerts-recaptcha"></div><title>Access denied</title>')
-    assert ar.CHALLENGE.search("<title>Just a moment...</title>") and ar.CHALLENGE.search('<script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script>')
+    assert ar.CHALLENGE.search("<title>Just a moment...</title>") and ar.CHALLENGE.search('<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=1"></script>')
 
 
 def test_track_page_calendar_decides_availability_before_any_price_request(tmp_path):

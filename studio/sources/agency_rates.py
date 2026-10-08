@@ -55,7 +55,7 @@ MAX_INVENTORY_PAGES = 400   # listing pages read from one company's sitemap
 PROGRESS_EVERY = 2.0
 # Interstitial human-verification pages only (Cloudflare, PerimeterX). An ordinary page that merely contains a CAPTCHA widget
 # (a contact form, a Drupal "Access denied" page) is not a verification page.
-CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf-chl-|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate|Verify you are human|Checking your browser before|"
+CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|"
                        r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold", re.I)
 BLOCK_PAGE = re.compile(r"Sorry, you have been blocked|You are unable to access|Attention Required! \| Cloudflare", re.I)
 SOFT_404 = re.compile(r"\bpages? not found\b|\b404\b|\bnot found\b", re.I)    # a "not found" page served with HTTP 200
