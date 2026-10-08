@@ -255,6 +255,13 @@ def test_rescms_optional_items_follow_the_sites_own_subtotal():
     included = aa.ResCMS.parse_quote(table("$10,655.66", "$11,859.14"))           # the sub-total includes it: part of the price
     assert [f["name"] for f in included["fees"]] == ["Cleaning Fee", "Travel Insurance (optional)"] and included["excluded_items"] is None
     assert included["total_includes_fees"] == 1
+    # Two optional rows (seen on homeownerscollection.com): the sub-total counts the community fee but not the insurance
+    two = table("$9,975.00", "$11,178.48").replace(
+        '<tr class="sub-total', '<tr class="line-item even"><td>Seaside A&amp;E Fee (Optional)<br /></td><td class="amount">$100.00</td></tr>\n<tr class="sub-total')
+    mixed = aa.ResCMS.parse_quote(two)
+    assert [f["name"] for f in mixed["fees"]] == ["Cleaning Fee", "Seaside A&E Fee (Optional)"]
+    assert [e["name"] for e in mixed["excluded_items"]] == ["Travel Insurance (optional)"] and mixed["total_includes_taxes"] == 1
+    assert aa.included_optional(100, [], [{"name": "a", "amount": 5}, {"name": "b", "amount": 5}], 105) == []    # two subsets fit: none counted
 
 
 def test_track_quote_groups_fees_and_keeps_missing_fields_null():

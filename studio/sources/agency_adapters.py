@@ -218,13 +218,24 @@ class ResCMS:
                     fees.append({"name": label, "amount": amount})
         if rent is None and total is None:
             raise AdapterError("Ayrıntılı fiyat tablosunda kira veya toplam satırı yok.")
-        base = (rent or 0) + sum(f["amount"] for f in fees)
-        if optional and subtotal is not None and abs(base + sum(o["amount"] for o in optional) - subtotal) <= 1.0 \
-                and abs(base - subtotal) > 1.0:
-            fees.extend(optional)            # the site's sub-total includes the optional items: they are part of this price
-        else:
-            excluded.extend({**o, "reason": "sitede isteğe bağlı; sitenin ara toplamına dahil değil"} for o in optional)
+        included = included_optional(rent, fees, optional, subtotal)
+        fees.extend(o for o in optional if o in included)      # part of this price: the site's sub-total counts them
+        excluded.extend({**o, "reason": "sitede isteğe bağlı; sitenin ara toplamına dahil değil"} for o in optional if o not in included)
         return breakdown(rent, fees, None, total, tax_items=taxes, excluded=excluded, currency=currency)
+
+
+def included_optional(rent, fees, optional, subtotal):
+    """The optional items the site's own sub-total includes: the one subset of them that makes rent + fees + subset equal the
+    sub-total (within a dollar). No sub-total, no matching subset or more than one matching subset: none is counted."""
+    if not optional or subtotal is None or len(optional) > 6:
+        return []
+    base = (rent or 0) + sum(f["amount"] for f in fees)
+    matches = []
+    for mask in range(1 << len(optional)):
+        subset = [o for i, o in enumerate(optional) if mask >> i & 1]
+        if abs(base + sum(o["amount"] for o in subset) - subtotal) <= 1.0:
+            matches.append(subset)
+    return matches[0] if len(matches) == 1 else []
 
 
 def _json_content(text):
