@@ -323,6 +323,33 @@ def test_a_plain_refusal_is_tried_in_the_browser_and_a_definite_answer_wins(tmp_
     assert session.looks >= 1 and site["site_status"] == "not_found"          # the browser's 404 is more than "unreachable"
 
 
+def test_a_review_row_can_add_menu_links_without_changing_the_site(tmp_path):
+    board = b"\xff\xd8\xff dinner board"
+    pages = {"/": "<title>Smoke House</title><h1>Smoke House</h1><a href='/menu'>Menu</a>", "/menu": "<h1>Menu</h1><p>Call us</p>"}
+    def handler(request):
+        if request.url.host == "smoke.example":
+            if request.url.path == "/up/Dinner2025.png":
+                return httpx.Response(200, content=board, headers={"content-type": "image/png"})
+            return httpx.Response(200, text=pages.get(request.url.path, "<h1>?</h1>"), headers={"content-type": "text/html"})
+        return Sites()(request)
+    overrides = tmp_path / "sites.csv"
+    with open(overrides, "w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["external_id", "name", "site_url", "kanit", "kaynak", "kontrol_tarihi", "menu_urls"])
+        writer.writeheader()
+        writer.writerow({"external_id": "/listing/smoke/", "name": "Smoke House", "site_url": "", "kanit": "menü sayfasındaki görsel",
+                         "kaynak": "site incelemesi", "kontrol_tarihi": "2026-10-08", "menu_urls": "https://smoke.example/up/Dinner2025.png"})
+    reading = {"external_id": "/listing/smoke/", "menu_url": "https://smoke.example/up/Dinner2025.png", "raw_sha256": hashlib.sha256(board).hexdigest(),
+               "menu_type": "dinner", "menu_title": "Dinner", "section": "Dinner Plates", "name": "Brisket Platter", "price_text": "26.00",
+               "price": "26", "price_rule": "single", "okundu": "2026-10-08"}
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False,
+                            config={**config([restaurant("smoke", "Smoke House", "https://smoke.example/")], tmp_path, [reading]),
+                                    "site_overrides": overrides}, client=client, browser=False)
+    site, _, menus, items = related(result, "/listing/smoke/")
+    assert site["site_source"] == "directory" and site["site_url"] == "https://smoke.example/"
+    assert [(i["name"], i["price"], i["method"]) for i in items] == [("Brisket Platter", 26.0, "görüntüden okundu")]
+
+
 def test_curly_quoted_names_pizza_pies_and_drinks_menus():
     items = rs.parse_menu([("p", "Kids Menu"), ("p", "“Horn Island” Chicken Fingers 13"), ("p", "“Ship Island” Bowtie Pasta & Sauce 10")])
     assert [(i["name"], i["price"]) for i in items] == [("“Horn Island” Chicken Fingers", 13.0), ("“Ship Island” Bowtie Pasta & Sauce", 10.0)]

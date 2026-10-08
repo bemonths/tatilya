@@ -702,7 +702,7 @@ class RestaurantRun:
         if not url:
             self.site["status_note"] = "Dizinde web sitesi yok ve gözden geçirilmiş bir resmî site kaydı yok."
             return self
-        self.site.update({"site_url": url, "site_source": "review" if self.override else "directory"})
+        self.site.update({"site_url": url, "site_source": "review" if (self.override or {}).get("site_url") else "directory"})
         try:
             home = self.get(url, "site-home")
         except (httpx.HTTPError, SourceError) as exc:
@@ -751,6 +751,8 @@ class RestaurantRun:
         self.structured(home, html)
         found = links(html, home.final_url) + self.schema_menus
         menu_targets, info_targets = self.targets(found, home.final_url)
+        reviewed = [u.strip() for u in ((self.override or {}).get("menu_urls") or "").split(";") if u.strip()]
+        menu_targets = [("gözden geçirilmiş menü bağlantısı", u) for u in reviewed] + [t for t in menu_targets if t[1] not in reviewed]
         for label, target in info_targets[:MAX_INFO_PAGES]:
             try:
                 page = self.get(target, "site-info")
@@ -1202,7 +1204,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
 
     def one(restaurant):
         run = RestaurantRun(fetcher, restaurant, overrides.get(restaurant["external_id"]), readings.get(restaurant["external_id"], []), sections)
-        url = (run.override or {}).get("site_url") or restaurant.get("website_url")
+        url = (run.override or {}).get("site_url") or restaurant.get("website_url")         # a review row may add only menu links
         try:
             if url and host_key(url) in browser_hosts:
                 # showed a verification page before: read only with the browser, never with plain HTTP

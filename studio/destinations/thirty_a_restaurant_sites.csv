@@ -1,3 +1,4 @@
-external_id,name,site_url,kanit,kaynak,kontrol_tarihi
-/listing/thai-elephant/,Thai Elephant,https://thaielephantsrb.com/,"Sitede telefon (850) 660-6711 ve adres 3906 Hwy 98 #5-6 Santa Rosa Beach; dizin kaydıyla aynı (dizindeki bağlantı Facebook sayfası).",web araması,2026-10-08
-/listing/siam-thai/,Siam Thai,https://order.online/store/-23129146/,"İşletmenin sipariş sayfası (DoorDash Storefront); adres 2078 US-98 Santa Rosa Beach dizin kaydıyla aynı (dizinde web sitesi yok).",web araması,2026-10-08
+external_id,name,site_url,kanit,kaynak,kontrol_tarihi,menu_urls
+/listing/thai-elephant/,Thai Elephant,https://thaielephantsrb.com/,"Sitede telefon (850) 660-6711 ve adres 3906 Hwy 98 #5-6 Santa Rosa Beach; dizin kaydıyla aynı (dizindeki bağlantı Facebook sayfası).",web araması,2026-10-08,
+/listing/siam-thai/,Siam Thai,https://order.online/store/-23129146/,"İşletmenin sipariş sayfası (DoorDash Storefront); adres 2078 US-98 Santa Rosa Beach dizin kaydıyla aynı (dizinde web sitesi yok).",web araması,2026-10-08,
+/listing/98-bar-b-que/,98 Bar-B-Que,,"Sitenin menü sayfasında (https://98bbq.com/menu/) yayımlanan iki menü görseli; dosya adlarında ""menu"" geçmediği için toplayıcı görsel menü sanmıyor.",site incelemesi,2026-10-08,https://98bbq.com/wp-content/uploads/2025/07/98BBQDinner2025.png;https://98bbq.com/wp-content/uploads/2025/07/98BBQAPPS2025.png
