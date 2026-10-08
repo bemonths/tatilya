@@ -683,6 +683,7 @@ class RestaurantRun:
         self.schema_menus = []         # menu urls the structured data names
         self.needs_browser = None      # 'challenge' (verification page) or 'render' (menus built with JavaScript): read again in a browser
         self.js_menus = False
+        self.challenged = []           # (host, url) of a menu or info page that kept its verification page (the restaurant goes on)
 
     def get(self, url, note):
         document = self.fetcher.get(url, restaurant=self.restaurant["external_id"], note=note)
@@ -755,6 +756,9 @@ class RestaurantRun:
                 page = self.get(target, "site-info")
             except (httpx.HTTPError, SourceError):
                 continue
+            except VerificationDeferred as wait:
+                self.challenged.append((wait.host, wait.url))
+                continue
             if page.status == 200 and page.kind == "html":
                 self.read_pages.append((page, html_lines(page.text)))
                 self.structured(page, page.text)
@@ -805,6 +809,11 @@ class RestaurantRun:
                 document = self.get(target, "menu")
             except (httpx.HTTPError, SourceError) as exc:
                 self.add_menu(target, label, home, None, "error", f"Okunamadı: {type(exc).__name__}")
+                continue
+            except VerificationDeferred as wait:
+                # only the restaurant's own home page waits for the user; a menu or ordering page that keeps its check is left unread
+                self.challenged.append((wait.host, wait.url))
+                self.add_menu(target, label, home, None, "error", f"Sayfa doğrulama istedi ({wait.host}); okunmadı.")
                 continue
             if document.sha256 in documents or document.final_url.split("#")[0] in seen and document.final_url.split("#")[0] != key:
                 continue                          # the same document under another link
@@ -1261,6 +1270,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                             break
                         first.site["status_note"] = f"{first.site['status_note'] or ''} Tarayıcıyla okuma başarısız: {type(exc).__name__}: {str(exc)[:120]}".strip()
                         continue
+                    for host, url in retry.challenged:
+                        marks[host_key(url)] = {"host": host_key(url), "url": url, "reason": "doğrulama sayfası"}
                     if better(retry, first):
                         retry.site["status_note"] = (f"{retry.site['status_note'] or ''} Sayfalar görünür tarayıcıyla okundu "
                                                      f"({BROWSER_REASONS[first.needs_browser]}).").strip()

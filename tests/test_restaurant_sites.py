@@ -446,6 +446,35 @@ def test_a_site_still_verifying_is_left_for_the_end_one_wait_then_read_or_skippe
         assert [m["host"] for m in result.related["browser_hosts"]] == ["guarded.example"]
 
 
+def test_a_menu_page_that_keeps_its_check_is_left_unread_and_the_restaurant_goes_on(tmp_path, monkeypatch):
+    monkeypatch.setattr(rs, "pause", lambda seconds, canceled: None)
+
+    class OrderingCheck(StandInSession):
+        def current(self):
+            self.looks += 1
+            if "order.online" in self.url:
+                return 403, self.url, "text/html", b"<title>Just a moment...</title>"
+            return 200, self.url, "text/html", self.pages.get(httpx.URL(self.url).path, "<h1>?</h1>").encode()
+
+        def wait_all(self, sites, canceled, timeout, waiting):
+            pytest.fail("a menu page must not make the run wait")
+
+    session = OrderingCheck({"/": "<title>Render Cafe</title><h1>Render Cafe</h1><a href='https://order.online/store/1'>Order online menu</a>"
+                                  "<a href='/menu'>Menu</a>", "/menu": "<h2>ENTREES</h2><p>Fish 20</p>"})
+    def handler(request):
+        if request.url.host == "render.example":
+            return httpx.Response(200, text="<title>Render</title><div id=\"root\"></div>", headers={"content-type": "text/html"})
+        return Sites()(request)
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        browser = rs.BrowserPages(None, lambda: False, opener=lambda profile: session, grace=0)
+        result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False,
+                            config=config([restaurant("render", "Render Cafe", "https://render.example/")], tmp_path), client=client, browser=browser)
+    site, _, menus, items = related(result, "/listing/render/")
+    assert site["site_status"] == "working" and [i["name"] for i in items] == ["Fish"]
+    assert any(m["status"] == "error" and "doğrulama istedi (order.online)" in m["message"] for m in menus)
+    assert [m["host"] for m in result.related["browser_hosts"]] == ["order.online"]
+
+
 def test_a_known_browser_host_is_never_asked_with_plain_http(tmp_path):
     session = StandInSession({"/": "<title>Guarded Grill</title><h1>Guarded Grill</h1><a href='/menu'>Menu</a>", "/menu": "<h2>ENTREES</h2><p>Fish 20</p>"})
     session.looks = 1                                         # no verification page this time: the profile kept the cookie
