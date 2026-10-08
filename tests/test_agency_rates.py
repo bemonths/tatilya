@@ -161,6 +161,12 @@ class Sites:
                                        "errorMsg": "The unit 3151-268932 is unavailable for these dates (10/17/2026 - 10/23/2026)."})
                 assert body["arrive"] in ("1/16/2027", "3/13/2027", "7/10/2027") and body["depart"] in ("1/23/2027", "3/20/2027", "7/17/2027")
                 return json_reply(ROUTER_PRICE)
+        if host == "www.drupal.example":
+            if path == "/rentals/gone":            # an unpublished listing: Drupal's themed 403 page with a CAPTCHA form widget
+                return html('<title>Access denied | Drupal Rentals</title><div class="bt-alerts-recaptcha" data-sitekey="x"></div>', 403)
+            if path == "/":
+                return html("<title>Drupal Rentals</title>")
+            return html(RESCMS_PAGE.replace('"eid":"261"', '"eid":"77"'))
         if host == "www.blocked.example":
             return html("Forbidden", 403)
         if host == "www.broken.example":
@@ -340,15 +346,36 @@ def test_one_company_failing_does_not_stop_the_others(tmp_path, monkeypatch):
     result = run(tmp_path, mock, sites=sites, listings=standard_listings() + extra)
     companies = {c["domain"]: c for c in result.related["companies"]}
     assert companies["broken.example"]["status"] == "stopped_errors" and companies["broken.example"]["request_count"] == 2
-    assert companies["blocked.example"]["status"] == "stopped_blocked" and companies["blocked.example"]["request_count"] == 3
+    # each refused page is followed by one look at the home page, which is refused too
+    assert companies["blocked.example"]["status"] == "stopped_blocked" and companies["blocked.example"]["request_count"] == 6
     assert companies["router.example"]["status"] == "failed" and "synthetic adapter bug" in companies["router.example"]["message"]
     assert {companies[d]["status"] for d in ("rescms.example", "track.example", "stream.example")} == {"done"}
     rows = {r["lodging_id"]: r for r in result.records}
     assert rows[62]["page_status"] == "not_queried" and "ulaşılamadı" in rows[62]["message"]
     assert rows[73]["page_status"] == "not_queried" and [rows[70 + i]["page_status"] for i in range(3)] == ["blocked"] * 3
     assert quotes_of(result)[(30, "winter")]["status"] == "priced"
-    assert sum(r.url.host == "www.blocked.example" for r in mock.seen) == 3
+    assert [r.url.path for r in mock.seen if r.url.host == "www.blocked.example"] == ["/rentals/0", "/", "/rentals/1", "/", "/rentals/2", "/"]
     monkeypatch.setattr(aa.VacationRentalsRouter, "parse_page", original)
+
+
+def test_one_refused_listing_page_is_not_a_site_block_or_a_verification(tmp_path):
+    opened = []
+    sites = [{"domain": "drupal.example", "company": "Drupal Rentals", "adapter": "rescms", "enabled": 1}]
+    listings = [listing(90 + i, f"https://www.drupal.example/rentals/{name}") for i, name in enumerate(["gone", "a", "gone2"])]
+    def handler(request):
+        if request.url.path == "/rentals/gone2":
+            request = httpx.Request("GET", str(request.url).replace("gone2", "gone"))
+        if request.url.path.startswith("/rescms/"):
+            return json_reply({"status": 1, "content": '<span class="rc-na">Not Available</span>', "reveals": ""})
+        return Sites()(request)
+    result = run(tmp_path, handler, sites=sites, listings=listings, verifier=lambda *a: opened.append(a))
+    rows = {r["lodging_id"]: r for r in result.records}
+    assert opened == []                                                     # a CAPTCHA widget on a 403 page is not a verification page
+    assert [rows[i]["page_status"] for i in (90, 91, 92)] == ["blocked", "matched", "blocked"]
+    assert "ana sayfası normal yanıt veriyor" in rows[90]["message"] and rows[91]["site_listing_id"] == "77"
+    assert result.related["companies"][0]["status"] == "done"
+    assert not ar.CHALLENGE.search('<div class="bt-alerts-recaptcha"></div><title>Access denied</title>')
+    assert ar.CHALLENGE.search("<title>Just a moment...</title>") and ar.CHALLENGE.search('<script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script>')
 
 
 def test_network_errors_are_retried_once_then_recorded(tmp_path):

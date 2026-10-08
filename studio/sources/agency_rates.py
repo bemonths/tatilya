@@ -35,13 +35,16 @@ USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHT
 REQUEST_GAP = 2.0           # seconds between two requests to the same company site
 WORKERS = 3                 # companies read side by side; each company is sequential
 RETRY_PAUSE = 5.0
-BLOCK_LIMIT = 3             # consecutive refusals (403/429 without a verification page) that stop a company
+BLOCK_LIMIT = 3             # consecutive refusals (401/403/429, no verification page) that stop a company; see site_answers()
 ERROR_LIMIT = 5             # consecutive unreachable/failed requests that stop a company
 VERIFY_TIMEOUT = 15 * 60
 MAX_BYTES = 6_000_000
 MAX_REDIRECTS = 5
 PROGRESS_EVERY = 2.0
-CHALLENGE = re.compile(r"Just a moment\.\.\.|cf-chl-|challenge-platform|Verify you are human|Checking your browser|captcha", re.I)
+# Interstitial human-verification pages only (Cloudflare, PerimeterX). An ordinary page that merely contains a CAPTCHA widget
+# (a contact form, a Drupal "Access denied" page) is not a verification page.
+CHALLENGE = re.compile(r"Just a moment\.\.\.|cf-chl-|/cdn-cgi/challenge-platform|Verify you are human|Checking your browser before|"
+                       r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold", re.I)
 PAGE_STATUSES = ("matched", "not_found", "no_listing", "off_site", "blocked", "error", "not_queried", "no_adapter", "no_url")
 COMPANY_STATUSES = ("done", "stopped_blocked", "stopped_errors", "verification_timeout", "verification_unavailable", "failed")
 QUOTE_STATUSES = ("priced", "unavailable", "restricted", "no_price", "error")
@@ -330,9 +333,18 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                 page = pages[url]
                 row.update({k: page[k] for k in ("page_status", "page_url", "http_status", "site_listing_id", "message")})
                 if page["page_status"] == "blocked":
-                    blocked += 1
-                    if blocked >= BLOCK_LIMIT:
-                        raise CompanyStopped("stopped_blocked", f"Site art arda {BLOCK_LIMIT} isteği reddetti (HTTP {page['http_status']}); şirket durduruldu.")
+                    # A refused listing page can be one unpublished listing (Drupal answers its themed "Access denied" page)
+                    # or the whole site refusing us. One look at the site's home page tells them apart.
+                    if site_answers(session, url, ask):
+                        blocked = 0
+                        page["message"] = (f"Bu ilan sayfası erişime kapalı (HTTP {page['http_status']}); sitenin ana sayfası normal yanıt "
+                                           "veriyor (ilan yayından kaldırılmış olabilir).")
+                        row["message"] = page["message"]
+                    else:
+                        blocked += 1
+                        if blocked >= BLOCK_LIMIT:
+                            raise CompanyStopped("stopped_blocked", f"Site art arda {BLOCK_LIMIT} isteği reddetti (HTTP {page['http_status']}); "
+                                                                    "şirket durduruldu.")
                 else:
                     blocked = 0
                 if page["page_status"] == "error":
@@ -427,6 +439,16 @@ def open_listing(session, adapter, url, ask):
     if not info:
         return {**base, "page_status": "no_listing", "message": "Sayfada bu altyapının ilan kimliği yok; bağlantı ilan sayfasına gitmiyor olabilir."}
     return {**base, "page_status": "matched", "site_listing_id": info["site_id"], "info": info}
+
+
+def site_answers(session, url, ask):
+    """True when the company's home page still answers 200, i.e. a refused listing page is not the whole site refusing us."""
+    parts = urlsplit(url)
+    try:
+        reply = ask(lambda: session.request("GET", f"{parts.scheme}://{parts.netloc}/", note="site-check", headers={"Accept": "text/html"}))
+    except AdapterError:
+        return False
+    return reply.status == 200 and not reply.location
 
 
 def ask_quote(session, adapter, info, window, ask):
