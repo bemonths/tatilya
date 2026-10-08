@@ -438,6 +438,7 @@ def open_listing(session, adapter, url, ask):
     info = adapter.parse_page(reply.text, reply.url)
     if not info:
         return {**base, "page_status": "no_listing", "message": "Sayfada bu altyapının ilan kimliği yok; bağlantı ilan sayfasına gitmiyor olabilir."}
+    info["page_sha256"] = reply.sha256          # an answer read from the page itself (e.g. its calendar) cites this response
     return {**base, "page_status": "matched", "site_listing_id": info["site_id"], "info": info}
 
 
@@ -465,7 +466,7 @@ def ask_quote(session, adapter, info, window, ask):
            "excluded_items": answer.get("excluded_items"), "currency": answer.get("currency"), "min_stay": answer.get("min_stay"),
            "checkin_days": answer.get("checkin_days"), "rule_source": answer.get("rule_source"), "message": answer.get("message"),
            "queried_at": started, "queried_url": replies[-1].url if replies else info.get("page_url"),
-           "raw_sha256": [reply.sha256 for reply in replies]}
+           "raw_sha256": [reply.sha256 for reply in replies] or ([info["page_sha256"]] if info.get("page_sha256") else [])}
     if row["status"] == "priced" and row["total"] is None and row["rent"] is None:
         row["status"] = "no_price"
     return row

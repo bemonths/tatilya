@@ -378,6 +378,35 @@ def test_one_refused_listing_page_is_not_a_site_block_or_a_verification(tmp_path
     assert ar.CHALLENGE.search("<title>Just a moment...</title>") and ar.CHALLENGE.search('<script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script>')
 
 
+def test_track_page_calendar_decides_availability_before_any_price_request(tmp_path):
+    from datetime import date as day, timedelta
+    def cell(d, mark):
+        return f'<td class="{mark}" data-date="{d.strftime("%m/%d/%Y")}"><span>{d.day}</span></td>'
+    fall = [day(2026, 10, 17) + timedelta(n) for n in range(7)]
+    winter = [day(2027, 1, 16) + timedelta(n) for n in range(7)]
+    calendar = "".join(cell(d, "booked" if d == day(2026, 10, 20) else "available") for d in fall)
+    calendar += "".join(cell(d, "check-out" if d == winter[0] else "available") for d in winter)   # a check-out morning leaves the night free
+    page = TRACK_PAGE % "194" + calendar
+    seen = []
+    def handler(request):
+        seen.append(request)
+        if request.url.path == "/rentals/194":
+            return html(page)
+        return Sites()(request)
+    result = run(tmp_path, handler, listings=[listing(20, "https://www.track.example/rentals/194")])
+    quotes = quotes_of(result)
+    assert (quotes[(20, "fall")]["status"], quotes[(20, "fall")]["available"]) == ("unavailable", 0)
+    assert "takvimi bu pencerenin 1 gecesini dolu" in quotes[(20, "fall")]["message"]
+    manifest = json.loads((tmp_path / "raw" / "manifest.json").read_text(encoding="utf-8"))
+    page_hash = next(e["raw_sha256"] for e in manifest["responses"] if e["note"] == "listing-page")
+    assert quotes[(20, "fall")]["raw_sha256"] == [page_hash] and quotes[(20, "fall")]["queried_url"] == "https://www.track.example/rentals/194"
+    assert quotes[(20, "winter")]["status"] == "priced" and quotes[(20, "winter")]["total"] == 3339.16
+    posts = [parse_qs(r.content.decode())["checkin"][0] for r in seen if r.method == "POST"]
+    assert posts == ["01/16/2027"]                                          # the fall window was never priced
+    info = aa.Track().parse_page(page, "https://www.track.example/rentals/194")
+    assert aa.Track().taken_nights(info, {"checkin_date": day(2027, 3, 13), "nights": 7}) is None   # not on the calendar: ask the site
+
+
 def test_network_errors_are_retried_once_then_recorded(tmp_path):
     calls = []
     def handler(request):

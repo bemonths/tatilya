@@ -229,10 +229,16 @@ def _json_content(text):
 
 class Track:
     """Track bookingEngine pages: hidden propertyID fields on the page; the front end posts them with the dates to ajax/quote
-    and shows the returned HTML price breakdown, 'No' for unavailable dates or an alert text (e.g. a minimum stay)."""
+    and shows the returned HTML price breakdown, 'No' for unavailable dates or an alert text (e.g. a minimum stay).
+
+    The page also carries the listing's availability calendar (td.available / booked / check-in / check-out with data-date);
+    its date picker only lets a visitor choose free nights. Some Track sites price any dates in ajax/quote without checking
+    availability (seen on panhandlegetaways.com, 8 Oct 2026), so a window whose nights the page calendar shows as taken is
+    recorded as unavailable from that calendar and not priced."""
 
     name = "track"
     FIELDS = ("propertyID", "roomTypeID", "propertyName", "hash")
+    TAKEN = ("booked", "check-in")      # a night that starts someone else's stay; a check-out morning leaves the night free
 
     def parse_page(self, html, url):
         fields = {}
@@ -245,10 +251,26 @@ class Track:
             return None
         folder = re.search(r"siteFolder\s*=\s*'([^']*)'", html)
         ending = re.search(r"siteURLEnding\s*=\s*'([^']*)'", html)
-        return {"site_id": fields["propertyID"], "fields": fields, "page_url": url,
+        calendar = {}
+        for classes, day in re.findall(r'<td class="([^"]*)" data-date="(\d{2}/\d{2}/\d{4})"', html):
+            month, dom, year = day.split("/")
+            calendar[f"{year}-{month}-{dom}"] = classes.split()
+        return {"site_id": fields["propertyID"], "fields": fields, "page_url": url, "calendar": calendar,
                 "quote_url": urljoin(url, (folder.group(1) if folder else "/") + "ajax/quote" + (ending.group(1) if ending else ""))}
 
+    def taken_nights(self, info, window):
+        """Nights of the window the page calendar shows as taken, or None when the calendar does not cover every night."""
+        calendar = info.get("calendar") or {}
+        nights = [date.fromordinal(window["checkin_date"].toordinal() + n).isoformat() for n in range(window["nights"])]
+        if not all(night in calendar for night in nights):
+            return None
+        return [night for night in nights if any(mark in calendar[night] for mark in self.TAKEN)]
+
     def quote(self, session, info, window):
+        taken = self.taken_nights(info, window)
+        if taken:
+            return {**outcome("unavailable", f"İlan sayfasının müsaitlik takvimi bu pencerenin {len(taken)} gecesini dolu gösteriyor "
+                                             f"({taken[0]} …); fiyat sorulmadı.", available=0), "replies": []}
         reply = session.request("POST", info["quote_url"], data={"checkin": us_date(window["checkin_date"]), "checkout": us_date(window["checkout_date"]),
                                                                 **info["fields"]},
                                 headers={"X-Requested-With": "XMLHttpRequest", "Referer": info["page_url"]},
