@@ -2,6 +2,8 @@
 
 Tarih: 7 Ekim 2026 · Görev: GÖREV-07 · Dal: `gorev-07-konaklama` · Uygulama `0.10.0` · Şema `10`
 
+> **GÖREV-08 güncellemesi (8 Ekim 2026, `bookdirect-lodging/2`, şema 11):** ilan kaydındaki şirket ilan sayfası (`url`) ve telefonlar (`phone`, `toll_free`) saklanıyor; takvimi gizli ilanlarda (`hide_rate_calendar`) takvim istenmiyor, atlanan ilan sayısı çekim kaydında (`calendars_skipped_hidden`). Çekim ~73 dakikadan ~35 dakikaya indi. Kaynakta şirket veya sahip adı alanı yok; bağlantının gösterdiği şirket sitesi fiyatları M11'de (`docs/M11-KONAKLAMA-FIYATLARI.md`).
+
 ## Durum
 
 Toplayıcı, şema, arayüz ve testler hazır; 7 Ekim 2026'da geçici klasörde ve gerçek veritabanında çalıştırıldı (Claude Code'un izin denetimi ilk denemeyi engellemişti; kullanıcı izin modunu değiştirdikten sonra çalıştırıldı). Özet dosyaları: `docs/gorevler/GOREV-07/konaklama-ozet.csv`, `konaklama-aylik-fiyat.csv`.
@@ -62,11 +64,11 @@ Kaynağın adres ve koordinatından mahalle çıkarılmaz; mahalle yalnız konum
 2. `show.json`: konumlar, kategoriler (varsayılan "All Lodging" kategorisi), olanaklar.
 3. Her pencere × her eşlenmiş konum filtresi için `lodgings.json`'un bütün sayfaları. Sayfalar arasında toplam değişir ya da okunan benzersiz ilan sayısı bildirilen toplamla tutmazsa filtre bir kez baştan okunur, yine tutmazsa çekim başarısız olur (kısmi sonuç yayımlanmaz). Bugünden önce başlayan pencere aranmaz, `skipped_past` diye kaydedilir; bütün pencereler geçmişteyse çekim durur.
 4. Canlı fiyat: ön yüz paketindeki mantığa göre (`get_live_rate_ids`, `request_live_rates`; 7 Ekim 2026'da okundu) aramada fiyatı olmayan ya da fiyatı beklemede (`liveness` 1) olan ilanlar sorulur; ön yüz yalnız arama satırında `liveness` dolu olanlara bakar, toplayıcı ayrıca `live_rates_enabled` işaretli olanları da sorar. İlanlar 50'şerlik gruplarla gider; yanıtı bekleyen (`liveness` dolu ve 0 değil) ilanlar yeniden sorulur. Ön yüz 20 denemeye kadar, 1 sn + 0,75 sn × deneme arayla soruyor; toplayıcı aynı aralıkla en fazla 5 deneme yapar. Dönen fiyat, en az gece ve `liveness` saklanır; yanıtta hiç görünmeyen ilan `no_answer`.
-5. Takvim: görülen her benzersiz ilan için `rates.json` bir kez okunur. Ham günlük değerler veritabanına yazılmaz; ilan başına ay ay fiyatlı gün sayısı, en düşük, ortanca ve en yüksek gecelik fiyat ve en sık görülen en az gece (`los`) saklanır. Ayrıca her pencerenin gecelerinin takvim fiyatlarının ortalaması, yalnız bütün geceler fiyatlıysa saklanır. Kaynak takvim vermezse (HTTP 400/404/422) ilan `unavailable` diye kaydedilir, çekim sürer.
+5. Takvim: görülen her benzersiz ilan için `rates.json` bir kez okunur; GÖREV-08'den (`bookdirect-lodging/2`) beri takvimi gizli ilanlar (`hide_rate_calendar`; ön yüz de bu ilanlarda takvim göstermiyor) istenmez ve sayıları `calendars_skipped_hidden` olarak çekim kaydına yazılır. Ham günlük değerler veritabanına yazılmaz; ilan başına ay ay fiyatlı gün sayısı, en düşük, ortanca ve en yüksek gecelik fiyat ve en sık görülen en az gece (`los`) saklanır. Ayrıca her pencerenin gecelerinin takvim fiyatlarının ortalaması, yalnız bütün geceler fiyatlıysa saklanır. Kaynak takvim vermezse (HTTP 400/404/422) ilan `unavailable` diye kaydedilir, çekim sürer.
 6. İstekler sıralı, aralarında 1,25 sn; ağ hatası ve 5xx bir kez yeniden denenir, 429 çekimi durdurur. İlerleme ve iptal her istekte denetlenir. Ham yanıtlar gzip ile sıkıştırılıp saklanır; manifestte her yanıtın adresi, durumu, zamanı, sıkıştırılmamış gövdenin SHA-256'sı ve baytı var.
 7. Bütün kayıtlar tek transaction'da yazılır; hata ya da iptal önceki başarılı sürümü bozmaz.
 
-İstek sayısı ve süre (7 Ekim 2026, ölçülen): yaklaşık 215 arama sayfası, 48–52 canlı fiyat isteği ve 2.389 takvim isteği; toplam ~2.655 istek, 1,25 sn arayla ~73 dakika. Süreyi takvim istekleri belirliyor (ilanların çoğunda takvim gizli ve boş döndüğü halde görev her ilan için bir kez okunmasını istiyor).
+İstek sayısı ve süre (7 Ekim 2026, ölçülen): yaklaşık 215 arama sayfası, 48–52 canlı fiyat isteği ve 2.389 takvim isteği; toplam ~2.655 istek, 1,25 sn arayla ~73 dakika. Süreyi takvim istekleri belirliyordu (ilanların çoğunda takvim gizli ve boş dönüyordu). GÖREV-08 (8 Ekim 2026, `bookdirect-lodging/2`): 1.536 gizli takvim istenmedi; geçici denemede 1.123 istek, 34,5 dakika.
 
 ## Saklanan alanlar (şema 10)
 
@@ -75,7 +77,7 @@ Kaynağın adres ve koordinatından mahalle çıkarılmaz; mahalle yalnız konum
 | `lodging_snapshots` | clone, ön yüz sürüm yolu, varsayılan kategori, arama günü (UTC), istek ve ilan sayısı |
 | `lodging_windows` | pencere, giriş/çıkış, gece, `searched` / `skipped_past` |
 | `lodging_filters` | pencere × konum filtresi: kaynak konum kimliği ve adı, kanonik bölge, bildirilen toplam, sayfa sayısı |
-| `lodging_listings` | kimlik, ad, kategori kimlikleri ve adları, adres, şehir, eyalet, posta kodu, koordinat, yatak odası, banyo, kapasite (`sleeps`), olanaklar, rezervasyon sistemi (`res_engine`), kaynak konum kimliği, takvim gizli mi, canlı fiyat açık mı |
+| `lodging_listings` | kimlik, ad, kategori kimlikleri ve adları, adres, şehir, eyalet, posta kodu, koordinat, yatak odası, banyo, kapasite (`sleeps`), olanaklar, rezervasyon sistemi (`res_engine`), kaynak konum kimliği, takvim gizli mi, canlı fiyat açık mı; şema 11'den beri şirketin ilan sayfası (`url`, yalnız http/https) ve telefonlar (`phone`, `toll_free`); `bookdirect-lodging/1` kayıtlarında bu üçü NULL |
 | `lodging_search_results` | pencere × filtre × ilan: sıra, `average_rate`, USD karşılığı, `los`, `liveness`, `live_rates_enabled`, `min_stays` (kaynaktaki biçimiyle JSON), canlı fiyat durumu, fiyatı, en az gecesi, `liveness`, deneme sayısı |
 | `lodging_calendars` | ilan takvimi okundu mu, istenen aralık, fiyatlı gün |
 | `lodging_rate_months` | ilan × ay: fiyatlı gün, en düşük, ortanca, en yüksek, en sık en az gece |
@@ -91,7 +93,7 @@ Her özetin etiketi: "<arama günü> tarihinde yapılan aramada görünen ilanla
 
 ## Arayüz
 
-Veri toplama → **Konaklama**: toplama düğmesi, sürüm seçimi, ham manifest indirme, mahalle × pencere özet tablosu; mahalle seçilince pencere başına tür, yatak odası, kapasite ve fiyat kaynağı, aylık takvim ortancaları ve ilan listesi; ilan seçilince adres, olanaklar, rezervasyon sistemi, canlı fiyat durumu ve aylık takvim.
+Veri toplama → **Konaklama**: toplama düğmesi, sürüm seçimi, ham manifest indirme, mahalle × pencere özet tablosu; mahalle seçilince pencere başına tür, yatak odası, kapasite ve fiyat kaynağı, aylık takvim ortancaları ve ilan listesi; ilan seçilince adres, olanaklar, rezervasyon sistemi, canlı fiyat durumu, şirketin ilan sayfasına bağlantı (GÖREV-08) ve aylık takvim (gizli takvimde "kaynakta gizli (istenmedi)"). Aynı sekmenin altında kiralama şirketi fiyat bölümü (M11).
 
 ## Sınırlar
 

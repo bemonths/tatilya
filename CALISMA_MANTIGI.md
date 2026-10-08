@@ -4,7 +4,7 @@
 >
 > Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M10`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 7 Ekim 2026'da GÖREV-07 (v0.9.0 yayını, referans tablosunun tamamlanması, konaklama profili toplayıcısı) ile güncellenmiştir.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 8 Ekim 2026'da GÖREV-08 (v0.10.0 yayını, kiralama şirketlerinden konaklama fiyatları, referans tablosunun kalan satırları) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
@@ -13,19 +13,19 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` @ `7110f881e69793b907ecd791a52e761d569cdfd1` (GÖREV-06: kasırga evre kuralı ve referans tablosu; 7 Ekim 2026'da GÖREV-07 Adım 1 ile fast-forward) |
-| Stable tag | `v0.9.0` → `7110f88` — **v0.9.0 — kasırga evre kuralı ve referans tablosu** (önceki: `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.9.0` / `9` (main ve `v0.9.0`) |
-| Aktif geliştirme dalı | `gorev-07-konaklama` — Book>Direct konaklama profili toplayıcısı (Konaklama sekmesi) ve referans tablosunun tamamlanması (`yerine_gecildi` durumu, 103 satır) |
-| Aktif dal durumu | Uygulama `0.10.0`, şema `10`; konaklama toplayıcısı geçici klasörde ve gerçek veride çalıştırıldı; main'e alınmadı; karar yöneticinin |
+| Stable branch | `main` @ `1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1` (GÖREV-07: konaklama profili ve referans tablosu tamamlama; 8 Ekim 2026'da GÖREV-08 Adım 1 ile fast-forward) |
+| Stable tag | `v0.10.0` → `1f4e80b` — **v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili** (önceki: `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
+| Stable uygulama sürümü / şema | `0.10.0` / `10` (main ve `v0.10.0`) |
+| Aktif geliştirme dalı | `gorev-08-konaklama-fiyat` — kiralama şirketlerinin kendi sitelerinden konaklama fiyatları (`agency-lodging-rates/1`, 9 şirket, 4 altyapı uyarlayıcısı), Book>Direct toplayıcısında şirket bağlantısı ve gizli takvim düzeltmesi (`bookdirect-lodging/2`), referans tablosunun kalan satırları (105 satır, doğrulanamayan kalmadı) |
+| Aktif dal durumu | Uygulama `0.11.0`, şema `11`; iki toplayıcı geçici klasörde ve gerçek veride çalıştırıldı; main'e alınmadı; karar yöneticinin |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main @ 7110f88 başarılı; görev dalının sonucu `docs/gorevler/GOREV-07/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 555 Python testi + 46 frontend testi (main/v0.9.0: 513 + 42) |
-| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); görev dalında ayrıca Book>Direct konaklama aramaları (`bookdirect-lodging/1`) |
+| Son CI | main @ 1f4e80b ve etiket `v0.10.0` başarılı; görev dalının sonucu `docs/gorevler/GOREV-08/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 587 Python testi + 52 frontend testi (main/v0.10.0: 555 + 46) |
+| Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
-| Gerçek veritabanı | 7 Ekim 2026'da (GÖREV-07) tam yedekten (`work/yedek/20261007-2235/`) sonra normal kullanımla şema 10'a yükseltildi ve yalnız konaklama toplayıcısı çalıştı. Şema 10 dosyasını main'deki 0.9.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-07-konaklama` dalından çalıştırılır. |
+| Gerçek veritabanı | 8 Ekim 2026'da (GÖREV-08) tam yedekten (`work/yedek/20261008-1517/`) sonra normal kullanımla şema 11'e yükseltildi; önce konaklama, sonra kiralama şirketi fiyat toplayıcısı çalıştı. Şema 11 dosyasını main'deki 0.10.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-08-konaklama-fiyat` dalından çalıştırılır. |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
-| Konaklama durumu | Tarihli arama anlık görüntüleri toplayıcısı görev dalında; gerçek veride ilk çekim 7 Ekim 2026 (4 pencerede 2.389 benzersiz ilan; fiyat verisi çok seyrek). Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md` |
+| Konaklama durumu | Tarihli arama anlık görüntüleri (main'de); görev dalında kiralama şirketlerinin kendi sitelerinden fiyat: 8 Ekim 2026 gerçek çekiminde 2.389 ilanın 759'i yapılandırılmış 9 şirkete bağlı, 529'i şirket sitesinde bulundu, 510 ilana en az bir pencerede fiyat alındı (12/13 mahalle). Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
 
 ## 2. Projenin amacı
 
@@ -299,15 +299,23 @@ Hesapladığımız değerler "NOAA verisinden bizim hesabımız" diye etiketleni
 
 GÖREV-06 (yönetici kararı): kasırga sayımı ve sınıflandırması yalnız fırtınanın tropikal veya subtropikal olduğu evrelere göre yapılır (HURDAT2 TD, TS, HU, SD, SS; EX, LO, WV, DB sayılmaz; ara noktalar aralığın başındaki evreyi taşır). Daireye yalnız tropikal olmayan evrede giren fırtına saklanır ama `non_tropical_only` diye işaretlenip bütün sayımların dışında kalır (`hurdat2-storm-proximity/2`, şema 9). Videoda kasırga rakamları 1991–2025 dönemiyle ve dönem söylenerek verilir.
 
-### 9.7 Elle doğrulanmış referans tablosu (v0.9.0; tamamlama `gorev-07-konaklama` dalında)
+### 9.7 Elle doğrulanmış referans tablosu (v0.9.0; tamamlama v0.10.0 ve `gorev-08-konaklama-fiyat`)
 
 Toplayıcıyla alınamayan ama videoda söylenecek olgular (plaj kuralları, bayraklar, plaj erişimi, ulaşım, parklar, kasırga sezonu, sezon ve maliyet) `studio/destinations/thirty_a_references.csv` dosyasında, her satır tek olgu olarak tutulur: kaynak, belge konumu, en fazla 25 kelimelik alıntı, erişim tarihi, belgenin SHA-256'sı, güven, durum (`dogrulandi` / `celiskili` / `dogrulanamadi`) ve yeniden kontrol tarihi. Belgeler `work/referans-belgeler/` altında (repoya girmez). Genel okuyucu/doğrulayıcı `studio/destinations/references.py`; API `GET /api/references`; Veri toplama → Referanslar sekmesi salt okunur. South Walton aylık turist vergisi tahsilatları `thirty_a_tdt_collections.csv` dosyasında (Walton County Clerk çalışma kitabı, 1998-10 → 2026-07). Ayrıntı ve video dili: `docs/M9-REFERANS-TABLOSU.md`.
 
 GÖREV-07: yeni durum `yerine_gecildi` (çözülen çelişkide eski satır silinmez, notunda `yerine geçen: <kimlik>` yazar); plajda alkol, 2026 cankurtaran sezonu, ilçenin golf arabası ve düşük hızlı araç kuralları, planlı toplulukların ziyaretçi otoparkı eklendi; 2025 ziyaretçi sayısı yönetici kararıyla çözüldü. 103 satır: 89 doğrulandı, 2 çelişkili, 9 doğrulanamadı, 3 yerine geçildi.
 
-### 9.8 Konaklama profili (`gorev-07-konaklama`, uygulama 0.10.0, şema 10)
+GÖREV-08: eyalet parklarının ücret ve saatleri (uygulama içi tarayıcıda açıldı), 30A hız kararı (2017 haberi ve ilçe tutanağı), ilçenin çok amaçlı yol bakım uzunluğu, Rosemary Beach ve WaterSound ziyaretçi otoparkı tamamlandı. 105 satır: 100 doğrulandı, 2 çelişkili (Timpoochee uzunluğu), 0 doğrulanamadı, 3 yerine geçildi.
+
+### 9.8 Konaklama profili (v0.10.0, şema 10; `bookdirect-lodging/2` görev dalında)
 
 Generic `bookdirect-lodging/1` toplayıcısı: clone adresi, konum filtresi → kanonik mahalle eşlemesi ve örnek tarih pencereleri SQLite'tan (30A: `visitsouthwalton.bookdirect.net`, 14 filtre — Seagrove Beach da Seagrove'a bağlı —, dört Cumartesi–Cumartesi 7 gecelik pencere). Ön yüzün herkese açık istemci anahtarı her çekimde paketten okunur, yalnız bellekte tutulur. Her pencere × filtre için bütün arama sayfaları, sınırlı denemeli canlı fiyat, ilan başına bir fiyat takvimi (ay ay özet); özetler okuma anında. Veri toplama → Konaklama sekmesi. 7 Ekim 2026 gerçek çekimi: 2.655 istek, ~73 dk, 2.389 ilan; tür, oda ve kapasite her mahallede var, fiyat yalnız birkaç ilanda (takvimlerin çoğu gizli, takvimler yalnız Ekim–Mart). Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
+
+GÖREV-08 (`bookdirect-lodging/2`, şema 11): ilan kaydındaki şirket ilan sayfası (`url`) ve telefonlar saklanıyor; takvimi gizli ilanlarda takvim istenmiyor (1.536 ilan atlandı, sayı çekim kaydında). 8 Ekim 2026 gerçek çekimi: 1.119 istek, 34,2 dk, 2.389 ilan.
+
+### 9.9 Konaklama fiyatları (`gorev-08-konaklama-fiyat`, uygulama 0.11.0, şema 11)
+
+Generic `agency-lodging-rates/1` toplayıcısı: girdi destinasyonun son Book>Direct çekimi; ilan, şirket sitesindeki ilana yalnız Book>Direct bağlantısıyla eşlenir. Hangi şirket sitesinin hangi altyapı uyarlayıcısıyla (`rescms`, `track`, `streamline`, `vr_router`) okunacağı SQLite'taki `destination_agency_sites` yapılandırmasında (30A: 9 şirket). Her ilan × pencere için sitenin herkese açık fiyat/müsaitlik gösterimi: müsaitlik, kira, ücretler, vergiler, genel toplam, en az gece ve giriş günü (site gösteriyorsa), ham yanıtların SHA-256'sı. Şirket başına sıralı ve aralıklı; bir şirketin hatası diğerlerini durdurmaz. İnsan doğrulaması isteyen sitede görünür tarayıcı açılır, iş "kullanıcı doğrulaması bekleniyor" durumuna geçer (`job_waits`), kullanıcı doğrular, aynı oturumla devam edilir (15 dk sonra şirket atlanır). Özet okuma anında. Konaklama sekmesinin fiyat bölümü. 8 Ekim 2026 gerçek çekimi: 3.855 istek, 92,5 dk; 510 ilana fiyat. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`, keşif `docs/gorevler/GOREV-08/AJANS-KESFI.md`.
 
 ## 10. Konaklama — şu an nerede kaldık?
 
@@ -352,11 +360,11 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve tag `v0.9.0` → `7110f881e69793b907ecd791a52e761d569cdfd1` (uygulama 0.9.0, şema 9; 7 Ekim 2026'da GÖREV-07 Adım 1 ile fast-forward ve açıklamalı etiket "v0.9.0 — kasırga evre kuralı ve referans tablosu"; main CI başarılı). Önceki: `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
+Stable: main ve tag `v0.10.0` → `1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1` (uygulama 0.10.0, şema 10; 8 Ekim 2026'da GÖREV-08 Adım 1 ile fast-forward ve açıklamalı etiket "v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili"; main ve etiket CI başarılı). Önceki: `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
 
-Aktif dal `gorev-07-konaklama`:
-- 555 Python testi ve 46 frontend testi geçti (tam takım art arda en az 3 kez)
-- konaklama profili toplayıcısı (şema 10, Konaklama sekmesi; gerçek veride çalıştı); referans tablosu tamamlandı (`yerine_gecildi`); bilgi toplama ilkesi (§4 madde 13–14); uygulama 0.10.0
+Aktif dal `gorev-08-konaklama-fiyat`:
+- 587 Python testi ve 52 frontend testi geçti (tam takım art arda en az 3 kez)
+- kiralama şirketi fiyat toplayıcısı (şema 11, Konaklama sekmesinin fiyat bölümü; gerçek veride çalıştı); `bookdirect-lodging/2`; referans tablosunun kalan satırları; "Tarayıcı ve insan doğrulaması" yöntemi (§4 madde 12–14); uygulama 0.11.0
 - main'e alınmadı
 
 Bilinen non-blocking uyarılar:
@@ -403,6 +411,8 @@ v0.8 (şema 7 → 8) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` ko
 v0.9 (şema 8 → 9) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı (satır sayıları, kaynaklar ve çekimler aynı; `integrity_check` ok, `foreign_key_check` boş). Ardından (GÖREV-06) `data/` tam yedeği (`work/yedek/20261007-1935/`, 380 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v8-14fb0efcabd8429ebdb63c0fdb353ac9.sqlite3`) ve yalnız kasırga toplayıcısı çalıştırıldı (`/2`, 227 geçiş, 10'u işaretli); `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-06/RAPOR.md`.
 
 v0.10 (şema 9 → 10) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski bütün tabloların satır sayıları ve çekimler aynı; yalnız 11 konaklama tablosu, 30A konaklama yapılandırması (1 clone, 14 konum filtresi, 4 pencere) ve 1 kaynak eklendi; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-07) `data/` tam yedeği (`work/yedek/20261007-2235/`, 384 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v9-f6412e0032864a4d8088398d54fe0223.sqlite3`) ve yalnız konaklama toplayıcısı çalıştırıldı (çekim `abe7764d…`, 2.655 istek, ~73 dk, 2.389 ilan, 9.189 arama satırı); `integrity_check` ok, `foreign_key_check` boş; eski çekimler aynı; istemci anahtarı ne ham dosyalarda ne veritabanında; ayrıntı `docs/gorevler/GOREV-07/RAPOR.md`.
+
+v0.11 (şema 10 → 11) migration denemesi 8 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski 37 tablonun satırları aynı (kaynaklara yalnız yeni satır eklendi), 7 yeni tablo (job_waits, destination_agency_sites, beş fiyat tablosu), `lodging_listings`'e üç boş sütun, 30A için 9 şirket yapılandırması ve 1 kaynak; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-08) `data/` tam yedeği (`work/yedek/20261008-1517/`, 3.040 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v10-…`), önce konaklama toplayıcısı (çekim `99735d8a…`, 1.119 istek, 34,2 dk), sonra uygulama yeni kodla yeniden açılıp kiralama şirketi fiyat toplayıcısı (çekim `1968245c…`, 3.855 istek, 92,5 dk) çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-08/RAPOR.md`.
 
 ## 13. Geliştirme çalışma biçimi
 
@@ -481,9 +491,10 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M8-IKLIM-VERISI.md`
 - `docs/M9-REFERANS-TABLOSU.md`
 - `docs/M10-KONAKLAMA-PROFILI.md`
+- `docs/M11-KONAKLAMA-FIYATLARI.md`
 
 ---
 
-**Son güncelleme:** 7 Ekim 2026  
-**Stable:** v0.9.0 — kasırga evre kuralı ve referans tablosu (`7110f88`)  
-**Aktif geliştirme:** `gorev-07-konaklama` — konaklama profili ve referans tablosunun tamamlanması, uygulama 0.10.0, şema 10 (yönetici incelemesinde)
+**Son güncelleme:** 8 Ekim 2026  
+**Stable:** v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili (`1f4e80b`)  
+**Aktif geliştirme:** `gorev-08-konaklama-fiyat` — kiralama şirketlerinden konaklama fiyatları, uygulama 0.11.0, şema 11 (yönetici incelemesinde)

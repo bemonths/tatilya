@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.9.0 -> 7110f881e69793b907ecd791a52e761d569cdfd1
-main -> 7110f881e69793b907ecd791a52e761d569cdfd1
-app 0.9.0
-schema 9
+tag v0.10.0 -> 1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1
+main -> 1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1
+app 0.10.0
+schema 10
 ```
+
+8 Ekim 2026'da GÖREV-08 Adım 1 ile main `1f4e80b`'ye (GÖREV-07) fast-forward edildi ve bu commit'e açıklamalı `v0.10.0` etiketi konuldu ("v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili"). main CI ve etiket CI: success.
 
 7 Ekim 2026'da GÖREV-07 Adım 1 ile main `7110f88`'e (GÖREV-06) fast-forward edildi ve bu commit'e açıklamalı `v0.9.0` etiketi konuldu ("v0.9.0 — kasırga evre kuralı ve referans tablosu"). main CI: success.
 
@@ -18,20 +20,21 @@ schema 9
 ## Aktif branch
 
 ```text
-gorev-07-konaklama
-app 0.10.0
-schema 10
+gorev-08-konaklama-fiyat
+app 0.11.0
+schema 11
 ```
 
 Bu dal:
-- Book>Direct konaklama profili toplayıcısını (`bookdirect-lodging/1`, şema 10, Konaklama sekmesi) ekler; gerçek veride ilk çekim 7 Ekim 2026,
-- bilgi toplama ilkesini (CLAUDE.md, CALISMA_MANTIGI §4 madde 13–14) yazar,
-- referans tablosunu tamamlar (`yerine_gecildi` durumu; 103 satır),
+- kiralama şirketlerinin kendi sitelerinden konaklama fiyatı toplayıcısını (`agency-lodging-rates/1`, şema 11, Konaklama sekmesinin fiyat bölümü) ekler; gerçek veride ilk çekim 8 Ekim 2026,
+- Book>Direct toplayıcısında şirket ilan bağlantısını saklar ve gizli takvimleri istemez (`bookdirect-lodging/2`),
+- "Tarayıcı ve insan doğrulaması" yöntemini (CLAUDE.md, CALISMA_MANTIGI §4) yazar,
+- referans tablosunun kalan 9 satırını tamamlar (105 satır),
 - main'e alınmadı; karar yöneticinin.
 
 Test:
-- 554 Python
-- 46 frontend
+- 587 Python
+- 52 frontend
 
 ---
 
@@ -305,6 +308,21 @@ Dal: `gorev-07-konaklama`, uygulama 0.10.0, şema 10.
 
 ---
 
+## v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili
+
+8 Ekim 2026'da main'e alındı ve etiketlendi (`v0.10.0` → `1f4e80b`). İçerik yukarıdaki GÖREV-07 bölümünde.
+
+## GÖREV-08 — kiralama şirketlerinden konaklama fiyatları (dal)
+
+Dal: `gorev-08-konaklama-fiyat`, uygulama 0.11.0, şema 11.
+
+- Keşif: 2.389 Book>Direct ilanının şirket bağlantıları 137 alan adında; ilk 40 alan adı (%94,6) incelendi. Fiyat yolu bulunan dört altyapı (ResCMS, Track, Streamline, vacation-rentals/router) ve bağlantısı ilan sayfasına giden 9 şirket (758 ilan) yapılandırıldı. 360blue ve dört site daha Cloudflare arkasında (360blue keşif denemelerinden sonra kullanıcının IP'sini engelledi; proxy kullanılmadı), Southern Resorts'un fiyat servisi çözülemedi. Ayrıntı: `docs/gorevler/GOREV-08/AJANS-KESFI.md`.
+- Toplayıcı: genel çekirdek + 4 uyarlayıcı; yalnız bağlantıyla eşleme; şirket bazında sonuç; görünür tarayıcıyla insan doğrulaması (`job_waits`). Geçici denemede üç hata bulundu ve düzeltildi (sıradan CAPTCHA kutusunun doğrulama sanılması, Track'te müsaitliğin fiyat servisinden değil sayfa takviminden okunması gereği, ResCMS'te isteğe bağlı sigortanın ara toplama göre ayrılması) ve 200 kodlu "not found" sayfaları ayrıldı. Gerçek çekim: 3.855 istek, 92,5 dk; 510 ilana fiyat (12/13 mahalle). Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`.
+- Referans tablosu: 105 satır (100 doğrulandı, 2 çelişkili, 0 doğrulanamadı, 3 yerine geçildi).
+- v10 → v11 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261008-1517/`), v10 → v11, konaklama sonra kiralama şirketi fiyat toplayıcısı; `integrity_check` ok, `foreign_key_check` boş.
+
+---
+
 ## Konaklama: açık konu
 
 3 Ekim'deki blocker, tam/tarihten bağımsız lodging inventory idi. 7 Ekim 2026 yönetici kararıyla bu şart kaldırıldı: konaklama tarihli arama anlık görüntüleri olarak modellenecek. Tam envanter iddiası taşıyan bir “lodging inventory connector” yine yapılmamalıdır.
@@ -314,16 +332,16 @@ Dal: `gorev-07-konaklama`, uygulama 0.10.0, şema 10.
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.9.0 — kasırga evre kuralı ve referans tablosu**
+**v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili**
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu** ve plaj–mahalle eşlemesi v3; `gorev-07-konaklama` dalında ayrıca **konaklama profili** (tarihli arama anlık görüntüleri)
+**beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu + konaklama profili** ve plaj–mahalle eşlemesi v3; `gorev-08-konaklama-fiyat` dalında ayrıca **kiralama şirketlerinden konaklama fiyatları**
 
 Görev dalında, gerçek veride çalışmış:
-**lodging** (tarihli arama anlık görüntüleri; `gorev-07-konaklama`; fiyat verisi seyrek)
+**konaklama fiyatları** (kiralama şirketlerinin kendi sitelerinde sorgulanan fiyatlar; `gorev-08-konaklama-fiyat`; 9 şirket, örnek şirketlere göre dengesiz)
 
 Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-07-konaklama` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).
+`gorev-08-konaklama-fiyat` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).

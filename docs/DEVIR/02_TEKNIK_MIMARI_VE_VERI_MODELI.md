@@ -345,9 +345,13 @@ Ayrıntı: `docs/M8-IKLIM-VERISI.md`. Şema 9'da `storm_passages.non_tropical_on
 
 Tablo değildir: `studio/destinations/thirty_a_references.csv` (elle doldurulan, repoda sürümlenen olgular) ve `thirty_a_tdt_collections.csv` (aylık turist vergisi). Genel okuyucu ve doğrulayıcı `studio/destinations/references.py`. Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
 
-### Konaklama (v0.10.0, şema 10; `gorev-07-konaklama` dalı)
+### Konaklama (v0.10.0, şema 10; şema 11'de üç sütun)
 
-Yapılandırma: `destination_lodging_sources` (clone adresi), `destination_lodging_locations` (kaynağın konum filtresi adı → kanonik bölge), `destination_lodging_windows` (örnek tarih pencereleri). Anlık görüntü: `lodging_snapshots`, `lodging_windows` (`searched` / `skipped_past`), `lodging_filters` (pencere × filtre), `lodging_listings`, `lodging_search_results` (pencere × filtre × ilan; liste ve canlı fiyat alanları), `lodging_calendars`, `lodging_rate_months` (ilan × ay takvim özeti; günlük değerler saklanmaz), `lodging_calendar_windows`. Özetler saklanmaz, okuma anında hesaplanır. Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
+Yapılandırma: `destination_lodging_sources` (clone adresi), `destination_lodging_locations` (kaynağın konum filtresi adı → kanonik bölge), `destination_lodging_windows` (örnek tarih pencereleri). Anlık görüntü: `lodging_snapshots`, `lodging_windows` (`searched` / `skipped_past`), `lodging_filters` (pencere × filtre), `lodging_listings`, `lodging_search_results` (pencere × filtre × ilan; liste ve canlı fiyat alanları), `lodging_calendars`, `lodging_rate_months` (ilan × ay takvim özeti; günlük değerler saklanmaz), `lodging_calendar_windows`. Özetler saklanmaz, okuma anında hesaplanır. Şema 11'de `lodging_listings`'e şirket ilan sayfası (`url`) ve telefonlar (`phone`, `toll_free`) eklendi. Ayrıntı: `docs/M10-KONAKLAMA-PROFILI.md`.
+
+### Konaklama fiyatları (v0.11.0, şema 11; `gorev-08-konaklama-fiyat` dalı)
+
+Yapılandırma: `destination_agency_sites` (alan adı, şirket adı, uyarlayıcı, etkin). Çekim: `agency_rate_snapshots` (girdi konaklama çekimi, sorgu günü), `agency_rate_windows`, `agency_rate_companies` (şirket bazında sonuç), `agency_rate_listings` (Book>Direct ilanı, bağlantı, sayfa durumu, platform kimliği), `agency_rate_quotes` (ilan × pencere: müsaitlik, kira, ücretler, vergiler, toplam, isteğe bağlı kalemler, kurallar, ham yanıt SHA-256'ları). `job_waits`: çalışan bir işin kullanıcı doğrulaması beklediği site. Genel çekirdek `studio/sources/agency_rates.py`, uyarlayıcılar `agency_adapters.py`, görünür tarayıcı `browser_verification.py` (isteğe bağlı Playwright). Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`.
 
 ## Migration stratejisi
 
@@ -358,7 +362,7 @@ Yapılandırma: `destination_lodging_sources` (clone adresi), `destination_lodgi
 - `PRAGMA foreign_key_check`,
 - hata halinde rollback.
 
-Stable şema: `9` (v0.9.0 ve main): v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler; v8 → v9 `storm_passages.non_tropical_only` sütununu ekler (kasırga evre kuralı). `gorev-07-konaklama` dalında şema `10` (gerçek DB 7 Ekim 2026'da şema 10'a yükseltildi): v9 → v10 konaklama yapılandırma tablolarını (`destination_lodging_sources`, `_locations`, `_windows`), sekiz konaklama anlık görüntü tablosunu ve 30A Book>Direct kaynağını ekler.
+Stable şema: `10` (v0.10.0 ve main): v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler; v8 → v9 `storm_passages.non_tropical_only` sütununu ekler (kasırga evre kuralı); v9 → v10 konaklama yapılandırma tablolarını (`destination_lodging_sources`, `_locations`, `_windows`), sekiz konaklama anlık görüntü tablosunu ve 30A Book>Direct kaynağını ekler. `gorev-08-konaklama-fiyat` dalında şema `11` (gerçek DB 8 Ekim 2026'da şema 11'e yükseltildi): v10 → v11 `lodging_listings`'e `url`, `phone`, `toll_free` sütunlarını, `job_waits`, `destination_agency_sites` ve beş kiralama şirketi fiyat tablosunu, 30A için 9 şirketi ve kiralama şirketi fiyat kaynağını ekler.
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
@@ -382,6 +386,7 @@ Domain:
 - `/api/climate-runs`, `/api/climate`, `/api/climate-runs/{id}/raw` (v0.8.0; iklim çekimleri, yapılandırma ve son anlık görüntüler, ham manifest)
 - `/api/references` (v0.9.0; profil dosyasındaki elle doğrulanmış referans tablosu, doğrulama sonucu ve yeniden kontrol işaretiyle, salt okunur; v0.10.0'da `replaced_by`)
 - `/api/lodging-runs`, `/api/lodging-runs/{id}` (mahalle × pencere özeti ve aylık takvim ortancaları, okuma anında), `/api/lodging-runs/{id}/listings?region_id=`, `/api/lodging-runs/{id}/raw` (v0.10.0)
+- `/api/agency-rate-runs`, `/api/agency-rate-runs/{id}` (mahalle × pencere fiyat özeti, oda gruplarına göre ortancalar, kapsama ve şirket sonuçları; okuma anında), `/api/agency-rate-runs/{id}/listings?region_id=`, `/api/agency-rate-runs/{id}/raw` (v0.11.0); `/api/jobs` ve olay akışındaki işlerde `waiting_for` (doğrulama bekleyen site)
 
 Liste endpoint'leri destination-filtered'dır.
 

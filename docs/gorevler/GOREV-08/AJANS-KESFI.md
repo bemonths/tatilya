@@ -5,7 +5,7 @@ Tarih: 8 Ekim 2026 · Girdi: gerçek veritabanındaki son konaklama çekimi `abe
 ## Özet
 
 - Book>Direct'teki 2.389 ilanın 2.382'sinde bir şirket bağlantısı (`url`) var; bağlantılar 137 alan adına dağılıyor. İlk 13 alan adı ilanların üçte ikisini (%68,9) kapsıyor; ilk 40 alan adı (%94,6) incelendi.
-- Fiyatı herkese açık gösterimden okunabilen dört altyapı bulundu: **ResCMS**, **Track**, **Streamline** ve **vacation-rentals/router**. Dördünde de kira, ücretler, vergiler ve genel toplam ayrı kalemler olarak geliyor; müsait olmayan tarih sitenin kendi cümlesiyle bildiriliyor.
+- Fiyatı herkese açık gösterimden okunabilen dört altyapı bulundu: **ResCMS**, **Track**, **Streamline** ve **vacation-rentals/router**. Dördünde de kira, vergiler ve genel toplam ayrı geliyor, ücretleri şirketlerin çoğu adlarıyla ayrı gösteriyor (30A Escapes göstermiyor); müsait olmayan tarih sitenin kendi cümlesiyle bildiriliyor.
 - Bu altyapıları kullanan ve Book>Direct bağlantıları ilan sayfasına giden **9 şirket** için uyarlayıcı yapılandırıldı: toplam **758 ilan** (%31,7). Gerçek kapsama (bağlantısı hâlâ çalışan, fiyatı alınabilen ilan) Adım 6'daki çekimde ölçüldü; rapora bakınız.
 - En büyük şirket **360blue.com (256 ilan)** ile **oversee.us (185)**, **realjoy.com (61)**, **exclusive30a.com (29)** ve **oldseagrove.com (8)** Cloudflare arkasında. 360blue keşifteki art arda denemelerden sonra kullanıcının IP adresini engelledi; proxy kullanılmadı, bu siteler bu görevde kapsam dışı kaldı.
 - Büyük bir engel de bağlantıların eskimesi: birçok şirkette Book>Direct'teki adres artık 404 veriyor, şirketin ana sayfasına ya da genel ilan listesine gidiyor. Bu ilanlar bağlantıyla eşlenemez (ad benzerliğiyle eşleme yapılmaz).

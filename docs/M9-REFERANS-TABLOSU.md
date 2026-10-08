@@ -1,6 +1,6 @@
 # M9 — Elle doğrulanmış referans tablosu
 
-Tarih: 7 Ekim 2026 · Görevler: GÖREV-06 (tablo), GÖREV-07 (tamamlama, `yerine_gecildi` durumu) · Uygulama `0.10.0`
+Tarih: 7 Ekim 2026 · Görevler: GÖREV-06 (tablo), GÖREV-07 (tamamlama, `yerine_gecildi` durumu), GÖREV-08 (kalan satırlar, 8 Ekim 2026) · Uygulama `0.11.0`
 
 ## Amaç
 
@@ -62,7 +62,7 @@ Kurallar, ücretler, saatler ve tanımlar yılda bir yeniden kontrol edilir (7 E
 
 ## 7 Ekim 2026 içeriği
 
-GÖREV-06'da 85 satır (73 `dogrulandi`, 6 `celiskili`, 6 `dogrulanamadi`); GÖREV-07 sonrası 103 satır: 89 `dogrulandi`, 2 `celiskili`, 9 `dogrulanamadi`, 3 `yerine_gecildi`.
+GÖREV-06'da 85 satır (73 `dogrulandi`, 6 `celiskili`, 6 `dogrulanamadi`); GÖREV-07 sonrası 103 satır: 89 `dogrulandi`, 2 `celiskili`, 9 `dogrulanamadi`, 3 `yerine_gecildi`; GÖREV-08 sonrası 105 satır: 100 `dogrulandi`, 2 `celiskili`, 0 `dogrulanamadi`, 3 `yerine_gecildi` (dağılım aşağıda).
 
 GÖREV-06 dağılımı (kayıt için):
 
@@ -100,6 +100,26 @@ GÖREV-07'de eklenen ve değişenler:
 - **Golf arabası ve düşük hızlı araç:** ilçe golf arabalarının ilçe yollarında kullanılmadığını, şerif hiçbir kamu yolunda kullanılamadığını söylüyor; ilçenin golf arabasına açtığı bir yol bulunamadı. Düşük hızlı araç: 35 mph ve altındaki yollar, kaldırım ve bisiklet yolunda yasak, US 98'de yasak (yalnız dört yollu kavşakta geçiş).
 - **Planlı topluluklar:** Seaside saatlik değişken ücretli otopark ve 06:00–24:00 ücretsiz servis; Alys Beach işaretli yerlerde ücretsiz ziyaretçi otoparkı, plaj ve plaj erişimleri halka kapalı; WaterColor'da topluluk derneğinin yönettiği ücretli park yerleri (otelin SSS'sinden, ikincil). Rosemary Beach ve WaterSound'un sitelerinde ziyaretçi otoparkı bilgisi bulunamadı (`dogrulanamadi`).
 - **Çözülemeyenler:** eyalet parklarının ücret ve saatleri (site Cloudflare doğrulaması; uygulama içi tarayıcıyla giriş reddedildi; ücret çizelgesi PDF'i de 403), Timpoochee uzunluğu (Walton County'nin resmî değeri bulunamadı; çelişki sürüyor), 30A hız sınırları (resmî karar belgesi bulunamadı; tek haber kaynağı Cloudflare arkasında).
+
+GÖREV-08 sonrası dağılım (8 Ekim 2026):
+
+| Konu | Satır | Doğrulandı | Çelişkili | Doğrulanamadı | Yerine geçildi |
+|---|---:|---:|---:|---:|---:|
+| Plaj kuralları | 29 | 29 | 0 | 0 | 0 |
+| Güvenlik | 13 | 11 | 0 | 0 | 2 |
+| Plaj erişimi | 17 | 17 | 0 | 0 | 0 |
+| Ulaşım | 19 | 17 | 2 | 0 | 0 |
+| Parklar | 8 | 8 | 0 | 0 | 0 |
+| Kasırga sezonu | 2 | 2 | 0 | 0 | 0 |
+| Sezon ve maliyet | 14 | 13 | 0 | 0 | 1 |
+| Genel | 3 | 3 | 0 | 0 | 0 |
+| **Toplam** | **105** | **100** | **2** | **0** | **3** |
+
+GÖREV-08'de tamamlananlar ("Tarayıcı ve insan doğrulaması" yöntemiyle):
+- **Eyalet parkları:** floridastateparks.org sayfaları uygulama içi tarayıcıda normal açıldı (doğrulama ekranı çıkmadı; otomasyonla açılan Chrome'a ve düz isteğe ise 403 veriyor). Ham sayfa aynı tarayıcı oturumunda `fetch` ile alındı, SHA-256'sı tarayıcıda ve diskte aynı. Grayton Beach: araç başına $5 (2–8 kişi), tek kişilik araç $4, yaya/bisikletli/ek yolcu $2; 08:00–gün batımı, her gün. Topsail Hill Preserve: $6 (2–8 kişi; fazlası kişi başı $2), tek kişilik araç veya motosiklet $4, yaya/bisikletli $2; 08:00–gün batımı. Deer Lake: $3 (2–8 kişi), yaya/bisikletli/ek yolcu $2, "honor box" ile; 08:00–gün batımı. Deer Lake'in eski "hours-fees" adresi artık 404; değerler parkın ana sayfasından.
+- **30A hız sınırları:** DeFuniak Herald haberi okundu (yayın 2 Mart 2017): ilçe meclisi CR-30A trafik çalışmasının hız önerilerini onayladı; öneri 35 mph azami hız (`hiz-30a`, ikincil). İlçenin 14 Şubat 2017 tutanağı kararı doğruluyor (5–0; `hiz-30a-karar`, birincil) ama hız değerlerini yazmıyor; Atkins çalışmasının kendisi bulunamadı. Bugünkü levha hızları ayrıca doğrulanmadı.
+- **Timpoochee:** ilçenin Turizm Dairesi sayfası "26 milden fazla çok amaçlı yol"un bakımını yaptığını söylüyor (`timpoochee-ilce-bakim`) ama yolun adını vermiyor; Timpoochee'ye özgü ilçe veya FDOT değeri yine bulunamadı. 19 / 18,5 mil çelişkisi sürüyor.
+- **Rosemary Beach ve WaterSound otoparkı:** toplulukların ve kiralama şirketlerinin sitelerinde ziyaretçi otoparkı bilgisi yok (Rosemary Beach'te yalnız kiracılara park kartı). Visit South Walton'ın 2023 park rehberi: Rosemary Beach'te Barrett Square boyunca ilk gelenin aldığı dükkân otoparkı; WaterSound'da The Big Chill ziyaretçilerine açık otopark (ikincil).
 
 ## Aylık turist vergisi (TDT)
 
