@@ -17,6 +17,12 @@ ages 12,cocuk,,
 dessert cocktails,icecek,,"tatlı satırlarından önce: tatlı kokteylleri içecektir"
 pizza pies,ana_yemek,,"""pies"" tatlı satırından önce"
 pizza pie,ana_yemek,,
+red pies,ana_yemek,,pizza
+white pies,ana_yemek,,pizza
+specialty pies,ana_yemek,,pizza
+signature pies,ana_yemek,,pizza
+shave ice,tatli,,
+shaved ice,tatli,,
 dessert,tatli,,
 desserts,tatli,,
 sweets,tatli,,
@@ -225,6 +231,8 @@ burgers,ana_yemek,,
 burger,ana_yemek,,
 sandwiches,ana_yemek,,
 sandwich,ana_yemek,,
+savory crepes,ana_yemek,,
+boils,ana_yemek,,deniz ürünü kaynatma
 grilled cheese,ana_yemek,,
 handhelds,ana_yemek,,
 hand helds,ana_yemek,,

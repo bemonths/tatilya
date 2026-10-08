@@ -199,9 +199,19 @@ class HostPacer:
 class Fetcher:
     def __init__(self, client, store, pacer, canceled):
         self.client, self.store, self.pacer, self.canceled = client, store, pacer, canceled
+        self.cache, self.cache_lock = {}, threading.Lock()
 
     def get(self, url, *, restaurant, note):
-        """GET with redirects followed (each hop kept). Returns Document or raises httpx.HTTPError / SourceError."""
+        """GET with redirects followed (each hop kept). Returns Document or raises httpx.HTTPError / SourceError. Restaurants that
+        share a page (one site for several locations) read it once in a run: a later request gets the same document."""
+        with self.cache_lock:
+            lock = self.cache.setdefault(url, {"lock": threading.Lock(), "document": None})
+        with lock["lock"]:
+            if lock["document"] is None or lock["document"].status not in (200,):
+                lock["document"] = self.fetch(url, restaurant=restaurant, note=note)
+            return lock["document"]
+
+    def fetch(self, url, *, restaurant, note):
         current = url
         for _ in range(MAX_REDIRECTS + 1):
             check(self.canceled)
@@ -263,10 +273,11 @@ def html_lines(html):
         if not line:
             continue
         if line.startswith("§H§"):
-            if line[3:].strip():
-                lines.append(("h", line[3:].strip()))
+            heading = clean(line.replace("§H§", " "))           # a heading element inside another one leaves a second marker
+            if heading:
+                lines.append(("h", heading))
         else:
-            lines.append(("p", line))
+            lines.append(("p", clean(line.replace("§H§", " "))))
     return lines
 
 
@@ -433,10 +444,13 @@ SIZE_PRICES = re.compile(r"^(?P<name>.+?)\s+(?P<sizes>(?:(?:cup|bowl|half|full|s
                          r"6\"|12\"|8\"|10\"|14\"|16\")\s*\$?\s?\d{1,3}(?:\.\d{1,2})?\s*[/|,]?\s*){2,})$", re.I)
 MARKET = re.compile(r"\b(?:market price|mkt\.?|mp|m\.p\.|market)\s*$", re.I)
 NOT_PRICE_UNIT = re.compile(r"\d\s*(?:oz|lb|lbs|pc|pcs|pieces?|ct|count|inch|in\.|\"|%|am|pm|a\.m|p\.m|calories|cal|years?|yrs?|ft|miles?)\b", re.I)
-SKIP_NAME = re.compile(r"^(?:add|sub|substitute|make it|upgrade|\+|with|w/|extra|choice of|choose|served|includes?|gratuity|tax|price|prices)\b", re.I)
+SKIP_NAME = re.compile(r"^(?:\*|(?:may )?contains?\b|gluten[- ]free (?:buns?|bread|crust|option)|add|sub|substitute|make it|upgrade|\+|with|w/|extra|choice of|choose|served|includes?|gratuity|tax|price|prices|"
+                       r"(?:your )?cart|skip to (?:main )?content|check (?:gift card )?balance|suite|ste\.?|"
+                       r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?|\d+\s+(?:reviews?|likes?|ratings?))\b|"
+                       r"^.*\b(?:county (?:hwy|highway|road)|hwy 30a|highway 30a)\b", re.I)    # an address line is not a dish
 PHONE = re.compile(r"\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}")
 # Buttons and counters menu platforms print between dishes ("1 likes", "Order Online", "0 0 0").
-NOISE = re.compile(r"^(?:\d+\s+likes?|\d+(?:\s+\d+)+|order online|order now|add to (?:cart|order|bag)|view details|completed loading.*|"
+NOISE = re.compile(r"^(?:\d+\s+(?:likes?|reviews?|ratings?)|\d+(?:\s+\d+)+|order online|order now|add to (?:cart|order|bag)|view details|completed loading.*|"
                    r"n/a|sold out|popular|new|gluten[- ]free|gf|v|vg|df)$", re.I)
 TWIN_PRICE = re.compile(r"\$(\d{1,3}(?:\.\d{2})?)\s+\$\1(?=\s|$)")
 
@@ -476,6 +490,9 @@ def parse_menu(lines):
         nonlocal pending, headed, section
         if headed is not None and under is headed:
             section = headed[1]                   # the heading was a dish name: its section is the one above
+        if (not market and min(values) < 1.5) or "$" in name or SKIP_NAME.match(name) or re.fullmatch(r"[\d\W]+", name):
+            pending, headed = None, None                  # "$0.00" / "1": a cart, a counter or an add-on; "Cup $11 Bowl $14": a price line
+            return
         items.append({"section": section, "name": name, "price_text": price_text, "price": None if market else min(values),
                       "price_rule": "market" if market else ("lowest" if len(values) > 1 else "single")})
         pending, headed = None, None
@@ -692,6 +709,16 @@ class RestaurantRun:
         if on_host(home.final_url, SOCIAL_HOSTS):
             self.site.update({"site_status": "social_login", "status_note": "Sosyal medya sayfası; giriş yapmadan içerik okunmadı."})
             return self
+        moved = None
+        root = f"{urlsplit(home.final_url).scheme}://{urlsplit(home.final_url).netloc}/"
+        if home.status in (404, 410) and urlsplit(home.final_url).path not in ("", "/"):
+            try:
+                again = self.get(root, "site-home")
+            except (httpx.HTTPError, SourceError):
+                again = None
+            if again is not None and again.status == 200 and again.kind == "html":
+                moved, home = home, again             # the directory's page is gone; the site itself answers
+                self.site.update({"final_url": home.final_url, "http_status": home.status, "fetched_at": home.fetched_at, "raw_sha256": home.sha256})
         if home.status in (404, 410):
             self.site.update({"site_status": "not_found", "status_note": f"Site HTTP {home.status} döndü."})
             return self
@@ -701,6 +728,8 @@ class RestaurantRun:
                               if challenged else f"Site HTTP {home.status} ({home.content_type}) döndü.")})
             if challenged:
                 self.needs_browser = "challenge"
+            elif home.status in (403, 429):
+                self.needs_browser = "refused"         # a real browser may be let in where a plain request was refused
             return self
         html = home.text
         lines = html_lines(html)
@@ -708,8 +737,12 @@ class RestaurantRun:
         if PARKED.search(flat) or PARKED.search(page_title(html)):
             self.site.update({"site_status": "other_business", "status_note": "Alan adı satılık / park edilmiş sayfa."})
             return self
+        notes = []
+        if moved is not None:
+            notes.append(f"Dizindeki sayfa bulunamadı (HTTP {moved.status}: {moved.final_url}); sitenin ana sayfası okundu.")
         if not same_business(page_title(html) + " " + flat, restaurant):
-            self.site["status_note"] = "Ana sayfada işletmenin adı ya da telefonu görünmedi; site yine de okundu."
+            notes.append("Ana sayfada işletmenin adı ya da telefonu görünmedi; site yine de okundu.")
+        self.site["status_note"] = " ".join(notes) or None
         self.site["site_status"] = "working"
         self.read_pages.append((home, lines))
         self.structured(home, html)
@@ -1087,10 +1120,16 @@ def browser_available():
     return True
 
 
+BROWSER_REASONS = {"challenge": "doğrulama sayfası", "render": "JavaScript ile çizilen menü", "refused": "düz HTTP isteği reddedildi"}
+KNOWN_STATUS = {"working": 3, "not_found": 2, "closed_permanently": 2, "closed_season": 2, "other_business": 2, "social_login": 1, "no_site": 1,
+                "unreachable": 0}
+
+
 def better(second, first):
-    """True when the browser pass read more of the restaurant than plain HTTP did."""
+    """True when the browser pass read more of the restaurant than plain HTTP did (a definite answer such as 'not found' also beats
+    an unreachable site)."""
     def score(run):
-        return (run.site["site_status"] == "working", sum(m["status"] == "read" for m in run.menus), len(run.items), len(run.facts))
+        return (KNOWN_STATUS[run.site["site_status"]], sum(m["status"] == "read" for m in run.menus), len(run.items), len(run.facts))
     return score(second) > score(first)
 
 
@@ -1160,7 +1199,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                         continue
                     if better(retry, first):
                         retry.site["status_note"] = (f"{retry.site['status_note'] or ''} Sayfalar görünür tarayıcıyla okundu "
-                                                     f"({'doğrulama sayfası' if first.needs_browser == 'challenge' else 'JavaScript ile çizilen menü'}).").strip()
+                                                     f"({BROWSER_REASONS[first.needs_browser]}).").strip()
                         runs[index] = retry
                     else:
                         first.site["status_note"] = f"{first.site['status_note'] or ''} Tarayıcıyla okuma daha fazla bilgi vermedi.".strip()

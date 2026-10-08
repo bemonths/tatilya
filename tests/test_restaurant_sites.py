@@ -270,6 +270,59 @@ def test_photos_menus_without_prices_and_text_pdfs_without_prices(tmp_path):
     assert (by_file["steam-menu.pdf"]["status"], by_file["steam-menu.pdf"]["method"]) == ("no_items", "PDF metni")   # text, but no prices
 
 
+def test_nested_headings_cart_counters_and_addresses_are_not_dishes():
+    html = ('<div class="menu-section-title"><h3>Lunch</h3></div><p>Turkey Wrap 14</p><p>Your Cart $0.00</p><p>Skip to content 0</p>'
+            '<p>1 Review 1</p><p>Suite 101</p><p>1777 East County Hwy 30A 120</p><p>Oct 8</p><p>Club Sandwich $13</p>')
+    items = rs.parse_menu(rs.html_lines(html))
+    assert [(i["section"], i["name"], i["price"]) for i in items] == [("Lunch", "Turkey Wrap", 14.0), ("Lunch", "Club Sandwich", 13.0)]
+    popmenu = [("h", "Appetizers"), ("h", "Pizza Bread"), ("p", "A quarter of a muffaletta roll topped with house marinara and mozzarella"),
+               ("p", "*contains sesame seeds"), ("p", "1 likes"), ("p", "$12.00"), ("h", "Fries"), ("p", "$8.00"), ("p", "/"), ("p", "$16"),
+               ("p", "Buffalo Style 1")]
+    assert [(i["section"], i["name"], i["price"]) for i in rs.parse_menu(popmenu)] == [("Appetizers", "Pizza Bread", 12.0), ("Appetizers", "Fries", 8.0)]
+
+
+def test_a_moved_page_falls_back_to_the_home_page_and_shared_pages_are_read_once(tmp_path):
+    pages = {"/": "<title>Big Breakfast</title><h1>Big Breakfast</h1><a href='/menu'>Menu</a>",
+             "/menu": "<h2>ENTREES</h2><p>Biscuit Plate 14</p>"}
+    def handler(request):
+        if request.url.host == "moved.example":
+            if request.url.path in pages:
+                return httpx.Response(200, text=pages[request.url.path], headers={"content-type": "text/html"})
+            return httpx.Response(404, text="<h1>Not found</h1>", headers={"content-type": "text/html"})
+        return Sites()(request)
+    sites = Sites()
+    def counting(request):
+        sites.seen.append(request)
+        return handler(request)
+    result = run(tmp_path, [restaurant("big", "Big Breakfast", "https://moved.example/locations/inlet-beach"),
+                            restaurant("coast-a", "Coast & Table", "https://restaurant.example/"),
+                            restaurant("coast-b", "Coast & Table Seaside", "https://restaurant.example/")], counting)
+    site, _, menus, items = related(result, "/listing/big/")
+    assert site["site_status"] == "working" and "Dizindeki sayfa bulunamadı (HTTP 404" in site["status_note"]
+    assert [i["name"] for i in items] == ["Biscuit Plate"]
+    homes = [r for r in sites.seen if r.url.host == "restaurant.example" and r.url.path == "/"]
+    assert len(homes) == 1                                        # two restaurants, one shared home page
+    assert related(result, "/listing/coast-b/")[0]["site_status"] == "working"
+
+
+def test_a_plain_refusal_is_tried_in_the_browser_and_a_definite_answer_wins(tmp_path):
+    class Refusing(StandInSession):
+        def current(self):
+            self.looks += 1
+            return 404, self.url, "text/html", b"<title>Page not found</title>"
+    def handler(request):
+        if request.url.host == "refuse.example":
+            return httpx.Response(403, text="<h1>Forbidden</h1>", headers={"content-type": "text/html"})
+        return Sites()(request)
+    session = Refusing({})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        pages = rs.BrowserPages(None, lambda: False, opener=lambda profile: session)
+        rows = [restaurant("refuse", "Refuse Grill", "https://refuse.example/")]
+        result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False, config=config(rows, tmp_path), client=client, browser=pages)
+    site = related(result, "/listing/refuse/")[0]
+    assert session.looks >= 1 and site["site_status"] == "not_found"          # the browser's 404 is more than "unreachable"
+
+
 def test_curly_quoted_names_pizza_pies_and_drinks_menus():
     items = rs.parse_menu([("p", "Kids Menu"), ("p", "“Horn Island” Chicken Fingers 13"), ("p", "“Ship Island” Bowtie Pasta & Sauce 10")])
     assert [(i["name"], i["price"]) for i in items] == [("“Horn Island” Chicken Fingers", 13.0), ("“Ship Island” Bowtie Pasta & Sauce", 10.0)]
