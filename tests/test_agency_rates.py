@@ -617,7 +617,7 @@ def test_job_shows_which_site_waits_for_verification(tmp_path, monkeypatch):
         assert tl.start(client)["status"] == "done"
         job = tl.start(client, url=AGENCY_URL)
         assert job["status"] == "done"
-        assert seen[0][0] == "challenge.example" and "Kullanıcı doğrulaması bekleniyor: challenge.example" in seen[0][1]
+        assert seen[0][0] == "challenge.example" and "Kullanıcı doğrulaması bekleniyor: challenge.example" in seen[0][1] and "(en çok 15 dk)" in seen[0][1]
         assert db.job(job["id"])["waiting_for"] is None and any("Doğrulama beklemesi bitti" in e["text"] for e in db.job(job["id"])["log"])
         summary = client.get(f"/api/agency-rate-runs/{job['id']}").json()
         assert summary["companies"][0]["status"] == "verification_timeout"

@@ -92,7 +92,8 @@ class JobQueue:
             extra = {}
             if getattr(connector, "uses_verification", False):
                 def waiting(site):
-                    message = (f"Kullanıcı doğrulaması bekleniyor: {site}. Açılan tarayıcı penceresinde doğrulamayı tamamlayın (en çok 15 dk)."
+                    message = (f"Kullanıcı doğrulaması bekleniyor: {site}. Açılan tarayıcı penceresinde doğrulamayı tamamlayın "
+                               f"(en çok {getattr(connector, 'verify_minutes', 15)} dk)."
                                if site else "Doğrulama beklemesi bitti; toplama devam ediyor.")
                     if not self.db.update_job(identifier, message=message, waiting_for=site or ""):
                         raise CollectionCanceled()

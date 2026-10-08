@@ -929,6 +929,7 @@ class AgencyRatesConnector:
     diff_reason = "Kiralama şirketi fiyatları tarihe bağlı sorgulardır; sürümler arası fark envanter değişikliği sayılmamalı."
     inputs = ("lodging_listings",)
     uses_verification = True
+    verify_minutes = VERIFY_TIMEOUT // 60
 
     def __init__(self, verifier_factory=None):
         self.verifier_factory = verifier_factory

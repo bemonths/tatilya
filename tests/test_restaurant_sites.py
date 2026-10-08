@@ -337,6 +337,11 @@ def test_a_verification_page_is_read_again_in_the_browser_and_the_user_wait_is_s
     assert any(e["note"].endswith("(tarayıcı)") for e in manifest["responses"]) and any(e["status"] == 403 for e in manifest["responses"])
 
 
+def test_each_connector_names_its_own_verification_wait():
+    from studio.sources import agency_rates
+    assert (rs.RestaurantSitesConnector.verify_minutes, agency_rates.AgencyRatesConnector.verify_minutes) == (5, 15)
+
+
 def test_an_ordinary_page_behind_cloudflare_is_not_a_verification_page(tmp_path):
     normal = ("<html><head><title>Coast Grill</title></head><body><h1>Coast Grill</h1><script>(function(){var a=document.createElement('script');"
               "a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.head.appendChild(a)})();</script></body></html>")

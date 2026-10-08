@@ -1288,6 +1288,7 @@ def dumps(value):
 
 class RestaurantSitesConnector:
     uses_verification = True
+    verify_minutes = VERIFY_TIMEOUT // 60
     name = "restaurant-sites"
     version = CONNECTOR_VERSION
     raw_filename = "manifest.json"
