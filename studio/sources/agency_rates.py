@@ -45,6 +45,7 @@ PROGRESS_EVERY = 2.0
 # (a contact form, a Drupal "Access denied" page) is not a verification page.
 CHALLENGE = re.compile(r"Just a moment\.\.\.|cf-chl-|/cdn-cgi/challenge-platform|Verify you are human|Checking your browser before|"
                        r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold", re.I)
+SOFT_404 = re.compile(r"\bpages? not found\b|\b404\b|\bnot found\b", re.I)    # a "not found" page served with HTTP 200
 PAGE_STATUSES = ("matched", "not_found", "no_listing", "off_site", "blocked", "error", "not_queried", "no_adapter", "no_url")
 COMPANY_STATUSES = ("done", "stopped_blocked", "stopped_errors", "verification_timeout", "verification_unavailable", "failed")
 QUOTE_STATUSES = ("priced", "unavailable", "restricted", "no_price", "error")
@@ -437,6 +438,10 @@ def open_listing(session, adapter, url, ask):
         return {**base, "page_status": "error", "message": f"Şirket sitesi HTTP {reply.status} döndü."}
     info = adapter.parse_page(reply.text, reply.url)
     if not info:
+        title = re.search(r"<title[^>]*>([^<]*)</title>", reply.text[:200_000], re.I)
+        if title and SOFT_404.search(title.group(1)):
+            return {**base, "page_status": "not_found", "message": f"Şirket sitesi 'sayfa bulunamadı' sayfası döndürdü (HTTP 200, başlık: "
+                                                                   f"{title.group(1).strip()[:80]})."}
         return {**base, "page_status": "no_listing", "message": "Sayfada bu altyapının ilan kimliği yok; bağlantı ilan sayfasına gitmiyor olabilir."}
     info["page_sha256"] = reply.sha256          # an answer read from the page itself (e.g. its calendar) cites this response
     return {**base, "page_status": "matched", "site_listing_id": info["site_id"], "info": info}

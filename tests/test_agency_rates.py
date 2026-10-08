@@ -116,6 +116,8 @@ class Sites:
                 return httpx.Response(302, headers={"location": "/"})
             if path == "/":
                 return html("<html><title>Home</title></html>")
+            if path == "/rentals/soft404":
+                return html("<html><head><title>Pages Not Found | ResCMS Rentals</title></head><body>gone</body></html>")
             if path == "/rentals/moved":
                 return httpx.Response(301, headers={"location": "https://other.example/x"})
             if path == "/rescms/ajax/item/pricing/simple":
@@ -186,6 +188,7 @@ def standard_listings():
             listing(12, "https://www.rescms.example/rentals/old"),
             listing(13, "https://www.rescms.example/rentals/home"),
             listing(14, "https://www.rescms.example/rentals/moved"),
+            listing(15, "https://www.rescms.example/rentals/soft404"),
             listing(20, "https://www.track.example/rentals/194", bedrooms=5),
             listing(21, "https://www.track.example/rentals/195", bedrooms=2),
             listing(22, "https://www.track.example/rentals/196", bedrooms=4),
@@ -291,12 +294,13 @@ def test_listings_are_matched_only_by_their_link(tmp_path):
     mock = Sites()
     result = run(tmp_path, mock)
     rows = {r["lodging_id"]: r for r in result.records}
-    assert {i: rows[i]["page_status"] for i in rows} == {10: "matched", 11: "matched", 12: "not_found", 13: "no_listing", 14: "off_site",
+    assert {i: rows[i]["page_status"] for i in rows} == {10: "matched", 11: "matched", 12: "not_found", 13: "no_listing", 14: "off_site", 15: "not_found",
                                                          20: "matched", 21: "matched", 22: "matched", 30: "matched", 40: "matched",
                                                          50: "no_url", 51: "no_adapter"}
     assert rows[10]["site_listing_id"] == rows[11]["site_listing_id"] == "261"           # the link, not the (different) title
     assert rows[13]["page_url"] == "https://www.rescms.example/" and rows[14]["page_url"] == "https://other.example/x"
     assert rows[12]["http_status"] == 404 and rows[50]["domain"] is None and rows[51]["url_host"] == "unknown.example"
+    assert rows[15]["http_status"] == 200 and "Pages Not Found" in rows[15]["message"]          # a "not found" page served with 200
     pages = [r for r in mock.seen if r.url.path == "/rentals/a"]
     assert len(pages) == 1                                                                 # one page read for a shared link
     assert not any(r.url.host == "other.example" or r.url.host == "unknown.example" for r in mock.seen)
