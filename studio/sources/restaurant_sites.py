@@ -1011,6 +1011,8 @@ class BrowserPages:
         if self.session is not None:
             try:
                 self.session.close()
+            except Exception:
+                pass
             finally:
                 self.session = None
 
@@ -1108,6 +1110,8 @@ class PlaywrightSession:
     def close(self):
         try:
             self.context.close()
+        except Exception:
+            pass                                  # the window may already be closed (by the user)
         finally:
             self.playwright.stop()
 
@@ -1120,6 +1124,7 @@ def browser_available():
     return True
 
 
+WINDOW_CLOSED = re.compile(r"TargetClosedError|has been closed|Browser closed|Connection closed", re.I)
 BROWSER_REASONS = {"challenge": "doğrulama sayfası", "render": "JavaScript ile çizilen menü", "refused": "düz HTTP isteği reddedildi"}
 KNOWN_STATUS = {"working": 3, "not_found": 2, "closed_permanently": 2, "closed_season": 2, "other_business": 2, "social_login": 1, "no_site": 1,
                 "unreachable": 0}
@@ -1195,6 +1200,12 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                     except CollectionCanceled:
                         raise
                     except Exception as exc:
+                        if WINDOW_CLOSED.search(f"{type(exc).__name__} {exc}"):
+                            # the browser window was closed: the rest keep their first (plain HTTP) reading
+                            for later in second[count - 1:]:
+                                runs[later].site["status_note"] = (f"{runs[later].site['status_note'] or ''} Tarayıcı penceresi kapandığı için "
+                                                                   f"tarayıcıyla ikinci okuma yapılmadı.").strip()
+                            break
                         first.site["status_note"] = f"{first.site['status_note'] or ''} Tarayıcıyla okuma başarısız: {type(exc).__name__}: {str(exc)[:120]}".strip()
                         continue
                     if better(retry, first):

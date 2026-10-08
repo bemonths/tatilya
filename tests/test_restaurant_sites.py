@@ -372,6 +372,26 @@ class StandInSession:
         self.closed = True
 
 
+def test_a_closed_browser_window_keeps_the_first_reading_and_the_run_completes(tmp_path):
+    class TargetClosedError(Exception):
+        pass
+
+    class Closed(StandInSession):
+        def goto(self, url):
+            raise TargetClosedError("Page.goto: Target page, context or browser has been closed")
+
+        def close(self):
+            raise TargetClosedError("BrowserContext.close: Target page, context or browser has been closed")
+
+    rows = [restaurant("guarded", "Guarded Grill", "https://guarded.example/"), restaurant("guarded2", "Guarded Two", "https://guarded.example/two")]
+    with httpx.Client(transport=httpx.MockTransport(Sites())) as client:
+        pages = rs.BrowserPages(None, lambda: False, opener=lambda profile: Closed({}))
+        result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False, config=config(rows, tmp_path), client=client, browser=pages)
+    for key in ("/listing/guarded/", "/listing/guarded2/"):
+        site = related(result, key)[0]
+        assert site["site_status"] == "unreachable" and "Tarayıcı penceresi kapandığı için" in site["status_note"]
+
+
 def test_a_verification_page_is_read_again_in_the_browser_and_the_user_wait_is_shown(tmp_path, monkeypatch):
     monkeypatch.setattr(rs, "VERIFY_TIMEOUT", 60)
     monkeypatch.setattr(rs, "pause", lambda seconds, canceled: None)
