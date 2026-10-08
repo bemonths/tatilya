@@ -185,8 +185,10 @@ class ResCMS:
 
     @staticmethod
     def parse_quote(content):
+        """Line items, sub-total, tax and total of the detailed quote. Optional items ("forced-choice" rows such as travel
+        insurance) count as fees only when the site's own sub-total includes them; a "declined" row never does."""
         tree = Tree(content).root
-        rent, fees, taxes, total, excluded, currency = None, [], [], None, [], None
+        rent, fees, optional, taxes, total, subtotal, excluded, currency = None, [], [], [], None, None, [], None
         for row in tree.find("tr"):
             classes = row.attrs.get("class", "").split()
             cells = [c for c in row.children if getattr(c, "tag", None) in ("td", "th")]
@@ -198,6 +200,8 @@ class ResCMS:
             currency = currency or currency_of(amount_text)
             if "total" in classes:
                 total = amount
+            elif "sub-total" in classes:
+                subtotal = amount
             elif "tax" in classes:
                 if amount is not None:
                     taxes.append({"name": label or "Tax", "amount": amount})
@@ -208,10 +212,18 @@ class ResCMS:
                     excluded.append({"name": label, "amount": amount, "reason": "sitede isteğe bağlı, seçilmemiş"})
                 elif rent is None and re.match(r"(lodging|rent|rental|accommodation)\b", label, re.I):
                     rent = amount
+                elif "forced-choice" in classes or re.search(r"\(optional\)", label, re.I):
+                    optional.append({"name": label, "amount": amount})
                 else:
                     fees.append({"name": label, "amount": amount})
         if rent is None and total is None:
             raise AdapterError("Ayrıntılı fiyat tablosunda kira veya toplam satırı yok.")
+        base = (rent or 0) + sum(f["amount"] for f in fees)
+        if optional and subtotal is not None and abs(base + sum(o["amount"] for o in optional) - subtotal) <= 1.0 \
+                and abs(base - subtotal) > 1.0:
+            fees.extend(optional)            # the site's sub-total includes the optional items: they are part of this price
+        else:
+            excluded.extend({**o, "reason": "sitede isteğe bağlı; sitenin ara toplamına dahil değil"} for o in optional)
         return breakdown(rent, fees, None, total, tax_items=taxes, excluded=excluded, currency=currency)
 
 

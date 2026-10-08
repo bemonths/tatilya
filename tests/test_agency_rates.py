@@ -236,6 +236,24 @@ def test_rescms_page_rules_and_detailed_quote():
     assert (quote["total_includes_fees"], quote["total_includes_taxes"], quote["currency"]) == (1, 1, "USD")
 
 
+def test_rescms_optional_items_follow_the_sites_own_subtotal():
+    def table(subtotal, total):
+        return f"""<table><tbody>
+ <tr class="line-item odd"><td>Lodging: Eagle's Nest<br /></td><td class="amount">$9,275.00</td></tr>
+ <tr class="line-item even"><td>Cleaning Fee<br /></td><td class="amount">$600.00</td></tr>
+ <tr class="line-item forced-choice odd"><td>Travel Insurance (optional)<p>The plan cost includes the premium.</p></td><td class="amount">$780.66</td></tr>
+ <tr class="sub-total even"><th>Sub-Total</th><td class="amount"><b>{subtotal}</b></td></tr>
+ <tr class="tax odd"><th>Tax</th><td class="amount"><b>$1,203.48</b></td></tr>
+ <tr class="total even"><th>Total</th><td class="amount"><b>{total}</b></td></tr></tbody></table>"""
+    left_out = aa.ResCMS.parse_quote(table("$9,875.00", "$11,078.48"))            # the site's sub-total leaves the insurance out
+    assert left_out["fees"] == [{"name": "Cleaning Fee", "amount": 600.0}] and left_out["other_fees"] is None
+    assert left_out["excluded_items"][0]["name"] == "Travel Insurance (optional)" and "ara toplamına dahil değil" in left_out["excluded_items"][0]["reason"]
+    assert (left_out["total_includes_fees"], left_out["total_includes_taxes"]) == (1, 1)
+    included = aa.ResCMS.parse_quote(table("$10,655.66", "$11,859.14"))           # the sub-total includes it: part of the price
+    assert [f["name"] for f in included["fees"]] == ["Cleaning Fee", "Travel Insurance (optional)"] and included["excluded_items"] is None
+    assert included["total_includes_fees"] == 1
+
+
 def test_track_quote_groups_fees_and_keeps_missing_fields_null():
     info = aa.Track().parse_page(TRACK_PAGE % "194", "https://www.track.example/rentals/194")
     assert info["site_id"] == "194" and info["quote_url"] == "https://www.track.example/ajax/quote"
