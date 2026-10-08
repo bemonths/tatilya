@@ -429,8 +429,8 @@ def create_app(data_dir: Path | None = None, registry=None):
     def agency_listings(identifier: str, region_id: str):
         find_agency_run(identifier)
         with db.connect() as con:
-            listings = agency_rates.region_listings(con, identifier, region_id)
-        return {"region_id": region_id, "listings": listings or []}
+            found = agency_rates.region_listings(con, identifier, region_id) or {}
+        return {"region_id": region_id, "listings": found.get("listings", []), "own": found.get("own", [])}
 
     @app.get("/api/agency-rate-runs/{identifier}/raw")
     def raw_agency_run(identifier: str):

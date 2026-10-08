@@ -1,19 +1,25 @@
 """Rental-platform adapters for the agency rate collector: find the platform's listing identity on a company listing page and
 ask the price/availability display the site's own front end asks, for one date window.
 
-Destination-independent: an adapter knows a reservation platform (ResCMS, Track, Streamline, "vacation-rentals/router"), never a
-company. Which company site uses which adapter comes from the destination configuration. Only fields the site shows are
-filled; everything else stays None. Amounts are the site's own numbers; sums and checks are labelled as ours.
+Destination-independent: an adapter knows a reservation platform or a company front end's public price display (ResCMS,
+Track, Streamline, "vacation-rentals/router", VRPConnect, ...), never a destination. Which company site uses which adapter comes
+from the destination configuration. Only fields the site shows are filled; everything else stays None. Amounts are the site's
+own numbers; sums and checks are labelled as ours.
+
+Every quote() receives the guest count (adults, children) and returns it under "guests" when the price request carried it, or
+None when the site's price request has no guest field. An adapter may also read the company's own listing list (inventory())
+and the listing details a page shows (unit_fields()) for the address/location matching in agency_matching.
 """
 import json
 import re
 from datetime import date
 from html import unescape
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlencode, urljoin, urlsplit
 
+from .agency_matching import json_ld_unit, normalize_address, number
 from .html_tree import Tree
 
-GUESTS = 2          # the price display asks for a guest count; two adults, no children or pets
+DEFAULT_GUESTS = {"adults": 2, "children": 0}     # two adults, no children or pets unless the company configuration says otherwise
 
 
 class AdapterError(Exception):
@@ -134,6 +140,7 @@ class ResCMS:
     /rescms/ajax/item/pricing/simple for availability and a price, then the "detailed quote" link for the breakdown."""
 
     name = "rescms"
+    sends_guests = True
 
     def parse_page(self, html, url):
         anchor = html.find("rcItemAvailForm")
@@ -159,11 +166,33 @@ class ResCMS:
         days = None if turn in (None, 0) or turn == [0] else sorted(set(turn if isinstance(turn, list) else [turn]))
         return (min_stay if isinstance(min_stay, int) and min_stay > 0 else None), days
 
-    def quote(self, session, info, window):
+    def unit_fields(self, html):
+        """The listing's own location (Drupal field_location: street, city, coordinates) and the bedroom/bath/occupancy lines."""
+        found = {}
+        location = re.search(r'"field_location":\{"und":\[\{(.*?)\}\]', html)
+        if location:
+            body = location.group(1)
+            for key, target in (("street", "address"), ("additional", "address2"), ("city", "city")):
+                value = re.search(r'"%s":"((?:[^"\\]|\\.)*)"' % key, body)
+                if value and value.group(1).strip():
+                    found[target] = json.loads(f'"{value.group(1)}"').strip()
+            for key in ("latitude", "longitude"):
+                value = re.search(r'"%s":"(-?[0-9.]+)"' % key, body)
+                if value and number(value.group(1)):
+                    found[key] = number(value.group(1))
+        beds = re.search(r'rc-lodging-beds[^>]*>\s*([0-9.]+)\s*Bed', html)
+        baths = re.search(r'rc-lodging-baths[^>]*>\s*([0-9.]+)\s*Bath', html)
+        sleeps = re.search(r'"Occupancy"\s*:\s*"?(\d+)', html)
+        found.update({k: number(m.group(1)) for k, m in (("bedrooms", beds), ("bathrooms", baths), ("sleeps", sleeps)) if m})
+        if found.get("address2"):
+            found["address"] = f"{found.get('address') or ''} {found.pop('address2')}".strip()
+        return found
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
         checkin, checkout = window["checkin_date"], window["checkout_date"]
         min_stay, days = self.rules(info, checkin)
-        params = {"rcav[begin]": us_date(checkin), "rcav[end]": us_date(checkout), "rcav[flex_type]": "d", "rcav[adult]": str(GUESTS),
-                  "rcav[child]": "0", "rcav[eid]": info["site_id"]}
+        params = {"rcav[begin]": us_date(checkin), "rcav[end]": us_date(checkout), "rcav[flex_type]": "d", "rcav[adult]": str(guests["adults"]),
+                  "rcav[child]": str(guests["children"]), "rcav[eid]": info["site_id"]}
         headers = {"X-Requested-With": "XMLHttpRequest", "Accept": "application/json, text/javascript, */*; q=0.01", "Referer": info["page_url"]}
         simple = session.request("GET", info["origin"] + "/rescms/ajax/item/pricing/simple", params=params, headers=headers,
                                  note=f"rescms-simple-{info['site_id']}-{window['window_key']}")
@@ -260,6 +289,7 @@ class Track:
     recorded as unavailable from that calendar and not priced."""
 
     name = "track"
+    sends_guests = False        # the page's quote request carries no guest count
     FIELDS = ("propertyID", "roomTypeID", "propertyName", "hash")
     TAKEN = ("booked", "check-in")      # a night that starts someone else's stay; a check-out morning leaves the night free
 
@@ -289,7 +319,7 @@ class Track:
             return None
         return [night for night in nights if any(mark in calendar[night] for mark in self.TAKEN)]
 
-    def quote(self, session, info, window):
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
         taken = self.taken_nights(info, window)
         if taken:
             return {**outcome("unavailable", f"İlan sayfasının müsaitlik takvimi bu pencerenin {len(taken)} gecesini dolu gösteriyor "
@@ -353,6 +383,7 @@ class Streamline:
     VerifyPropertyAvailability (a 'status' answer is the site's refusal text), then GetPreReservationPrice with separate taxes."""
 
     name = "streamline"
+    sends_guests = True
 
     def parse_page(self, html, url):
         unit = re.search(r"getRatesDetails\((\d+)\)|getCalendarDataNew\((\d+)\)", html)
@@ -375,9 +406,33 @@ class Streamline:
             raise AdapterError(f"{method} yanıtı beklenen biçimde değil.")
         return reply, data
 
-    def quote(self, session, info, window):
+    def inventory(self, session, origin, options):
+        """Every unit the plugin lists (GetPropertyListWordPress): id, page, coordinates, bedrooms and bathrooms (full + ½ per half
+        bath). The list has no address field; its location name is taken as the street address only when it is one (a street
+        number first, optionally after "Name |"), so a company whose location names are addresses matches by address."""
+        ajax_url = origin + "/wp-admin/admin-ajax.php"
+        reply, data = self.call(session, {"ajax_url": ajax_url, "page_url": origin + "/"}, "GetPropertyListWordPress", {}, "streamline-inventory")
+        rows = (data.get("data") or {}).get("property") if isinstance(data.get("data"), dict) else None
+        if not isinstance(rows, list):
+            raise AdapterError("GetPropertyListWordPress yanıtında ilan listesi yok.")
+        units = []
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get("id") or "").isdigit():
+                continue
+            page = urljoin(origin + "/", (row.get("seo_page_name") or "").strip("/") + "/")
+            full, half = number(row.get("bathrooms_number")), number(row.get("half_bathroom_count")) or 0
+            location = (clean(row.get("location_name")) or "").split("|")[-1].strip()
+            units.append({"site_id": str(row["id"]), "url": page, "title": clean(row.get("name")),
+                          "address": location if normalize_address(location) else None, "city": clean(row.get("city")),
+                          "latitude": number(row.get("latitude")), "longitude": number(row.get("longitude")),
+                          "bedrooms": number(row.get("bedrooms_number")), "bathrooms": None if full is None else full + 0.5 * half,
+                          "sleeps": number(row.get("max_occupants")),
+                          "info": {"site_id": str(row["id"]), "ajax_url": ajax_url, "page_url": page}})
+        return units, [reply]
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
         base = {"unit_id": int(info["site_id"]), "startdate": us_date(window["checkin_date"]), "enddate": us_date(window["checkout_date"]),
-                "occupants": GUESTS, "occupants_small": 0, "pets": 0}
+                "occupants": guests["adults"], "occupants_small": guests["children"], "pets": 0}
         first, data = self.call(session, info, "VerifyPropertyAvailability", {**base, "use_room_type_logic": 0, "include_coupon_information": 1},
                                 f"streamline-verify-{info['site_id']}-{window['window_key']}")
         status = data.get("status")
@@ -420,6 +475,7 @@ class VacationRentalsRouter:
     shows rent, fees, taxes and bookingTotal; an unavailable answer carries isAvailable=false and the site's errorMsg."""
 
     name = "vr_router"
+    sends_guests = True
 
     def parse_page(self, html, url):
         unit = re.search(r"unitId['\"]?\s*[:=]\s*['\"]([0-9]+-[0-9]+|[0-9]+)['\"]", html) or re.search(r"/vacation-rentals/rental/([0-9]+-[0-9]+)/", url)
@@ -429,8 +485,26 @@ class VacationRentalsRouter:
         origin = f"{urlsplit(url).scheme}://{urlsplit(url).netloc}"
         return {"site_id": unit.group(1), "router_url": (router.group(1) + "/router/") if router else origin + "/vacation-rentals/router/", "page_url": url}
 
-    def quote(self, session, info, window):
-        reply = session.request("POST", info["router_url"], json={"call": "getPrice", "unitId": info["site_id"], "people": GUESTS,
+    def unit_fields(self, html):
+        """propDetails on the listing page: street address (+ address2), city, coordinates ('geocode'), bedrooms, bathrooms (full and
+        three-quarter baths count as full, a half bath as ½) and sleeps."""
+        match = re.search(r"propDetails\s*:\s*\{", html)
+        try:
+            data = json.JSONDecoder().raw_decode(html, match.end() - 1)[0] if match else None
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return json_ld_unit(html)
+        geocode = re.fullmatch(r"\s*(-?[0-9.]+)\s*,\s*(-?[0-9.]+)\s*", str(data.get("geocode") or ""))
+        full, half, three = number(data.get("bath")), number(data.get("half_bath")) or 0, number(data.get("three_fourths_bath")) or 0
+        address = " ".join(part for part in (clean(data.get("address")), clean(data.get("address2"))) if part) or None
+        return {"address": address, "city": clean(data.get("city")), "latitude": number(geocode.group(1)) if geocode else None,
+                "longitude": number(geocode.group(2)) if geocode else None, "bedrooms": number(data.get("bed")),
+                "bathrooms": None if full is None else full + three + 0.5 * half, "sleeps": number(data.get("sleeps")),
+                "title": clean(data.get("prop_name"))}
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        reply = session.request("POST", info["router_url"], json={"call": "getPrice", "unitId": info["site_id"], "people": guests["adults"] + guests["children"],
                                                                  "arrive": us_date(window["checkin_date"], padded=False),
                                                                  "depart": us_date(window["checkout_date"], padded=False), "nights": window["nights"],
                                                                  "optIn": False, "promoCode": "", "sdpBool": False},
@@ -467,4 +541,422 @@ class VacationRentalsRouter:
         return {**result, "replies": [reply]}
 
 
-ADAPTERS = {adapter.name: adapter for adapter in (ResCMS(), Track(), Streamline(), VacationRentalsRouter())}
+def json_of(reply, what):
+    try:
+        return json.loads(reply.text)
+    except ValueError as exc:
+        raise AdapterError(f"{what} yanıtı JSON değil.") from exc
+
+
+def origin_of(url):
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}"
+
+
+def site_answer(message):
+    """A site's refusal text -> (status, min_stay). A date the company has not opened for booking yet is 'no_price'."""
+    text = clean(message) or ""
+    if re.search(r"maximum notice|beyond the|too far|not (?:yet )?(?:open|available) for booking|rates? (?:are )?not (?:yet )?available", text, re.I):
+        return "no_price", None
+    return stay_message(text)
+
+
+def refusal(message, replies, **extra):
+    status, nights = site_answer(message)
+    return {**outcome(status, clean(message), available=0 if status == "unavailable" else None, min_stay=nights),
+            "rule_source": "yanıt" if nights else None, "replies": replies, **extra}
+
+
+# --- VRPConnect (Gueststream "vrp" WordPress plugin) ---------------------------------------------------------------------
+
+class VRP:
+    """VRPConnect pages (/vrp/unit/<name>-<id>-<n>): the page's #bookingform carries the unit id and the field names the front end
+    sends; its checkAvailability asks /?vrpjax=1&act=checkavailability with the form and shows the returned charges. The plugin's
+    search (act=search, json) lists every unit with street address, city, coordinates, bedrooms and bathrooms."""
+
+    name = "vrp"
+    sends_guests = True
+
+    def parse_page(self, html, url):
+        form = re.search(r'<form[^>]+id="bookingform"[^>]*>(.*?)</form>', html, re.S | re.I)
+        if not form:
+            return None
+        fields = {}
+        for tag in re.findall(r"<(?:input|select)[^>]*>", form.group(1)):
+            name = re.search(r'name="([^"]+)"', tag)
+            value = re.search(r'value="([^"]*)"', tag)
+            if name and name.group(1).startswith(("obj[", "search[")) and name.group(1) not in fields:
+                fields[name.group(1)] = unescape(value.group(1)) if value and tag.startswith("<input") else ""
+        if not re.fullmatch(r"\d+", fields.get("obj[PropID]") or ""):
+            return None
+        return {"site_id": fields["obj[PropID]"], "fields": fields, "page_url": url, "origin": origin_of(url)}
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        fields = dict(info["fields"])
+        fields.update({"obj[Arrival]": us_date(window["checkin_date"]), "obj[Departure]": us_date(window["checkout_date"])})
+        adults = "obj[Adults]" if "obj[Adults]" in fields else "search[Adults]"
+        children = "obj[Children]" if "obj[Children]" in fields else "search[Children]"
+        fields.update({adults: str(guests["adults"]), children: str(guests["children"])})
+        if "obj[Pets]" in fields:
+            fields["obj[Pets]"] = "No Pets"
+        reply = session.request("GET", f"{info['origin']}/?vrpjax=1&act=checkavailability&par=1&{urlencode(fields)}",
+                                headers={"Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest",
+                                         "Referer": info["page_url"]}, note=f"vrp-quote-{info['site_id']}-{window['window_key']}")
+        if reply.status != 200:
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü.")
+        data = json_of(reply, "checkavailability")
+        if not isinstance(data, dict):
+            raise AdapterError("checkavailability yanıtı beklenen biçimde değil.")
+        if data.get("Error"):
+            return refusal(data["Error"], [reply])
+        return {**self.parse_quote(data), "replies": [reply]}
+
+    @staticmethod
+    def parse_quote(data):
+        charges = [c for c in data.get("Charges") or [] if isinstance(c, dict)]
+        details = data.get("BookDetails") if isinstance(data.get("BookDetails"), dict) else {}
+        tax_names = {clean(t.get("Description")) for t in details.get("tax") or [] if isinstance(t, dict)}
+        rent, fees, taxes = None, [], []
+        for charge in charges:
+            label, amount = clean(charge.get("Description")) or "", money(charge.get("Amount"))
+            if amount is None:
+                continue
+            if rent is None and re.fullmatch(r"rent|rental|lodging", label, re.I):
+                rent = amount
+            elif label in tax_names or re.search(r"\btax\b", label, re.I):
+                taxes.append({"name": label, "amount": amount})
+            else:
+                fees.append({"name": label, "amount": amount})
+        total = money(data.get("TotalCost"))
+        if rent is None and total is None:
+            raise AdapterError("checkavailability yanıtında kira veya toplam yok.")
+        insurance = money(data.get("InsuranceAmount"))
+        excluded = [{"name": "Travel insurance", "amount": insurance, "reason": "sitede isteğe bağlı; sitenin toplamına dahil değil"}] if insurance else []
+        return breakdown(rent, fees, None, total, tax_items=taxes, excluded=excluded, currency="USD")
+
+    def inventory(self, session, origin, options):
+        query = {"vrpjax": "1", "act": "search", "search[json]": "1", "search[limit]": "1000", "search[show]": "1000",
+                 "search[showmax]": "true", "showmax": "true"}
+        reply = session.request("GET", f"{origin}/?{urlencode(query)}", headers={"Accept": "application/json"}, note="vrp-inventory")
+        if reply.status != 200:
+            raise AdapterError(f"İlan listesi HTTP {reply.status} döndü.")
+        data = json_of(reply, "VRP arama")
+        rows = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(rows, list):
+            raise AdapterError("VRP arama yanıtında ilan listesi yok.")
+        if isinstance(data.get("count"), int) and data["count"] > len(rows):
+            raise AdapterError(f"VRP arama yanıtı {data['count']} ilandan yalnız {len(rows)} tanesini verdi; liste eksik.")
+        units = []
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get("id") or "").isdigit() or not row.get("page_slug"):
+                continue
+            units.append({"site_id": str(row["id"]), "url": f"{origin}/vrp/unit/{row['page_slug']}", "title": clean(row.get("Name")),
+                          "address": clean(row.get("Address1")), "city": clean(row.get("City")), "latitude": number(row.get("lat")),
+                          "longitude": number(row.get("long")), "bedrooms": number(row.get("Bedrooms")), "bathrooms": number(row.get("Bathrooms")),
+                          "sleeps": number(row.get("Sleeps")), "info": None})
+        return units, [reply]
+
+
+# --- Company front ends with their own public quote services -------------------------------------------------------------
+
+class PropertyQuoteV3:
+    """A Vue front end (seen on southernresorts.com) whose listing page carries booking-data with the property id; choosing dates
+    posts {unitId, arrivalDate, departureDate, occupants, promoCode, applyAutoPromoCode} to /property/v3/quote and shows the
+    rent, fee and tax sections. A promotion the site applies by itself is kept as a negative line with its code."""
+
+    name = "property_quote"
+    sends_guests = True
+
+    def parse_page(self, html, url):
+        data = re.search(r'booking-data="([^"]+)"', html)
+        try:
+            info = json.loads(unescape(data.group(1))).get("propertyInfo") if data else None
+        except ValueError:
+            info = None
+        if not isinstance(info, dict) or not str(info.get("propertyId") or "").isdigit():
+            return None
+        return {"site_id": str(info["propertyId"]), "page_url": url, "origin": origin_of(url)}
+
+    def unit_fields(self, html):
+        return json_ld_unit(html)
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        body = {"unitId": info["site_id"], "arrivalDate": window["checkin_date"].isoformat(), "departureDate": window["checkout_date"].isoformat(),
+                "occupants": {"adults": guests["adults"], "children": guests["children"], "pets": 0}, "promoCode": "", "applyAutoPromoCode": True}
+        reply = session.request("POST", info["origin"] + "/property/v3/quote", json=body,
+                                headers={"Accept": "*/*", "Referer": info["page_url"]}, note=f"v3-quote-{info['site_id']}-{window['window_key']}")
+        try:
+            data = json.loads(reply.text)
+        except ValueError:
+            data = None
+        if reply.status != 200 or not isinstance(data, dict) or not isinstance(data.get("quote"), dict):
+            messages = self.messages(data)
+            if messages:
+                return refusal(" ".join(messages), [reply])
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü; yanıtta fiyat yok.")
+        return {**self.parse_quote(data["quote"]), "replies": [reply]}
+
+    @staticmethod
+    def messages(data):
+        if not isinstance(data, dict):
+            return []
+        found = []
+        for key in ("errors", "messages", "quoteErrors", "message", "error", "title", "detail"):
+            value = data.get(key)
+            if isinstance(value, str):
+                found.append(value)
+            elif isinstance(value, list):
+                found.extend(str(v.get("message") if isinstance(v, dict) else v) for v in value)
+            elif isinstance(value, dict):
+                found.extend(str(v[0] if isinstance(v, list) and v else v) for v in value.values())
+        return [clean(m) for m in found if clean(m)]
+
+    @staticmethod
+    def parse_quote(quote):
+        sections = quote.get("sections") if isinstance(quote.get("sections"), dict) else {}
+        def items(name):
+            section = sections.get(name) if isinstance(sections.get(name), dict) else {}
+            return section, [{"name": clean(i.get("label")), "amount": money(i.get("value"))} for i in section.get("items") or []
+                             if isinstance(i, dict) and money(i.get("value")) is not None]
+        rent_section, _ = items("rent")
+        _, fees = items("fees")
+        _, taxes = items("taxes")
+        promo = quote.get("promoCode") if isinstance(quote.get("promoCode"), dict) else {}
+        discount = money(quote.get("promoDiscount")) or 0
+        if discount and promo.get("valid"):
+            fees.append({"name": f"Promotion {clean(promo.get('name')) or ''} ({clean(quote.get('promoType')) or 'site'})".replace("  ", " "),
+                         "amount": -abs(discount)})
+        rent, total = money(rent_section.get("total")), money(quote.get("total"))
+        if rent is None and total is None:
+            raise AdapterError("Fiyat yanıtında kira veya toplam yok.")
+        insurance = money(quote.get("travelInsurance"))
+        excluded = [{"name": "Travel insurance", "amount": insurance, "reason": "sitede isteğe bağlı; sitenin toplamına dahil değil"}] if insurance else []
+        return breakdown(rent, fees, None, total, tax_items=taxes, excluded=excluded, currency=currency_of(str(quote.get("total"))))
+
+
+class ExceptionalStay:
+    """Pages with the exceptionalStay front end (seen on exclusive30a.com): unitData.unitID on the page; the quote box asks
+    GET /quote with the dates and guest counts and shows rent, required charges, taxes and grandTotal. Add-ons and travel
+    insurance offered in the same answer are not part of grandTotal."""
+
+    name = "exceptional_stay"
+    sends_guests = True
+
+    def parse_page(self, html, url):
+        unit = re.search(r"unitData\s*=\s*\{\s*['\"]unitID['\"]\s*:\s*(\d+)", html)
+        if not unit or "exceptionalStay" not in html and "/website/assets/js/main.js" not in html:
+            return None
+        return {"site_id": unit.group(1), "page_url": url, "origin": origin_of(url)}
+
+    def unit_fields(self, html):
+        return json_ld_unit(html)
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        params = {"arrival": window["checkin_date"].isoformat(), "departure": window["checkout_date"].isoformat(), "pid": info["site_id"],
+                  "numberOfAdult": str(guests["adults"]), "numberOfChild": str(guests["children"]), "numberOfPets": "0", "travelInsurance": "",
+                  "promoCode": "", "action": "", "compositePropertyID": "", "nights": str(window["nights"]), "min_nights_stay_req": ""}
+        reply = session.request("GET", info["origin"] + "/quote", params=params,
+                                headers={"Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest",
+                                         "Referer": info["page_url"]}, note=f"es-quote-{info['site_id']}-{window['window_key']}")
+        if reply.status != 200:
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü.")
+        data = json_of(reply, "quote")
+        body = data.get("body") if isinstance(data, dict) and isinstance(data.get("body"), dict) else data
+        if not isinstance(body, dict):
+            raise AdapterError("quote yanıtı beklenen biçimde değil.")
+        if body.get("result") != "success":
+            return refusal(body.get("message") or body.get("error") or "Site fiyat vermedi.", [reply])
+        return {**self.parse_quote(body), "replies": [reply]}
+
+    @staticmethod
+    def parse_quote(body):
+        fees = [{"name": clean(c.get("displayName") or c.get("name")), "amount": money(c.get("value"))} for c in body.get("otherChargesItemized") or []
+                if isinstance(c, dict) and (c.get("isRequired") or c.get("type") == "required") and money(c.get("value")) is not None]
+        service = money(body.get("serviceFeeTotal")) or 0
+        if service:
+            fees.append({"name": "Service fee", "amount": service})
+        discount = money(body.get("discount")) or 0
+        if discount:
+            fees.append({"name": "Discount", "amount": -abs(discount)})
+        rent, total = money(body.get("guestDiscountedRent") or body.get("nightlyRates")), money(body.get("grandTotal"))
+        if rent is None and total is None:
+            raise AdapterError("quote yanıtında kira veya toplam yok.")
+        return breakdown(rent, fees, money(body.get("taxes")), total, currency="USD")
+
+
+class AsmxGetQuote:
+    """Rental pages (seen on destinvacation.com) whose calendar posts {RentalId, Arrival, Departure, PromoCode} to
+    /service.asmx/GetQuote and shows the returned charges (rent, cleaning, resort fees, tax, total). The request has no guest field."""
+
+    name = "asmx_quote"
+    sends_guests = False
+
+    def parse_page(self, html, url):
+        rental = re.search(r"rentalId\s*:\s*(\d+)", html)
+        if not rental or "/service.asmx" not in html and "property-calendar" not in html:
+            return None
+        return {"site_id": rental.group(1), "page_url": url, "origin": origin_of(url)}
+
+    def unit_fields(self, html):
+        return json_ld_unit(html)
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        body = {"RentalId": int(info["site_id"]), "Arrival": us_date(window["checkin_date"], padded=False),
+                "Departure": us_date(window["checkout_date"], padded=False), "PromoCode": ""}
+        reply = session.request("POST", info["origin"] + "/service.asmx/GetQuote", json=body,
+                                headers={"Accept": "application/json, text/javascript, */*; q=0.01", "Referer": info["page_url"]},
+                                note=f"asmx-quote-{info['site_id']}-{window['window_key']}")
+        if reply.status != 200:
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü.")
+        data = json_of(reply, "GetQuote")
+        result = data.get("d") if isinstance(data, dict) else None
+        if not isinstance(result, dict):
+            raise AdapterError("GetQuote yanıtı beklenen biçimde değil.")
+        if not result.get("IsAvailable"):
+            return refusal(result.get("Message") or "Not available", [reply])
+        rent, total, taxes, fees = None, None, None, []
+        for charge in result.get("Charge") or []:
+            if not isinstance(charge, dict):
+                continue
+            label, amount = clean(charge.get("Charge")) or "", money(charge.get("Amount"))
+            if amount is None or re.search(r"deposit|due", label, re.I):
+                continue
+            if re.fullmatch(r"total", label, re.I):
+                total = amount
+            elif re.fullmatch(r"tax(es)?", label, re.I):
+                taxes = amount
+            elif rent is None and re.match(r"rent", label, re.I):
+                rent = amount
+            else:
+                fees.append({"name": label, "amount": amount})
+        if rent is None and total is None:
+            raise AdapterError("GetQuote yanıtında kira veya toplam yok.")
+        return {**breakdown(rent, fees, taxes, total, currency="USD"), "replies": [reply]}
+
+
+class Wander:
+    """Websites built on Wander's SaaS (seen on 30abeachstays.com): the page's <html data-website-id> and the property id in the
+    url; the booking box posts the stay to api.wander.com .../listings/<id>/estimate and shows the total (amounts in cents)."""
+
+    name = "wander"
+    sends_guests = True
+    api_hosts = ("api.wander.com",)
+    API = "https://api.wander.com/saas/website/listings/{}/estimate"
+
+    def parse_page(self, html, url):
+        website = re.search(r'<html[^>]+data-website-id="(\d+)"', html)
+        unit = re.search(r"/property/(\d+)(?:/|$)", url)
+        if not website or not unit:
+            return None
+        return {"site_id": unit.group(1), "website_id": website.group(1), "page_url": url, "origin": origin_of(url)}
+
+    def unit_fields(self, html):
+        return json_ld_unit(html)
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        body = {"checkIn": window["checkin_date"].isoformat(), "checkOut": window["checkout_date"].isoformat(), "paymentType": "FULL",
+                "pricingSurface": "CALENDAR", "numberOfGuests": guests["adults"] + guests["children"], "numberOfPets": 0}
+        reply = session.request("POST", self.API.format(info["site_id"]), json=body,
+                                headers={"Accept": "application/json", "X-Website-Id": info["website_id"], "X-Wander-Client": "wander-customer-website",
+                                         "Origin": info["origin"], "Referer": info["page_url"]},
+                                note=f"wander-estimate-{info['site_id']}-{window['window_key']}")
+        try:
+            data = json.loads(reply.text)
+        except ValueError:
+            data = None
+        estimate = data.get("estimate") if isinstance(data, dict) else None
+        if reply.status != 200 or not isinstance(estimate, dict):
+            message = data.get("message") if isinstance(data, dict) else None
+            code = data.get("code") if isinstance(data, dict) else None
+            if code == "DATES_NOT_BOOKABLE":       # the site does not say why (booked, rules or not open): no price, availability unknown
+                return {**outcome("no_price", f"Site: {message or ''} ({code}); tarihler bu sitede rezerve edilemiyor."), "replies": [reply]}
+            if message:
+                return refusal(f"{message} ({code})" if code else message, [reply])
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü; yanıtta fiyat yok.")
+        cents = lambda value: None if money(value) is None else round(money(value) / 100, 2)
+        rent, with_fees = cents(estimate.get("totalNightsPrice")), cents(estimate.get("totalWithFees"))
+        taxes_block = estimate.get("taxes") if isinstance(estimate.get("taxes"), dict) else {}
+        tax_items = [{"name": clean(t.get("name")) or "Tax", "amount": cents(t.get("amount"))} for t in taxes_block.get("breakdown") or []
+                     if isinstance(t, dict) and cents(t.get("amount")) is not None]
+        fees = []
+        if rent is not None and with_fees is not None and round(with_fees - rent, 2):
+            fees.append({"name": "Fees (the site's single fee total)", "amount": round(with_fees - rent, 2)})
+        coupon = cents(estimate.get("couponOff")) or 0
+        if coupon:
+            fees.append({"name": "Coupon", "amount": -abs(coupon)})
+        result = breakdown(rent, fees, cents(taxes_block.get("total")), cents(estimate.get("total")), tax_items=tax_items,
+                           currency=clean(data.get("currency")))
+        return {**result, "replies": [reply]}
+
+
+class Q4VR:
+    """WordPress sites with the Q4VR plugin (Escapia; seen on yourfriendatthebeach.com). The page's search form asks admin-ajax
+    action=q4vr_stay for a stay; the date picker reads q4vr_availability, which also carries the site's published nightly rent
+    range per season (base_rate, taxes and fees excluded). The range is kept apart as a published rent, never as a quote."""
+
+    name = "qvr"         # Q4VR (digits are not allowed in adapter names)
+    sends_guests = True
+
+    def parse_page(self, html, url):
+        unit = re.search(r'name="unit_code"\s+value="([0-9]+-[0-9]+)"', html) or re.search(r'id="unitCode"[^>]*value="([0-9]+-[0-9]+)"', html)
+        ajax = re.search(r'VRAjax\s*=\s*\{"ajaxurl":"([^"]+)"', html)
+        if not unit or not ajax:
+            return None
+        return {"site_id": unit.group(1), "ajax_url": ajax.group(1).replace("\\/", "/"), "page_url": url, "origin": origin_of(url)}
+
+    def unit_fields(self, html):
+        return json_ld_unit(html)
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        params = {"post_type": "vacation_rental", "s": "", "action": "q4vr_stay", "unit_code": info["site_id"],
+                  "start_date": us_date(window["checkin_date"]), "end_date": us_date(window["checkout_date"]),
+                  "guests": f"{guests['adults']},{guests['children']},0"}
+        reply = session.request("GET", info["ajax_url"], params=params, headers={"Accept": "application/json", "Referer": info["page_url"]},
+                                note=f"q4vr-stay-{info['site_id']}-{window['window_key']}")
+        if reply.status != 200:
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü.")
+        data = json_of(reply, "q4vr_stay")
+        content = data.get("data") if isinstance(data, dict) else None
+        if not isinstance(content, str):
+            raise AdapterError("q4vr_stay yanıtında içerik yok.")
+        errors = re.findall(r'class="[^"]*stay-error-list-item[^"]*"[^>]*>(.*?)</li>', content, re.S)
+        if errors:
+            message = "; ".join(plain_text(e) for e in errors)
+            if re.search(r"not authorized", message, re.I):
+                return {**outcome("no_price", f"Sitenin fiyat servisi hata verdi: {message}"), "replies": [reply]}
+            return refusal(message, [reply])
+        return {**outcome("no_price", "Sitenin fiyat yanıtı tanınmadı; fiyat alınmadı."), "replies": [reply]}
+
+    def published(self, session, info, windows):
+        """{window_key: published rent row} from the date picker's seasons: a window counts only when its whole stay lies in one season."""
+        reply = session.request("GET", info["ajax_url"], params={"action": "q4vr_availability", "unit_code": info["site_id"]},
+                                headers={"Accept": "application/json", "Referer": info["page_url"]}, note=f"q4vr-availability-{info['site_id']}")
+        if reply.status != 200:
+            raise AdapterError(f"Takvim isteği HTTP {reply.status} döndü.")
+        data = json_of(reply, "q4vr_availability")
+        seasons = (data.get("data") or {}).get("minimumNights") if isinstance(data, dict) and isinstance(data.get("data"), dict) else None
+        rows = {}
+        for window in windows:
+            first, last = window["checkin_date"].isoformat(), date.fromordinal(window["checkout_date"].toordinal() - 1).isoformat()
+            season = next((s for s in seasons or [] if isinstance(s, dict) and (s.get("start_date") or "") <= first and last <= (s.get("end_date") or "")), None)
+            if not season:
+                continue
+            amounts = [money(part) for part in re.findall(r"\$[0-9,]+(?:\.\d+)?", season.get("base_rate") or "")]
+            amounts = [a for a in amounts if a]
+            if not amounts or (season.get("type") or "").lower() not in ("nightly", "weekly"):
+                continue
+            weekly = (season.get("type") or "").lower() == "weekly"
+            low, high = min(amounts), max(amounts)
+            factor = window["nights"] / 7 if weekly else window["nights"]
+            rows[window["window_key"]] = {
+                "season_start": season.get("start_date"), "season_end": season.get("end_date"), "rate_text": clean(season.get("base_rate")),
+                "rate_period": "week" if weekly else "night", "rent_low": round(low * factor, 2), "rent_high": round(high * factor, 2),
+                "basis": (f"Sitenin {season.get('start_date')}–{season.get('end_date')} sezonu için yayımladığı "
+                          f"{'haftalık' if weekly else 'gecelik'} kira aralığı {clean(season.get('base_rate'))}; pencere tutarı = aralık × "
+                          f"{'gece/7' if weekly else 'gece sayısı'} (bizim hesabımız; vergi ve ücretler hariç)."),
+                "source_url": reply.url, "raw_sha256": [reply.sha256]}
+        return rows
+
+
+ADAPTERS = {adapter.name: adapter for adapter in (ResCMS(), Track(), Streamline(), VacationRentalsRouter(), VRP(), PropertyQuoteV3(),
+                                                  ExceptionalStay(), AsmxGetQuote(), Wander(), Q4VR())}

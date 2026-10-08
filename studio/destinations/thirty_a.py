@@ -115,6 +115,43 @@ AGENCY_SITES = (
     ("30acottagesandconcierge.com", "30A Cottages", "rescms"),
     ("myvacationhaven.com", "My Vacation Haven", "rescms"),
 )
+# Added by migration v12 (agency-lodging-rates/2): new companies and per-company options. aliases: other domains the company's
+# links redirect to; protected: read only through the visible browser, 6 s apart, stopping at the first refusal; guest_rule:
+# two_adults or bedrooms_x2 (GÖREV-09 guest count check); inventory: the company's own listing list for address/location
+# matching ("platform": the platform's list service at origin; "sitemap": listing pages named by the sitemap); own_region_id +
+# own_city: the official rental program of one community, whose site names the community in its own listing data.
+# Discovery and the companies left out: docs/gorevler/GOREV-09/AJANS-KESFI-2.md.
+AGENCY_SITES_V12 = (
+    ("homeownerscollection.com", "Homeowner's Collection", "rescms"),
+    ("southernresorts.com", "Southern Vacation Rentals", "property_quote"),
+    ("oceanreefresorts.com", "Ocean Reef Resorts", "track"),
+    ("oversee.us", "Oversee", "vrp"),
+    ("paradise30a.com", "Paradise Properties", "vr_router"),
+    ("grayt30avacations.com", "Grayt 30A Vacations / Royal Destinations", "rescms"),
+    ("30a-vacay.com", "30A Vacay", "vr_router"),
+    ("sandersbeachrentals.com", "Sanders Beach Rentals", "rescms"),
+    ("funvacay.com", "FunVacay", "rescms"),
+    ("exclusive30a.com", "Exclusive 30A", "exceptional_stay"),
+    ("yourfriendatthebeach.com", "Your Friend at the Beach", "qvr"),
+    ("30abeachstays.com", "30A Beach Stays", "wander"),
+    ("destinvacation.com", "Newman-Dailey Resort Properties", "asmx_quote"),
+    ("coastalbluevacations.com", "Coastal Blue Vacations", "rescms"),
+    ("alysbeach.com", "Alys Beach Vacation Rentals", "vrp"),
+)
+AGENCY_SITE_OPTIONS = {
+    "oversee.us": {"protected": 1, "inventory": {"source": "platform", "origin": "https://oversee.us"}},
+    "exclusive30a.com": {"protected": 1},
+    "grayt30avacations.com": {"aliases": ["royaldestinations.com"],
+                              "inventory": {"source": "sitemap", "url": "https://www.royaldestinations.com/sitemap.xml",
+                                            "pattern": r"/30a-vacation-rentals/[^/]+$"}},
+    "30a-vacay.com": {"inventory": {"source": "sitemap", "url": "https://www.30a-vacay.com/sitemap.xml", "pattern": r"/vacation-rentals/rental/[^/]+/?$"}},
+    "rosemarybeach.com": {"inventory": {"source": "platform", "origin": "https://rosemarybeach.com"}},
+    "dunevacationrentals.com": {"inventory": {"source": "platform", "origin": "https://dunevacationrentals.com"}},
+    "alysbeach.com": {"inventory": {"source": "platform", "origin": "https://vacation.alysbeach.com"}, "own_region_id": "alys-beach",
+                      "own_city": "Alys Beach"},
+}
+# Added by migration v12: the seasonal fall window (Fall 2026 became a last-minute window once queried in October 2026).
+LODGING_WINDOWS_V12 = (("fall-2027", "Sonbahar 2027", "2027-10-16", "2027-10-23"),)
 STORM_CORRIDOR = {
     "label": "30A kıyı koridoru",
     "west_latitude": 30.35548, "west_longitude": -86.2638, "west_reference": "Stallworth Preserve (5c81ab02f836f9166348e96c)",

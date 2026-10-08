@@ -14,8 +14,9 @@ from .migration_v8 import upgrade_v8
 from .migration_v9 import upgrade_v9
 from .migration_v10 import upgrade_v10
 from .migration_v11 import upgrade_v11
+from .migration_v12 import upgrade_v12
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -56,14 +57,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -78,7 +79,9 @@ class Database:
                     upgrade_v9(con)
                 if version < 10:
                     upgrade_v10(con)
-                upgrade_v11(con)
+                if version < 11:
+                    upgrade_v11(con)
+                upgrade_v12(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -132,6 +135,7 @@ class Database:
             upgrade_v9(con)
             upgrade_v10(con)
             upgrade_v11(con)
+            upgrade_v12(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -157,7 +161,9 @@ class Database:
             lodging={"clone_host":row["clone_host"],
                      "locations":{r["source_location_name"]:r["region_id"] for r in con.execute("SELECT * FROM destination_lodging_locations WHERE destination_id=? ORDER BY source_location_name",(identifier,))},
                      "windows":[dict(r) for r in con.execute("SELECT window_key,label,checkin,checkout FROM destination_lodging_windows WHERE destination_id=? AND enabled=1 ORDER BY sort_order,checkin",(identifier,))]} if row else None
-            sites=[dict(r) for r in con.execute("SELECT domain,company,adapter,enabled FROM destination_agency_sites WHERE destination_id=? ORDER BY sort_order,domain",(identifier,))]
+            sites=[{**dict(r),"aliases":json.loads(r["aliases"]),"inventory":json.loads(r["inventory"]) if r["inventory"] else None}
+                   for r in con.execute("""SELECT domain,company,adapter,enabled,aliases,protected,guest_rule,inventory,own_region_id,own_city
+                       FROM destination_agency_sites WHERE destination_id=? ORDER BY sort_order,domain""",(identifier,))]
             agency={"sites":sites} if sites else None
             if agency and "lodging_listings" in inputs:
                 agency["input"]=self.lodging_input(con,identifier)
@@ -165,8 +171,8 @@ class Database:
 
     @staticmethod
     def lodging_input(con, destination_id):
-        """Listings of the destination's latest successful Book>Direct run: id, title, company url, bedrooms and the regions whose
-        location filters showed it (any window). None when there is no such run."""
+        """Listings of the destination's latest successful Book>Direct run: id, title, company url, bedrooms, bathrooms, capacity,
+        street address, coordinates and the regions whose location filters showed it (any window). None when there is no such run."""
         run=con.execute("""SELECT r.id, s.searched_on FROM source_runs r JOIN lodging_snapshots s ON s.run_id=r.id
             WHERE r.destination_id=? AND r.status='done' ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
         if not run:
@@ -175,9 +181,9 @@ class Database:
         for row in con.execute("""SELECT DISTINCT r.lodging_id, f.region_id FROM lodging_search_results r JOIN lodging_filters f
                 ON f.run_id=r.run_id AND f.window_key=r.window_key AND f.location_id=r.location_id WHERE r.run_id=?""",(run["id"],)):
             regions.setdefault(row["lodging_id"],set()).add(row["region_id"])
-        listings=[{"lodging_id":row["lodging_id"],"title":row["title"],"url":row["url"],"bedrooms":row["bedrooms"],
-                   "region_ids":sorted(regions.get(row["lodging_id"],()))}
-                  for row in con.execute("SELECT lodging_id,title,url,bedrooms FROM lodging_listings WHERE run_id=? ORDER BY lodging_id",(run["id"],))]
+        listings=[{**dict(row),"region_ids":sorted(regions.get(row["lodging_id"],()))}
+                  for row in con.execute("""SELECT lodging_id,title,url,bedrooms,bathrooms,sleeps,address,latitude,longitude
+                      FROM lodging_listings WHERE run_id=? ORDER BY lodging_id""",(run["id"],))]
         return {"run_id":run["id"],"searched_on":run["searched_on"],"listings":listings}
 
     def sources(self, destination_id=DEFAULT_DESTINATION_ID):

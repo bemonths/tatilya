@@ -20,7 +20,7 @@ from studio.migration_v10 import upgrade_v10
 from studio.sources import bookdirect_lodging as bl
 from studio.sources.base import CollectionCanceled, SourceError
 from studio.sources.registry import DEFAULT_REGISTRY
-from tests.legacy import V10_TABLES, V11_TABLES
+from tests.legacy import V10_TABLES, V11_TABLES, V12_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_climate import make_v8, table_counts
 from tests.test_destinations import add_destination
@@ -406,7 +406,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         assert client.get("/api/bootstrap").json()["lodging_runs"][0]["id"] == job["id"]
         data = client.get(f"/api/lodging-runs/{job['id']}").json()
         assert data["run"]["record_count"] == 64 and data["snapshot"]["listing_count"] == 64 and data["snapshot"]["searched_on"] == "2026-10-07"
-        assert [w["window_key"] for w in data["windows"]] == ["fall-2026", "winter-2027", "spring-break-2027", "summer-2027"]
+        assert [w["window_key"] for w in data["windows"]] == ["fall-2026", "winter-2027", "spring-break-2027", "summer-2027", "fall-2027"]
         assert [r["region_id"] for r in data["regions"]][:3] == ["dune-allen", "gulf-place", "santa-rosa-beach"]   # west to east profile order
         assert next(r for r in data["regions"] if r["region_id"] == "seagrove")["filters"] == ["Seagrove", "Seagrove Beach"]
         cells = {(c["region_id"], c["window_key"]): c for c in data["cells"]}
@@ -427,7 +427,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         assert "tam envanter değildir" in data["label"] and "2026-10-07" in data["label"]
         listings = client.get(f"/api/lodging-runs/{job['id']}/listings?region_id=seagrove").json()["listings"]
         shared = next(l for l in listings if l["lodging_id"] == 2002)
-        assert shared["filters"] == ["Seagrove", "Seagrove Beach"] and set(shared["windows"]) == {"fall-2026", "winter-2027", "spring-break-2027", "summer-2027"}
+        assert shared["filters"] == ["Seagrove", "Seagrove Beach"] and set(shared["windows"]) == {"fall-2026", "winter-2027", "spring-break-2027", "summer-2027", "fall-2027"}
         first = next(l for l in client.get(f"/api/lodging-runs/{job['id']}/listings?region_id=seaside").json()["listings"] if l["lodging_id"] == 1000)
         assert first["windows"]["fall-2026"]["price"] == 250.0 and first["windows"]["fall-2026"]["price_source"] == "liste"
         assert first["calendar"]["status"] == "read" and first["months"][0]["month"] == "2026-10"
@@ -486,7 +486,7 @@ def test_fresh_database_has_lodging_configuration_and_source(tmp_path):
     db = Database(tmp_path / "studio.sqlite3"); db.initialize()
     lodging = db.context("30a").lodging
     assert lodging["clone_host"] == HOST and lodging["locations"] == thirty_a.LODGING_LOCATIONS
-    assert [(w["window_key"], w["checkin"], w["checkout"]) for w in lodging["windows"]] == [(k, i, o) for k, _, i, o in thirty_a.LODGING_WINDOWS]
+    assert [(w["window_key"], w["checkin"], w["checkout"]) for w in lodging["windows"]] == [(k, i, o) for k, _, i, o in thirty_a.LODGING_WINDOWS + thirty_a.LODGING_WINDOWS_V12]
     source = next(s for s in db.sources() if s["url"] == URL)
     assert (source["method"], source["category"], source["destination_id"]) == ("JSON", "Konaklama", "30a")
     with db.connect() as con:
@@ -507,10 +507,10 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
-        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, **V11_TABLES, "sources": len(before["sources"]) + 2}
+        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, **V11_TABLES, **V12_TABLES, "sources": len(before["sources"]) + 2}
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         assert {t: r for t, r in after.items() if t != "sources"} == {t: r for t, r in before.items() if t != "sources"}
         assert after["sources"][:len(before["sources"])] == before["sources"]
@@ -519,7 +519,7 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         assert con.execute("PRAGMA user_version").fetchone()[0] == 9
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert table_counts(con)["sources"] == len(before["sources"]) + 2 and table_counts(con)["destination_lodging_windows"] == 4
+        assert table_counts(con)["sources"] == len(before["sources"]) + 2 and table_counts(con)["destination_lodging_windows"] == 5
 
 
 def test_v9_to_v10_failure_rolls_back_everything(tmp_path, monkeypatch):
@@ -541,7 +541,7 @@ def test_v9_to_v10_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
 
 
 def test_v10_never_duplicates_an_existing_lodging_source_or_overwrites_configuration(tmp_path):
@@ -620,9 +620,9 @@ def test_v10_to_v11_migration_adds_listing_link_columns(tmp_path):
     db = Database(path); db.initialize()
     with sqlite3.connect(path) as con:
         columns = [row[1] for row in con.execute("PRAGMA table_info(lodging_listings)")]
-        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 12
         with pytest.raises(sqlite3.OperationalError):
             con.execute("BEGIN IMMEDIATE"); upgrade_v11(con)                     # columns already exist; the transaction rolls back
         con.rollback()
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
 

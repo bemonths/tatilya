@@ -20,13 +20,15 @@ ADDED_SOURCE_URLS = (NEIGHBORHOOD_URL, NORMALS_URL, WATER_URL, STORMS_URL, LODGI
 V8_TABLES = {"destination_climate_stations": 3, "destination_storm_corridors": 1, "climate_normal_stations": 0,
              "climate_normal_values": 0, "water_temperature_stations": 0, "water_temperature_months": 0,
              "storm_corridor_snapshots": 0, "storm_passages": 0}
-# Tables created by v10 and their rows in an upgraded 30A database (lodging configuration only, no snapshots).
-V10_TABLES = {"destination_lodging_sources": 1, "destination_lodging_locations": 14, "destination_lodging_windows": 4,
+# Tables created by v10 and their rows in an upgraded 30A database (lodging configuration only, no snapshots; v12 adds a window).
+V10_TABLES = {"destination_lodging_sources": 1, "destination_lodging_locations": 14, "destination_lodging_windows": 5,
               "lodging_snapshots": 0, "lodging_windows": 0, "lodging_filters": 0, "lodging_listings": 0, "lodging_search_results": 0,
               "lodging_calendars": 0, "lodging_rate_months": 0, "lodging_calendar_windows": 0}
-# Tables created by v11 and their rows in an upgraded 30A database (agency site list only, no snapshots).
-V11_TABLES = {"job_waits": 0, "destination_agency_sites": 9, "agency_rate_snapshots": 0, "agency_rate_windows": 0,
+# Tables created by v11 and their rows in an upgraded 30A database (agency site list only, no snapshots; v12 adds 15 companies).
+V11_TABLES = {"job_waits": 0, "destination_agency_sites": 24, "agency_rate_snapshots": 0, "agency_rate_windows": 0,
               "agency_rate_companies": 0, "agency_rate_listings": 0, "agency_rate_quotes": 0}
+# Tables created by v12 (empty in an upgraded database).
+V12_TABLES = {"agency_rate_own_listings": 0, "agency_rate_own_quotes": 0, "agency_rate_published": 0}
 
 
 def without_added_sources(sources):

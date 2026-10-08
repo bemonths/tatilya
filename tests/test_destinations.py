@@ -42,7 +42,7 @@ def test_fresh_profile_and_scoped_unique_constraints(client):
     assert len(db.context().canonical_regions)==13 and len(db.context().weather_anchors)==3
     assert db.context().destination['name']=='30A'
     with db.connect() as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0]==11
+        assert con.execute('PRAGMA user_version').fetchone()[0]==12
         assert not con.execute('PRAGMA foreign_key_check').fetchall()
         con.execute("INSERT INTO regions VALUES ('30a-downtown','Downtown','30a',99)")
         with pytest.raises(sqlite3.IntegrityError):
@@ -188,7 +188,7 @@ def test_v5_migration_preserves_old_fields_backup_and_rollback(tmp_path,monkeypa
         assert not con.execute("SELECT name FROM sqlite_master WHERE name='destinations'").fetchall()
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0]==11
+        assert con.execute('PRAGMA user_version').fetchone()[0]==12
         row=con.execute("SELECT * FROM sources WHERE id='archived'").fetchone()
         assert row[:len(before)]==before and row[-2:]==('30a','seaside')
         assert con.execute("SELECT destination_id FROM entities WHERE id='entity'").fetchone()[0]=='30a'

@@ -551,3 +551,18 @@ test('jobs panel names the site waiting for the user verification',async()=>{
   const source=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
   assert.match(source,/job\.waiting_for\?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor<\/span> \$\{esc\(job\.waiting_for\)\}/);
 });
+import {methodLine, ownLine, publishedLine, ownTable, publishedTag, publishedBreakdown, METHOD_LABELS} from '../studio/web/agency.js';
+test('agency v2 cells name the match method, own inventory and published rents apart from the totals',()=>{
+  assert.equal(methodLine({by_method:{link:3,address:0,location:0}}),'');
+  assert.match(methodLine({by_method:{link:3,address:2,location:1}}),/eşleme: bağlantı 3 · adres 2 · konum 1/);
+  assert.equal(METHOD_LABELS.location,'konum');
+  assert.equal(ownLine({own_listing_count:0,own:{priced_count:0}}),'');
+  assert.match(ownLine({own_listing_count:12,own:{priced_count:9,total_median:14768.32}}),/kendi envanteri: 12 ev · fiyatlı 9 · ortanca \$14,768/);
+  assert.match(publishedLine({published:{count:4,low_median:1925,high_median:4536}}),/yayımlanmış kira \(vergi ve ücret hariç\): 4 ilan · ortanca \$1,925–\$4,536/);
+  assert.equal(publishedLine({published:{count:0}}),'');
+  assert.match(publishedTag({rent_low:1925,rent_high:4536}),/yayımlanmış kira \$1,925–\$4,536/);
+  assert.match(publishedBreakdown({rent_low:1925,rent_high:4536,basis:'Sitenin <sezon> aralığı'}),/toplam fiyata karışmaz[^]*Sitenin &lt;sezon&gt; aralığı/);
+  const own=ownTable([{title:'103 <North>',address:'103 North Charles Street',bedrooms:4,company:'Alys',domain:'alysbeach.com',page_url:'https://vacation.alysbeach.com/vrp/unit/x',quotes:{w:{status:'priced',total:14768.32}}}],[{window_key:'w',label:'Kış'}]);
+  assert.match(own,/Şirketin kendi envanteri/);assert.match(own,/103 &lt;North&gt;/);assert.match(own,/\$14,768<small>toplam/);
+  assert.equal(ownTable([],[]),'');
+});

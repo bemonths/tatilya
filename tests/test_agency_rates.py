@@ -18,7 +18,7 @@ from studio.destinations import thirty_a
 from studio.sources import agency_adapters as aa
 from studio.sources import agency_rates as ar
 from studio.sources.base import CollectionCanceled, SourceError
-from tests.legacy import AGENCY_URL, V11_TABLES
+from tests.legacy import AGENCY_URL, V11_TABLES, V12_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_climate import table_counts
 from tests import test_lodging as tl
@@ -124,7 +124,7 @@ class Sites:
                 assert url.params["rcav[eid]"] == "261" and url.params["rcav[adult]"] == "2"
                 if url.params["rcav[begin]"] == "10/17/2026":
                     return json_reply({"status": 1, "content": '<span class="rc-na">Not Available</span>', "reveals": ""})
-                assert url.params["rcav[begin]"] in ("01/16/2027", "03/13/2027", "07/10/2027")
+                assert url.params["rcav[begin]"] in ("01/16/2027", "03/13/2027", "07/10/2027", "10/16/2027")
                 return json_reply({"status": 1, "content": RESCMS_PRICE, "reveals": ""})
             if path == "/rescms/ajax/item/pricing/quote":
                 assert url.params["rcav[IDs][8][0]"] == "2261-210212"
@@ -161,7 +161,7 @@ class Sites:
                 if body["arrive"] == "10/17/2026":
                     return json_reply({"apiError": False, "isAvailable": False, "rent": 0, "fees": [], "taxes": [], "bookingTotal": 0,
                                        "errorMsg": "The unit 3151-268932 is unavailable for these dates (10/17/2026 - 10/23/2026)."})
-                assert body["arrive"] in ("1/16/2027", "3/13/2027", "7/10/2027") and body["depart"] in ("1/23/2027", "3/20/2027", "7/17/2027")
+                assert body["arrive"] in ("1/16/2027", "3/13/2027", "7/10/2027", "10/16/2027") and body["depart"] in ("1/23/2027", "3/20/2027", "7/17/2027", "10/23/2027")
                 return json_reply(ROUTER_PRICE)
         if host == "www.drupal.example":
             if path == "/rentals/gone":            # an unpublished listing: Drupal's themed 403 page with a CAPTCHA form widget
@@ -351,7 +351,7 @@ def test_raw_responses_are_kept_with_hashes(tmp_path):
     import hashlib
     result = run(tmp_path)
     manifest = json.loads((tmp_path / "raw" / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["connector"] == "agency-lodging-rates/1" and len(manifest["responses"]) == result.metadata["request_count"]
+    assert manifest["connector"] == "agency-lodging-rates/2" and len(manifest["responses"]) == result.metadata["request_count"]
     for entry in manifest["responses"]:
         body = gzip.decompress((tmp_path / "raw" / entry["raw_file"]).read_bytes())
         assert hashlib.sha256(body).hexdigest() == entry["raw_sha256"]
@@ -564,7 +564,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         lodging = tl.start(client)
         assert lodging["status"] == "done", lodging["message"]
         source = next(s for s in client.get("/api/sources").json() if s["url"] == AGENCY_URL)
-        assert source["connector"] == {"name": "agency-lodging-rates", "version": "agency-lodging-rates/1", "method": "HTML/JSON"}
+        assert source["connector"] == {"name": "agency-lodging-rates", "version": "agency-lodging-rates/2", "method": "HTML/JSON"}
         job = tl.start(client, url=AGENCY_URL)
         assert job["status"] == "done", job["message"]
         assert db.job(job["id"])["waiting_for"] is None
@@ -572,7 +572,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         assert [r["id"] for r in boot["agency_runs"]] == [job["id"]] and len(boot["agency_connector"]["sites"]) == 4
         data = client.get(f"/api/agency-rate-runs/{job['id']}").json()
         assert data["snapshot"]["lodging_run_id"] == lodging["id"] and data["snapshot"]["queried_on"] == "2026-10-08"
-        assert [w["window_key"] for w in data["windows"]] == ["fall-2026", "winter-2027", "spring-break-2027", "summer-2027"]
+        assert [w["window_key"] for w in data["windows"]] == ["fall-2026", "winter-2027", "spring-break-2027", "summer-2027", "fall-2027"]
         assert [r["region_id"] for r in data["regions"]] == ["dune-allen", "seaside", "rosemary-beach"]       # west to east
         assert data["regions"][1]["region_name"] == "Seaside"
         cells = {(c["region_id"], c["window_key"]): c for c in data["cells"]}
@@ -596,11 +596,11 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
         assert first["quotes"]["fall-2026"]["status"] == "unavailable" and first["region_ids"] == ["seaside"]
         assert client.get(f"/api/agency-rate-runs/{job['id']}/listings?region_id=nowhere").json()["listings"] == []
         raw = client.get(f"/api/agency-rate-runs/{job['id']}/raw")
-        assert raw.status_code == 200 and json.loads(raw.content)["connector"] == "agency-lodging-rates/1"
+        assert raw.status_code == 200 and json.loads(raw.content)["connector"] == "agency-lodging-rates/2"
         assert client.get(f"/api/agency-rate-runs/{lodging['id']}").status_code == 404
         with db.connect() as con:
             assert con.execute("PRAGMA foreign_key_check").fetchall() == []
-            assert con.execute("SELECT COUNT(*) FROM agency_rate_quotes WHERE run_id=?", (job["id"],)).fetchone()[0] == 6 * 4
+            assert con.execute("SELECT COUNT(*) FROM agency_rate_quotes WHERE run_id=?", (job["id"],)).fetchone()[0] == 6 * 5
 
 
 def test_job_shows_which_site_waits_for_verification(tmp_path, monkeypatch):
@@ -681,15 +681,15 @@ def test_cancel_job_through_api_publishes_nothing(tmp_path, monkeypatch):
 def test_fresh_database_has_agency_sites_and_source(tmp_path):
     db = Database(tmp_path / "studio.sqlite3"); db.initialize()
     agency = db.context("30a").agency
-    assert [(s["domain"], s["company"], s["adapter"]) for s in agency["sites"]] == list(thirty_a.AGENCY_SITES) and "input" not in agency
+    assert [(s["domain"], s["company"], s["adapter"]) for s in agency["sites"]] == list(thirty_a.AGENCY_SITES + thirty_a.AGENCY_SITES_V12)
+    assert "input" not in agency
     assert db.context("30a", inputs=("lodging_listings",)).agency["input"] is None         # no lodging run yet
     source = next(s for s in db.sources() if s["url"] == AGENCY_URL)
     assert (source["method"], source["category"]) == ("HTML", "Konaklama")
     with db.connect() as con:
-        for statement in ("INSERT INTO destination_agency_sites VALUES ('30a','www.example.com','X','track',1,0)",
-                          "INSERT INTO destination_agency_sites VALUES ('30a','Example.com','X','track',1,0)",
-                          "INSERT INTO destination_agency_sites VALUES ('30a','example.com','X','Track-2',1,0)",
-                          "INSERT INTO destination_agency_sites VALUES ('30a','example.com',' ','track',1,0)"):
+        insert = "INSERT INTO destination_agency_sites (destination_id,domain,company,adapter,enabled,sort_order) VALUES "
+        for statement in (insert + "('30a','www.example.com','X','track',1,0)", insert + "('30a','Example.com','X','track',1,0)",
+                          insert + "('30a','example.com','X','Track-2',1,0)", insert + "('30a','example.com',' ','track',1,0)"):
             with pytest.raises(sqlite3.IntegrityError):
                 con.execute(statement)
 
@@ -720,13 +720,16 @@ def test_v10_to_v11_migration_adds_agency_tables_source_and_keeps_rows(tmp_path)
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
-        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, "sources": len(before["sources"]) + 1}
+        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, **V12_TABLES, "destination_lodging_windows": 5,
+                          "sources": len(before["sources"]) + 1}
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
-        unchanged = {t: r for t, r in after.items() if t not in ("sources", "lodging_listings")}
-        assert unchanged == {t: r for t, r in before.items() if t not in ("sources", "lodging_listings")}
+        changed = ("sources", "lodging_listings", "destination_lodging_windows")
+        unchanged = {t: r for t, r in after.items() if t not in changed}
+        assert unchanged == {t: r for t, r in before.items() if t not in changed}
+        assert after["destination_lodging_windows"][:4] == before["destination_lodging_windows"]        # v12 adds Fall 2027
         assert after["lodging_listings"] == [row + (None, None, None) for row in before["lodging_listings"]]
         assert after["sources"][:len(before["sources"])] == before["sources"] and after["sources"][-1][2] == AGENCY_URL
     backup, = (tmp_path / "backups").glob("*-v10-*.sqlite3")
@@ -734,7 +737,7 @@ def test_v10_to_v11_migration_adds_agency_tables_source_and_keeps_rows(tmp_path)
         assert con.execute("PRAGMA user_version").fetchone()[0] == 10
     Database(path).initialize()                                                              # idempotent: nothing added twice
     with sqlite3.connect(path) as con:
-        assert table_counts(con)["sources"] == len(before["sources"]) + 1 and table_counts(con)["destination_agency_sites"] == 9
+        assert table_counts(con)["sources"] == len(before["sources"]) + 1 and table_counts(con)["destination_agency_sites"] == 24
 
 
 def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
@@ -754,4 +757,4 @@ def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
