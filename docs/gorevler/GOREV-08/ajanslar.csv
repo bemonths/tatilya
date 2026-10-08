@@ -1,0 +1,139 @@
+﻿alan_adi,sirket,ilan_sayisi,kumulatif_pay,mahalle_dagilimi,bookdirect_rez_altyapisi,site_altyapisi,fiyat_yolu,uyarlayici,not
+360blue.com,— (site açılamadı),256,10.7,WaterColor 139; WaterSound 44; Seagrove 20; Blue Mountain Beach 15; Rosemary Beach 12; Seacrest 9; Grayton Beach 6; Seaside 5; Dune Allen 3; Santa Rosa Beach 2; Inlet Beach 1,Natural Retreats 253; Escapia 3,Cloudflare arkasında; altyapı okunamadı,site açılmadı,yok,Cloudflare engel sayfası; keşifteki art arda denemelerden sonra IP engellendi. Proxy kullanılmadı.
+benchmark30a.com,Benchmark Management,241,20.8,Seagrove 181; Seacrest 39; Blue Mountain Beach 8; Inlet Beach 3; WaterSound 3; Seaside 2; WaterColor 2; Dune Allen 1; Grayton Beach 1; Santa Rosa Beach 1,Escapia 240; Res CMS 1,ResCMS (Drupal),çalışıyor: pricing/simple + pricing/quote,rescms,"Ayrıntılı döküm: kira, temizlik, ücretler, vergi, toplam."
+oversee.us,— (site açılamadı),185,28.5,Seagrove 60; Seacrest 31; Blue Mountain Beach 24; WaterColor 19; Inlet Beach 12; Dune Allen 8; Rosemary Beach 8; Gulf Place 6; Santa Rosa Beach 6; WaterSound 5; Grayton Beach 4; Seaside 2,VR Pros 172; - No Reservation Engine - 7; TrackHs 2; TrackHS API 2; Escapia 1; Natural Retreats 1,Cloudflare arkasında; sayfada /vrp/ izi,site açılmadı,yok,Cloudflare doğrulama sayfası (403).
+30aescapes.com,30A Escapes,162,35.3,Seacrest 78; Rosemary Beach 28; Seagrove 27; Inlet Beach 7; WaterSound 6; Grayton Beach 4; WaterColor 4; Gulf Place 3; Dune Allen 2; Santa Rosa Beach 2; Blue Mountain Beach 1,TrackHs 83; TrackHS API 53; Live Rez 13; - No Reservation Engine - 12; - Unique - 1,Track bookingEngine,çalışıyor: POST ajax/quote,track,"Kira, vergiler, toplam; ücret kalemi bu şirkette ayrı gösterilmiyor."
+homeownerscollection.com,Homeowner's Collection,143,41.3,Seaside 137; Santa Rosa Beach 6,Homeowners Collection 138; Res CMS 5,ResCMS (Drupal),altyapı çalışır; eşleme yok,yok,Book>Direct bağlantıları şirketin ana sayfasını gösteriyor; ilan bağlantıyla bulunamaz.
+southernresorts.com,— (sayfada şirket adı satırı yok),104,45.7,Blue Mountain Beach 29; Seagrove 25; Santa Rosa Beach 20; Seacrest 15; WaterSound 5; Gulf Place 3; Inlet Beach 3; Dune Allen 2; Grayton Beach 2,SouthernResorts 104,kendi ön yüzü (/property/v3/quote),bulunamadı,yok,Fiyat servisi denemelerde 400/500 döndü; doğru istek biçimi çözülemedi.
+oceanreefresorts.com,Ocean Reef Resorts,96,49.7,Grayton Beach 30; Santa Rosa Beach 23; Seagrove 18; Blue Mountain Beach 11; Dune Allen 7; Seacrest 6; Inlet Beach 1,Res CMS 96,Track izleri,eşleme yok,yok,Book>Direct bağlantıları genel ilan listesine (/vacation-rentals/) yönleniyor.
+rosemarybeach.com,Rosemary Beach®,89,53.4,Rosemary Beach 83; Inlet Beach 4; Seacrest 2,Irmnet Json 89,Streamline (WordPress eklentisi),çalışıyor: VerifyPropertyAvailability + GetPreReservationPrice,streamline,Bazı bağlantılar 404.
+beautifulbeach.com,Dune Allen Realty Vacation Rentals,87,57.1,Dune Allen 70; Santa Rosa Beach 8; Blue Mountain Beach 4; Seagrove 4; Grayton Beach 1,VR Pros 87,vacation-rentals/router (WordPress),çalışıyor: POST router getPrice,vr_router,Bazı bağlantılar 404.
+rentals.cottagerentalagency.com,— (site yanıt vermedi),82,60.5,Seaside 59; Seagrove 9; Inlet Beach 4; WaterColor 4; Blue Mountain Beach 3; Seacrest 2; Rosemary Beach 1,Synxis XML 75; - Unique - 6; - No Reservation Engine - 1,okunamadı,site açılmadı,yok,Bağlantı kurulamadı.
+panhandlegetaways.com,Panhandle Getaways,81,63.9,WaterSound 56; Seacrest 13; Seagrove 5; Santa Rosa Beach 4; Alys Beach 1; Inlet Beach 1; Rosemary Beach 1,VRM Reservations 53; Res CMS 28,Track bookingEngine,çalışıyor: POST ajax/quote,track,Bazı bağlantılar 404 (eski adres biçimi).
+realjoy.com,— (site açılamadı),61,66.4,Seagrove 18; Santa Rosa Beach 12; Seacrest 9; Blue Mountain Beach 6; Gulf Place 6; WaterSound 4; Inlet Beach 2; Rosemary Beach 2; Dune Allen 1; Grayton Beach 1,Kigo 36; - Unique - 25,Cloudflare arkasında,site açılmadı,yok,Cloudflare doğrulama sayfası (403).
+paradise30a.com,— (sayfada şirket adı satırı yok),59,68.9,Inlet Beach 25; Seagrove 13; Seacrest 8; Blue Mountain Beach 5; Seaside 3; Rosemary Beach 2; Grayton Beach 1; Gulf Place 1; WaterSound 1,streamline api 59,vacation-rentals/router (WordPress),altyapı çalışır; eşleme yok,yok,Book>Direct bağlantıları sayfa içi betikle sonuç listesine yönleniyor; ilan bağlantıyla bulunamaz.
+30a-vacay.com,30A Vacay,54,71.2,Seacrest 20; Seagrove 11; Blue Mountain Beach 7; WaterColor 5; Grayton Beach 3; Rosemary Beach 3; WaterSound 3; Dune Allen 1; Inlet Beach 1,Live Rez 54,WordPress,eşleme yok,yok,Book>Direct bağlantıları eski .asp adresleri; 404.
+vrbo.com,— (platform),52,73.3,Seagrove 13; Santa Rosa Beach 9; Blue Mountain Beach 8; Rosemary Beach 6; Seacrest 5; Gulf Place 4; Dune Allen 2; Grayton Beach 2; Inlet Beach 2; WaterSound 1,VRBO API 52,Vrbo,site açılmadı,yok,429 ve 'Bot or Not?' doğrulama sayfası; aracı platform.
+dunevacationrentals.com,Dune Vacation Rentals,49,75.4,WaterColor 27; WaterSound 8; Seaside 5; Seagrove 3; Seacrest 2; Grayton Beach 1; Inlet Beach 1; Rosemary Beach 1; Santa Rosa Beach 1,streamline api 48; - No Reservation Engine - 1,Streamline (WordPress eklentisi),çalışıyor: VerifyPropertyAvailability + GetPreReservationPrice,streamline,
+30a-beachgirls.com,— (sayfa yok),48,77.4,Blue Mountain Beach 20; Seacrest 11; WaterSound 9; Seagrove 5; Grayton Beach 1; Inlet Beach 1; Santa Rosa Beach 1,streamline api 48,okunamadı,eşleme yok,yok,Bağlantılar 404.
+grayt30avacations.com,Grayt 30A Vacations,40,79.1,Seagrove 17; Grayton Beach 15; Blue Mountain Beach 2; Santa Rosa Beach 2; Seaside 2; Dune Allen 1; WaterColor 1,VRM Reservations 39; - No Reservation Engine - 1,ResCMS (Drupal),altyapı çalışır; eşleme yok,yok,Book>Direct bağlantıları şirketin ana sayfasını gösteriyor.
+sandersbeachrentals.com,Sanders Beach Rentals,38,80.7,WaterColor 32; Seagrove 2; WaterSound 2; Grayton Beach 1; Santa Rosa Beach 1,Live Rez 38,ResCMS (Drupal),sayfada fiyat sorgusu yok,yok,İlan sayfasında yalnız müsaitlik takvimi var.
+funvacay.com,— (sayfada şirket adı satırı yok),31,82.0,Seagrove 9; Santa Rosa Beach 6; Dune Allen 3; Inlet Beach 3; Seacrest 3; Gulf Place 2; WaterColor 2; WaterSound 2; Blue Mountain Beach 1,Res CMS 31,ResCMS (Drupal),sayfada fiyat sorgusu yok,yok,İlan sayfasında yalnız müsaitlik takvimi var.
+exclusive30a.com,— (site açılamadı),29,83.2,WaterColor 15; Seacrest 4; Seaside 4; Inlet Beach 3; Seagrove 2; WaterSound 1,Escapia 29,Cloudflare arkasında,site açılmadı,yok,Cloudflare doğrulama sayfası (403).
+yourfriendatthebeach.com,Your Friend at the Beach,22,84.1,Blue Mountain Beach 21; Santa Rosa Beach 1,Escapia 22,WordPress (Barefoot/Escapia izleri),incelenmedi,yok,Üçte iki eşiğinin dışında.
+vacasa.com,— (site açılamadı),21,85.0,Santa Rosa Beach 8; Seacrest 4; Seagrove 4; Inlet Beach 2; Blue Mountain Beach 1; Rosemary Beach 1; Seaside 1,Vacasa 21,Vacasa,site açılmadı,yok,403 (CloudFront).
+outdoorshower30a.com,— (site yanıt vermedi),21,85.9,Seacrest 13; WaterSound 5; Seagrove 2; Inlet Beach 1,Live Rez 21,okunamadı,site açılmadı,yok,Bağlantı kurulamadı.
+30abeachstays.com,— (başlıkta '30a Beach Stays'),21,86.7,Santa Rosa Beach 14; Inlet Beach 7,- No Reservation Engine - 21,farklı altyapı,incelenmedi,yok,Üçte iki eşiğinin dışında.
+airbnb.com,— (platform),19,87.5,Santa Rosa Beach 9; Inlet Beach 2; Rosemary Beach 2; Seacrest 2; Dune Allen 1; Gulf Place 1; Seagrove 1; WaterSound 1,AirBnb API 17; - No Reservation Engine - 1; - No Reservation Engine and No Website - 1,Airbnb,incelenmedi,yok,Aracı platform.
+legacybeachhomes.com,Legacy Beach Homes,18,88.3,Seagrove 8; Dune Allen 7; Blue Mountain Beach 1; Santa Rosa Beach 1; Seacrest 1,- Unique - 17; - No Reservation Engine - 1,WordPress,incelenmedi,yok,Üçte iki eşiğinin dışında.
+graytoncoastrentals.com,Grayton Coast Rentals,17,89.0,Grayton Beach 10; WaterColor 3; Seagrove 2; Santa Rosa Beach 1; Seacrest 1,Res CMS 17,ResCMS (Drupal),çalışıyor: pricing/simple + pricing/quote,rescms,Bir denemede 'Access denied' sayfası döndü.
+30acottagesandconcierge.com,30A Cottages,17,89.7,Rosemary Beach 6; WaterColor 4; Seacrest 3; Seagrove 2; Inlet Beach 1; Santa Rosa Beach 1,streamline api 17,ResCMS (Drupal),çalışıyor: pricing/simple + pricing/quote,rescms,
+destinvacation.com,"Newman-Dailey Resort Properties, Inc.",16,90.4,Blue Mountain Beach 9; Santa Rosa Beach 7,Instant Software Online XML 16,farklı altyapı,incelenmedi,yok,Üçte iki eşiğinin dışında.
+myvacationhaven.com,My Vacation Haven,15,91.0,Santa Rosa Beach 4; Inlet Beach 3; Gulf Place 2; Blue Mountain Beach 2; Rosemary Beach 1; Seagrove 1; Dune Allen 1; Seacrest 1,Escapia 15,ResCMS (Drupal),çalışıyor: pricing/simple + pricing/quote,rescms,Bazı bağlantılar 404 veya 'Access denied'.
+wyndhamvacationrentals.com,— (site açılamadı),14,91.6,Santa Rosa Beach 6; Seagrove 6; Seacrest 2,Vacasa 14,bağlantılar vacasa.com'a gidiyor,site açılmadı,yok,403.
+beachescapesrentals.com,Beach Escapes Realty,13,92.1,Santa Rosa Beach 10; Seagrove 2; Seacrest 1,Live Rez 13,Escapia izleri,eşleme yok,yok,Bağlantılar 'page not found' sayfasına gidiyor.
+coastalbluevacations.com,Coastal Blue Vacations,12,92.6,Blue Mountain Beach 5; Santa Rosa Beach 5; Gulf Place 1; Inlet Beach 1,Res CMS 12,ResCMS (Drupal),sayfada fiyat sorgusu yok,yok,İlan sayfasında yalnız müsaitlik takvimi var.
+cottagerentalagency.com,— (sandestin.com'a yönleniyor),10,93.1,Santa Rosa Beach 10,Synxis XML 10,okunamadı,site açılmadı,yok,Access denied.
+liv-vacations.com,Liv Vacations,8,93.4,Blue Mountain Beach 5; Seacrest 2; Seagrove 1,Lodgix 8,Lodgix (WordPress),incelenmedi,yok,Üçte iki eşiğinin dışında.
+beachesofsouthwaltonvacations.com,"Beaches of South Walton Vacations, LLC",8,93.7,Seagrove 4; Seacrest 3; Santa Rosa Beach 1,- No Reservation Engine - 8,okunamadı,eşleme yok,yok,Bağlantılar ana sayfayı gösteriyor.
+oldseagrove.com,— (site açılamadı),8,94.1,Seagrove 7; Santa Rosa Beach 1,VRM Reservations 7; - Unique - 1,Cloudflare arkasında,site açılmadı,yok,Cloudflare doğrulama sayfası (403).
+(url yok),—,7,94.3,Santa Rosa Beach 5; Seacrest 1; Seagrove 1,- No Reservation Engine and No Website - 7,—,bağlantı yok,yok,Book>Direct kaydında şirket bağlantısı (url) yok.
+alysbeach.com,Alys Beach,6,94.6,Alys Beach 6,Reseze API 6,WordPress,eşleme yok,yok,Bağlantılar genel 'vacation properties' sayfasına gidiyor.
+dolphindevelopers.com,— (sayfa yok),6,94.9,Dune Allen 3; Blue Mountain Beach 2; Santa Rosa Beach 1,- No Reservation Engine - 6,okunamadı,eşleme yok,yok,Bağlantılar 404.
+forevervacationrentals.com,,5,95.1,Santa Rosa Beach 4; Seacrest 1,streamline api 4; Resort Pro 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+glasscasa.com,,4,95.2,Seagrove 2; Blue Mountain Beach 1; WaterColor 1,VRM Reservations 4,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+bellamarvacationrentals.com,,4,95.4,Santa Rosa Beach 2; Gulf Place 1; Inlet Beach 1,LMPM 4,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+dogfriendlybeachrentals.com,,4,95.6,Santa Rosa Beach 4,- No Reservation Engine - 4,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+rivardnet.com,,3,95.7,Grayton Beach 1; Inlet Beach 1; Santa Rosa Beach 1,Instant Software Online XML 3,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+itrip.net,,3,95.8,Santa Rosa Beach 3,- No Reservation Engine - 2; VRBO API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sanddollarvacationproperties.com,,3,95.9,Santa Rosa Beach 3,- Unique - 3,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+shvrs.com,,2,96.0,Blue Mountain Beach 2,Ownerrez API (Lodgix) 2,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+ecbyo.com,,2,96.1,Santa Rosa Beach 1; Seacrest 1,ivacation 1; - No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+floridastateparks.org,,2,96.2,Santa Rosa Beach 2,Reserve America 2,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+seastarvacations.net,,2,96.3,Santa Rosa Beach 2,streamline api 2,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+emeraldcoastbyowner.com,,2,96.4,Santa Rosa Beach 1; Seacrest 1,- No Reservation Engine - 2,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+houfy.com,,2,96.4,Santa Rosa Beach 1; Seagrove 1,- Unique - 1; - No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+blueswell.com,,2,96.5,Seacrest 1; Seagrove 1,Res CMS 2,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+radiantresortproperties.com,,1,96.6,Blue Mountain Beach 1,lodgify 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+book.beautifulbeach.com,,1,96.6,Dune Allen 1,VR Pros 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+hibiscusflorida.com,,1,96.7,Grayton Beach 1,Resnexus (Availability Exchange) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+graytonbeachjakes.com,,1,96.7,Grayton Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+casabelleview.com,,1,96.7,Gulf Place 1,- Unique - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30aluxuryvacations.com,,1,96.8,Inlet Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+holidaybeachrentals.com,,1,96.8,Inlet Beach 1,Live Rez 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30aseastory.com,,1,96.9,Inlet Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+clareoncottage30a.com,,1,96.9,Inlet Beach 1,Ownerrez API (Lodgix) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sandbyme30a.com,,1,96.9,Inlet Beach 1,lodgify 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+allseasons30a.com,,1,97.0,Inlet Beach 1,Lodgix 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30aseacrestknights.com,,1,97.0,Rosemary Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+barefoot-30a.com,,1,97.1,Rosemary Beach 1,Lodgix 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+purehaven30a.com,,1,97.1,Rosemary Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+rebasretreat.hosted.ownerrez.com,,1,97.2,Rosemary Beach 1,Ownerrez API (Lodgix) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+greatescapeatrosemary.com,,1,97.2,Rosemary Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+therosemarybeachinn.com,,1,97.2,Rosemary Beach 1,Irmnet Json 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+spf50llc.com,,1,97.3,Rosemary Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+zeebythesea.com,,1,97.3,Rosemary Beach 1,VRBO API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30asuites.com,,1,97.4,Santa Rosa Beach 1,Inn Road API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+facebook.com,,1,97.4,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sterling30a.com,,1,97.4,Santa Rosa Beach 1,Vacasa 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+beachbunksrentals.com,,1,97.5,Santa Rosa Beach 1,Live Rez 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+bestbeachgetaways.com,,1,97.5,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+bluemountainbeachcondo.com,,1,97.6,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+breatheeasyrentals.com,,1,97.6,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+coast-properties.com,,1,97.7,Santa Rosa Beach 1,Wix Hotels 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+coastaldreamin.com,,1,97.7,Santa Rosa Beach 1,streamline api 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+destinmemories.com,,1,97.7,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+ecvr.com,,1,97.8,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+gotothebeach.com,,1,97.8,Santa Rosa Beach 1,Res CMS 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+harborheightson30a.com,,1,97.9,Santa Rosa Beach 1,- Unique - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+harmonybeachvacations.com,,1,97.9,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+luxurypropertiesvr.com,,1,97.9,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+straighttothebeach.com,,1,98.0,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+campflorida.com,,1,98.0,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+royaldestinations.com,,1,98.1,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sanctuaryredfish.com,,1,98.1,Santa Rosa Beach 1,Instant Software Online XML 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+southwaltonvacation.com,,1,98.2,Santa Rosa Beach 1,Destin Vacation 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sanddollarone.com,,1,98.2,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sandpipervacationrentals.com,,1,98.2,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+seabreeze-fl.com,,1,98.3,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+lagniappeon30a.com,,1,98.3,Santa Rosa Beach 1,Ownerrez API (Lodgix) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+seadreamer30a.com,,1,98.4,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+seagrovebeach.com,,1,98.4,Santa Rosa Beach 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+southernbeachrealestateandrentals.com,,1,98.5,Santa Rosa Beach 1,VRBO API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+southerngirlvacationrentals.com,,1,98.5,Santa Rosa Beach 1,Ownerrez API (Lodgix) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+tropicalescape30a.com,,1,98.5,Santa Rosa Beach 1,streamline api 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+rentals.behappyrentalsof30a.com,,1,98.6,Santa Rosa Beach 1,Ownerrez API (Lodgix) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+villagroveproperties.com,,1,98.6,Santa Rosa Beach 1,My Vacation Rental 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+id360media.com,,1,98.7,Santa Rosa Beach 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+behappyrentalsof30a.com,,1,98.7,Seacrest 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+beachycations.com,,1,98.7,Seacrest 1,Lodgix 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+travellifevacations.com,,1,98.8,Seacrest 1,My Vacation Rental 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+neptunesretreat.com,,1,98.8,Seacrest 1,- Unique - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sunburstbeachvacations.com,,1,98.9,Seacrest 1,- Unique - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+seascape-resort.com,,1,98.9,Seacrest 1,Escapia 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30avacay.com,,1,99.0,Seagrove 1,Live Rez 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+benchmark30ahttps,,1,99.0,Seagrove 1,VR Pros 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+coastal30a.net,,1,99.0,Seagrove 1,Res CMS 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+casamimosa30a.com,,1,99.1,Seagrove 1,Wix Hotels 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+danieldunes.com,,1,99.1,Seagrove 1,Ownerrez API (Lodgix) 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+floridarentals.com,,1,99.2,Seagrove 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+oneseagroveplace.com,,1,99.2,Seagrove 1,Irmnet Json 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30abeachvilla.com,,1,99.2,Seagrove 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30ahomerentals.com,,1,99.3,Seagrove 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+zenful-villa.business.site,,1,99.3,Seagrove 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+thelodge30a.com,,1,99.4,Seagrove 1,Synxis XML 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+sealinkinseaside.com,,1,99.4,Seaside 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+watercolorresort.com,,1,99.5,WaterColor 1,Synxis XML 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+campcreekcasita.com,,1,99.5,WaterSound 1,AirBnb API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+watersoundclub.com,,1,99.5,WaterSound 1,Synxis XML 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+30acoastalrental.com,,1,99.6,WaterSound 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+mylifestyle30a.com,,1,99.6,WaterSound 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+peninsulaparadise30a.com,,1,99.7,WaterSound 1,LodgifyV2 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+plimsollretreat.com,,1,99.7,WaterSound 1,- No Reservation Engine - 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+embark850.com,,1,99.7,WaterSound 1,Hostfully 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+watersoundinn.com,,1,99.8,WaterSound 1,Synxis XML 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+kaiyabeachresort.com,,1,99.8,Inlet Beach 1,AZDS API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+gotomybeachhouse.com,,1,99.9,Inlet Beach 1,VRBO API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+thepearlrb.com,,1,99.9,Rosemary Beach 1,Synxis XML 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+book.shutupandbeach.com,,1,100.0,WaterSound 1,Hostfully 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.
+crosswindsbeachhouse.com,,1,100.0,Santa Rosa Beach 1,VRBO API 1,incelenmedi,incelenmedi,yok,Üçte iki eşiğinin dışında.

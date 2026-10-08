@@ -16,7 +16,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import beaches, bookdirect_lodging, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
+from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, neighborhoods, storm_proximity, water_temperature, weather
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
@@ -98,6 +98,9 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "lodging_runs": lodging_runs(destination_id),
                 "lodging_connector": {"name": bookdirect_lodging.BookDirectLodgingConnector.name, "method": "JSON",
                                       "scope": bookdirect_lodging.SCOPE, "config": context.lodging},
+                "agency_runs": agency_runs(destination_id),
+                "agency_connector": {"name": agency_rates.AgencyRatesConnector.name, "method": "HTML/JSON", "scope": agency_rates.SCOPE,
+                                     "sites": (context.agency or {}).get("sites", [])},
                 "climate_connectors": {"normals": climate_normals.ClimateNormalsConnector.name,
                                        "water": water_temperature.WaterTemperatureConnector.name,
                                        "storms": storm_proximity.StormProximityConnector.name},
@@ -397,6 +400,46 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham konaklama manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"konaklama-{identifier[:8]}.json")
+
+    AGENCY = agency_rates.AgencyRatesConnector.name
+
+    @app.get("/api/agency-rate-runs")
+    def agency_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] == AGENCY and run["status"] == "done"]
+
+    def find_agency_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != AGENCY or run["status"] != "done":
+            raise HTTPException(404, "Bu kiralama şirketi fiyat sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/agency-rate-runs/{identifier}")
+    def agency_run(identifier: str):
+        """Region x window price summary and bedroom medians, computed when read; nothing derived is stored."""
+        run = find_agency_run(identifier)
+        regions = db.context(run["destination_id"]).canonical_regions
+        with db.connect() as con:
+            summary = agency_rates.summarize(con, identifier, [r["id"] for r in regions], {r["id"]: r["name"] for r in regions})
+        if summary is None:
+            raise HTTPException(404, "Bu fiyat sürümünün özeti bulunamadı.")
+        return {"run": run, **summary}
+
+    @app.get("/api/agency-rate-runs/{identifier}/listings")
+    def agency_listings(identifier: str, region_id: str):
+        find_agency_run(identifier)
+        with db.connect() as con:
+            listings = agency_rates.region_listings(con, identifier, region_id)
+        return {"region_id": region_id, "listings": listings or []}
+
+    @app.get("/api/agency-rate-runs/{identifier}/raw")
+    def raw_agency_run(identifier: str):
+        run = find_agency_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham fiyat manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"kiralama-fiyat-{identifier[:8]}.json")
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

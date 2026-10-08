@@ -144,7 +144,8 @@ class Database:
             if not row: raise KeyError(identifier)
             return dict(row)
 
-    def context(self, identifier=DEFAULT_DESTINATION_ID):
+    def context(self, identifier=DEFAULT_DESTINATION_ID, inputs=()):
+        """Destination configuration for a connector; `inputs` adds data a connector reads from earlier runs (only for jobs)."""
         destination=self.destination(identifier)
         with self.connect() as con:
             regions=tuple(dict(r) for r in con.execute("SELECT * FROM regions WHERE destination_id=? ORDER BY sort_order,id",(identifier,)))
@@ -156,7 +157,28 @@ class Database:
             lodging={"clone_host":row["clone_host"],
                      "locations":{r["source_location_name"]:r["region_id"] for r in con.execute("SELECT * FROM destination_lodging_locations WHERE destination_id=? ORDER BY source_location_name",(identifier,))},
                      "windows":[dict(r) for r in con.execute("SELECT window_key,label,checkin,checkout FROM destination_lodging_windows WHERE destination_id=? AND enabled=1 ORDER BY sort_order,checkin",(identifier,))]} if row else None
-        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging)
+            sites=[dict(r) for r in con.execute("SELECT domain,company,adapter,enabled FROM destination_agency_sites WHERE destination_id=? ORDER BY sort_order,domain",(identifier,))]
+            agency={"sites":sites} if sites else None
+            if agency and "lodging_listings" in inputs:
+                agency["input"]=self.lodging_input(con,identifier)
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency)
+
+    @staticmethod
+    def lodging_input(con, destination_id):
+        """Listings of the destination's latest successful Book>Direct run: id, title, company url, bedrooms and the regions whose
+        location filters showed it (any window). None when there is no such run."""
+        run=con.execute("""SELECT r.id, s.searched_on FROM source_runs r JOIN lodging_snapshots s ON s.run_id=r.id
+            WHERE r.destination_id=? AND r.status='done' ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+        if not run:
+            return None
+        regions={}
+        for row in con.execute("""SELECT DISTINCT r.lodging_id, f.region_id FROM lodging_search_results r JOIN lodging_filters f
+                ON f.run_id=r.run_id AND f.window_key=r.window_key AND f.location_id=r.location_id WHERE r.run_id=?""",(run["id"],)):
+            regions.setdefault(row["lodging_id"],set()).add(row["region_id"])
+        listings=[{"lodging_id":row["lodging_id"],"title":row["title"],"url":row["url"],"bedrooms":row["bedrooms"],
+                   "region_ids":sorted(regions.get(row["lodging_id"],()))}
+                  for row in con.execute("SELECT lodging_id,title,url,bedrooms FROM lodging_listings WHERE run_id=? ORDER BY lodging_id",(run["id"],))]
+        return {"run_id":run["id"],"searched_on":run["searched_on"],"listings":listings}
 
     def sources(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
@@ -238,16 +260,20 @@ class Database:
 
     def jobs(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
-            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
+            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name, job_waits.site AS waiting_for FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
 
     def job(self, identifier):
         with self.connect() as con:
-            row = con.execute("SELECT * FROM jobs WHERE id=?", (identifier,)).fetchone()
+            row = con.execute("SELECT jobs.*, job_waits.site AS waiting_for FROM jobs LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') WHERE id=?", (identifier,)).fetchone()
             return self.decode_job(row) if row else None
 
-    def update_job(self, identifier, *, status=None, progress=None, message=None, result=None, diagnostic=None):
+    def update_job(self, identifier, *, status=None, progress=None, message=None, result=None, diagnostic=None, waiting_for=None):
+        """waiting_for names the site that waits for the user's verification; "" clears it (also after the job ended).
+        A wait is shown only while its job is queued or running."""
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
+            if waiting_for == "":
+                con.execute("DELETE FROM job_waits WHERE job_id=?", (identifier,))
             row = con.execute("SELECT * FROM jobs WHERE id=?", (identifier,)).fetchone()
             if not row or row["status"] not in ("queued", "running"):
                 return False
@@ -269,6 +295,8 @@ class Database:
                         (job["status"], job["progress"], job["message"], job["result"], job["log"], job["finished_at"], identifier))
             if diagnostic is not None:
                 con.execute("UPDATE jobs SET diagnostic=? WHERE id=?", (json.dumps(diagnostic), identifier))
+            if waiting_for:
+                con.execute("INSERT OR REPLACE INTO job_waits (job_id,site,since) VALUES (?,?,?)", (identifier, waiting_for, now()))
             if status is not None:
                 con.execute("""UPDATE source_runs SET status=?, started_at=CASE WHEN ?='running' THEN COALESCE(started_at,?) ELSE started_at END,
                     finished_at=?, error_message=? WHERE job_id=?""", (status, status, now(), job["finished_at"],
@@ -277,6 +305,7 @@ class Database:
 
     def recover_jobs(self):
         with self.connect() as con:
+            con.execute("DELETE FROM job_waits")
             con.execute("""UPDATE jobs SET status='interrupted', finished_at=?,
                 message='Önceki oturumda yarıda kaldı. Kontrolü yeniden başlatabilirsiniz.'
                 WHERE status IN ('queued','running')""", (now(),))

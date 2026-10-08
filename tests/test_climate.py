@@ -29,7 +29,7 @@ from studio.sources import water_temperature as wt
 from studio.sources.base import CollectionCanceled, SourceError
 from studio.sources.geo import EARTH_RADIUS_KM, KM_PER_NMI, Segment, distance_km
 from studio.sources.registry import DEFAULT_REGISTRY
-from tests.legacy import V8_TABLES, V10_TABLES
+from tests.legacy import V8_TABLES, V10_TABLES, V11_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_destinations import add_destination
 from tests.test_neighborhoods import make_v6
@@ -737,16 +737,17 @@ def test_v7_to_v8_migration_adds_tables_configuration_and_sources_with_backup(tm
         assert con.execute("PRAGMA user_version").fetchone()[0] == 11
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-        # The chain continues to v10, which adds the lodging configuration and its source.
-        assert table_counts(con) == {**tables_before, **V8_TABLES, **V10_TABLES, "sources": tables_before["sources"] + 4}
+        # The chain continues to v10 and v11, which add the lodging and agency configuration and their sources.
+        assert table_counts(con) == {**tables_before, **V8_TABLES, **V10_TABLES, **V11_TABLES, "sources": tables_before["sources"] + 5}
         for table, rows in rows_before.items():
             after = con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()
             assert after[:len(rows)] == rows, table
         added = con.execute("SELECT name,url,category,region,method,cadence,notes,enabled,version,destination_id,scope_region_id "
                             "FROM sources ORDER BY rowid").fetchall()[len(rows_before["sources"]):]
         assert added[:3] == [(name, url, category, "Tüm 30A", method, "Haftalık", notes, 1, 1, "30a", None)
-                             for name, url, category, notes, method in thirty_a.SEEDS[-4:-1]]
-        assert added[3][1] == f"https://{thirty_a.LODGING_CLONE_HOST}/" and len(added) == 4
+                             for name, url, category, notes, method in thirty_a.SEEDS[-5:-2]]
+        assert added[3][1] == f"https://{thirty_a.LODGING_CLONE_HOST}/" and len(added) == 5
+        assert added[4][1] == f"https://{thirty_a.LODGING_CLONE_HOST}/?kaynak=kiralama-sirketleri"
         stations = con.execute("SELECT station_key,station_id,distance_km,first_year,sort_order,enabled FROM destination_climate_stations "
                                "WHERE destination_id='30a' ORDER BY sort_order").fetchall()
         assert stations == [("coastal", COASTAL, 20.5, None, 0, 1), ("inland", INLAND, 44.1, None, 1, 1), ("water", "PCBF1", 12.9, 2005, 2, 1)]
@@ -758,7 +759,7 @@ def test_v7_to_v8_migration_adds_tables_configuration_and_sources_with_backup(tm
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in rows_before} == rows_before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert table_counts(con)["sources"] == tables_before["sources"] + 4
+        assert table_counts(con)["sources"] == tables_before["sources"] + 5
         assert table_counts(con)["destination_climate_stations"] == 3
     assert len(list((tmp_path / "backups").glob("*.sqlite3"))) == 1
 
@@ -818,8 +819,8 @@ def test_v8_to_v9_migration_adds_stage_flag_and_keeps_old_runs(tmp_path):
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         unchanged = lambda tables: {t: rows for t, rows in tables.items() if t not in ("storm_passages", "sources")}
         assert unchanged(after) == unchanged(before)
-        # v10 (later in the same chain) only appends the lodging source.
-        assert after["sources"][:len(before["sources"])] == before["sources"] and len(after["sources"]) == len(before["sources"]) + 1
+        # v10 and v11 (later in the same chain) only append the lodging and agency sources.
+        assert after["sources"][:len(before["sources"])] == before["sources"] and len(after["sources"]) == len(before["sources"]) + 2
         # The old v1 row keeps every value; the new column is 0 (v1 did not separate stages).
         assert after["storm_passages"] == [row + (0,) for row in before["storm_passages"]]
         with pytest.raises(sqlite3.IntegrityError):

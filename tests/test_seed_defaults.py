@@ -62,8 +62,10 @@ def test_fresh_seed_methods_and_nws_description(tmp_path):
     climate = {NORMALS_URL: 'API', WATER_URL: 'Dosya', STORMS_URL: 'Dosya'}
     assert {url: sources[url]['method'] for url in climate} == climate
     assert all(s['method'] == 'Belirlenecek' for url, s in sources.items() if url not in (NWS, BEACH, "https://www.visitsouthwalton.com/listings/culinary-experiences/", "https://www.visitsouthwalton.com/neighborhoods/", *climate,
-                                                                              "https://visitsouthwalton.bookdirect.net/"))
+                                                                              "https://visitsouthwalton.bookdirect.net/",
+                                                                              "https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri"))
     assert sources["https://visitsouthwalton.bookdirect.net/"]['method'] == 'JSON'
+    assert sources["https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri"]['method'] == 'HTML'
 
 
 def test_v2_chain_also_refreshes_default_beach_method(tmp_path):

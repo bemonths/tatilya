@@ -20,7 +20,7 @@ from studio.migration_v10 import upgrade_v10
 from studio.sources import bookdirect_lodging as bl
 from studio.sources.base import CollectionCanceled, SourceError
 from studio.sources.registry import DEFAULT_REGISTRY
-from tests.legacy import V10_TABLES
+from tests.legacy import V10_TABLES, V11_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_climate import make_v8, table_counts
 from tests.test_destinations import add_destination
@@ -510,7 +510,7 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         assert con.execute("PRAGMA user_version").fetchone()[0] == 11
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
-        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, "sources": len(before["sources"]) + 1}
+        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, **V11_TABLES, "sources": len(before["sources"]) + 2}
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         assert {t: r for t, r in after.items() if t != "sources"} == {t: r for t, r in before.items() if t != "sources"}
         assert after["sources"][:len(before["sources"])] == before["sources"]
@@ -519,7 +519,7 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         assert con.execute("PRAGMA user_version").fetchone()[0] == 9
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert table_counts(con)["sources"] == len(before["sources"]) + 1 and table_counts(con)["destination_lodging_windows"] == 4
+        assert table_counts(con)["sources"] == len(before["sources"]) + 2 and table_counts(con)["destination_lodging_windows"] == 4
 
 
 def test_v9_to_v10_failure_rolls_back_everything(tmp_path, monkeypatch):

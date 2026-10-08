@@ -100,7 +100,7 @@ def test_anchors_exact_and_registry_metadata(tmp_path):
         ('central', 30.3167, -86.12845, '5c81a5acf836f90dc03cccca'),
         ('east', 30.2713, -85.99579, '5c81a6a2f836f9166348e961')]
     assert 'mahalle merkezleri değildir' in ANCHOR_PROVENANCE['scope']
-    assert len(DEFAULT_REGISTRY.connectors) == 8
+    assert len(DEFAULT_REGISTRY.connectors) == 9
     with TestClient(create_app(tmp_path)) as client:
         for rows in (client.get('/api/sources').json(), client.get('/api/bootstrap').json()['sources']):
             s = next(s for s in rows if s['url'] == weather.SOURCE_URL)

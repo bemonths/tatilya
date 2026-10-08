@@ -40,13 +40,13 @@ def wait_job(client, identifier, timeout=30):
 
 def test_sources_survive_restart_and_seed_is_not_duplicated(tmp_path):
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
-        assert len(client.get("/api/sources").json()) == 12
+        assert len(client.get("/api/sources").json()) == 13
         result = client.post("/api/sources", json=payload())
         assert result.status_code == 201
         identifier = result.json()["id"]
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         sources = client.get("/api/sources").json()
-        assert len(sources) == 13
+        assert len(sources) == 14
         assert next(source for source in sources if source["id"] == identifier)["notes"] == payload()["notes"]
 
 
@@ -83,7 +83,7 @@ def test_duplicate_normalized_url(client):
 ])
 def test_invalid_source_rejected(client, change):
     assert client.post("/api/sources", json=payload(**change)).status_code == 422
-    assert len(client.get("/api/sources").json()) == 12
+    assert len(client.get("/api/sources").json()) == 13
 
 
 def test_missing_source_update(client):
@@ -97,7 +97,7 @@ def test_audit_is_persistent_and_does_not_change_source_records(tmp_path):
         assert response.status_code == 202
         job = wait_job(client, response.json()["id"])
         assert job["status"] == "done"
-        assert job["result"]["checked"] == 12
+        assert job["result"]["checked"] == 13
         assert job["result"]["needs_attention"] == 4
         assert client.get("/api/sources").json() == before
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:

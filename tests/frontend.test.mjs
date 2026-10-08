@@ -483,3 +483,58 @@ test('company listing links open only http(s) addresses and escape text',()=>{
   assert.equal(companyLink('javascript:alert(1)'),'javascript:alert(1)');
   assert.equal(companyLink('<b>'),'&lt;b&gt;');
 });
+import {AgencyPrices, agencyCell, bedroomCell, quoteTag, quoteBreakdown, weekdays, PAGE_LABELS, AGENCY_CONNECTOR} from '../studio/web/agency.js';
+test('agency price cells keep missing prices, skipped windows and availability visible',()=>{
+  assert.equal(AGENCY_CONNECTOR,'agency-lodging-rates');
+  assert.deepEqual(jobResultTarget({kind:'source_collection',result:{connector_name:'agency-lodging-rates'}}),{href:'#collect/lodging',label:'Konaklama fiyatlarını aç'});
+  assert.match(agencyCell({status:'skipped_past'}),/Geçmiş tarih; sorulmadı/);
+  assert.match(agencyCell({status:'queried',queried_count:0,listing_count:5,linked_count:2}),/Sorgulanan ilan yok<\/span><small>5 ilan · 2 bağlantılı/);
+  const cell=agencyCell({status:'queried',queried_count:4,priced_count:3,priced_share:0.75,available_share:1,total_q1:1666.43,total_median:1936.65,total_q3:2637.9,nightly_median:247.02});
+  assert.match(cell,/4 ilan soruldu/);assert.match(cell,/fiyatlı 3 \(%75\) · müsait %100/);
+  assert.match(cell,/<strong>\$1,937<\/strong><small>toplam ortanca · \$1,666–\$2,638<\/small><small>kira gecelik \$247/);
+  assert.match(agencyCell({status:'queried',queried_count:2,priced_count:0,priced_share:0,available_share:null,total_median:null}),/müsait —.*Fiyat alınamadı/);
+  assert.match(bedroomCell({bedrooms:{'1-2':{count:0,median:null},'3':{count:2,median:1500},'4':{count:0,median:null},'5+':{count:1,median:3000}}}),/1–2 oda: —<\/small><small>3 oda: \$1,500 \(2\)/);
+  assert.equal(weekdays([6,7]),'Cumartesi, Pazar');assert.equal(weekdays(null),'');
+});
+test('agency quote tags and breakdown show only what the site gave',()=>{
+  assert.match(quoteTag(undefined),/Sorulmadı/);
+  assert.match(quoteTag({status:'priced',total:3339.16}),/\$3,339<small>toplam/);
+  assert.match(quoteTag({status:'restricted',min_stay:4}),/konaklama kuralına takıldı<\/span><small>en az 4 gece/);
+  const window={label:'Kış <2027>',checkin:'2027-01-16',checkout:'2027-01-23',nights:7};
+  const html=quoteBreakdown({status:'priced',rent:705.99,fees:[{name:'Cleaning <Fee>',amount:325}],tax_items:[{name:'Tax',amount:149.59}],total:1396.21,
+    total_includes_taxes:1,total_includes_fees:1,excluded_items:[{name:'Insurance',amount:100.34,reason:'sitede isteğe bağlı, seçilmemiş'}],
+    min_stay:3,checkin_days:[6],rule_source:'sayfa',message:null,queried_at:'2027-01-01T00:00:00Z',currency:'USD'},window);
+  assert.match(html,/Kış &lt;2027&gt;/);assert.match(html,/<td>Cleaning &lt;Fee&gt;<\/td><td>\$325<\/td>/);
+  assert.match(html,/Toplam = kira \+ ücretler \+ vergiler/);assert.match(html,/Toplama dahil edilmeyen: Insurance \$100/);
+  assert.match(html,/en az 3 gece · giriş günü: Cumartesi/);assert.match(html,/ilan sayfasının takviminden/);
+  const empty=quoteBreakdown({status:'unavailable',rent:null,fees:null,tax_items:null,total:null,message:'Not <Available>',queried_at:null,currency:null},window);
+  assert.doesNotMatch(empty,/<table/);assert.match(empty,/Site: Not &lt;Available&gt;/);assert.match(empty,/müsait değil/);
+  assert.match(quoteBreakdown(undefined,window),/sorulmadı/);
+  assert.equal(PAGE_LABELS.no_url,"Book>Direct'te şirket bağlantısı yok");
+});
+test('agency section draws the price table, bedroom medians and company results',()=>{
+  const nodes={};const node=()=>({innerHTML:'',textContent:'',addEventListener(){},querySelector:selector=>nodes[selector] ??= node()});
+  const body=node();const target={querySelector:selector=>selector==='#agency-body'?body:(nodes[selector] ??= node())};
+  const prices=new AgencyPrices();
+  prices.snapshot={run:{id:'a1'},snapshot:{lodging_run_id:'lodging1',queried_on:'2026-10-08',request_count:120},
+    windows:[{window_key:'w',label:'Kış',checkin:'2027-01-16',checkout:'2027-01-23',nights:7,status:'queried'},{window_key:'p',label:'Eski',checkin:'2026-01-03',checkout:'2026-01-10',nights:7,status:'skipped_past'}],
+    regions:[{region_id:'seaside',region_name:'Seaside'}],
+    cells:[{region_id:'seaside',window_key:'w',status:'queried',listing_count:5,linked_count:4,queried_count:4,priced_count:3,priced_share:0.75,available_share:1,total_median:1936.65,total_q1:1666,total_q3:2637,nightly_median:247,bedrooms:{'1-2':{count:0,median:null},'3':{count:1,median:1396},'4':{count:1,median:1936},'5+':{count:1,median:3339}}},
+           {region_id:'seaside',window_key:'p',status:'skipped_past',listing_count:5,linked_count:4}],
+    companies:[{company:'<Benchmark>',domain:'benchmark30a.com',adapter:'rescms',listing_count:241,matched_count:200,priced_count:150,quote_count:800,request_count:900,status:'stopped_blocked',message:'Site reddetti'}],
+    coverage:{listings:2389,matched:600,priced_listings:400,regions:13,regions_with_price:12,no_url:10,no_adapter:1500,not_found:100,no_listing:0},
+    label:'Kiralama şirketlerinin kendi sitelerinde 2026-10-08 tarihinde sorgulanan fiyatlar; toplam fiyat vergileri içerir.',nightly_note:'Gecelik ortalama = kira ÷ gece.',bedroom_note:'Oda sayısı Book>Direct ilanından.'};
+  prices.draw(target);
+  assert.match(body.innerHTML,/<strong>2389<\/strong><span class="metric-label">Book&gt;Direct ilanı/);
+  assert.match(body.innerHTML,/879 ilan yapılandırılmış şirketlere bağlı/);
+  assert.match(body.innerHTML,/2026-10-08 tarihinde sorgulanan fiyatlar/);
+  assert.match(body.innerHTML,/data-agency-region="seaside">Seaside<\/button>/);
+  assert.match(body.innerHTML,/Geçmiş tarih; sorulmadı/);assert.match(body.innerHTML,/5\+ oda: \$3,339 \(1\)/);
+  assert.match(body.innerHTML,/&lt;Benchmark&gt;<small>benchmark30a.com/);assert.match(body.innerHTML,/site reddetti; durduruldu<\/span><small>Site reddetti/);
+  assert.match(body.innerHTML,/şirket sitesi sayfayı bulamadı \(404\) 100/);
+});
+test('jobs panel names the site waiting for the user verification',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const source=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  assert.match(source,/job\.waiting_for\?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor<\/span> \$\{esc\(job\.waiting_for\)\}/);
+});

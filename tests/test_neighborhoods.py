@@ -20,7 +20,7 @@ from studio.sources.registry import DEFAULT_REGISTRY
 from tests.test_beaches import HEADERS, finished
 from tests.test_destinations import add_destination, make_v5
 from tests.test_studio import payload
-from tests.legacy import ADDED_SOURCE_URLS, V8_TABLES, V10_TABLES
+from tests.legacy import ADDED_SOURCE_URLS, V8_TABLES, V10_TABLES, V11_TABLES
 
 FIXTURES = Path(__file__).parent / 'fixtures/neighborhoods'
 INDEX = (FIXTURES / 'index.html').read_text(encoding='utf-8')
@@ -505,7 +505,7 @@ def test_v6_to_v7_migration_adds_table_and_source_with_backup(tmp_path):
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         tables_after = {row[0]: con.execute(f'SELECT COUNT(*) FROM "{row[0]}"').fetchone()[0]
                         for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert tables_after == {**tables_before, 'neighborhood_records': 0, **V8_TABLES, **V10_TABLES,
+        assert tables_after == {**tables_before, 'neighborhood_records': 0, **V8_TABLES, **V10_TABLES, **V11_TABLES,
                                 'sources': tables_before['sources'] + len(ADDED_SOURCE_URLS)}
         sources_after = con.execute('SELECT * FROM sources ORDER BY rowid').fetchall()
         assert sources_after[:len(sources_before)] == sources_before

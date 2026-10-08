@@ -66,8 +66,8 @@ export function regionMonthly(monthly, regionId) {
 }
 
 export class LodgingScreen {
-  constructor() {this.selectedRun=null;this.selectedRegion=null;this.selectedListing=null;this.snapshot=null;this.listings=null;this.sequence=0;}
-  invalidate() {this.sequence++;}
+  constructor(agency=null) {this.agency=agency;this.selectedRun=null;this.selectedRegion=null;this.selectedListing=null;this.snapshot=null;this.listings=null;this.sequence=0;}
+  invalidate() {this.sequence++;this.agency?.invalidate();}
   render(main,data,heading) {
     data={...data,sources:destinationRows(data.sources,data.selected_destination),jobs:destinationRows(data.jobs,data.selected_destination),
       lodging_runs:destinationRows(data.lodging_runs || [],data.selected_destination)};
@@ -88,7 +88,9 @@ export class LodgingScreen {
       (run?`<div class="collection-version"><label>Sürüm <select id="lodging-version" aria-label="Konaklama veri sürümü">${runs.map((r,i)=>`<option value="${esc(r.id)}" ${r.id===run.id?"selected":""}>${i===0?"Son çekim · ":""}${esc(date(r.fetched_at))} · ${r.record_count} ilan · ${esc(r.id.slice(0,6))}</option>`).join("")}</select></label><a class="download-link" href="/api/lodging-runs/${esc(run.id)}/raw" download>↓ Ham kaynak manifestini indir</a></div>
       <div id="lodging-body" aria-live="polite"><p>Özet yükleniyor…</p></div>`:
       `<section class="quality-result empty"><h2>İlk konaklama çekimi hazır</h2><p>“Konaklama aramalarını topla” her tarih penceresinde her mahalle filtresinin bütün sayfalarını, canlı fiyatları ve her ilanın fiyat takvimini okur. İstekler sıralıdır ve aralıklıdır; çekim uzun sürebilir. Her başarılı çekim ayrı sürüm olarak korunur.</p></section>`)+
-      `<div class="stage-note"><p>${esc(data.lodging_connector?.scope || "")} Kaynağın istemci anahtarı her çekimde ön yüz paketinden okunur ve hiçbir yere yazılmaz. Mahalle, kaynağın konum filtresinin adından gelir; adres veya koordinattan mahalle çıkarılmaz.</p></div>`;
+      `<div class="stage-note"><p>${esc(data.lodging_connector?.scope || "")} Kaynağın istemci anahtarı her çekimde ön yüz paketinden okunur ve hiçbir yere yazılmaz. Mahalle, kaynağın konum filtresinin adından gelir; adres veya koordinattan mahalle çıkarılmaz.</p></div>`+
+      '<div id="agency-prices"></div>';
+    this.agency?.render(main.querySelector("#agency-prices"),data);
     if(!run) return;
     main.querySelector("#lodging-version").addEventListener("change",event=>{this.selectedRun=event.target.value;this.snapshot=null;this.selectedRegion=null;this.listings=null;this.render(main,data,heading);});
     const draw=()=>this.draw(main);

@@ -35,6 +35,8 @@ SEEDS = [
      "Atlantik best track dosyasından destinasyonun kıyı koridoruna yakın geçen tropikal siklonlar (bizim hesabımız): ilk giriş ayı, en yakın mesafe, daire içindeki en yüksek rüzgâr ve sınıf.", "Dosya"),
     ("South Walton · Konaklama (Book>Direct)", "https://visitsouthwalton.bookdirect.net/", "Konaklama",
      "Visit South Walton'ın resmî Stay ön yüzünün kullandığı Book>Direct aramaları: yapılandırılmış tarih pencerelerinde her mahalle filtresinde görünen ilanlar, türleri, büyüklükleri ve kaynağın verdiği fiyat alanları; ilan başına aylık fiyat takvimi özeti. Tarihli arama anlık görüntüsüdür, tam envanter değildir.", "JSON"),
+    ("Kiralama şirketleri · Konaklama fiyatları", "https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri", "Konaklama",
+     "Son Book>Direct çekimindeki ilanların şirket bağlantısıyla, yapılandırılmış kiralama şirketlerinin kendi sitelerinde her tarih penceresi için sorulan müsaitlik ve fiyat: kira, temizlik ve diğer ücretler, vergiler, genel toplam, en az gece ve giriş günü kuralı (site hangilerini gösteriyorsa). Eşleme yalnız bağlantıyla yapılır; tam envanter değildir.", "HTML"),
 ]
 
 # Visit South Walton spells a few neighborhoods differently from the canonical regions.
@@ -98,6 +100,20 @@ LODGING_WINDOWS = (
     ("winter-2027", "Kış 2027", "2027-01-16", "2027-01-23"),
     ("spring-break-2027", "Bahar tatili 2027", "2027-03-13", "2027-03-20"),
     ("summer-2027", "Yaz 2027", "2027-07-10", "2027-07-17"),
+)
+# Rental company sites asked for prices by the generic agency rate collector (copied into SQLite by migration v11), as
+# (domain, company name as the site shows it, platform adapter). Only companies whose Book>Direct links reach listing pages on a
+# platform with a working public price display are listed; discovery and the companies left out: docs/gorevler/GOREV-08/AJANS-KESFI.md.
+AGENCY_SITES = (
+    ("benchmark30a.com", "Benchmark Management", "rescms"),
+    ("30aescapes.com", "30A Escapes", "track"),
+    ("rosemarybeach.com", "Rosemary Beach®", "streamline"),
+    ("beautifulbeach.com", "Dune Allen Realty Vacation Rentals", "vr_router"),
+    ("panhandlegetaways.com", "Panhandle Getaways", "track"),
+    ("dunevacationrentals.com", "Dune Vacation Rentals", "streamline"),
+    ("graytoncoastrentals.com", "Grayton Coast Rentals", "rescms"),
+    ("30acottagesandconcierge.com", "30A Cottages", "rescms"),
+    ("myvacationhaven.com", "My Vacation Haven", "rescms"),
 )
 STORM_CORRIDOR = {
     "label": "30A kıyı koridoru",

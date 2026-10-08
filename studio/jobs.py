@@ -88,8 +88,16 @@ class JobQueue:
             def progress(percent, message):
                 if not self.db.update_job(identifier, progress=percent, message=message):
                     raise CollectionCanceled()
-            context = self.db.context(source["destination_id"])
-            batch = connector.collect(source, raw_path, progress, canceled, context=context)
+            context = self.db.context(source["destination_id"], inputs=getattr(connector, "inputs", ()))
+            extra = {}
+            if getattr(connector, "uses_verification", False):
+                def waiting(site):
+                    message = (f"Kullanıcı doğrulaması bekleniyor: {site}. Açılan tarayıcı penceresinde doğrulamayı tamamlayın (en çok 15 dk)."
+                               if site else "Doğrulama beklemesi bitti; toplama devam ediyor.")
+                    if not self.db.update_job(identifier, message=message, waiting_for=site or ""):
+                        raise CollectionCanceled()
+                extra["waiting"] = waiting
+            batch = connector.collect(source, raw_path, progress, canceled, context=context, **extra)
             self.db.record_raw_artifact(identifier, raw_path)
             self.db.complete_source_run(identifier, batch, connector)
         except CollectionCanceled:
