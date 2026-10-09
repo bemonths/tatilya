@@ -471,7 +471,8 @@ def test_a_site_still_verifying_is_left_for_the_end_one_wait_then_read_or_skippe
                                 client=client, browser=browser)
         waited = [i for i, e in enumerate(session.order) if e[0] == "wait_all"]
         assert len(waited) == 1 and session.order[waited[0]][1:] == (("guarded.example",), 15 * 60)
-        assert ("goto", "render.example") in session.order[:waited[0]]           # the other restaurants are read before the wait
+        assert ("goto", "render.example") not in session.order                   # a menu drawn with JavaScript is no reason to open the browser
+        assert "JavaScript ile çiziliyor" in related(result, "/listing/render/")[0]["status_note"]
         assert waits == ["guarded.example", None]
         site, _, _, items = related(result, "/listing/guarded/")
         if clear:
@@ -481,10 +482,14 @@ def test_a_site_still_verifying_is_left_for_the_end_one_wait_then_read_or_skippe
         assert [m["host"] for m in result.related["browser_hosts"]] == ["guarded.example"]
 
 
-def test_a_menu_page_that_keeps_its_check_is_left_unread_and_the_restaurant_goes_on(tmp_path, monkeypatch):
+def test_only_the_blocked_menu_host_goes_to_the_browser_and_a_lasting_check_leaves_that_menu_unread(tmp_path, monkeypatch):
     monkeypatch.setattr(rs, "pause", lambda seconds, canceled: None)
 
     class OrderingCheck(StandInSession):
+        def goto(self, url):
+            self.opened = [*getattr(self, "opened", []), httpx.URL(url).host]
+            return super().goto(url)
+
         def current(self):
             self.looks += 1
             if "order.online" in self.url:
@@ -494,36 +499,42 @@ def test_a_menu_page_that_keeps_its_check_is_left_unread_and_the_restaurant_goes
         def wait_all(self, sites, canceled, timeout, waiting):
             pytest.fail("a menu page must not make the run wait")
 
-    session = OrderingCheck({"/": "<title>Render Cafe</title><h1>Render Cafe</h1><a href='https://order.online/store/1'>Order online menu</a>"
-                                  "<a href='/menu'>Menu</a>", "/menu": "<h2>ENTREES</h2><p>Fish 20</p>"})
+    session = OrderingCheck({})
     def handler(request):
         if request.url.host == "render.example":
-            return httpx.Response(200, text="<title>Render</title><div id=\"root\"></div>", headers={"content-type": "text/html"})
+            if request.url.path == "/menu":
+                return httpx.Response(200, text="<h2>ENTREES</h2><p>Fish 20</p>", headers={"content-type": "text/html"})
+            return httpx.Response(200, text="<title>Render Cafe</title><h1>Render Cafe</h1><a href='https://order.online/store/1'>Order online menu</a>"
+                                            "<a href='/menu'>Menu</a>", headers={"content-type": "text/html"})
+        if request.url.host == "order.online":
+            return httpx.Response(403, text="<title>Just a moment...</title><div id='cf-chl-widget'></div>", headers={"content-type": "text/html"})
         return Sites()(request)
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         browser = rs.BrowserPages(None, lambda: False, opener=lambda profile: session, grace=0)
         result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False,
                             config=config([restaurant("render", "Render Cafe", "https://render.example/")], tmp_path), client=client, browser=browser)
     site, _, menus, items = related(result, "/listing/render/")
+    assert session.opened == ["order.online"]                     # the restaurant's own pages stay plain HTTP
     assert site["site_status"] == "working" and [i["name"] for i in items] == ["Fish"]
-    assert any(m["status"] == "error" and "doğrulama istedi (order.online)" in m["message"] for m in menus)
-    assert [m["host"] for m in result.related["browser_hosts"]] == ["order.online"]
+    assert any(m["status"] == "error" and "order.online" in m["message"] for m in menus)
+    assert [m["host"] for m in result.related["browser_hosts"]] == ["order.online"]          # the menu host, not the restaurant's site
 
 
-def test_a_known_browser_host_is_never_asked_with_plain_http(tmp_path):
-    session = StandInSession({"/": "<title>Guarded Grill</title><h1>Guarded Grill</h1><a href='/menu'>Menu</a>", "/menu": "<h2>ENTREES</h2><p>Fish 20</p>"})
-    session.looks = 1                                         # no verification page this time: the profile kept the cookie
+def test_a_known_browser_host_is_asked_directly_first_and_needs_no_browser_when_it_answers(tmp_path):
+    def opener(profile):
+        pytest.fail("the browser must not open for a site that answers plain HTTP")
     def handler(request):
-        if request.url.host == "guarded.example":
-            pytest.fail(f"plain HTTP to {request.url}")
+        if request.url.host == "guarded.example":         # showed a verification page in an earlier run, answers now
+            body = "<h2>ENTREES</h2><p>Fish 20</p>" if request.url.path == "/menu" else "<title>Guarded Grill</title><h1>Guarded Grill</h1><a href='/menu'>Menu</a>"
+            return httpx.Response(200, text=body, headers={"content-type": "text/html"})
         return Sites()(request)
     rows = [restaurant("guarded", "Guarded Grill", "https://guarded.example/")]
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        browser = rs.BrowserPages(None, lambda: False, opener=lambda profile: session)
+        browser = rs.BrowserPages(None, lambda: False, opener=opener)
         result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False,
                             config={**config(rows, tmp_path), "browser_hosts": ("guarded.example",)}, client=client, browser=browser)
     site, _, _, items = related(result, "/listing/guarded/")
-    assert site["site_status"] == "working" and [i["name"] for i in items] == ["Fish"] and "daha önce doğrulama gösteren site" in site["status_note"]
+    assert site["site_status"] == "working" and [i["name"] for i in items] == ["Fish"] and not site["status_note"]
 
 
 def test_a_verification_page_is_read_again_in_the_browser_and_the_user_wait_is_shown(tmp_path, monkeypatch):

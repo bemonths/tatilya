@@ -946,7 +946,8 @@ class RestaurantRun:
         self.facts, self.menus, self.items = {}, [], []
         self.read_pages = []           # (document, lines) of every HTML page read for this restaurant
         self.schema_menus = []         # menu urls the structured data names
-        self.needs_browser = None      # 'challenge' (verification page) or 'render' (menus built with JavaScript): read again in a browser
+        self.needs_browser = None      # 'challenge' (verification page) or 'refused' (plain HTTP refused): the blocked host in a browser
+        self.blocked_hosts = {}        # host -> {'reason', 'url'}: answered plain HTTP with a verification page or a refusal
         self.js_menus = False
         self.challenged = []           # (host, url) of a menu or info page that kept its verification page (the restaurant goes on)
         self.seen_schema = set()       # structured-data menus already recorded (the same menu is published on several pages)
@@ -955,6 +956,20 @@ class RestaurantRun:
         document = self.fetcher.get(url, restaurant=self.restaurant["external_id"], note=note)
         self.site["page_count"] += 1
         return document
+
+    def note_block(self, document):
+        """A page whose host answered plain HTTP with a verification page or a refusal: only that host is read with the browser in
+        the second pass (the browser is used only where a site blocks plain requests). True when the page was such a block."""
+        if document.status in (403, 429, 503) and document.kind == "html" and CHALLENGE.search(document.text[:40000]):
+            reason = "challenge"
+        elif document.status in (403, 429):
+            reason = "refused"
+        else:
+            return False
+        for url in {document.url, document.final_url} - {None}:
+            self.blocked_hosts.setdefault(host_key(url), {"reason": reason, "url": url})
+        self.needs_browser = self.needs_browser or reason
+        return True
 
     def fact(self, field, value, document, method, *, detail=None, link_url=None, data=None, replace=False):
         if field in self.facts and not replace:
@@ -995,10 +1010,7 @@ class RestaurantRun:
             challenged = home.status in (403, 429, 503) and CHALLENGE.search(home.text[:40000] if home.kind == "html" else "")
             self.site.update({"site_status": "unreachable", "status_note": (f"Site düz HTTP isteğine doğrulama sayfası gösterdi (HTTP {home.status})."
                               if challenged else f"Site HTTP {home.status} ({home.content_type}) döndü.")})
-            if challenged:
-                self.needs_browser = "challenge"
-            elif home.status in (403, 429):
-                self.needs_browser = "refused"         # a real browser may be let in where a plain request was refused
+            self.note_block(home)                      # a real browser may be let in where a plain request was blocked
             return self
         html = home.text
         frame = re.search(r'(?is)<frameset\b.*?<frame\b[^>]*?\bsrc\s*=\s*["\']([^"\']+)["\']', html)
@@ -1045,11 +1057,16 @@ class RestaurantRun:
                 self.read_pages.append((page, html_lines(page.text)))
                 self.structured(page, page.text)
                 self.structured_menus(page, page.text, home)
+            else:
+                self.note_block(page)
         self.read_menus(menu_targets, home)
         self.text_facts()
-        if not any(m["status"] == "read" for m in self.menus) and (self.js_menus or any(m["status"] == "no_items" and m["platform"] for m in self.menus)
-                                                                  or not self.menus and len(flat) < 600):
-            self.needs_browser = self.needs_browser or "render"
+        if (not self.needs_browser and not any(m["status"] == "read" for m in self.menus)
+                and (self.js_menus or any(m["status"] == "no_items" and m["platform"] for m in self.menus) or not self.menus and len(flat) < 600)):
+            # the menu is probably drawn with JavaScript; the browser is used only where a site blocks plain requests (user decision,
+            # 9 October 2026), so it stays unread and the note says why
+            self.site["status_note"] = (f"{self.site['status_note'] or ''} Menü fiyatları sayfanın düz HTML'inde yok (JavaScript ile "
+                                        "çiziliyor olabilir); tarayıcı yalnız engel olduğunda kullanıldığı için tarayıcıyla okunmadı.").strip()
         return self
 
     def targets(self, found, base):
@@ -1106,7 +1123,9 @@ class RestaurantRun:
             documents.add(document.sha256)
             seen.add(document.final_url.split("#")[0])
             if document.status != 200:
-                self.add_menu(target, label, home, document, "error", f"HTTP {document.status}")
+                blocked = self.note_block(document)
+                self.add_menu(target, label, home, document, "error", f"HTTP {document.status}" +
+                              (f" ({host_key(document.final_url)} düz isteği engelledi)" if blocked else ""))
                 continue
             if document.kind == "html":
                 html = document.text
@@ -1362,10 +1381,28 @@ class VerificationDeferred(Exception):
         self.host, self.url = host, url
 
 
+class RoutedPages:
+    """The second pass of one restaurant: only hosts that blocked plain HTTP (a verification page or a refusal) are read with the
+    browser; every other page is fetched directly as in the first pass (the plain fetcher's cache answers it without a new request).
+    A host that blocks only now is added and read with the browser too."""
+
+    def __init__(self, plain, browser, blocked):
+        self.plain, self.browser, self.blocked = plain, browser, set(blocked)
+
+    def get(self, url, *, restaurant, note):
+        if host_key(url) in self.blocked:
+            return self.browser.get(url, restaurant=restaurant, note=note)
+        document = self.plain.get(url, restaurant=restaurant, note=note)
+        if document.status in (403, 429, 503) and (document.status != 503 or document.kind == "html" and CHALLENGE.search(document.text[:40000])):
+            self.blocked.update(host_key(u) for u in (document.url, document.final_url) if u)
+            return self.browser.get(url, restaurant=restaurant, note=note)
+        return document
+
+
 class BrowserPages:
     """The second pass: pages rendered in the computer's own browser (studio.sources.browser_verification: installed Chrome started
-    as an ordinary application, one persistent profile, reached over CDP), one page at a time. Used for sites that showed a
-    verification page (now or in an earlier run), sites that refused plain HTTP and menus built with JavaScript. A verification
+    as an ordinary application, one persistent profile, reached over CDP), one page at a time. Used only for hosts that blocked plain
+    HTTP in this run (a verification page or a refusal); see RoutedPages. A verification
     page that does not clear within the grace period leaves the restaurant for the end of the run; a block page stops that site."""
 
     def __init__(self, store, canceled, waiting=None, profile=None, opener=None, grace=None):
@@ -1587,10 +1624,11 @@ def review_note(run):
 def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None):
     """Read every restaurant's own site once (its pages, menus and documents) and return the facts with their provenance.
 
-    First pass: plain HTTP, several restaurants side by side; a site that showed a verification page in an earlier run (browser_hosts)
-    is not asked with plain HTTP at all. Second pass (when the computer's browser is available): those sites, the ones answering
-    with a verification page or refusing plain HTTP and the ones whose menus did not show prices without JavaScript, one at a time;
-    the second reading replaces the first only when it read more. A site still verifying after the grace period is left for the
+    First pass: plain HTTP for every site (also one that showed a verification page in an earlier run), several restaurants side by
+    side. Second pass (when the computer's browser is available), one restaurant at a time: only for restaurants where a host of
+    theirs blocked plain HTTP (a verification page or a refusal, on the home page or a menu page), and only that host's pages are
+    read with the browser (RoutedPages); a menu that merely needs JavaScript is not opened in the browser (user decision,
+    9 October 2026). The second reading replaces the first only when it read more. A site still verifying after the grace period is left for the
     end: then the waiting sites open in tabs, the job lists them once and waits VERIFY_TIMEOUT for the user."""
     restaurants = (config.get("input") or {}).get("restaurants") if config else None
     if not restaurants:
@@ -1604,22 +1642,14 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
     client = client or httpx.Client(timeout=httpx.Timeout(30, connect=15), verify=True)
     fetcher = Fetcher(client, store, pacer, canceled)
     done, lock, last = [0], threading.Lock(), [0.0]
-    browser_hosts = {host_key(h) for h in config.get("browser_hosts") or ()}
     marks = {}
     progress(1, f"{len(restaurants)} restoranın kendi sitesi okunacak.")
 
     def one(restaurant):
         run = RestaurantRun(fetcher, restaurant, overrides.get(restaurant["external_id"]), readings.get(restaurant["external_id"], []), sections,
                             item_reviews.get(restaurant["external_id"]))
-        url = (run.override or {}).get("site_url") or restaurant.get("website_url")         # a review row may add only menu links
         try:
-            if url and host_key(url) in browser_hosts:
-                # showed a verification page before: read only with the browser, never with plain HTTP
-                run.site.update({"site_url": url, "site_source": "review" if run.override else "directory", "site_status": "unreachable",
-                                 "status_note": "Daha önce doğrulama sayfası gösteren site; düz HTTP isteği yapılmadı."})
-                run.needs_browser = "known"
-            else:
-                run.run()
+            run.run()        # every site is asked directly first, also one that showed a verification page before (user decision, 9 Oct 2026)
         except CollectionCanceled:
             raise
         except Exception as exc:          # one site's failure never stops the others
@@ -1644,10 +1674,9 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
         runs = [f.result() for f in futures]
         store.flush()
         for run in runs:
-            if run.needs_browser == "challenge":
-                marks[host_key(run.site["final_url"] or run.site["site_url"])] = {
-                    "host": host_key(run.site["final_url"] or run.site["site_url"]), "url": run.site["final_url"] or run.site["site_url"],
-                    "reason": "doğrulama sayfası"}
+            for host, block in run.blocked_hosts.items():
+                if block["reason"] == "challenge":
+                    marks[host] = {"host": host, "url": block["url"], "reason": "doğrulama sayfası"}
         second = [index for index, run in enumerate(runs) if run.needs_browser]
         if second and browser is not False and (browser is not None or browser_available()):
             pages = browser if browser is not None and not isinstance(browser, bool) else BrowserPages(store, canceled, waiting)
@@ -1661,7 +1690,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                     check(canceled)
                     first = runs[index]
                     progress(95, f"Tarayıcıyla ikinci okuma {count}/{len(second)} · {first.restaurant['name']}")
-                    retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections, first.item_reviews)
+                    retry = RestaurantRun(RoutedPages(fetcher, pages, first.blocked_hosts), first.restaurant, first.override, first.readings,
+                                          sections, first.item_reviews)
                     try:
                         retry.run()
                     except CollectionCanceled:
@@ -1699,7 +1729,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                             first.site["status_note"] = (f"{first.site['status_note'] or ''} Doğrulama sayfası {VERIFY_TIMEOUT // 60} dk içinde "
                                                          f"tamamlanmadı ({host}); tarayıcıyla okunamadı.").strip()
                             continue
-                        retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections, first.item_reviews)
+                        retry = RestaurantRun(RoutedPages(fetcher, pages, first.blocked_hosts), first.restaurant, first.override,
+                                              first.readings, sections, first.item_reviews)
                         try:
                             retry.run()
                         except CollectionCanceled:
@@ -1791,6 +1822,8 @@ def level_reason(view):
         return SITE_REASONS.get(view["site_status"], view["site_status"])
     if not view["main"]["count"] and view["small_plates"]["count"]:
         return "tapas / küçük tabak menüsü, ana yemek bölümü yok (küçük tabak ortancası ayrı verilir)"
+    if "JavaScript ile çiziliyor" in (view.get("status_note") or "") and not view["main"]["count"]:
+        return "menü fiyatları sayfanın düz HTML'inde yok (JavaScript ile çiziliyor olabilir); tarayıcı yalnız engelde kullanıldığı için okunmadı"
     menus = view["menus"]
     if not menus:
         return "sitede menü bulunamadı"
