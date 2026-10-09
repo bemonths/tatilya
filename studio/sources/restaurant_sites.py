@@ -815,8 +815,11 @@ def parse_menu(lines, known=None):
             text = f"${twin.group(1)}"            # "...lime juice$12 $12 Mashed avocado..." (description, price, description again)
         if (kind == "h" or heading_like(text) and not ITEM_LINE.match(text) and not MARKET.search(text)
                 or known and MIXED_HEADING.match(text) and known(text)):          # "TO FEAST large plates"
-            if SKIP_NAME.match(text):
+            if ADDON_NAME.match(text) and re.search(r"\+\s?\$?\d", text):
+                continue                          # "ADD EGG +2 | ADD PORK BELLY +4": the section's add-on prices, not a new section
+            if SKIP_NAME.match(text) and not ADDON_NAME.match(text):
                 continue                          # "SERVED WITH A CHOICE OF ONE SIDE": a note in capitals, not a new section
+            # an add-on heading without prices ("ADD-ONS", "EXTRAS") is a section: its items are add-ons, never mains
             if len(text) <= 60 and not PHONE.search(text):
                 headed = (text, section)
                 section, pending = text, None

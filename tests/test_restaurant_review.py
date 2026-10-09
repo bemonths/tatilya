@@ -381,3 +381,9 @@ def test_a_dropped_plain_connection_counts_as_a_block_and_only_that_host_goes_to
     site, _, _, items = related(result, "/listing/taco/")
     assert set(session.opened) == {"dropped.example"} and site["site_status"] == "working" and len(items) == 5
     assert "düz HTTP isteği reddedildi" in site["status_note"]
+
+
+def test_an_add_on_price_note_in_capitals_is_not_a_new_section():
+    lines = [("h", "BURGERS"), ("p", "ADD EGG +2 | ADD PORK BELLY +4"), ("p", "Smash Burger $22"), ("h", "ADD-ONS"), ("p", "Shrimp $9")]
+    items = [(i["section"], i["name"], i["price"]) for i in rs.parse_menu(lines)]
+    assert items == [("BURGERS", "Smash Burger", 22.0), ("ADD-ONS", "Shrimp", 9.0)]
