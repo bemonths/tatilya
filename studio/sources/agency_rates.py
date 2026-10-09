@@ -395,7 +395,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
         statuses = {name: sum(r["page_status"] == name for r in listings.values()) for name in PAGE_STATUSES}
         priced = sorted({q["lodging_id"] for q in quotes if q["status"] == "priced"})
         metadata = {"lodging_run_id": lodging["run_id"], "lodging_searched_on": lodging.get("searched_on"), "queried_on": today.isoformat(),
-                    "windows": windows_rows, "skipped_past_windows": [w["window_key"] for w in windows if w["status"] == "skipped_past"],
+                    "window_rule": config.get("window_rule"), "windows": windows_rows, "skipped_past_windows": [w["window_key"] for w in windows if w["status"] == "skipped_past"],
                     "request_count": store.count, "listing_count": len(listings), "page_statuses": statuses,
                     "match_methods": {m: sum(r["match_method"] == m for r in listings.values()) for m in MATCH_METHODS},
                     "priced_listings": len(priced), "quote_count": len(quotes), "own_listings": len(own_rows),

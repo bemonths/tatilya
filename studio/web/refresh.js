@@ -20,7 +20,7 @@ export function trDate(value) {
 
 function dueTag(item) {
   if(item.interval_months==null) return '<span class="tag">aralık tanımlı değil</span>';
-  if(item.due) return `<span class="tag warm">zamanı geldi</span>${item.last_done_on?"":"<small>hiç çekilmedi</small>"}`;
+  if(item.due) return `<span class="tag warm">zamanı geldi</span>${item.due_reason?`<small>${esc(item.due_reason)}</small>`:""}`;
   return `<span class="tag green">güncel</span><small>sonraki: ${esc(trDate(item.next_due_on))}</small>`;
 }
 

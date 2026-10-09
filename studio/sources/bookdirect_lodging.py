@@ -396,6 +396,7 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
                   "canli": sum(row["live_average_rate_usd"] is not None for row in results.values()),
                   "takvim_ilan": sum(row["priced_days"] > 0 for row in calendars)}
         metadata = {"clone_host": clone_host, "front_end_path": bases[0], "searched_on": today.isoformat(),
+                    "window_rule": config.get("window_rule"),
                     "windows": [{k: w[k] for k in ("window_key", "label", "checkin", "checkout", "status")} for w in windows],
                     "skipped_past_windows": [w["window_key"] for w in windows if w["status"] == "skipped_past"],
                     "location_filters": [{"location_id": f[0], "location_name": f[1], "region_id": f[2]} for f in filters],

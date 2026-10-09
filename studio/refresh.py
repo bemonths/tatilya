@@ -1,7 +1,9 @@
 """Suggested refresh (GÖREV-10): which collectors are due by the destination's refresh intervals, and the one-button batch that starts
 the due ones in order. Nothing runs by itself: there is no scheduler; the user starts a batch from the home screen.
 
-A collector is due when it never finished a run or its last successful run is at least its interval (in calendar months) old.
+A collector is due when it never finished a run or its last successful run is at least its interval (in calendar months) old;
+a lodging window collector is also due when its last run asked a different window rule than the destination's current one
+(fixed windows before the monthly rule, or a changed rule): its snapshot does not belong to the current monthly series.
 A batch first takes the app's own database backup (SQLite backup API, data/backups/toplu-*.sqlite3; only the last six of these are
 kept, older ones are deleted by the app), then submits the due collectors one at a time through the normal job queue, waiting for
 each; a collector whose input collector in the same batch did not finish is skipped. The estimate is the last successful run's
@@ -15,6 +17,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from .database import Conflict
+from .sources.windows import DEFAULT_RULE
 
 BACKUP_PREFIX = "toplu"
 KEEP_BACKUPS = 6
@@ -47,6 +50,11 @@ def run_seconds(run):
     return max(0, int((end - start).total_seconds()))
 
 
+def rule_of(rule):
+    """A window rule with its defaults filled in (None for fixed windows), so two runs' rules compare by meaning."""
+    return {**DEFAULT_RULE, **rule} if rule else None
+
+
 def window_count(metadata):
     windows = (metadata or {}).get("windows") or []
     return sum(1 for w in windows if w.get("status") in ("searched", "queried")) or None
@@ -57,6 +65,7 @@ def status(db, destination_id, today=None):
     today = today or datetime.now(timezone.utc).date()
     context = db.context(destination_id)
     current_windows = len((context.lodging or {}).get("windows") or []) or None
+    current_rule = rule_of((context.lodging or {}).get("window_rule"))
     items = []
     with db.connect() as con:
         intervals = {r["connector_name"]: dict(r) for r in con.execute(
@@ -72,10 +81,18 @@ def status(db, destination_id, today=None):
             interval = intervals.get(connector.name)
             last_day = date.fromisoformat((last["finished_at"] or last["fetched_at"])[:10]) if last else None
             next_due = add_months(last_day, interval["months"]) if interval and last_day else None
+            metadata = json.loads(last["metadata"] or "{}") if last else {}
+            reason = None
+            if interval and last_day is None:
+                reason = "hiç çekilmedi"
+            elif interval and today >= next_due:
+                reason = "önerilen aralık doldu"
+            elif interval and connector.name in WINDOW_CONNECTORS and current_rule and rule_of(metadata.get("window_rule")) != current_rule:
+                reason = "pencere kuralı son çekimden sonra değişti"
             seconds, note = None, None
             if last:
                 seconds = run_seconds(last)
-                old_windows = window_count(json.loads(last["metadata"] or "{}"))
+                old_windows = window_count(metadata)
                 if seconds is not None and connector.name in WINDOW_CONNECTORS and old_windows and current_windows and old_windows != current_windows:
                     note = f"son çekimin süresi × pencere oranı ({old_windows} → {current_windows}); bizim tahminimiz"
                     seconds = int(seconds * current_windows / old_windows)
@@ -85,7 +102,7 @@ def status(db, destination_id, today=None):
                           "interval_months": interval["months"] if interval else None, "sort_order": interval["sort_order"] if interval else None,
                           "last_run_id": last["id"] if last else None, "last_done_on": last_day.isoformat() if last_day else None,
                           "next_due_on": next_due.isoformat() if next_due else None,
-                          "due": bool(interval) and (last_day is None or today >= next_due),
+                          "due": reason is not None, "due_reason": reason,
                           "estimate_seconds": seconds, "estimate_note": note,
                           "inputs": list(getattr(connector, "inputs", ())), "produces": getattr(connector, "produces", None)})
     items.sort(key=lambda i: (i["interval_months"] is None, i["sort_order"] if i["sort_order"] is not None else 0, i["source_name"]))

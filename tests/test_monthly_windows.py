@@ -141,6 +141,7 @@ def test_status_lists_due_collectors_in_order_and_the_interval_starts_at_the_las
         db = client.app.state.db
         current = client.get("/api/refresh").json()
         assert [i["connector"] for i in current["items"] if i["due"]] == DUE and current["due_count"] == 4
+        assert {i["due_reason"] for i in current["items"] if i["due"]} == {"hiç çekilmedi"} and current["estimate_seconds"] is None
         assert [i["interval_months"] for i in current["items"][:4]] == [1, 1, 3, 3] and current["estimate_complete"] is False
         assert all(i["interval_months"] is None and not i["due"] for i in current["items"][4:])
         assert "kendiliğinden çalışmaz" in current["note"]
@@ -153,10 +154,20 @@ def test_status_lists_due_collectors_in_order_and_the_interval_starts_at_the_las
         done_on = date.fromisoformat(item["last_done_on"])
         assert item["last_run_id"] == job["id"] and item["next_due_on"] == refresh.add_months(done_on, 1).isoformat()
         assert item["due"] is False and item["estimate_note"] == "son başarılı çekimin süresi; bizim tahminimiz"
-        assert refresh.status(db, "30a", refresh.add_months(done_on, 1))["items"][0]["due"] is True
+        later = refresh.status(db, "30a", refresh.add_months(done_on, 1))["items"][0]
+        assert (later["due"], later["due_reason"]) == (True, "önerilen aralık doldu")
+        with db.connect() as con:                                       # a run made before the monthly rule (fixed windows)
+            con.execute("UPDATE source_runs SET metadata=json_remove(metadata, '$.window_rule') WHERE id=?", (job["id"],))
+        item = refresh.status(db, "30a", done_on)["items"][0]
+        assert (item["due"], item["due_reason"]) == (True, "pencere kuralı son çekimden sonra değişti")
+        with db.connect() as con:
+            con.execute("UPDATE source_runs SET metadata=json_set(metadata, '$.window_rule', json(?)) WHERE id=?",
+                        (json.dumps({"kind": "monthly"}), job["id"]))               # the same rule written shorter: not a change
+        assert refresh.status(db, "30a", done_on)["items"][0]["due"] is False
         with db.connect() as con:
             con.execute("UPDATE destination_lodging_sources SET window_rule=?", (json.dumps({"kind": "monthly", "months": 6}),))
         item = refresh.status(db, "30a", done_on)["items"][0]
+        assert item["due_reason"] == "pencere kuralı son çekimden sonra değişti"
         assert item["estimate_note"].startswith("son çekimin süresi × pencere oranı (12 → 6)")
 
 

@@ -596,7 +596,7 @@ test('restaurant business-site cells keep unknown values unknown and label our p
 import {refreshSection, duration, STEP_LABELS} from '../studio/web/refresh.js';
 test('refresh section lists every collector, the due ones, the estimate and a running batch with its stop button',()=>{
   assert.equal(duration(null),'bilinmiyor');assert.equal(duration(20),'~1 dk');assert.equal(duration(3*3600+20*60),'~3 sa 20 dk');assert.equal(duration(7200),'~2 sa');
-  const items=[{connector:'bookdirect-lodging',source_name:'Book>Direct <konaklama>',interval_months:1,due:true,last_done_on:null,estimate_seconds:null},
+  const items=[{connector:'bookdirect-lodging',source_name:'Book>Direct <konaklama>',interval_months:1,due:true,due_reason:'hiç çekilmedi',last_done_on:null,estimate_seconds:null},
     {connector:'restaurant-sites',source_name:'İşletme siteleri',interval_months:3,due:false,last_done_on:'2026-10-09',next_due_on:'2027-01-09',estimate_seconds:3600},
     {connector:'nws-weather',source_name:'NWS',interval_months:null,due:false,last_done_on:'2026-10-01'}];
   const html=refreshSection({items,note:'kendiliğinden çalışmaz',estimate_seconds:null,estimate_complete:false,batch:null});
