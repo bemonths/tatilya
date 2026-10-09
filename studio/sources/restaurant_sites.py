@@ -27,7 +27,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import quote, urlencode, urljoin, urlsplit, urlunsplit
 
 import httpx
 
@@ -447,6 +447,68 @@ MHM_ITEM = re.compile(r'(?is)<div[^>]*class="item\b[^"]*"[^>]*data-source="mhm"[
 MHM_SECTION = re.compile(r'(?is)<div[^>]*class="mo-name\b[^"]*"[^>]*>(.*?)</div>')
 
 
+SP_TOKEN = re.compile(r'(?is)<h2[^>]*class="menu-title"[^>]*>(.*?)</h2>|<div class="title">\s*<h3[^>]*>(.*?)</h3>'
+                      r'|<div class="menu(?:\s[^"]*)?"\s+id="menu-(\d+)"[^>]*>|<div class="item(?:\s[^"]*)?"[^>]*>')
+SP_WIDGET = re.compile(r'(?is)<script\b[^>]*\bsrc\s*=\s*["\'](?:https?:)?//menus\.singleplatform\.com/widget[^>]*>')
+IFRAME_SRC = re.compile(r'(?is)<iframe\b[^>]*?\bsrc\s*=\s*["\']([^"\']+)["\']')
+
+
+def singleplatform_menus(html):
+    """Menus of a SinglePlatform menu page (places.singleplatform.com/<place>/menu_widget: the frame its widget shows on many
+    restaurant sites). Each menu title starts a menu, each section title a section; an item is priced only by the price in its own
+    title row ('+ …' add-on rows under it are not items, an item without a price is left out). Same shape as schema_menus."""
+    if 'class="item-title-row"' not in html:
+        return []
+    names = {m.group(1): clean(re.sub(r"<[^>]+>", " ", m.group(2))) or None
+             for m in re.finditer(r'(?is)<div[^>]*class="menu-name[^"]*"[^>]*toggle="#menu-(\d+)"[^>]*>(.*?)</div>', html)}
+    tokens = list(SP_TOKEN.finditer(html))
+    menus, current, section, title = [], None, None, None
+    for index, token in enumerate(tokens):
+        if token.group(1) is not None:          # the shown menu's title (a page of several menus names them in its menu list)
+            title = clean(re.sub(r"<[^>]+>", " ", token.group(1))) or None
+            continue
+        if token.group(3) is not None:          # one menu of the page
+            current, section = {"name": names.get(token.group(3)) or title, "url": None, "items": []}, None
+            menus.append(current)
+            continue
+        if token.group(2) is not None:
+            section = clean(re.sub(r"<[^>]+>", " ", token.group(2))) or None
+            continue
+        block = html[token.end():tokens[index + 1].start() if index + 1 < len(tokens) else len(html)]
+        row = re.search(r'(?is)<div class="item-title-row">(.*?)</div>', block)
+        name = re.search(r'(?is)<h4[^>]*class="item-title"[^>]*>(.*?)</h4>', row.group(1)) if row else None
+        if not name:
+            continue
+        name_text = clean(re.sub(r"<[^>]+>", " ", name.group(1)))
+        price_text = " / ".join(t for t in (clean(re.sub(r"<[^>]+>", " ", m)) for m in re.findall(r'(?is)<span[^>]*class="price"[^>]*>(.*?)</span>', row.group(1))) if t)
+        values = [v for v in (float(x) for x in re.findall(r"\d{1,4}(?:\.\d{1,2})?", price_text.replace(",", ""))) if v > 0]
+        if not name_text or not values or ADDON_NAME.match(name_text):
+            continue
+        if current is None:
+            current = {"name": title, "url": None, "items": []}
+            menus.append(current)
+        current["items"].append({"section": section, "name": name_text, "price_text": price_text, "price": min(values),
+                                 "price_rule": "lowest" if len(values) > 1 else "single"})
+    return [m for m in menus if m["items"]]
+
+
+def embedded_menus(html, base):
+    """Menus a page embeds instead of linking: the SinglePlatform widget script (its menu frame is a plain page at
+    places.singleplatform.com/<place>/menu_widget with the widget's own attributes) and frames whose address is a menu platform
+    (ohbz, SinglePlatform, Toast...). Returned as (label, url) menu links, so they are fetched directly, without a browser."""
+    found = []
+    for tag in SP_WIDGET.finditer(html):
+        attrs = {k.lower(): html_module.unescape(v) for k, v in re.findall(r'data-([a-z_]+)\s*=\s*["\']([^"\']*)["\']', tag.group(0))}
+        if attrs.get("location"):
+            query = urlencode({k: attrs[k] for k in ("api_key", "display_menu") if attrs.get(k)}, safe=",")      # the widget's own form
+            found.append(("SinglePlatform menüsü", f"https://places.singleplatform.com/{quote(attrs['location'])}/menu_widget" + (f"?{query}" if query else "")))
+    for match in IFRAME_SRC.finditer(html):
+        src = urljoin(base, html_module.unescape(match.group(1).strip()))
+        if src.startswith("http") and platform_of(src, MENU_PLATFORMS):
+            found.append(("gömülü menü", src))
+    return found
+
+
 def mhm_menus(html):
     """Menu items of a menu designed on ohbz.com (embedded by many restaurant sites): each dish is an element whose attributes name
     it and its price (aria-label="Item name: …", aria-label="Price: …"); its section is the block title before it (class mo-name),
@@ -458,9 +520,16 @@ def mhm_menus(html):
         block = html[start:starts[index + 1] if index + 1 < len(starts) else start + 6000]
         name = re.search(r'aria-label="Item name:\s*([^"]*)"', block)
         price = re.search(r'aria-label="Price:\s*([^"]*)"', block)
-        if not name or not price:
-            continue
-        name_text, price_text = clean(name.group(1)), clean(price.group(1))
+        if name:
+            name_text = clean(html_module.unescape(name.group(1)))
+        else:                                       # print-style designs: <span class="name"> and data-pv="16" price entries
+            span = re.search(r'(?is)<(span|div)[^>]*class="name"[^>]*>(.*?)</\1>', block)
+            name_text = clean(re.sub(r"<[^>]+>", " ", html_module.unescape(span.group(2)))) if span else ""
+        if price:
+            price_text = clean(html_module.unescape(price.group(1)))
+        else:
+            entries = (clean(re.sub(r"<[^>]+>", " ", html_module.unescape(v))) for v in re.findall(r'data-pv="([^"]*)"', block))
+            price_text = " / ".join(v for v in entries if v)
         values = [float(v) for v in re.findall(r"\d{1,4}(?:\.\d{1,2})?", price_text.replace(",", ""))]
         values = [v for v in values if v > 0]
         if not name_text or not values or ADDON_NAME.match(name_text):
@@ -1039,7 +1108,7 @@ class RestaurantRun:
         self.read_pages.append((home, lines))
         self.structured(home, html)
         self.structured_menus(home, html, home)
-        found = links(html, home.final_url) + self.schema_menus
+        found = links(html, home.final_url) + self.schema_menus + embedded_menus(html, home.final_url)
         if platform_of(home.final_url, MENU_PLATFORMS):
             found = [("menu", home.final_url)] + found        # the site is an ordering page: the page itself is the menu
         menu_targets, info_targets = self.targets(found, home.final_url)
@@ -1083,11 +1152,11 @@ class RestaurantRun:
                 continue
             if platform and urlsplit(target).path.strip("/") == "" and not urlsplit(target).netloc.lower().removeprefix("www.").count(".") > 1:
                 continue                          # "powered by" credit to the platform's own home page, not a menu
-            if NOT_MENU_PAGE.search(urlsplit(target).path) or host_of(target) == "pos.toasttab.com":
+            if NOT_MENU_PAGE.search(urlsplit(target).path + "?" + urlsplit(target).query) or host_of(target) == "pos.toasttab.com":
                 continue                          # one dish of an ordering menu, or the platform's legal pages
             same_site = host_of(target) == site
             is_doc = re.search(r"\.(pdf|jpe?g|png|webp)$", path)
-            menu_like = MENU_WORD.search(label) or re.search(r"menu|dinner|lunch|brunch|breakfast|kids|drink|cocktail|dessert|happy-hour", path)
+            menu_like = MENU_WORD.search(label) or re.search(r"menu|dinner|lunch|brunch|breakfast|kids|drink|cocktail|dessert|happy-hour|\bfood\b|\beats?\b", path)
             if platform or (menu_like and (same_site or is_doc)) or (is_doc and re.search(r"menu", path + " " + label, re.I)):
                 if re.search(r"/(?:cart|checkout|account|login|signin|gift|careers?|jobs)\b", path):
                     continue
@@ -1135,6 +1204,7 @@ class RestaurantRun:
                 title = page_title(html)
                 platform = platform_of(document.final_url, MENU_PLATFORMS)
                 reading = self.reviewed_reading(target, label or title, home, document, " ".join(t for _, t in lines), "html")
+                queue.extend((label or "gömülü menü", url) for _, url in embedded_menus(html, document.final_url) if url.split("#")[0] not in seen)
                 if reading is True or self.structured_menus(document, html, home, label=label):
                     continue                          # a person's reading of this page, or the menus it publishes as structured data
                 tabs = [(name, parse_menu(html_lines(part), self.known_heading)) for name, part in tab_panels(html)]
@@ -1199,14 +1269,15 @@ class RestaurantRun:
         """The menus a page publishes as schema.org data (Popmenu, Toast and many site builders put the whole menu there). A menu
         seen on several pages of the site is recorded once. True when the page publishes any."""
         found = ([(m, "yapısal veri") for m in schema_menus(html, document.final_url)] + [(m, "platform verisi") for m in toast_menus(html)]
-                 + [(m, "platform verisi") for m in mhm_menus(html)])
+                 + [(m, "platform verisi") for m in mhm_menus(html)] + [(m, "platform verisi") for m in singleplatform_menus(html)])
         title = page_title(html)
         for menu, method in found:
             key = (menu["name"], tuple((i["section"], i["name"], i["price"]) for i in menu["items"]))
             if key in self.seen_schema:
                 continue
             self.seen_schema.add(key)
-            url = menu["url"] or document.final_url
+            slug = re.sub(r"[^a-z0-9]+", "-", (menu["name"] or "").lower()).strip("-")
+            url = menu["url"] or (f"{document.final_url.split('#')[0]}#{slug}" if len(found) > 1 and slug else document.final_url)
             self.add_menu(url, menu["name"] or label or title, home, document, "read", None, items=menu["items"],
                           platform=platform_of(document.final_url, MENU_PLATFORMS), method=method, url=url,
                           menu_kind=menu_type(menu["name"] or label or title,

@@ -299,3 +299,55 @@ def test_a_popup_is_closed_with_escape_and_its_own_close_button_only(monkeypatch
 def test_single_item_pages_of_an_ordering_menu_are_not_menus():
     assert rs.NOT_MENU_PAGE.search("https://pizzabythesea.com/menu/miramar-beach?item=16-cheese-tNfF&matchItemName=16%22%20Cheese")
     assert not rs.NOT_MENU_PAGE.search("https://pizzabythesea.com/menu/miramar-beach")
+
+
+SINGLEPLATFORM_PAGE = """<div class="nav-row"><h2 class="menu-title">
+    Main Menu </h2></div>
+<div class="menu " id="menu-1"><div class="section two-column"><div class="title"><h3>Entrees</h3></div>
+<div class="item left" id="1"><div class="item-title-row"><h4 class="item-title">Fried Crab Claws*</h4></div>
+  <div class="description text">Served with tomato jam</div></div>
+<div class="item left" id="2"><div class="item-title-row"><h4 class="item-title">Grouper</h4><span class="price">$34.00</span></div>
+  <div class="addon"><span class="title"><ul class="leaders"><li class="text">Add Shrimp</li></ul></span><span class="price"><ul><li>$9.00</li></ul></span></div></div>
+<div class="item right" id="3"><div class="item-title-row"><h4 class="item-title">Seafood Platter</h4><span class="price">$38.00</span><span class="price">$52.00</span></div></div>
+</div></div>"""
+
+
+def test_singleplatform_menu_page_reads_own_prices_only():
+    menus = rs.singleplatform_menus(SINGLEPLATFORM_PAGE)
+    assert [m["name"] for m in menus] == ["Main Menu"]
+    assert [(i["section"], i["name"], i["price"], i["price_rule"]) for i in menus[0]["items"]] == [
+        ("Entrees", "Grouper", 34.0, "single"), ("Entrees", "Seafood Platter", 38.0, "lowest")]   # no unpriced item, no add-on row
+    assert rs.singleplatform_menus("<h2 class='menu-title'>x</h2>") == []
+
+
+def test_embedded_menus_are_followed_without_a_browser(tmp_path):
+    widget = ('<script data-display_menu="298657" data-location="local-catch" data-api_key="pagekey" id="singleplatform-menu" '
+              'src="https://menus.singleplatform.com/widget"></script><iframe src="https://ohbz.com/design/abc"></iframe>'
+              '<iframe src="https://www.youtube.com/embed/x"></iframe>')
+    assert rs.embedded_menus(widget, "https://catch.example/eats") == [
+        ("SinglePlatform menüsü", "https://places.singleplatform.com/local-catch/menu_widget?api_key=pagekey&display_menu=298657"),
+        ("gömülü menü", "https://ohbz.com/design/abc")]
+    entrees = "".join(f'<div class="item left"><div class="item-title-row"><h4 class="item-title">Dish {n}</h4><span class="price">${20 + n}.00</span></div></div>'
+                      for n in range(5))
+    page = f'<h2 class="menu-title">Dinner</h2><div class="title"><h3>Entrees</h3></div>{entrees}'
+    pages = {"https://catch.example/": ("text/html", "<html><title>Catch</title><a href='/eats'>Menu</a>(850) 555-0100</html>"),
+             "https://catch.example/eats": ("text/html", f"<html><title>Eats</title>{widget}</html>"),
+             "https://places.singleplatform.com/local-catch/menu_widget?api_key=pagekey&display_menu=298657": ("text/html", page)}
+    result = collect(tmp_path, [restaurant("catch", "Catch", "https://catch.example/")], pages)
+    view = view_of(result, "/listing/catch/")
+    assert view["price_level"] == "$$" and view["main"]["count"] == 5
+    menu = next(m for m in view["menus"] if m["status"] == "read")
+    assert (menu["method"], menu["menu_type"]) == ("platform verisi", "dinner")
+
+
+def test_ohbz_print_style_items_name_and_data_price_entries():
+    html = ('<div class="mo-name">Plates</div>'
+            '<div class="item highlighted" data-source="mhm" data-id="a"><div class="name"><p>Grits A Ya Ya</p></div>'
+            '<span class="price"><span class="price-entry last" data-pv="&lt;p&gt;26&lt;/p&gt;">26</span></span>'
+            '<div class="extras"><p>Fresh Catch MKT</p></div></div>'
+            '<div class="item" data-source="mhm" data-id="b"><span class="name"><p>Key Lime Pie</p></span>'
+            '<span class="price-entry" data-pv="9"></span><span class="price-entry last" data-pv="4"></span></div>'
+            '<div class="item" data-source="mhm" data-id="c"><span class="name"><p>Fries</p></span><span class="price-entry" data-pv=""></span></div>')
+    items = rs.mhm_menus(html)[0]["items"]
+    assert [(i["section"], i["name"], i["price_text"], i["price"], i["price_rule"]) for i in items] == [
+        ("Plates", "Grits A Ya Ya", "26", 26.0, "single"), ("Plates", "Key Lime Pie", "9 / 4", 4.0, "lowest")]
