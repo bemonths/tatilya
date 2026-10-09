@@ -281,6 +281,14 @@ def test_nested_headings_cart_counters_and_addresses_are_not_dishes():
     assert [(i["section"], i["name"], i["price"]) for i in rs.parse_menu(popmenu)] == [("Appetizers", "Pizza Bread", 12.0), ("Appetizers", "Fries", 8.0)]
 
 
+def test_a_nutrition_table_and_menu_titles_are_not_prices():
+    nutrition = [("p", "NUTRITIONAL INFORMATION"), ("p", "SPECIALTIES"), ("p", "Biscuit Crumble — 890 58 31 0 135 2190 74 4 10 18"),
+                 ("p", "Huevos Rancheros — 1120 83 23 0 485 2450 61 13 7 36")]
+    assert rs.parse_menu(nutrition) == []
+    assert [i["name"] for i in rs.parse_menu([("p", "Steak and Eggs — 1230 71 37 0 580 5090 82 3 19 61"), ("p", "Grits 4")])] == ["Grits"]
+    assert [(i["name"], i["price"]) for i in rs.parse_menu([("h", "Dinner"), ("p", "DINNER MENU 23"), ("p", "Fish 20")])] == [("Fish", 20.0)]
+
+
 def test_a_moved_page_falls_back_to_the_home_page_and_shared_pages_are_read_once(tmp_path):
     pages = {"/": "<title>Big Breakfast</title><h1>Big Breakfast</h1><a href='/menu'>Menu</a>",
              "/menu": "<h2>ENTREES</h2><p>Biscuit Plate 14</p>"}

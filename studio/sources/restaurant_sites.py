@@ -449,11 +449,13 @@ NOT_PRICE_UNIT = re.compile(r"\d\s*(?:oz|lb|lbs|pc|pcs|pieces?|ct|count|inch|in\
 SKIP_NAME = re.compile(r"^(?:\*|(?:may )?contains?\b|gluten[- ]free (?:buns?|bread|crust|option)|add|sub|substitute|make it|upgrade|\+|with|w/|extra|choice of|choose|served|includes?|gratuity|tax|price|prices|"
                        r"(?:your )?cart|skip to (?:main )?content|check (?:gift card )?balance|suite|ste\.?|"
                        r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?|\d+\s+(?:reviews?|likes?|ratings?))\b|"
-                       r"^.*\b(?:county (?:hwy|highway|road)|hwy 30a|highway 30a)\b", re.I)    # an address line is not a dish
+                       r"^.*\b(?:county (?:hwy|highway|road)|hwy 30a|highway 30a)\b|"     # an address line is not a dish
+                       r"^(?:dinner|lunch|brunch|breakfast|kids|dessert|drinks?|happy hour|bar|wine)\s+menu$", re.I)    # nor a menu's title
 PHONE = re.compile(r"\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}")
 # Buttons and counters menu platforms print between dishes ("1 likes", "Order Online", "0 0 0").
 NOISE = re.compile(r"^(?:\d+\s+(?:likes?|reviews?|ratings?)|\d+(?:\s+\d+)+|order online|order now|add to (?:cart|order|bag)|view details|completed loading.*|"
                    r"n/a|sold out|popular|new|gluten[- ]free|gf|v|vg|df)$", re.I)
+NUTRITION = re.compile(r"nutrition(?:al)? (?:information|facts)|total fat \(g\)|sodium \(mg\)|calories\s+total fat", re.I)
 TWIN_PRICE = re.compile(r"\$(\d{1,3}(?:\.\d{2})?)\s+\$\1(?=\s|$)")
 
 
@@ -499,10 +501,12 @@ def parse_menu(lines):
                       "price_rule": "market" if market else ("lowest" if len(values) > 1 else "single")})
         pending, headed = None, None
 
+    if NUTRITION.search(" ".join(t for _, t in lines[:400])):
+        return []                                 # a nutrition table (calories, fat, sodium per dish): its numbers are not prices
     for kind, line in lines:
         text = menu_line(line)
-        if not text or NOISE.match(text):
-            continue
+        if not text or NOISE.match(text) or len(re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])", text)) >= 6:
+            continue                              # a table row of many numbers is not a dish with its price
         twin = TWIN_PRICE.search(text)
         if twin and kind != "h":
             text = f"${twin.group(1)}"            # "...lime juice$12 $12 Mashed avocado..." (description, price, description again)
@@ -544,6 +548,9 @@ def parse_menu(lines):
             if values and name and not re.fullmatch(r"[\d\W]+", name):
                 emit(name, clean(item.group("prices")), values, under=under)
                 continue
+        label = re.sub(r"[\d$.,/|\s+-]+$", "", text).strip()
+        if PRICE_ONLY.match(text) and label and SKIP_NAME.match(label):
+            continue                              # "DINNER MENU 23": a menu title with a stray number
         if PRICE_ONLY.match(text) and not NOT_PRICE_UNIT.search(text):
             values = money_values(text)
             if values and name_above:
