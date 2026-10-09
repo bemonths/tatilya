@@ -1,0 +1,16 @@
+﻿# Fiyat seviyesi bizim sınıflamamızdır: işletmenin kendi sitesindeki en kapsamlı ana öğün menüsünde (akşam, yoksa öğle, yoksa genel, yoksa brunch, yoksa kahvaltı) ana yemek fiyatlarının ortancası $15 altı '$', $15–25 '$$', $25–40 '$$$', $40 ve üstü '$$$$'; 5'ten az ana yemek fiyatı varsa hesaplanmaz.
+# Çekim c51e63dcd7af42aab32ced56574899f3
+mahalle,restoran,seviye_$,seviye_$$,seviye_$$$,seviye_$$$$,seviyesi_hesaplanan,ana_yemek_ortancalarinin_ortancasi_usd,cevrim_ici_rezervasyon,cocuk_menusu,bilgisi_bulunamayan
+Dune Allen,2,0,0,1,0,1,25.0,0,2,0
+Gulf Place,6,0,0,2,0,2,25.25,0,2,2
+Santa Rosa Beach,28,0,3,0,0,3,17.95,1,6,12
+Blue Mountain Beach,8,1,0,0,0,1,13.49,2,0,1
+Grayton Beach,15,0,3,1,0,4,18.0,1,4,2
+WaterColor,5,1,1,1,0,3,19.0,0,4,0
+Seaside,19,3,2,0,0,5,13.0,3,2,4
+Seagrove,17,2,2,1,1,6,15.5,4,5,7
+WaterSound,3,0,1,0,0,1,17.0,0,0,0
+Seacrest,8,1,1,1,0,3,19.0,0,2,3
+Alys Beach,7,0,1,1,0,2,21.0,3,3,0
+Rosemary Beach,12,0,0,0,0,0,,1,4,2
+Inlet Beach,11,0,1,1,0,2,21.25,1,3,2

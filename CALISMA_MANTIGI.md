@@ -4,7 +4,7 @@
 >
 > Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M10`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 8 Ekim 2026'da GÖREV-08 (v0.10.0 yayını, kiralama şirketlerinden konaklama fiyatları, referans tablosunun kalan satırları) ile güncellenmiştir.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 8–9 Ekim 2026'da GÖREV-09 (v0.11.0 yayını, gerçek Chrome ile tarayıcı kurulumu, konaklama fiyat kapsaması, restoranların kendi sitelerinden bilgiler) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
@@ -13,19 +13,20 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` @ `1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1` (GÖREV-07: konaklama profili ve referans tablosu tamamlama; 8 Ekim 2026'da GÖREV-08 Adım 1 ile fast-forward) |
-| Stable tag | `v0.10.0` → `1f4e80b` — **v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili** (önceki: `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.10.0` / `10` (main ve `v0.10.0`) |
-| Aktif geliştirme dalı | `gorev-08-konaklama-fiyat` — kiralama şirketlerinin kendi sitelerinden konaklama fiyatları (`agency-lodging-rates/1`, 9 şirket, 4 altyapı uyarlayıcısı), Book>Direct toplayıcısında şirket bağlantısı ve gizli takvim düzeltmesi (`bookdirect-lodging/2`), referans tablosunun kalan satırları (105 satır, doğrulanamayan kalmadı) |
-| Aktif dal durumu | Uygulama `0.11.0`, şema `11`; iki toplayıcı geçici klasörde ve gerçek veride çalıştırıldı; main'e alınmadı; karar yöneticinin |
+| Stable branch | `main` @ `9f2d65ae85a2adccd1e7f4605406271dbc4d952f` (GÖREV-08: kiralama şirketlerinden konaklama fiyatları; 8 Ekim 2026'da GÖREV-09 Adım 1 ile fast-forward) |
+| Stable tag | `v0.11.0` → `9f2d65a` — **v0.11.0 — kiralama şirketlerinden konaklama fiyatları** (önceki: `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
+| Stable uygulama sürümü / şema | `0.11.0` / `11` (main ve `v0.11.0`) |
+| Aktif geliştirme dalı | `gorev-09-kapsama-restoran` — gerçek Chrome ile tarayıcı kurulumu (CDP, tek kalıcı profil, `browser_hosts`), konaklama fiyat kapsaması (`agency-lodging-rates/2`: 24 şirket, adres/konum eşlemesi, kendi envanteri, yayımlanmış kira, misafir sayısı, korumalı siteler, Sonbahar 2027), restoranların kendi sitelerinden bilgiler (`restaurant-sites/1`), restoran adres düzeltmesi (`south-walton-restaurants/2`) |
+| Aktif dal durumu | Uygulama `0.12.0`, şema `12`; geçici klasörde denendi, gerçek veride dört toplayıcı çalıştırıldı; main'e alınmadı; karar yöneticinin |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main @ 1f4e80b ve etiket `v0.10.0` başarılı; görev dalının sonucu `docs/gorevler/GOREV-08/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 587 Python testi + 52 frontend testi (main/v0.10.0: 555 + 46) |
+| Son CI | main @ 9f2d65a ve etiket `v0.11.0` başarılı; görev dalının sonucu `docs/gorevler/GOREV-09/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 650 Python testi + 54 frontend testi (main/v0.11.0: 587 + 52) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
-| Gerçek veritabanı | 8 Ekim 2026'da (GÖREV-08) tam yedekten (`work/yedek/20261008-1517/`) sonra normal kullanımla şema 11'e yükseltildi; önce konaklama, sonra kiralama şirketi fiyat toplayıcısı çalıştı. Şema 11 dosyasını main'deki 0.10.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-08-konaklama-fiyat` dalından çalıştırılır. |
+| Gerçek veritabanı | 8 Ekim 2026'da (GÖREV-09) tam yedekten (`work/yedek/20261008-2310/`) sonra normal kullanımla şema 12'ye yükseltildi; restoran dizini, işletme siteleri, konaklama ve kiralama şirketi fiyat toplayıcıları çalıştı; 9 Ekim 2026'da besin değeri tablosu düzeltmesinden sonra ikinci tam yedek (`work/yedek/20261009-0419/`) alınıp işletme siteleri toplayıcısı yeniden çalıştırıldı. Şema 12 dosyasını main'deki 0.11.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-09-kapsama-restoran` dalından çalıştırılır. |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
-| Konaklama durumu | Tarihli arama anlık görüntüleri (main'de); görev dalında kiralama şirketlerinin kendi sitelerinden fiyat: 8 Ekim 2026 gerçek çekiminde 2.389 ilanın 759'i yapılandırılmış 9 şirkete bağlı, 529'i şirket sitesinde bulundu, 510 ilana en az bir pencerede fiyat alındı (12/13 mahalle). Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
+| Konaklama durumu | Tarihli arama anlık görüntüleri; kiralama şirketlerinin kendi sitelerinden fiyat (main'de 9 şirket, görev dalında 24): GÖREV-09 gerçek çekiminde 1.127 ilan şirket sitesinde bulundu, 1.066 ilana en az bir pencerede fiyat alındı (Book>Direct ilanlarıyla 12/13 mahallede); Alys Beach'in kendi envanterinden 73 ev (69 fiyatlı). Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
+| Restoran bilgileri | Görev dalında işletmelerin kendi sitelerinden: 113 sitesi çalışan restoran, 33 restoranda fiyat seviyesi, 85 restoranda saat, 87 restoranda menü (138 restoranda). Ayrıntı `docs/M12-RESTORAN-BILGILERI.md` |
 
 ## 2. Projenin amacı
 
@@ -266,6 +267,12 @@ Alanlar:
 
 Gerçek kullanıcı snapshot'ında 138 restoran ve 141 restoran-bölge ilişkisi korunmuştur. Bunlar kaynak değişebileceği için sabit test sayısı değildir.
 
+GÖREV-09: `south-walton-restaurants/2` posta kodu olmayan şehir satırını ayrıştırıyor ("Canopy Road Café": şehir Inlet Beach, eyalet FL).
+
+### 9.10 Restoran bilgileri — işletmelerin kendi siteleri (`gorev-09-kapsama-restoran`, uygulama 0.12.0, şema 12)
+
+Generic `restaurant-sites/1` toplayıcısı: girdi destinasyonun son restoran dizini çekimi; her restoranın kendi sitesi (ve yayımladığı menü/sipariş platformu sayfaları) okunur: site durumu, menüler ve kalemler (fiyat metniyle; birden fazla boyda en düşük fiyat; "market price" sayıya çevrilmez), saatler, rezervasyon, çocuk menüsü, açık hava, su kenarı, köpek; her değer kaynak url, erişim zamanı, SHA-256 ve yöntem etiketiyle. Menü bölümleri gözden geçirilmiş tabloyla sınıflanır (`studio/sources/menu_sections.csv`); ana yemek ortancası ve fiyat seviyesi ($ <15, $$ 15–25, $$$ 25–40, $$$$ ≥40; en az 5 ana yemek) okuma anında hesaplanır ve "bizim sınıflamamız" diye etiketlenir. Görüntü menüleri bir kişi okur (`studio/destinations/thirty_a_menu_readings.csv`, SHA'ya bağlı); dizinde sitesi olmayanların resmî sitesi gözden geçirilmiş dosyada (`thirty_a_restaurant_sites.csv`). Doğrulama gösteren ya da JavaScript ile menü çizen siteler gerçek Chrome ile okunur (§4 madde 14). GÖREV-09 gerçek çekimi: 952 istek, 42 dk; 112 çalışan site, 33 fiyat seviyesi. Ayrıntı: `docs/M12-RESTORAN-BILGILERI.md`.
+
 ### 9.4 Mahalleler (v0.7.0)
 
 Kaynak: `https://www.visitsouthwalton.com/neighborhoods/`  
@@ -315,7 +322,7 @@ GÖREV-08 (`bookdirect-lodging/2`, şema 11): ilan kaydındaki şirket ilan sayf
 
 ### 9.9 Konaklama fiyatları (`gorev-08-konaklama-fiyat`, uygulama 0.11.0, şema 11)
 
-Generic `agency-lodging-rates/1` toplayıcısı: girdi destinasyonun son Book>Direct çekimi; ilan, şirket sitesindeki ilana yalnız Book>Direct bağlantısıyla eşlenir. Hangi şirket sitesinin hangi altyapı uyarlayıcısıyla (`rescms`, `track`, `streamline`, `vr_router`) okunacağı SQLite'taki `destination_agency_sites` yapılandırmasında (30A: 9 şirket). Her ilan × pencere için sitenin herkese açık fiyat/müsaitlik gösterimi: müsaitlik, kira, ücretler, vergiler, genel toplam, en az gece ve giriş günü (site gösteriyorsa), ham yanıtların SHA-256'sı. Şirket başına sıralı ve aralıklı; bir şirketin hatası diğerlerini durdurmaz. İnsan doğrulaması isteyen sitede görünür tarayıcı açılır, iş "kullanıcı doğrulaması bekleniyor" durumuna geçer (`job_waits`), kullanıcı doğrular, aynı oturumla devam edilir (15 dk sonra şirket atlanır). Özet okuma anında. Konaklama sekmesinin fiyat bölümü. 8 Ekim 2026 gerçek çekimi: 3.855 istek, 92,5 dk; 510 ilana fiyat. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`, keşif `docs/gorevler/GOREV-08/AJANS-KESFI.md`.
+Generic `agency-lodging-rates/1` toplayıcısı: girdi destinasyonun son Book>Direct çekimi; ilan, şirket sitesindeki ilana yalnız Book>Direct bağlantısıyla eşlenir. Hangi şirket sitesinin hangi altyapı uyarlayıcısıyla (`rescms`, `track`, `streamline`, `vr_router`) okunacağı SQLite'taki `destination_agency_sites` yapılandırmasında (30A: 9 şirket). Her ilan × pencere için sitenin herkese açık fiyat/müsaitlik gösterimi: müsaitlik, kira, ücretler, vergiler, genel toplam, en az gece ve giriş günü (site gösteriyorsa), ham yanıtların SHA-256'sı. GÖREV-09 (`/2`, şema 12): 24 şirket, 6 yeni uyarlayıcı, bağlantı çalışmazsa şirket listesiyle adres ya da konum eşlemesi (yöntem saklanır), Alys Beach'in kendi envanteri, Your Friend at the Beach'in yayımlanmış sezon kirası (toplamlardan ayrı), her fiyatta misafir sayısı, korumalı siteler yalnız gerçek tarayıcıdan 6 sn arayla; Sonbahar 2027 penceresi. Gerçek çekim: 10.172 istek, 209 dk. Şirket başına sıralı ve aralıklı; bir şirketin hatası diğerlerini durdurmaz. İnsan doğrulaması isteyen sitede görünür tarayıcı açılır, iş "kullanıcı doğrulaması bekleniyor" durumuna geçer (`job_waits`), kullanıcı doğrular, aynı oturumla devam edilir (15 dk sonra şirket atlanır). Özet okuma anında. Konaklama sekmesinin fiyat bölümü. 8 Ekim 2026 gerçek çekimi: 3.855 istek, 92,5 dk; 510 ilana fiyat. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`, keşif `docs/gorevler/GOREV-08/AJANS-KESFI.md`.
 
 ## 10. Konaklama — şu an nerede kaldık?
 
@@ -360,11 +367,11 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve tag `v0.10.0` → `1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1` (uygulama 0.10.0, şema 10; 8 Ekim 2026'da GÖREV-08 Adım 1 ile fast-forward ve açıklamalı etiket "v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili"; main ve etiket CI başarılı). Önceki: `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
+Stable: main ve tag `v0.11.0` → `9f2d65ae85a2adccd1e7f4605406271dbc4d952f` (uygulama 0.11.0, şema 11; 8 Ekim 2026'da GÖREV-09 Adım 1 ile fast-forward ve açıklamalı etiket "v0.11.0 — kiralama şirketlerinden konaklama fiyatları"; main CI 37796679492 ve etiket CI 37796684505 başarılı). Önceki: `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
 
-Aktif dal `gorev-08-konaklama-fiyat`:
-- 587 Python testi ve 52 frontend testi geçti (tam takım art arda en az 3 kez)
-- kiralama şirketi fiyat toplayıcısı (şema 11, Konaklama sekmesinin fiyat bölümü; gerçek veride çalıştı); `bookdirect-lodging/2`; referans tablosunun kalan satırları; "Tarayıcı ve insan doğrulaması" yöntemi (§4 madde 12–14); uygulama 0.11.0
+Aktif dal `gorev-09-kapsama-restoran`:
+- 650 Python testi ve 54 frontend testi geçti (tam takım art arda en az 3 kez)
+- gerçek Chrome ile tarayıcı kurulumu (§4 madde 14), `agency-lodging-rates/2`, `restaurant-sites/1`, `south-walton-restaurants/2`, şema 12, uygulama 0.12.0; gerçek veride çalıştı
 - main'e alınmadı
 
 Bilinen non-blocking uyarılar:
@@ -412,6 +419,8 @@ v0.9 (şema 8 → 9) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` ko
 
 v0.10 (şema 9 → 10) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski bütün tabloların satır sayıları ve çekimler aynı; yalnız 11 konaklama tablosu, 30A konaklama yapılandırması (1 clone, 14 konum filtresi, 4 pencere) ve 1 kaynak eklendi; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-07) `data/` tam yedeği (`work/yedek/20261007-2235/`, 384 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v9-f6412e0032864a4d8088398d54fe0223.sqlite3`) ve yalnız konaklama toplayıcısı çalıştırıldı (çekim `abe7764d…`, 2.655 istek, ~73 dk, 2.389 ilan, 9.189 arama satırı); `integrity_check` ok, `foreign_key_check` boş; eski çekimler aynı; istemci anahtarı ne ham dosyalarda ne veritabanında; ayrıntı `docs/gorevler/GOREV-07/RAPOR.md`.
 
+v0.12 (şema 11 → 12) migration denemesi 8 Ekim 2026'da gerçek DB'nin `work/` kopyasında iki kez yapıldı (ikincisi `browser_hosts` tablosu eklendikten sonra): eski 41 tablonun satırları aynı; 9 yeni tablo, `destination_agency_sites` 9 → 24, pencere 4 → 5, kaynak 14 → 15; NWS yöntemi "API"; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-09) `data/` tam yedeği (`work/yedek/20261008-2310/`, 8.016 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v11-b5d35eae98694c6c8a7bae7e9c2d2e1d.sqlite3`) ve sırayla restoran dizini, işletme siteleri, konaklama ve kiralama şirketi fiyat toplayıcıları çalıştırıldı; 9 Ekim 2026'da besin değeri tablosu düzeltmesinden sonra ikinci tam yedek (`work/yedek/20261009-0419/`) alınıp işletme siteleri toplayıcısı yeniden çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-09/RAPOR.md`.
+
 v0.11 (şema 10 → 11) migration denemesi 8 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski 37 tablonun satırları aynı (kaynaklara yalnız yeni satır eklendi), 7 yeni tablo (job_waits, destination_agency_sites, beş fiyat tablosu), `lodging_listings`'e üç boş sütun, 30A için 9 şirket yapılandırması ve 1 kaynak; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-08) `data/` tam yedeği (`work/yedek/20261008-1517/`, 3.040 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v10-…`), önce konaklama toplayıcısı (çekim `99735d8a…`, 1.119 istek, 34,2 dk), sonra uygulama yeni kodla yeniden açılıp kiralama şirketi fiyat toplayıcısı (çekim `1968245c…`, 3.855 istek, 92,5 dk) çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-08/RAPOR.md`.
 
 ## 13. Geliştirme çalışma biçimi
@@ -442,7 +451,6 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 - Etkinlik connector
 - Ulaşım connector
 - Grocery / günlük ihtiyaç fiyatları
-- Restoran menü/fiyat enrichment
 - Scheduler
 - Otomatik entity matching
 - Mahalle sınırı poligonları (plaj–mahalle eşlemesi ilçe alt bölüm poligonları, komşuluk ve boylam yöntemleriyle ayrı katmandadır; mahalle sınırı yoktur)
@@ -492,9 +500,10 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M9-REFERANS-TABLOSU.md`
 - `docs/M10-KONAKLAMA-PROFILI.md`
 - `docs/M11-KONAKLAMA-FIYATLARI.md`
+- `docs/M12-RESTORAN-BILGILERI.md`
 
 ---
 
 **Son güncelleme:** 8 Ekim 2026  
-**Stable:** v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili (`1f4e80b`)  
-**Aktif geliştirme:** `gorev-08-konaklama-fiyat` — kiralama şirketlerinden konaklama fiyatları, uygulama 0.11.0, şema 11 (yönetici incelemesinde)
+**Stable:** v0.11.0 — kiralama şirketlerinden konaklama fiyatları (`9f2d65a`)  
+**Aktif geliştirme:** `gorev-09-kapsama-restoran` — konaklama fiyat kapsaması ve restoranların kendi sitelerinden bilgiler, uygulama 0.12.0, şema 12 (yönetici incelemesinde)

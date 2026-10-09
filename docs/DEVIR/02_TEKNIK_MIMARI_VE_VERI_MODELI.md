@@ -327,6 +327,10 @@ Alanlar:
 
 Description nullable'dır.
 
+### Restoran bilgileri (v0.12.0, şema 12; `gorev-09-kapsama-restoran` dalı)
+
+İşletmelerin kendi sitelerinden: `restaurant_site_snapshots` (girdi restoran dizini çekimi, sayılar), `restaurant_sites` (restoran başına site durumu, kaynağı — dizin ya da gözden geçirilmiş site dosyası —, son url, HTTP durumu, not), `restaurant_facts` (saatler, rezervasyon, çocuk menüsü, açık hava, su kenarı/manzara, köpek dostu, sitenin fiyat işareti; her biri kaynak url, erişim zamanı, SHA-256 ve yöntemle), `restaurant_menus` (url, biçim, tür, durum), `restaurant_menu_items` (bölüm, ad, fiyat metni, fiyat, fiyat kuralı `single`/`lowest`/`market`, bölüm sınıfı ve dayanağı). Ana yemek ortancası ve fiyat seviyesi saklanmaz, okuma anında hesaplanır. Genel çekirdek `studio/sources/restaurant_sites.py`, bölüm sınıflama tablosu `studio/sources/menu_sections.csv`; 30A'nın gözden geçirilmiş site ve görüntü menü okuma dosyaları `studio/destinations/thirty_a_restaurant_sites.csv`, `thirty_a_menu_readings.csv`. Ayrıntı: `docs/M12-RESTORAN-BILGILERI.md`.
+
 ### Neighborhoods (v0.7.0, şema 7)
 
 - neighborhood_records: kaynak kimliği, permalink, ad, canonical_region_id, nullable summary, temsilî nokta (mahalle merkezi değil), tags (JSON dizi), nullable source_modified, nullable page_intro
@@ -353,6 +357,8 @@ Yapılandırma: `destination_lodging_sources` (clone adresi), `destination_lodgi
 
 Yapılandırma: `destination_agency_sites` (alan adı, şirket adı, uyarlayıcı, etkin). Çekim: `agency_rate_snapshots` (girdi konaklama çekimi, sorgu günü), `agency_rate_windows`, `agency_rate_companies` (şirket bazında sonuç), `agency_rate_listings` (Book>Direct ilanı, bağlantı, sayfa durumu, platform kimliği), `agency_rate_quotes` (ilan × pencere: müsaitlik, kira, ücretler, vergiler, toplam, isteğe bağlı kalemler, kurallar, ham yanıt SHA-256'ları). `job_waits`: çalışan bir işin kullanıcı doğrulaması beklediği site. Genel çekirdek `studio/sources/agency_rates.py`, uyarlayıcılar `agency_adapters.py`, görünür tarayıcı `browser_verification.py` (isteğe bağlı Playwright). Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`.
 
+Şema 12 (`agency-lodging-rates/2`, `gorev-09-kapsama-restoran` dalı): `destination_agency_sites`'a takma alan adları (`aliases`), korumalı bayrağı (`protected`), misafir kuralı (`guest_rule`: `two_adults` / `bedrooms_x2`), şirket ilan listesi kaynağı (`inventory`: platform liste servisi ya da site haritası) ve kendi envanteri mahallesi (`own_region_id`, `own_city`); `agency_rate_listings`'e eşleme yöntemi (`match_method`: `link` / `address` / `location`), bağlantı durumu ve eşleme notu; `agency_rate_quotes`'a misafir sayısı (`adults`, `children`); `agency_rate_companies`'e korumalı, misafir kuralı, şirket listesi sayısı ve ham SHA-256'ları, kendi envanteri sayıları ve yöntem dağılımı. Yeni tablolar: `agency_rate_own_listings` ve `agency_rate_own_quotes` (şirketin kendi envanteri), `agency_rate_published` (yayımlanmış sezon kirası; toplam fiyatlardan ayrı). Adres/konum kuralları `studio/sources/agency_matching.py`'de.
+
 ## Migration stratejisi
 
 Şema yükseltmeden önce:
@@ -362,7 +368,7 @@ Yapılandırma: `destination_agency_sites` (alan adı, şirket adı, uyarlayıc�
 - `PRAGMA foreign_key_check`,
 - hata halinde rollback.
 
-Stable şema: `10` (v0.10.0 ve main): v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler; v8 → v9 `storm_passages.non_tropical_only` sütununu ekler (kasırga evre kuralı); v9 → v10 konaklama yapılandırma tablolarını (`destination_lodging_sources`, `_locations`, `_windows`), sekiz konaklama anlık görüntü tablosunu ve 30A Book>Direct kaynağını ekler. `gorev-08-konaklama-fiyat` dalında şema `11` (gerçek DB 8 Ekim 2026'da şema 11'e yükseltildi): v10 → v11 `lodging_listings`'e `url`, `phone`, `toll_free` sütunlarını, `job_waits`, `destination_agency_sites` ve beş kiralama şirketi fiyat tablosunu, 30A için 9 şirketi ve kiralama şirketi fiyat kaynağını ekler.
+Stable şema: `10` (v0.10.0 ve main): v7 → v8 iklim tablolarını, 30A iklim yapılandırmasını ve üç iklim kaynağını ekler; v8 → v9 `storm_passages.non_tropical_only` sütununu ekler (kasırga evre kuralı); v9 → v10 konaklama yapılandırma tablolarını (`destination_lodging_sources`, `_locations`, `_windows`), sekiz konaklama anlık görüntü tablosunu ve 30A Book>Direct kaynağını ekler. `gorev-08-konaklama-fiyat` dalında şema `11` (gerçek DB 8 Ekim 2026'da şema 11'e yükseltildi): v10 → v11 `lodging_listings`'e `url`, `phone`, `toll_free` sütunlarını, `job_waits`, `destination_agency_sites` ve beş kiralama şirketi fiyat tablosunu, 30A için 9 şirketi ve kiralama şirketi fiyat kaynağını ekler. `gorev-09-kapsama-restoran` dalında şema `12` (`studio/migration_v12.py`): v11 → v12 kiralama şirketi tablolarına yukarıdaki sütunları ve üç tabloyu, beş restoran bilgisi tablosunu ekler; eski çekimlerde eşleme yöntemi `link`, misafir sayısı 2 yetişkin (Track hariç; servis sormuyor) olarak doldurulur; 30A için 15 yeni şirket, şirket seçenekleri, Sonbahar 2027 penceresi ve "Restoranlar · İşletme siteleri" kaynağı eklenir; NWS kaynağının yöntemi hâlâ "Belirlenecek" ise "API" yapılır.
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
@@ -386,7 +392,8 @@ Domain:
 - `/api/climate-runs`, `/api/climate`, `/api/climate-runs/{id}/raw` (v0.8.0; iklim çekimleri, yapılandırma ve son anlık görüntüler, ham manifest)
 - `/api/references` (v0.9.0; profil dosyasındaki elle doğrulanmış referans tablosu, doğrulama sonucu ve yeniden kontrol işaretiyle, salt okunur; v0.10.0'da `replaced_by`)
 - `/api/lodging-runs`, `/api/lodging-runs/{id}` (mahalle × pencere özeti ve aylık takvim ortancaları, okuma anında), `/api/lodging-runs/{id}/listings?region_id=`, `/api/lodging-runs/{id}/raw` (v0.10.0)
-- `/api/agency-rate-runs`, `/api/agency-rate-runs/{id}` (mahalle × pencere fiyat özeti, oda gruplarına göre ortancalar, kapsama ve şirket sonuçları; okuma anında), `/api/agency-rate-runs/{id}/listings?region_id=`, `/api/agency-rate-runs/{id}/raw` (v0.11.0); `/api/jobs` ve olay akışındaki işlerde `waiting_for` (doğrulama bekleyen site)
+- `/api/agency-rate-runs`, `/api/agency-rate-runs/{id}` (mahalle × pencere fiyat özeti, oda gruplarına göre ortancalar, kapsama ve şirket sonuçları; okuma anında), `/api/agency-rate-runs/{id}/listings?region_id=`, `/api/agency-rate-runs/{id}/raw` (v0.11.0; v0.12.0'da mahalle ilan listesi `{listings, own}` biçiminde, kendi envanteri ayrı); `/api/jobs` ve olay akışındaki işlerde `waiting_for` (doğrulama bekleyen site)
+- `/api/restaurant-site-runs`, `/api/restaurant-site-runs/{id}` (restoran listesi, mahalle özeti, kapsama; okuma anında), `/api/restaurant-site-runs/{id}/restaurant?external_id=` (bir restoranın bütün alanları, menüleri ve kalemleri), `/api/restaurant-site-runs/{id}/raw` (v0.12.0)
 
 Liste endpoint'leri destination-filtered'dır.
 

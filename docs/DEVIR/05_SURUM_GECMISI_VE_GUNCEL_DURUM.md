@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.10.0 -> 1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1
-main -> 1f4e80bcab70e7dd5fd4cb29bd1a0d67b9822ca1
-app 0.10.0
-schema 10
+tag v0.11.0 -> 9f2d65ae85a2adccd1e7f4605406271dbc4d952f
+main -> 9f2d65ae85a2adccd1e7f4605406271dbc4d952f
+app 0.11.0
+schema 11
 ```
+
+8 Ekim 2026'da GÖREV-09 Adım 1 ile main `9f2d65a`'ya (GÖREV-08) fast-forward edildi ve bu commit'e açıklamalı `v0.11.0` etiketi konuldu ("v0.11.0 — kiralama şirketlerinden konaklama fiyatları"). main CI (37796679492) ve etiket CI (37796684505): success.
 
 8 Ekim 2026'da GÖREV-08 Adım 1 ile main `1f4e80b`'ye (GÖREV-07) fast-forward edildi ve bu commit'e açıklamalı `v0.10.0` etiketi konuldu ("v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili"). main CI ve etiket CI: success.
 
@@ -20,21 +22,22 @@ schema 10
 ## Aktif branch
 
 ```text
-gorev-08-konaklama-fiyat
-app 0.11.0
-schema 11
+gorev-09-kapsama-restoran
+app 0.12.0
+schema 12
 ```
 
 Bu dal:
-- kiralama şirketlerinin kendi sitelerinden konaklama fiyatı toplayıcısını (`agency-lodging-rates/1`, şema 11, Konaklama sekmesinin fiyat bölümü) ekler; gerçek veride ilk çekim 8 Ekim 2026,
-- Book>Direct toplayıcısında şirket ilan bağlantısını saklar ve gizli takvimleri istemez (`bookdirect-lodging/2`),
-- "Tarayıcı ve insan doğrulaması" yöntemini (CLAUDE.md, CALISMA_MANTIGI §4) yazar,
-- referans tablosunun kalan 9 satırını tamamlar (105 satır),
+- tarayıcıyı gerçek Chrome'a çevirir: normal uygulama gibi başlatılır, tek kalıcı profil, CDP bağlantısı, "tarayıcıyla okunur" alan adları (`browser_hosts`), doğrulamada siteyi sona bırakma ve tek 15 dk bekleme, ısınma listesi (Adım 1b; CLAUDE.md, CALISMA_MANTIGI §4),
+- konaklama fiyat kapsamasını genişletir (`agency-lodging-rates/2`: 24 şirket, 6 yeni uyarlayıcı, adres/konum eşlemesi, Alys Beach kendi envanteri, yayımlanmış kira, misafir sayısı, korumalı siteler, Sonbahar 2027),
+- restoranların kendi sitelerinden bilgi toplar (`restaurant-sites/1`, Restoranlar sekmesinde seviye/rezervasyon/çocuk menüsü sütunları ve mahalle özeti),
+- restoran adres ayrıştırmasını düzeltir (`south-walton-restaurants/2`) ve NWS kaynak yöntemini v12'de "API" yapar,
+- gerçek veride dört toplayıcı çalıştı (8 Ekim 2026); işletme siteleri 9 Ekim'de menü ayrıştırma düzeltmesinden sonra yeniden çekildi,
 - main'e alınmadı; karar yöneticinin.
 
 Test:
-- 587 Python
-- 52 frontend
+- 650 Python
+- 54 frontend
 
 ---
 
@@ -321,6 +324,19 @@ Dal: `gorev-08-konaklama-fiyat`, uygulama 0.11.0, şema 11.
 - Referans tablosu: 105 satır (100 doğrulandı, 2 çelişkili, 0 doğrulanamadı, 3 yerine geçildi).
 - v10 → v11 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261008-1517/`), v10 → v11, konaklama sonra kiralama şirketi fiyat toplayıcısı; `integrity_check` ok, `foreign_key_check` boş.
 
+## v0.11.0 — kiralama şirketlerinden konaklama fiyatları
+
+8 Ekim 2026'da main'e alındı ve etiketlendi (`v0.11.0` → `9f2d65a`). İçerik yukarıdaki GÖREV-08 bölümünde.
+
+## GÖREV-09 — tarayıcı kurulumu, konaklama fiyat kapsaması ve restoran bilgileri (dal)
+
+Dal: `gorev-09-kapsama-restoran`, uygulama 0.12.0, şema 12.
+
+- Tarayıcı (Adım 1b, kullanıcı kararı): Playwright'in test tarayıcısı bırakıldı; gerçek Chrome normal uygulama gibi açılıp CDP ile bağlanılıyor. Isınmada 24 siteden yalnız order.online doğrulama istedi; 360blue hâlâ engel sayfası gösteriyor; floridastateparks.org bu tarayıcıda açıldı (GÖREV-08'de 403).
+- Keşif ve toplayıcı: 15 yeni şirket (`AJANS-KESFI-2.md`, `ajanslar.csv`); adres/konum eşlemesi doğrulandı (`eslesme-dogrulama.csv`); misafir sayısı kontrolünde hiçbir şirkette toplam değişmedi (bütün şirketler 2 yetişkin).
+- Restoranlar: işletme sitelerinden menü, fiyat seviyesi, saat, rezervasyon, çocuk menüsü; görüntü menüleri elle okundu.
+- v11 → v12 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261008-2310/`), v11 → v12, sırayla dört toplayıcı; 9 Ekim 2026'da besin değeri tablosu düzeltmesinden sonra ikinci tam yedek (`work/yedek/20261009-0419/`) alınıp işletme siteleri toplayıcısı yeniden çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş. Sayılar `docs/gorevler/GOREV-09/RAPOR.md`.
+
 ---
 
 ## Konaklama: açık konu
@@ -332,16 +348,16 @@ Dal: `gorev-08-konaklama-fiyat`, uygulama 0.11.0, şema 11.
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.10.0 — bilgi toplama ilkesi, referans tablosu tamamlama ve konaklama profili**
+**v0.11.0 — kiralama şirketlerinden konaklama fiyatları**
 
 Çalışan veri domain'leri:
-**beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu + konaklama profili** ve plaj–mahalle eşlemesi v3; `gorev-08-konaklama-fiyat` dalında ayrıca **kiralama şirketlerinden konaklama fiyatları**
+**beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu + konaklama profili + kiralama şirketlerinden konaklama fiyatları** ve plaj–mahalle eşlemesi v3; `gorev-09-kapsama-restoran` dalında ayrıca **genişletilmiş fiyat kapsaması** ve **restoranların kendi sitelerinden bilgiler**
 
 Görev dalında, gerçek veride çalışmış:
-**konaklama fiyatları** (kiralama şirketlerinin kendi sitelerinde sorgulanan fiyatlar; `gorev-08-konaklama-fiyat`; 9 şirket, örnek şirketlere göre dengesiz)
+**konaklama fiyatları** (24 şirket; örnek şirketlere göre hâlâ dengesiz, 360blue yok) ve **restoran bilgileri** (`gorev-09-kapsama-restoran`)
 
 Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-08-konaklama-fiyat` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).
+`gorev-09-kapsama-restoran` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).
