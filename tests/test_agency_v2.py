@@ -5,7 +5,9 @@ Synthetic pages in the platforms' real shapes through httpx.MockTransport only; 
 """
 import json
 import sqlite3
+import tempfile
 import threading
+from pathlib import Path
 from datetime import date
 from urllib.parse import parse_qs
 
@@ -168,6 +170,25 @@ QVR_AVAILABILITY = {"data": {"minimumNights": [
     {"base_rate": "$275-$648", "start_date": "2026-12-01", "end_date": "2027-02-28", "nights": 2, "type": "Nightly"},
     {"base_rate": "$359-$648", "start_date": "2027-09-01", "end_date": "2027-10-18", "nights": 2, "type": "Nightly"},
     {"base_rate": "$0", "start_date": "2027-10-19", "end_date": "2028-01-31", "nights": 2, "type": "Nightly"}]}}
+
+
+def test_vrp_search_answered_with_html_cards_is_read():
+    cards = ('<div class="abe-item map-filter-loader" data-vrp-index="0" data-vrp-address="3604 E. Co Hwy 30A A-8 Santa Rosa Beach, FL" '
+             'data-vrp-city="Santa Rosa Beach" data-vrp-property-code="245" data-vrp-name="Palms Getaway" '
+             'data-vrp-url="https://vrp.example/vrp/unit/Palms_Getaway-245-15" data-vrp-latitude="30.31292200" data-vrp-longitude="-86.11681580" '
+             'data-vrp-beds="1" data-vrp-baths="2" data-vrp-sleeps="4" data-vrp-unitid="371">'
+             '<div class="abe-item" data-vrp-address="" data-vrp-unitid="x"></div>')
+    def handler(request):
+        assert request.url.params["act"] == "search"
+        return httpx.Response(200, text=cards, headers={"content-type": "text/html; charset=UTF-8"})
+    store = ar.RawStore(Path(tempfile.mkdtemp()) / "manifest.json")
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        session = ar.SiteSession(store, "vrp.example", ar.HttpTransport(client), lambda: False)
+        units, replies = aa.VRP().inventory(session, "https://vrp.example", {})
+    assert units == [{"site_id": "371", "url": "https://vrp.example/vrp/unit/Palms_Getaway-245-15", "title": "Palms Getaway",
+                      "address": "3604 E. Co Hwy 30A A-8", "city": "Santa Rosa Beach", "latitude": 30.312922, "longitude": -86.1168158,
+                      "bedrooms": 1.0, "bathrooms": 2.0, "sleeps": 4.0, "info": None}] and len(replies) == 1
+    assert am.normalize_address(units[0]["address"]) == ("3604", "e 30a", "a 8")
 
 
 def test_vrp_page_quote_and_refusals():

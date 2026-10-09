@@ -22,7 +22,7 @@ export function weekdays(days) {
 /** One region x window cell: how many listings were asked, how many got a price, availability and the 7-night total. */
 export function agencyCell(cell) {
   if(!cell || cell.status==="skipped_past") return '<span class="muted">Geçmiş tarih; sorulmadı</span>';
-  if(!cell.queried_count) return `<span class="muted">Sorgulanan ilan yok</span><small>${cell.listing_count} ilan · ${cell.linked_count} bağlantılı</small>`;
+  if(!cell.queried_count) return `<span class="muted">Sorgulanan ilan yok</span><small>${cell.listing_count} ilan · ${cell.linked_count} bağlantılı</small>${ownLine(cell)}`;
   const total=cell.total_median==null?'<small>Fiyat alınamadı</small>':
     `<strong>${usd(cell.total_median)}</strong><small>toplam ortanca · ${usd(cell.total_q1)}–${usd(cell.total_q3)}</small>${cell.nightly_median==null?"":`<small>kira gecelik ${usd(cell.nightly_median)}</small>`}`;
   return `<span class="lodging-count">${cell.queried_count} ilan soruldu</span><small>fiyatlı ${cell.priced_count} (${percent(cell.priced_share)}) · müsait ${cell.available_share==null?"—":percent(cell.available_share)}</small>${total}${methodLine(cell)}${ownLine(cell)}${publishedLine(cell)}`;

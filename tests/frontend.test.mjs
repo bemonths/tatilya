@@ -490,6 +490,7 @@ test('agency price cells keep missing prices, skipped windows and availability v
   assert.deepEqual(jobResultTarget({kind:'source_collection',result:{connector_name:'agency-lodging-rates'}}),{href:'#collect/lodging',label:'Konaklama fiyatlarını aç'});
   assert.match(agencyCell({status:'skipped_past'}),/Geçmiş tarih; sorulmadı/);
   assert.match(agencyCell({status:'queried',queried_count:0,listing_count:5,linked_count:2}),/Sorgulanan ilan yok<\/span><small>5 ilan · 2 bağlantılı/);
+  assert.match(agencyCell({status:'queried',queried_count:0,listing_count:7,linked_count:7,own_listing_count:73,own:{priced_count:69,total_median:12000}}),/kendi envanteri: 73 ev · fiyatlı 69 · ortanca \$12,000/);   // Alys Beach: no Book>Direct listing asked, own homes priced
   const cell=agencyCell({status:'queried',queried_count:4,priced_count:3,priced_share:0.75,available_share:1,total_q1:1666.43,total_median:1936.65,total_q3:2637.9,nightly_median:247.02});
   assert.match(cell,/4 ilan soruldu/);assert.match(cell,/fiyatlı 3 \(%75\) · müsait %100/);
   assert.match(cell,/<strong>\$1,937<\/strong><small>toplam ortanca · \$1,666–\$2,638<\/small><small>kira gecelik \$247/);

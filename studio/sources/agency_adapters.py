@@ -640,6 +640,8 @@ class VRP:
         reply = session.request("GET", f"{origin}/?{urlencode(query)}", headers={"Accept": "application/json"}, note="vrp-inventory")
         if reply.status != 200:
             raise AdapterError(f"İlan listesi HTTP {reply.status} döndü.")
+        if "data-vrp-unitid" in reply.text:
+            return self.inventory_cards(reply, origin), [reply]
         data = json_of(reply, "VRP arama")
         rows = data.get("results") if isinstance(data, dict) else None
         if not isinstance(rows, list):
@@ -655,6 +657,26 @@ class VRP:
                           "longitude": number(row.get("long")), "bedrooms": number(row.get("Bedrooms")), "bathrooms": number(row.get("Bathrooms")),
                           "sleeps": number(row.get("Sleeps")), "info": None})
         return units, [reply]
+
+    def inventory_cards(self, reply, origin):
+        """Some themes answer the search with HTML result cards instead of JSON (seen on oversee.us): every card carries the unit
+        in data-vrp-* attributes (unit id, page, street address, city, coordinates, beds, baths, sleeps)."""
+        units = []
+        for card in re.findall(r"<div\b[^>]*\bdata-vrp-unitid=[^>]*>", reply.text, re.S):
+            value = lambda key: (lambda m: unescape(m.group(1)) if m else None)(re.search(rf'data-vrp-{key}="([^"]*)"', card))
+            unit_id, url = value("unitid"), value("url")
+            if not unit_id or not unit_id.isdigit() or not url:
+                continue
+            address, city = clean(value("address")), clean(value("city"))
+            if address and city:       # "3604 E. Co Hwy 30A A-8 Santa Rosa Beach, FL": the street line without its city and state
+                address = re.sub(rf"[\s,]+{re.escape(city)}\s*,?\s*(?:[A-Z]{{2}}\.?)?$", "", address, flags=re.I)
+            units.append({"site_id": unit_id, "url": urljoin(origin + "/", url), "title": clean(value("name")),
+                          "address": address, "city": city, "latitude": number(value("latitude")),
+                          "longitude": number(value("longitude")), "bedrooms": number(value("beds")), "bathrooms": number(value("baths")),
+                          "sleeps": number(value("sleeps")), "info": None})
+        if not units:
+            raise AdapterError("VRP arama yanıtında ilan kartı yok.")
+        return units
 
 
 # --- Company front ends with their own public quote services -------------------------------------------------------------
