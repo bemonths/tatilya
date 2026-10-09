@@ -138,6 +138,7 @@ def fast(monkeypatch):
     monkeypatch.setattr(bl, "REQUEST_GAP", 0)
     monkeypatch.setattr(bl, "LIVE_PAUSE", 0)
     monkeypatch.setattr(bl, "LIVE_BACKOFF", 0)
+    monkeypatch.setattr(bl, "SEARCH_RETRY_PAUSE", 0)
 
 
 def config(**changes):
@@ -258,7 +259,7 @@ def test_every_page_is_read(tmp_path):
     assert sum(1 for r in result.related["results"] if r["window_key"] == "fall-2026" and r["location_id"] == 2565) == 60
 
 
-def test_a_changing_total_is_retried_once_then_fails(tmp_path):
+def test_a_changing_total_is_read_again_then_fails(tmp_path):
     class Shifting(BookDirectMock):
         def __call__(self, request):
             response = super().__call__(request)
@@ -271,7 +272,7 @@ def test_a_changing_total_is_retried_once_then_fails(tmp_path):
     with pytest.raises(SourceError, match="tutarlı bir sonuç vermedi"):
         run(tmp_path, mock)
     pages = [r.url.params["page"] for r in mock.seen if r.url.path.endswith("/lodgings.json") and r.url.params["group_ids[]"] == "2565"]
-    assert pages == ["1", "2", "1", "2"]
+    assert pages == ["1", "2"] * bl.SEARCH_ATTEMPTS
 
 
 def test_past_windows_are_skipped_and_recorded(tmp_path):

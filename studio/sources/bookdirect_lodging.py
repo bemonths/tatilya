@@ -32,6 +32,8 @@ MAX_PAGES = 100             # per window and location filter
 # The front end asks again while an answer is pending, waiting 1 s + 0.75 s x attempt, up to 20 times; we stop after 5.
 LIVE_BATCH, LIVE_ATTEMPTS, LIVE_PAUSE, LIVE_BACKOFF = 50, 5, 1.0, 0.75
 CALENDAR_DAYS = 365
+# A search whose total changes between its pages (a listing added or removed meanwhile) is read again from page 1, after a pause.
+SEARCH_ATTEMPTS, SEARCH_RETRY_PAUSE = 3, 20.0
 CALENDAR_MISSING = (400, 404, 422)   # a listing whose calendar the source does not serve is recorded, not a failed run
 MAX_BYTES = 8_000_000
 JSON_TYPES = {"application/json"}
@@ -341,7 +343,7 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
             for position, (location_id, location_name, region_id) in enumerate(filters):
                 done = index * len(filters) + position
                 progress(5 + int(35 * done / steps), f"{window['label']}: {location_name} aranıyor.")
-                total, pages, rows = search(call, window, location_id, location_name, clone)
+                total, pages, rows = search(call, window, location_id, location_name, clone, canceled)
                 for listing, result in rows:
                     known = listings.get(listing["lodging_id"])
                     if known and known["title"] != listing["title"]:
@@ -416,9 +418,12 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
             client.close()
 
 
-def search(call, window, location_id, location_name, clone):
-    """All pages of one window x location filter; a changing total or an incomplete page set is retried once, then fails."""
-    for attempt in range(2):
+def search(call, window, location_id, location_name, clone, canceled=lambda: False):
+    """All pages of one window x location filter; a changing total or an incomplete page set is read again from page 1 (up to
+    SEARCH_ATTEMPTS times, SEARCH_RETRY_PAUSE apart), then fails: no partial result is kept."""
+    for attempt in range(SEARCH_ATTEMPTS):
+        if attempt:
+            pause(SEARCH_RETRY_PAUSE, canceled)
         params = {"per_page": PER_PAGE, "checkin": window["checkin_date"].strftime("%Y%m%d"), "checkout": window["checkout_date"].strftime("%Y%m%d"),
                   "category_ids[]": clone["default_category"], "group_ids[]": location_id, "sort": "title", "direction": "asc", "locale": "en"}
         rows, totals, page, pages = {}, set(), 1, None
