@@ -1910,6 +1910,9 @@ def restaurant_view(site, facts, menus, items, regions):
             "main_menu_type": best["menu_type"] if best else None, "main_menu_url": best["url"] if best else None, "main": stats,
             "price_level": price_level(stats), "small_plates": small, "small_plates_menu_url": small_menu["url"] if small["count"] else None,
             "fixed_menus": fixed}
+    if (view["facts"].get("review_note") or {}).get("value") == "note":
+        view["price_level"] = None       # a reviewer read the site and wrote why no level can be given (e.g. the menu read is another
+                                         # business's): that decision holds until the reviewed file changes
     view["level_reason"] = level_reason(view)
     return view
 

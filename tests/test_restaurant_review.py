@@ -216,6 +216,13 @@ def test_review_notes_give_the_reason_and_a_level_still_wins(tmp_path):
     assert coffee["level_reason"] == "ana yemek sunmuyor (kahve dükkânı)" and coffee["facts"]["review_note"]["method"] == "gözden geçirme"
     assert quiet["level_reason"] == "sitedeki menüde ana yemek fiyatları yazmıyor"
     assert rs.level_reason({**coffee, "price_level": "$"}) is None
+    menu = "<html><h2>Entrees</h2>" + "".join(f"<p>Dish {n} {20 + n}</p>" for n in range(5)) + "</html>"
+    shared = collect(tmp_path / "shared", [restaurant("bar", "Bar Room", "https://bakery.example/")],
+                     {"https://bakery.example/": ("text/html", "<html><title>Bakery</title><a href='/menu'>Menu</a>(850) 555-0100</html>"),
+                      "https://bakery.example/menu": ("text/html", menu)},
+                     overrides=[{"external_id": "/listing/bar/", "name": "Bar Room", "seviye_notu": "sitede Bar Room menüsü yok"}])
+    bar = view_of(shared, "/listing/bar/")                       # the bakery's menu is read, the reviewer's note decides
+    assert bar["main"]["count"] == 5 and bar["price_level"] is None and bar["level_reason"] == "sitede Bar Room menüsü yok"
 
 
 def test_reasons_for_missing_menus_unreadable_menus_and_few_mains():
