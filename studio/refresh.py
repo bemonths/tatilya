@@ -175,7 +175,7 @@ class BatchRunner:
             identifier = uuid.uuid4().hex
             with self.db.connect() as con:
                 con.execute("""INSERT INTO refresh_batches (id,destination_id,created_at,status,backup_file,plan,estimate_seconds,message)
-                    VALUES (?,?,?,'running',?,?,?,?)""", (identifier, destination_id, now(), str(copy.relative_to(self.db.path.parent)),
+                    VALUES (?,?,?,'running',?,?,?,?)""", (identifier, destination_id, now(), copy.relative_to(self.db.path.parent).as_posix(),
                                                           json.dumps(plan, ensure_ascii=False), current["estimate_seconds"],
                                                           f"Uygulamanın yedeği alındı: {copy.name}"))
             self.thread = threading.Thread(target=self.run, args=(identifier,), name="30a-refresh", daemon=True)
