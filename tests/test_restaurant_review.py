@@ -351,3 +351,33 @@ def test_ohbz_print_style_items_name_and_data_price_entries():
     items = rs.mhm_menus(html)[0]["items"]
     assert [(i["section"], i["name"], i["price_text"], i["price"], i["price_rule"]) for i in items] == [
         ("Plates", "Grits A Ya Ya", "26", 26.0, "single"), ("Plates", "Key Lime Pie", "9 / 4", 4.0, "lowest")]
+
+
+def test_a_dropped_plain_connection_counts_as_a_block_and_only_that_host_goes_to_the_browser(tmp_path, monkeypatch):
+    from tests.test_restaurant_sites import StandInSession
+    monkeypatch.setattr(rs, "pause", lambda seconds, canceled: None)
+
+    class Session(StandInSession):
+        def goto(self, url):
+            self.opened = [*getattr(self, "opened", []), httpx.URL(url).host]
+            return super().goto(url)
+
+    session = Session({"/taco-bar": "<title>Taco Bar</title><a href='/taco-menu'>Menu</a>",
+                       "/taco-menu": "<h2>Tacos</h2>" + "".join(f"<p>Taco {n} {12 + n}</p>" for n in range(5))})
+
+    def handler(request):
+        if request.url.host == "dropped.example":
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.", request=request)
+        raise AssertionError(f"Beklenmeyen istek: {request.url}")
+
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    reading_path = tmp_path / "readings.csv"
+    reading_path.write_text("external_id,menu_url,raw_sha256,menu_type,menu_title,section,name,price_text,price,price_rule,okundu,yontem\n", encoding="utf-8")
+    config = {"input": {"run_id": "r", "restaurants": [restaurant("taco", "Taco Bar", "https://dropped.example/taco-bar")]}, "menu_readings": reading_path,
+              "site_overrides": None}
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        browser = rs.BrowserPages(None, lambda: False, opener=lambda profile: session, grace=0)
+        result = rs.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False, config=config, client=client, browser=browser)
+    site, _, _, items = related(result, "/listing/taco/")
+    assert set(session.opened) == {"dropped.example"} and site["site_status"] == "working" and len(items) == 5
+    assert "düz HTTP isteği reddedildi" in site["status_note"]

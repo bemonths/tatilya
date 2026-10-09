@@ -1057,6 +1057,10 @@ class RestaurantRun:
             home = self.get(url, "site-home")
         except (httpx.HTTPError, SourceError) as exc:
             self.site.update({"site_status": "unreachable", "status_note": f"Siteye ulaşılamadı: {type(exc).__name__}"})
+            if isinstance(exc, httpx.RemoteProtocolError):
+                # the server dropped the plain request without an answer (seen on Cloudflare sites that let a browser in): a block
+                self.blocked_hosts.setdefault(host_key(url), {"reason": "refused", "url": url})
+                self.needs_browser = self.needs_browser or "refused"
             return self
         self.site.update({"final_url": home.final_url, "http_status": home.status, "fetched_at": home.fetched_at, "raw_sha256": home.sha256})
         if on_host(home.final_url, SOCIAL_HOSTS):
