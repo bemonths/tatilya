@@ -40,6 +40,8 @@ from .base import CollectionCanceled, CollectionResult, SourceError
 from .browser_verification import GRACE_SECONDS, host_key, mark_hosts
 from .bookdirect_lodging import is_front_host, quartiles
 from .climate_http import check, pause
+from .price_history import annotate_windows, compare, season_groups
+from .windows import monthly_windows
 
 CONNECTOR_VERSION = "agency-lodging-rates/2"
 SOURCE_QUERY = "kaynak=kiralama-sirketleri"
@@ -331,7 +333,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     if not lodging or not lodging.get("listings"):
         raise SourceError("Önce konaklama aramaları toplanmalı: kiralama şirketi fiyatları son Book>Direct çekimindeki ilanlardan sorulur.")
     today = today or datetime.now(timezone.utc).date()
-    windows = active_windows(config["windows"], today)
+    # the same window rule as the lodging collector (the windows of the run day); otherwise the configured fixed windows
+    windows = active_windows(monthly_windows(today, config["window_rule"]) if config.get("window_rule") else config["windows"], today)
     active = [w for w in windows if w["status"] == "queried"]
     if not active:
         raise SourceError("Bütün tarih pencereleri geçmişte kaldı; yapılandırmaya yeni tarihler eklenmeli.")
@@ -911,13 +914,22 @@ def summarize(con, run_id, region_order=(), region_names=None):
                                      "low_median": round(statistics.median(r["rent_low"] for r in rents), 2) if rents else None,
                                      "high_median": round(statistics.median(r["rent_high"] for r in rents), 2) if rents else None}
             cells.append(cell)
+    windows = annotate_windows(windows, snapshot["queried_on"])
+    totals = {}
+    for region in regions:
+        for window in windows:
+            totals[(region, window["window_key"])] = [q["total"] for q in by_window.get(window["window_key"], {}).values()
+                                                      if q["status"] == "priced" and q["total"] is not None
+                                                      and region in listings.get(q["lodging_id"], {}).get("region_ids", ())]
+    seasons = season_groups(regions, windows, totals)
+    comparison = previous_comparison(con, run_id, regions, listings, windows, by_window, snapshot["queried_on"])
     coverage = {name: sum(l["page_status"] == name for l in listings.values()) for name in PAGE_STATUSES}
     methods = {method: sum(l["match_method"] == method for l in listings.values()) for method in MATCH_METHODS}
     priced_ids = {q["lodging_id"] for q in quotes if q["status"] == "priced"}
     regions_priced = {r for l in listings.values() if l["lodging_id"] in priced_ids for r in l["region_ids"]}
     own_priced = {(q["domain"], q["site_listing_id"]) for q in own_quotes if q["status"] == "priced"}
     return {"snapshot": dict(snapshot), "windows": windows, "regions": [{"region_id": r, "region_name": names.get(r, r)} for r in regions],
-            "cells": cells, "companies": companies,
+            "cells": cells, "companies": companies, "seasons": seasons, "comparison": comparison,
             "coverage": {**coverage, "listings": len(listings), "priced_listings": len(priced_ids), "regions": len(regions),
                          "regions_with_price": len(regions_priced), "methods": methods, "own_listings": len(own), "own_priced": len(own_priced),
                          "published": len({r["lodging_id"] for r in published})},
@@ -927,6 +939,35 @@ def summarize(con, run_id, region_order=(), region_names=None):
             "published_note": "Yayımlanmış kira: sitenin sezon için yayımladığı kira aralığı × gece sayısı; vergi ve ücretler hariç, toplam fiyat ortancalarına karışmaz.",
             "nightly_note": "Gecelik ortalama = sitenin kira tutarı ÷ gece sayısı (bizim hesabımız; ücret ve vergiler hariç).",
             "bedroom_note": "Oda sayısı Book>Direct ilanından; 1–2 grubuna stüdyolar dahildir. Ortancalar 7 gecelik toplam fiyattandır."}
+
+
+def run_totals(con, run_id):
+    """Windows and the priced 7-night totals {(lodging_id, window_key): total} of one run."""
+    windows = [dict(r) for r in con.execute("SELECT * FROM agency_rate_windows WHERE run_id=? AND status='queried' ORDER BY checkin", (run_id,))]
+    prices = {(r["lodging_id"], r["window_key"]): r["total"] for r in con.execute(
+        "SELECT lodging_id, window_key, total FROM agency_rate_quotes WHERE run_id=? AND status='priced' AND total IS NOT NULL", (run_id,))}
+    return windows, prices
+
+
+def previous_comparison(con, run_id, regions, listings, windows, by_window, queried_on):
+    """The same-week comparison with the latest earlier successful run of the destination that asked at least one same week."""
+    current = con.execute("SELECT rowid, destination_id FROM source_runs WHERE id=?", (run_id,)).fetchone()
+    if not current:
+        return None
+    dates = {(w["checkin"], w["checkout"]) for w in windows if w["status"] == "queried"}
+    for row in con.execute("""SELECT s.run_id, s.queried_on FROM agency_rate_snapshots s JOIN source_runs r ON r.id=s.run_id
+            WHERE r.status='done' AND r.destination_id=? AND r.rowid<? ORDER BY r.rowid DESC""", (current["destination_id"], current["rowid"])):
+        earlier_windows, earlier_prices = run_totals(con, row["run_id"])
+        if not dates & {(w["checkin"], w["checkout"]) for w in earlier_windows}:
+            continue
+        later_prices = {(lodging_id, key): q["total"] for key, quotes in by_window.items() for lodging_id, q in quotes.items()
+                        if q["status"] == "priced" and q["total"] is not None}
+        members = {region: {l["lodging_id"] for l in listings.values() if region in l["region_ids"]} for region in regions}
+        result = compare(regions, {"windows": earlier_windows, "prices": earlier_prices},
+                         {"windows": [w for w in windows if w["status"] == "queried"], "prices": later_prices, "members": members},
+                         row["queried_on"], queried_on)
+        return {**result, "earlier_run_id": row["run_id"], "earlier_queried_on": row["queried_on"], "basis": "7 gecelik toplam (sitenin)"}
+    return None
 
 
 def region_listings(con, run_id, region_id):
@@ -1016,7 +1057,7 @@ class AgencyRatesConnector:
         if lodging["clone_host"] != source_host(source["url"]):
             raise SourceError("Kaynağın Book>Direct adresi destinasyonun konaklama yapılandırmasıyla uyuşmuyor.")
         verifier = self.verifier_factory() if self.verifier_factory else default_verifier()
-        return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "browser_hosts": context.browser_hosts},
+        return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts},
                        verifier=verifier, waiting=waiting)
 
     def store_records(self, con, run_id, records, related=None):

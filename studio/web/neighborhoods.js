@@ -1,6 +1,7 @@
 import {destinationRows} from "./destinations.js";
 import {api, esc, date} from "./api.js";
 import {collectionTabs} from "./connectors.js";
+import {DailyNeeds} from "./dailyneeds.js";
 
 const CONNECTOR="south-walton-neighborhoods";
 const shown=value=>esc(value ?? "Belirtilmemiş");
@@ -24,8 +25,8 @@ export function sourcePageLink(url) {
 }
 
 export class NeighborhoodScreen {
-  constructor() {this.selectedRun=null;this.selectedRecord=null;this.snapshot=null;this.sequence=0;}
-  invalidate() {this.sequence++;}
+  constructor() {this.selectedRun=null;this.selectedRecord=null;this.snapshot=null;this.sequence=0;this.daily=new DailyNeeds();}
+  invalidate() {this.sequence++;this.daily?.invalidate();}
   render(main,data,heading) {
     data={...data,sources:destinationRows(data.sources,data.selected_destination),jobs:destinationRows(data.jobs,data.selected_destination),neighborhood_runs:destinationRows(data.neighborhood_runs || [],data.selected_destination)};
     const sequence=++this.sequence;
@@ -48,7 +49,9 @@ export class NeighborhoodScreen {
       <div class="workspace-grid"><section class="library" aria-label="Toplanan mahalle verileri"><div class="library-title"><h2>Mahalleler · batıdan doğuya</h2><small id="neighborhood-count">Yükleniyor…</small></div>
       <div class="table-scroll"><table><thead><tr><th>MAHALLE</th><th>KANONİK BÖLGE</th><th>KAYNAK ETİKETLERİ</th></tr></thead><tbody id="neighborhood-rows"><tr><td colspan="3">Kayıtlar yükleniyor…</td></tr></tbody></table></div></section><section class="detail" id="neighborhood-detail" aria-label="Mahalle ayrıntıları"></section></div>`:
       `<section class="quality-result empty"><h2>İlk mahalle çekimi hazır</h2><p>“Mahalle verilerini topla” ile mahalle dizinini ve her mahallenin sayfasını kaydet. Her başarılı çekim ayrı sürüm olarak korunur.</p></section>`)+
-      `<div class="stage-note"><p>${esc(scope)} Kaynak adı tam eşleşmeyle veya açık yazım tablosuyla kanonik mahalleye bağlanır; adres veya koordinattan mahalle çıkarılmaz. Kaynak metinleri iç araştırma kanıtıdır; videoda aynen kullanılmaz, kendi cümlelerimizle ve atıfla kullanılır.</p></div>`;
+      `<div class="stage-note"><p>${esc(scope)} Kaynak adı tam eşleşmeyle veya açık yazım tablosuyla kanonik mahalleye bağlanır; adres veya koordinattan mahalle çıkarılmaz. Kaynak metinleri iç araştırma kanıtıdır; videoda aynen kullanılmaz, kendi cümlelerimizle ve atıfla kullanılır.</p></div>`+
+      '<div id="daily-needs"></div>';
+    this.daily?.render(main.querySelector?.("#daily-needs"),data);
     if(!run) return;
     main.querySelector('#neighborhood-version').addEventListener('change',e=>{this.selectedRun=e.target.value;this.render(main,data,heading);});
     api(`neighborhood-runs/${run.id}`).then(snapshot=>{

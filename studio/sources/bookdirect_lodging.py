@@ -17,6 +17,8 @@ from datetime import date, datetime, timedelta, timezone
 
 from .base import CollectionCanceled, CollectionResult, SourceError
 from .climate_http import Reader, check, make_client, pause
+from .price_history import annotate_windows, compare, season_groups
+from .windows import monthly_windows
 
 CONNECTOR_VERSION = "bookdirect-lodging/2"
 API_HOST = "admin.bookdirect.net"
@@ -283,8 +285,10 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
     if not mapping or any(region_id not in region_names for region_id in mapping.values()):
         raise SourceError("Konaklama konum eşlemesi destinasyonun bölgeleriyle uyuşmuyor.")
     today = today or datetime.now(timezone.utc).date()
+    # a window rule gives the windows of the run day (GÖREV-10: 12 monthly weeks); otherwise the configured fixed windows
+    configured = monthly_windows(today, config["window_rule"]) if config.get("window_rule") else config["windows"]
     windows = [{**window, "checkin_date": date.fromisoformat(window["checkin"]), "checkout_date": date.fromisoformat(window["checkout"])}
-               for window in config["windows"]]
+               for window in configured]
     if not windows:
         raise SourceError("Konaklama için örnek tarih penceresi yapılandırılmamış.")
     for window in windows:
@@ -532,7 +536,7 @@ def summarize(con, run_id, region_order=()):
         key = (region_of[(row["window_key"], row["location_id"])], row["window_key"])
         seen.setdefault(key, {}).setdefault(row["lodging_id"], dict(row))
     default_category = snapshot["default_category_id"]
-    cells = []
+    cells, region_prices = [], {}
     for region in region_list:
         for window in windows:
             rows = seen.get((region["region_id"], window["window_key"]), {})
@@ -550,6 +554,7 @@ def summarize(con, run_id, region_order=()):
                         prices.append(price)
                         sources[source] += 1
                 q1, median, q3 = quartiles(prices)
+                region_prices[(region["region_id"], window["window_key"])] = prices
                 cell.update({"categories": dict(categories.most_common()), "no_category": sum(1 for m in members if not any(c != default_category for c in m["category_ids"])),
                              "bedrooms_known": len(bedrooms), "bedrooms_median": float(statistics.median(bedrooms)) if bedrooms else None,
                              "bedrooms_4_plus_share": round(sum(b >= 4 for b in bedrooms) / len(bedrooms), 3) if bedrooms else None,
@@ -573,9 +578,45 @@ def summarize(con, run_id, region_order=()):
         for month, values in sorted(per_month.items()):
             monthly.append({"region_id": region["region_id"], "month": month, "listing_count": len(values),
                             "median_rate": round(statistics.median(values), 2)})
+    windows = annotate_windows(windows, snapshot["searched_on"])
+    region_ids = [r["region_id"] for r in region_list]
+    members = {}
+    for (region_id, _), rows in seen.items():
+        members.setdefault(region_id, set()).update(rows)
     return {"snapshot": dict(snapshot), "windows": windows,
             "regions": [{**r, "filters": sorted(r["filters"])} for r in region_list], "cells": cells, "monthly": monthly,
-            "label": label(snapshot["searched_on"])}
+            "label": label(snapshot["searched_on"]), "seasons": season_groups(region_ids, windows, region_prices),
+            "comparison": previous_comparison(con, run_id, region_ids, members, snapshot["searched_on"])}
+
+
+def run_nightly(con, run_id):
+    """Searched windows and each listing's nightly price per window (price_of) of one run."""
+    windows = [dict(r) for r in con.execute("SELECT * FROM lodging_windows WHERE run_id=? AND status='searched' ORDER BY checkin", (run_id,))]
+    calendars = {(r["lodging_id"], r["window_key"]): dict(r) for r in con.execute("SELECT * FROM lodging_calendar_windows WHERE run_id=?", (run_id,))}
+    prices = {}
+    for row in con.execute("SELECT * FROM lodging_search_results WHERE run_id=? ORDER BY position", (run_id,)):
+        key = (row["lodging_id"], row["window_key"])
+        if key not in prices or prices[key] is None:
+            prices[key] = price_of(dict(row), calendars.get(key))[0]
+    return windows, {k: v for k, v in prices.items() if v is not None}
+
+
+def previous_comparison(con, run_id, regions, members, searched_on):
+    """Same-week comparison (nightly price as in price_of) with the latest earlier run of the destination that searched a same week."""
+    current = con.execute("SELECT rowid, destination_id FROM source_runs WHERE id=?", (run_id,)).fetchone()
+    if not current:
+        return None
+    windows, prices = run_nightly(con, run_id)
+    dates = {(w["checkin"], w["checkout"]) for w in windows}
+    for row in con.execute("""SELECT s.run_id, s.searched_on FROM lodging_snapshots s JOIN source_runs r ON r.id=s.run_id
+            WHERE r.status='done' AND r.destination_id=? AND r.rowid<? ORDER BY r.rowid DESC""", (current["destination_id"], current["rowid"])):
+        earlier_windows, earlier_prices = run_nightly(con, row["run_id"])
+        if not dates & {(w["checkin"], w["checkout"]) for w in earlier_windows}:
+            continue
+        result = compare(regions, {"windows": earlier_windows, "prices": earlier_prices},
+                         {"windows": windows, "prices": prices, "members": members}, row["searched_on"], searched_on)
+        return {**result, "earlier_run_id": row["run_id"], "earlier_queried_on": row["searched_on"], "basis": "gecelik fiyat (Book>Direct)"}
+    return None
 
 
 def label(searched_on):
@@ -630,6 +671,7 @@ def region_listings(con, run_id, region_id):
 class BookDirectLodgingConnector:
     name = "bookdirect-lodging"
     version = CONNECTOR_VERSION
+    produces = "lodging_listings"           # the agency rate collector reads the latest run's listings
     raw_filename = "manifest.json"
     method = "JSON"
     diff_enabled = False

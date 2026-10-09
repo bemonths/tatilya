@@ -41,6 +41,10 @@ SEEDS = [
      "zamanı ve ham kopyanın SHA-256'sıyla. Yorum ve puan platformları kullanılmaz; sitenin söylemediği bilgi bilinmiyor kalır.", "HTML"),
     ("Kiralama şirketleri · Konaklama fiyatları", "https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri", "Konaklama",
      "Son Book>Direct çekimindeki ilanların şirket bağlantısıyla, yapılandırılmış kiralama şirketlerinin kendi sitelerinde her tarih penceresi için sorulan müsaitlik ve fiyat: kira, temizlik ve diğer ücretler, vergiler, genel toplam, en az gece ve giriş günü kuralı (site hangilerini gösteriyorsa). Eşleme yalnız bağlantıyla yapılır; tam envanter değildir.", "HTML"),
+    ("OpenStreetMap · Günlük ihtiyaç noktaları", "https://www.openstreetmap.org/?kaynak=gunluk-ihtiyac", "Genel",
+     "OpenStreetMap'te (Overpass API) destinasyonun alanındaki süpermarket ve marketler, küçük marketler, eczaneler, acil sağlık noktaları ve "
+     "bisiklet kiralama noktaları; süpermarketler zincirlerin kendi mağaza bulucularıyla gözden geçirilir. Kiralık evlerden kuş uçuşu "
+     "mesafeler okuma anında hesaplanır. © OpenStreetMap katkıcıları, ODbL.", "API"),
 ]
 
 # Visit South Walton spells a few neighborhoods differently from the canonical regions.
@@ -159,6 +163,9 @@ AGENCY_SITE_OPTIONS = {
 # person from image menus or text-less PDFs, each tied to the document's SHA-256.
 RESTAURANT_SITE_OVERRIDES = Path(__file__).with_name("thirty_a_restaurant_sites.csv")
 MENU_READINGS = Path(__file__).with_name("thirty_a_menu_readings.csv")
+# GÖREV-10: classes a reviewer gave single menu items (main dishes under $8 checked one by one: add-ons, nigiri pieces, bento choices,
+# page lines that are not dishes), keyed by restaurant, item name and (optionally) price text.
+MENU_ITEM_CLASSES = Path(__file__).with_name("thirty_a_menu_item_classes.csv")
 # Added by migration v12: the seasonal fall window (Fall 2026 became a last-minute window once queried in October 2026).
 LODGING_WINDOWS_V12 = (("fall-2027", "Sonbahar 2027", "2027-10-16", "2027-10-23"),)
 STORM_CORRIDOR = {
@@ -167,3 +174,26 @@ STORM_CORRIDOR = {
     "east_latitude": 30.2713, "east_longitude": -85.99579, "east_reference": "Lupine - 1 (5c81a6a2f836f9166348e961)",
     "radii_nmi": (50, 100),
 }
+
+# GÖREV-10 (migration v13). Lodging price windows: for each of the 12 months after the run month, the Saturday-to-Saturday week that
+# contains the 15th (7 nights); a week starting fewer than 21 days after the run date is skipped and the 13th month added. An
+# assumption of ours (a common vacation-rental pattern), not a source fact.
+LODGING_WINDOW_RULE = {"kind": "monthly", "months": 12, "anchor_day": 15, "weekday": 5, "nights": 7, "min_lead_days": 21}
+# Suggested refresh interval per collector in months (the home screen shows which are due; nothing runs by itself).
+REFRESH_INTERVALS = (("bookdirect-lodging", 1), ("agency-lodging-rates", 1), ("south-walton-restaurants", 3), ("restaurant-sites", 3))
+# Daily-need points (generic OpenStreetMap collector): the 30A coast and the US-98 corridor behind it, widened to the east end of
+# Miramar Beach and the west end of Panama City Beach so the nearest store of a listing near either end of 30A is not cut off.
+DAILY_NEEDS_AREA = {"south": 30.20, "west": -86.40, "north": 30.45, "east": -85.84,
+                    "note": "30A kıyısı ve arkasındaki US-98 koridoru; 30A'nın iki ucundaki ilanların en yakın noktası kesilmesin diye batıda "
+                            "Miramar Beach'in doğu ucu, doğuda Panama City Beach'in batı ucu da alana dahil (en yakın nokta 30A dışında olabilir)."}
+# OpenStreetMap tags of each category: a point belongs to the first category one of whose tag sets it carries in full.
+DAILY_NEEDS_CATEGORIES = (
+    ("supermarket", "Süpermarket ve market", [{"shop": "supermarket"}, {"shop": "grocery"}]),
+    ("convenience", "Küçük market", [{"shop": "convenience"}, {"shop": "general"}]),
+    ("pharmacy", "Eczane", [{"amenity": "pharmacy"}, {"healthcare": "pharmacy"}]),
+    ("urgent_care", "Acil sağlık", [{"amenity": "hospital"}, {"healthcare": "urgent_care"}, {"amenity": "clinic", "emergency": "yes"}]),
+    ("bike_rental", "Bisiklet kiralama", [{"amenity": "bicycle_rental"}, {"shop": "bicycle", "service:bicycle:rental": "yes"}]),
+)
+# Supermarket chains' own store locators reviewed by a person (GÖREV-10): stores in the area with the locator's address, coordinates,
+# page and check date; a store OpenStreetMap does not have is added as a point labelled "zincirin kendi sitesi".
+CHAIN_STORE_CHECKS = Path(__file__).with_name("thirty_a_chain_stores.csv")

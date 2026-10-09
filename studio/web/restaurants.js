@@ -8,9 +8,9 @@ export const YES_NO={yes:"evet",no:"hayır"};
 export const SITE_STATUS_LABELS={working:"site çalışıyor",not_found:"site bulunamadı",closed_permanently:"site kalıcı olarak kapandığını söylüyor",
   closed_season:"site sezon için kapalı olduğunu söylüyor",other_business:"alan adı başka işletmeye/satışa ait",unreachable:"siteye ulaşılamadı",
   social_login:"sosyal medya sayfası; girişsiz okunamadı",no_site:"web sitesi yok"};
-export const MENU_TYPE_LABELS={dinner:"akşam",lunch:"öğle",general:"genel",brunch:"brunch",breakfast:"kahvaltı",kids:"çocuk",drinks:"içecek",dessert:"tatlı",happy_hour:"happy hour"};
+export const MENU_TYPE_LABELS={dinner:"akşam",lunch:"öğle",general:"genel",brunch:"brunch",breakfast:"kahvaltı",kids:"çocuk",drinks:"içecek",dessert:"tatlı",happy_hour:"happy hour",catering:"catering",special:"özel gün"};
 export const FORMAT_LABELS={html:"web sayfası",pdf:"PDF",image:"görüntü",platform:"platform"};
-export const SECTION_LABELS={ana_yemek:"ana yemek",baslangic:"başlangıç",salata_corba:"salata/çorba",tatli:"tatlı",icecek:"içecek",cocuk:"çocuk",yan_urun:"yan ürün",diger:"diğer"};
+export const SECTION_LABELS={ana_yemek:"ana yemek",baslangic:"başlangıç",salata_corba:"salata/çorba",kucuk_tabak:"küçük tabak",sabit_menu:"sabit menü",tatli:"tatlı",icecek:"içecek",cocuk:"çocuk",yan_urun:"yan ürün",diger:"diğer"};
 const FACT_LABELS={hours:"Çalışma saatleri",reservation:"Rezervasyon",kids_menu:"Çocuk menüsü",outdoor_seating:"Açık hava oturma",water_view:"Su kenarı / manzara",
   dog_friendly:"Köpek dostu",site_price_range:"Sitenin kendi fiyat aralığı ifadesi"};
 const usd=value=>value==null?"—":`$${Number(value).toLocaleString("en-US",{minimumFractionDigits:value%1?2:0,maximumFractionDigits:2})}`;
@@ -42,8 +42,18 @@ const pills=values=>values.length?values.map(v=>`<span class="feature-pill">${es
 /** Our price level with the main-dish median it comes from; nothing when the site gave fewer than five main-dish prices. */
 export function levelCell(site) {
   if(!site) return '<span class="muted">—</span>';
-  if(!site.price_level) return `<span class="muted">${site.main?.count?`hesaplanmadı (${site.main.count} ana yemek fiyatı)`:"bilinmiyor"}</span>`;
+  if(!site.price_level) return `<span class="muted">hesaplanmadı</span>${site.level_reason?`<small>${esc(site.level_reason)}</small>`:""}${smallPlatesLine(site)}`;
   return `<strong>${esc(site.price_level)}</strong><small>ana yemek ortancası ${usd(site.main.median)} · ${site.main.count} kalem</small>`;
+}
+/** Tapas / small plates: their median apart (our calculation), never a price level. */
+export function smallPlatesLine(site) {
+  const small=site?.small_plates;
+  return small?.count?`<small>küçük tabak ortancası ${usd(small.median)} · ${small.count} kalem</small>`:"";
+}
+/** Fixed price per person (prix fixe, tasting menu), kept apart from the main-dish median. */
+export function fixedMenuLine(site) {
+  const fixed=site?.fixed_menus || [];
+  return fixed.length?`<p>Sabit menü fiyatı: ${fixed.map(f=>`${esc(f.name)} ${esc(f.price_text || usd(f.price))}`).join(" · ")} <small>(ana yemek ortancasına karışmaz)</small></p>`:"";
 }
 export function reservationCell(site) {
   if(!site?.reservation) return '<span class="muted">bilinmiyor</span>';
@@ -71,9 +81,9 @@ export function siteDetail(detail, levelNote="") {
   const menus=detail.menus || [], items=detail.items || [];
   const main=detail.main_menu_id?menus.find(m=>m.menu_id===detail.main_menu_id):null;
   const mainLine=detail.price_level?`<p><strong>${esc(detail.price_level)}</strong> · ana yemek ortancası ${usd(detail.main.median)} (${usd(detail.main.min)}–${usd(detail.main.max)}, ${detail.main.count} kalem) · ${esc(MENU_TYPE_LABELS[main?.menu_type] || "")} menüsünden</p>`:
-    `<p class="muted">Fiyat seviyesi hesaplanmadı${detail.main?.count?` (ana yemek menüsünde ${detail.main.count} fiyat; en az 5 gerekir)`:""}.</p>`;
+    `<p class="muted">Fiyat seviyesi hesaplanmadı${detail.level_reason?`: ${esc(detail.level_reason)}`:""}.</p>`;
   return `<section class="site-facts"><h3>İşletmenin kendi sitesi</h3><p>${esc(SITE_STATUS_LABELS[detail.site_status] || detail.site_status)}${detail.site_url?` · ${restaurantLink(detail.final_url || detail.site_url,detail.site_source==="review"?"resmî site (web aramasıyla bulundu)":"resmî site")}`:""}${detail.status_note?`<br><small>${esc(detail.status_note)}</small>`:""}</p>
-    ${mainLine}<p class="source-stamp">${esc(levelNote)}</p>
+    ${mainLine}${detail.small_plates?.count?`<p>Küçük tabak ortancası ${usd(detail.small_plates.median)} (${usd(detail.small_plates.min)}–${usd(detail.small_plates.max)}, ${detail.small_plates.count} kalem; bizim hesabımız, fiyat seviyesi sayılmaz)</p>`:""}${fixedMenuLine(detail)}<p class="source-stamp">${esc(levelNote)}</p>
     <dl>${Object.keys(FACT_LABELS).map(field=>factLine(field,detail.facts?.[field])).join("")}</dl>
     <h3>Menüler</h3>${menus.length?`<ul class="menu-list">${menus.map(m=>`<li>${restaurantLink(m.url,m.title || MENU_TYPE_LABELS[m.menu_type] || "menü")} <small>${esc(MENU_TYPE_LABELS[m.menu_type] || m.menu_type)} · ${esc(FORMAT_LABELS[m.format] || m.format)}${m.platform?` (${esc(m.platform)})`:""} · ${m.status==="read"?`${m.item_count} kalem · ${esc(m.method || "")}`:esc(m.message || m.status)}${m.menu_id===detail.main_menu_id?" · fiyat seviyesi bu menüden":""}</small></li>`).join("")}</ul>`:'<p class="muted">Sitede menü bulunamadı.</p>'}
     ${main?`<details><summary>${esc(MENU_TYPE_LABELS[main.menu_type] || "")} menüsündeki ana yemekler</summary><table class="lodging-table"><tbody>${items.filter(i=>i.menu_id===main.menu_id && i.section_class==="ana_yemek").map(i=>`<tr><td>${esc(i.name)}<small>${esc(i.section || "")}</small></td><td>${esc(i.price_text || "")}${i.price_rule==="lowest"?" <small>(en düşük)</small>":""}</td></tr>`).join("")}</tbody></table></details>`:""}</section>`;

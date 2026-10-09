@@ -22,7 +22,30 @@ export function monthLabel(month) {
   return `${MONTHS[Number(number)-1] || number} ${year}`;
 }
 export function windowHeader(window) {
-  return `${esc(window.label)}<small>${esc(window.checkin)} → ${esc(window.checkout)} · ${window.nights} gece</small>`;
+  const lead=window.lead_days==null?"":` · sorgudan ${window.lead_days} gün sonra`;
+  return `${esc(window.label)}<small>${esc(window.checkin)} → ${esc(window.checkout)} · ${window.nights} gece${lead}</small>`;
+}
+const SEASONS=["kış","ilkbahar","yaz","sonbahar"];
+/** Our season groups (Dec–Feb winter ...): per region the median over every priced listing-window pair of the season. */
+export function seasonTable(seasons, regions, what) {
+  if(!seasons?.rows?.length) return "";
+  const present=SEASONS.filter(season=>seasons.rows.some(r=>r.season===season));
+  const cell=(region,season)=>{const r=seasons.rows.find(x=>x.region_id===region && x.season===season);
+    return !r?'<span class="muted">—</span>':r.median==null?`<span class="muted">fiyat yok</span><small>${r.window_count} pencere</small>`:`<strong>${usd(r.median)}</strong><small>${r.priced_count} fiyat · ${r.window_count} pencere</small>`;};
+  return `<section class="library climate-block"><div class="library-title"><h2>Mevsimlere göre (bizim gruplamamız)</h2><small>${esc(seasons.note)} Değer: ${esc(what)} ortancası; mevsimdeki her fiyatlı ilan-pencere çifti bir kez sayılır.</small></div>
+    <div class="table-scroll"><table class="lodging-table"><thead><tr><th>MAHALLE</th>${present.map(s=>`<th>${esc(s.toLocaleUpperCase("tr"))}</th>`).join("")}</tr></thead>
+    <tbody>${regions.map(r=>`<tr><td>${esc(r.region_name)}</td>${present.map(s=>`<td>${cell(r.region_id,s)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>`;
+}
+/** Same week, two runs: listings priced in both, the median change; the matched count is always shown. */
+export function comparisonTable(comparison, regions) {
+  if(!comparison?.windows?.length) return `<section class="library climate-block"><div class="library-title"><h2>Aynı hafta, iki sorgu</h2><small>Bu sürümle aynı haftayı soran önceki bir sorgu yok; karşılaştırma ikinci aylık çekimden sonra oluşur.</small></div></section>`;
+  const sign=v=>v==null?"":v>0?"+":"";
+  const cell=(region,key)=>{const r=comparison.rows.find(x=>x.region_id===region && x.window_key===key);
+    if(!r || !r.matched_count) return `<span class="muted">eşleşen ilan yok</span>`;
+    return `<strong>${sign(r.median_change)}${percent(r.median_change)}</strong><small>${sign(r.median_amount)}${usd(r.median_amount)} · ${r.matched_count} eşleşen ilan</small>`;};
+  return `<section class="library climate-block"><div class="library-title"><h2>Aynı hafta, iki sorgu</h2><small>${esc(comparison.label)} · temel: ${esc(comparison.basis)} · ortanca değişim ve eşleşen ilan sayısı</small></div>
+    <div class="table-scroll"><table class="lodging-table"><thead><tr><th>MAHALLE</th>${comparison.windows.map(w=>`<th>${esc(w.label || w.checkin)}<small>${esc(w.checkin)} → ${esc(w.checkout)}${w.earlier_label && w.earlier_label!==w.label?` · önceki: ${esc(w.earlier_label)}`:""}</small></th>`).join("")}</tr></thead>
+    <tbody>${regions.map(r=>`<tr><td>${esc(r.region_name)}</td>${comparison.windows.map(w=>`<td>${cell(r.region_id,w.window_key)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>`;
 }
 /** One region x window cell: listing count, priced share and the nightly price median with its quartiles. */
 export function summaryCell(cell) {
@@ -81,13 +104,14 @@ export class LodgingScreen {
     if(!source && !runs.length) {
       main.innerHTML=collectionTabs("lodging")+heading("Veri toplama","Bu destinasyon için konaklama kaynağı (Book>Direct) bağlı değil.");return;
     }
-    const windows=(config?.windows || []).map(w=>`${esc(w.label)} (${esc(w.checkin)} → ${esc(w.checkout)})`).join(" · ");
+    const windows=data.lodging_connector?.window_rule_text?`${(config?.windows || []).length} aylık pencere`:(config?.windows || []).map(w=>`${esc(w.label)} (${esc(w.checkin)} → ${esc(w.checkout)})`).join(" · ");
     main.innerHTML=collectionTabs("lodging")+heading("Veri toplama",`${data.selected_destination?.name || "Seçili destinasyon"} mahallelerinde belirli tarihlerdeki aramalarda görünen konaklamalar: tür, büyüklük ve kaynağın verdiği fiyatlar.`,
       `<button class="primary" data-action="collect-lodging" ${!source || busy?"disabled":""}>${busy?"Toplama sürüyor…":"↓ Konaklama aramalarını topla"}</button>`)+
       `<section class="connector-strip"><div><span class="eyebrow">BAĞLI KAYNAK</span><h2>${esc(source?.name || "Konaklama (Book>Direct)")}</h2><p>${esc(config?.clone_host || "")} · ${Object.keys(config?.locations || {}).length} konum filtresi · ${windows || "tarih penceresi yok"}</p></div><span class="tag ${source?"green":"warm"}">${source?"JSON · bağlı":"Kaynak etkin değil"}</span></section>`+
       (run?`<div class="collection-version"><label>Sürüm <select id="lodging-version" aria-label="Konaklama veri sürümü">${runs.map((r,i)=>`<option value="${esc(r.id)}" ${r.id===run.id?"selected":""}>${i===0?"Son çekim · ":""}${esc(date(r.fetched_at))} · ${r.record_count} ilan · ${esc(r.id.slice(0,6))}</option>`).join("")}</select></label><a class="download-link" href="/api/lodging-runs/${esc(run.id)}/raw" download>↓ Ham kaynak manifestini indir</a></div>
       <div id="lodging-body" aria-live="polite"><p>Özet yükleniyor…</p></div>`:
       `<section class="quality-result empty"><h2>İlk konaklama çekimi hazır</h2><p>“Konaklama aramalarını topla” her tarih penceresinde her mahalle filtresinin bütün sayfalarını, canlı fiyatları ve her ilanın fiyat takvimini okur. İstekler sıralıdır ve aralıklıdır; çekim uzun sürebilir. Her başarılı çekim ayrı sürüm olarak korunur.</p></section>`)+
+      (data.lodging_connector?.window_rule_text?`<div class="stage-note"><p>${esc(data.lodging_connector.window_rule_text)} Bugün sorulacak pencereler: ${(config?.windows || []).map(w=>esc(w.label)).join(" · ")}.</p></div>`:"")+
       `<div class="stage-note"><p>${esc(data.lodging_connector?.scope || "")} Kaynağın istemci anahtarı her çekimde ön yüz paketinden okunur ve hiçbir yere yazılmaz. Mahalle, kaynağın konum filtresinin adından gelir; adres veya koordinattan mahalle çıkarılmaz.</p></div>`+
       '<div id="agency-prices"></div>';
     this.agency?.render(main.querySelector("#agency-prices"),data);
@@ -114,6 +138,7 @@ export class LodgingScreen {
       <tbody>${snap.regions.map(region=>`<tr class="${region.region_id===this.selectedRegion?"selected":""}"><td><button class="source-name" data-lodging-region="${esc(region.region_id)}">${esc(region.region_name)}</button><small>${region.filters.map(esc).join(", ")}</small></td>
         ${snap.windows.map(w=>`<td>${summaryCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
       <p class="source-stamp">Fiyat önceliği: güncel canlı fiyat (ön yüz arama fiyatını bununla değiştirir), yoksa aramadaki liste fiyatı, yoksa diğer canlı yanıt, yoksa pencerenin bütün geceleri fiyatlıysa takvimin gecelik ortalaması. Çeyrekler arası aralık fiyatı olan ilanlardan hesaplanır (bizim hesabımız).</p></section>
+      ${seasonTable(snap.seasons,snap.regions,"gecelik fiyat")}${comparisonTable(snap.comparison,snap.regions)}
       <div id="lodging-region"></div>`;
     body.querySelector(".lodging-table").addEventListener("click",event=>{
       const button=event.target.closest("[data-lodging-region]");

@@ -1,6 +1,6 @@
 import {destinationRows} from "./destinations.js";
 import {api, esc, date} from "./api.js";
-import {usd, percent, windowHeader, companyLink} from "./lodging.js";
+import {usd, percent, windowHeader, companyLink, seasonTable, comparisonTable} from "./lodging.js";
 
 export const AGENCY_CONNECTOR="agency-lodging-rates";
 export const PAGE_LABELS={matched:"şirket sitesinde ilan bulundu",not_found:"şirket sitesi sayfayı bulamadı (404)",no_listing:"bağlantı ilan sayfasına gitmiyor",
@@ -123,6 +123,7 @@ export class AgencyPrices {
       <section class="library climate-block"><div class="library-title"><h2>Fiyat · mahalle × tarih penceresi</h2><small>7 gecelik toplamın ortancası ve çeyrekler aralığı; bir mahalleye tıklayınca ilanlar açılır.</small></div>
       <div class="table-scroll"><table class="lodging-table agency-table"><thead><tr><th>MAHALLE</th>${snap.windows.map(w=>`<th>${windowHeader(w)}</th>`).join("")}</tr></thead>
       <tbody>${snap.regions.map(region=>`<tr class="${region.region_id===this.selectedRegion?"selected":""}"><td><button class="source-name" data-agency-region="${esc(region.region_id)}">${esc(region.region_name)}</button></td>${snap.windows.map(w=>`<td>${agencyCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>
+      ${seasonTable(snap.seasons,snap.regions,"7 gecelik toplam")}${comparisonTable(snap.comparison,snap.regions)}
       <section class="library climate-block"><div class="library-title"><h2>Oda sayısına göre ortanca toplam</h2><small>${esc(snap.bedroom_note)}</small></div>
       <div class="table-scroll"><table class="lodging-table"><thead><tr><th>MAHALLE</th>${queried.map(w=>`<th>${windowHeader(w)}</th>`).join("")}</tr></thead>
       <tbody>${snap.regions.map(region=>`<tr><td>${esc(region.region_name)}</td>${queried.map(w=>`<td>${bedroomCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>

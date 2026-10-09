@@ -10,6 +10,7 @@ import {ClimateScreen, CLIMATE_ACTIONS, CLIMATE_BUTTONS, CLIMATE_CONNECTORS} fro
 import {ReferencesScreen} from "./references.js";
 import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
+import {refreshSection} from "./refresh.js";
 
 const $ = selector => document.querySelector(selector);
 const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null};
@@ -18,6 +19,7 @@ const active = job => ["queued", "running"].includes(job.status);
 let toastTimer;
 let events=null;
 let lastCollectionId=null;
+let lastJobKey="";
 const beachScreen=new BeachScreen();
 const weatherScreen=new WeatherScreen();
 let lastWeatherId=null;
@@ -25,7 +27,7 @@ let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
 let lastNeighborhoodId=null;
 const neighborhoodScreen=new NeighborhoodScreen();
-let lastLodgingId=null, lastAgencyId=null, lastSiteId=null;
+let lastLodgingId=null, lastAgencyId=null, lastSiteId=null, lastDailyId=null;
 const agencyPrices=new AgencyPrices();
 const lodgingScreen=new LodgingScreen(agencyPrices);
 // The three climate jobs can be queued together; refresh on every newly finished one, not only the newest.
@@ -34,7 +36,7 @@ const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status=
 const climateScreen=new ClimateScreen();
 const referencesScreen=new ReferencesScreen();
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
-const collectionActions={"collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
+const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
 
 function toast(text) {
@@ -94,6 +96,7 @@ function renderSources() {
       <div class="metric"><span class="metric-icon" aria-hidden="true">▦</span><div><div class="metric-number"><strong>${categories.size}</strong><span class="metric-label">kategoride kaynak</span></div><small>Konaklamadan etkinliklere</small></div></div>
       <div class="metric"><span class="metric-icon" aria-hidden="true">⇣</span><div><div class="metric-number"><strong>${state.data.collections[0]?.included_count || 0}</strong><span class="metric-label">son çekimde veri kaydı</span></div><small>${state.data.collections.length?"Plaj erişimleri · "+esc(date(state.data.collections[0].fetched_at)):"Henüz plaj verisi yok"}</small></div></div>
     </section>
+    <div id="refresh-section">${refreshSection(state.data.refresh,state.data.jobs.some(active))}</div>
     <div class="workspace-grid"><section class="library" aria-label="Kaynak kütüphanesi">
       <div class="library-title"><h2>Kaynak kütüphanesi</h2><small>${esc(state.data.selected_destination.name)} / ${esc(state.data.selected_destination.subtitle)}</small></div>
       <div class="toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><input type="search" id="source-search" aria-label="Kaynak ara" placeholder="Kaynak adı, adres veya not ara…" value="${esc(state.search)}"></div>
@@ -239,6 +242,12 @@ function openEditor(source=null) {
   form.elements.name.focus();
 }
 
+async function updateRefresh() {
+  state.data.refresh=await api("refresh");
+  const box=document.querySelector("#refresh-section");
+  if(box) box.innerHTML=refreshSection(state.data.refresh,state.data.jobs.some(active));
+}
+
 async function refreshSources() {
   const sources=await api("sources");
   state.data.sources=sources;
@@ -297,6 +306,7 @@ $("#main").addEventListener("click", async event=>{
       case "collect-water-temperature":
       case "collect-storms":
       case "collect-neighborhoods":
+      case "collect-daily-needs":
       case "collect-lodging":
       case "collect-agency-rates":
       case "collect-restaurant-sites":
@@ -309,6 +319,17 @@ $("#main").addEventListener("click", async event=>{
         if(!source) throw new Error("Veri kaynağı etkin değil.");
         await api("jobs",{method:"POST",body:JSON.stringify({kind:"source_collection",source_id:source.id})});
         state.data.jobs=await api("jobs");renderJobs();toggleJobs(true);break;
+      }
+      case "refresh-start": {
+        button.disabled=true;
+        const batch=await api("refresh-batches",{method:"POST",body:JSON.stringify({destination_id:state.data.selected_destination.id})});
+        toast(`Toplu çalıştırma başladı. ${batch.message || ""}`);
+        await updateRefresh();state.data.jobs=await api("jobs");renderJobs();break;
+      }
+      case "refresh-cancel": {
+        button.disabled=true;
+        await api(`refresh-batches/${button.dataset.batch}/cancel`,{method:"POST"});
+        await updateRefresh();toast("Toplu çalıştırma durduruldu.");break;
       }
       case "reload": location.reload();break;
     }
@@ -363,6 +384,7 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastLodgingId=state.data.lodging_runs?.[0]?.id || null;
     lastAgencyId=state.data.agency_runs?.[0]?.id || null;
     lastSiteId=state.data.restaurant_site_runs?.[0]?.id || null;
+    lastDailyId=state.data.daily_needs_runs?.[0]?.id || null;
     climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
     render();renderJobs();
@@ -376,6 +398,8 @@ async function start(destinationId=storedDestination(localStorage)) {
       if(ticket!==destinationRevision()) return;
       state.data.jobs=JSON.parse(event.data).filter(job=>job.destination_id===state.data.selected_destination.id);renderJobs();
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
+      const jobKey=state.data.jobs.map(j=>`${j.id}:${j.status}`).join(",");     // the section changes only when a job starts or ends
+      if(state.page==="sources" && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
       const restaurantLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-restaurants");
       if(restaurantLatest && restaurantLatest.id!==lastRestaurantId) {
         try {
@@ -398,6 +422,14 @@ async function start(destinationId=storedDestination(localStorage)) {
           state.data.neighborhood_runs=await api("neighborhood-runs");lastNeighborhoodId=neighborhoodLatest.id;neighborhoodScreen.selectedRun=null;
           if(location.hash==="#collect/neighborhoods") render();
           toast("Mahalle verileri kaydedildi. Mahalleler sekmesinden inceleyebilirsin.");
+        } catch(error) {toast(error.message);}
+      }
+      const dailyLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="openstreetmap-daily-needs");
+      if(dailyLatest && dailyLatest.id!==lastDailyId) {
+        try {
+          state.data.daily_needs_runs=await api("daily-needs-runs");lastDailyId=dailyLatest.id;neighborhoodScreen.daily.selectedRun=null;neighborhoodScreen.daily.snapshot=null;
+          if(location.hash==="#collect/neighborhoods") render();
+          toast("Günlük ihtiyaç noktaları kaydedildi. Mahalleler sekmesinden inceleyebilirsin.");
         } catch(error) {toast(error.message);}
       }
       const lodgingLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name===LODGING_CONNECTOR);

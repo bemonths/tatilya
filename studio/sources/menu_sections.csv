@@ -1,4 +1,16 @@
 kalip,sinif,tam,not
+fire cuts,ana_yemek,,GÖREV-10: menü incelemesi
+a la flame,ana_yemek,,GÖREV-10: menü incelemesi
+crafted burger,ana_yemek,,GÖREV-10: menü incelemesi
+sandwiches & salads,ana_yemek,1,GÖREV-10: menü incelemesi
+sandwiches and salads,ana_yemek,1,GÖREV-10: menü incelemesi
+fries & rings,yan_urun,1,GÖREV-10: menü incelemesi
+chef's specials,ana_yemek,,GÖREV-10: menü incelemesi
+chefs specials,ana_yemek,,GÖREV-10: menü incelemesi
+pub grub,ana_yemek,,GÖREV-10: menü incelemesi
+starts,baslangic,1,GÖREV-10: menü incelemesi
+quick bites,baslangic,,GÖREV-10: menü incelemesi
+chicken & seafood,ana_yemek,1,GÖREV-10: menü incelemesi
 kids,cocuk,,
 kid's,cocuk,,
 children,cocuk,,
@@ -14,7 +26,19 @@ children's menu,cocuk,,
 for the little ones,cocuk,,
 12 and under,cocuk,,
 ages 12,cocuk,,
-dessert cocktails,icecek,,"tatlı satırlarından önce: tatlı kokteylleri içecektir"
+prix fixe,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+prix-fixe,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+tasting menu,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+chef's tasting,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+three course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+four course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+five course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+3 course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+4 course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+5 course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+multi-course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+multi course,sabit_menu,,GÖREV-10: kişi başı sabit fiyat
+dessert cocktails,icecek,,tatlı satırlarından önce: tatlı kokteylleri içecektir
 pizza pies,ana_yemek,,"""pies"" tatlı satırından önce"
 pizza pie,ana_yemek,,
 red pies,ana_yemek,,pizza
@@ -160,8 +184,14 @@ appetizers,baslangic,,
 apps,baslangic,,
 starters,baslangic,,
 starter,baslangic,,
-small plates,baslangic,,
-smalls,baslangic,,
+para picar,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+little plates,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+petite plates,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+small plate,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+tapas frias,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+tapas calientes,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+small plates,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
+smalls,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
 shareables,baslangic,,
 sharables,baslangic,,
 to share,baslangic,,
@@ -173,7 +203,7 @@ raw bar,baslangic,,
 oysters,baslangic,,
 nigiri,baslangic,,
 sashimi,baslangic,,
-tapas,baslangic,,
+tapas,kucuk_tabak,,GÖREV-10: tapas / küçük tabak ayrı verilir
 dips,baslangic,,
 first course,baslangic,,
 antipasti,baslangic,,

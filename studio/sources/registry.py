@@ -8,6 +8,7 @@ from .storm_proximity import StormProximityConnector
 from .bookdirect_lodging import BookDirectLodgingConnector
 from .agency_rates import AgencyRatesConnector
 from .restaurant_sites import RestaurantSitesConnector
+from .daily_needs import DailyNeedsConnector
 
 
 class ConnectorRegistry:
@@ -29,4 +30,4 @@ class ConnectorRegistry:
 DEFAULT_REGISTRY = ConnectorRegistry([BeachesConnector(), WeatherConnector(), RestaurantsConnector(), NeighborhoodsConnector(),
                                      ClimateNormalsConnector(), WaterTemperatureConnector(), StormProximityConnector(),
                                      BookDirectLodgingConnector(), AgencyRatesConnector(),
-                                     RestaurantSitesConnector()])
+                                     RestaurantSitesConnector(), DailyNeedsConnector()])

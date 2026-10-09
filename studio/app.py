@@ -15,8 +15,9 @@ from . import __version__
 from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
+from . import refresh
 from .models import JobInput, SourceInput, SourceUpdate
-from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather
+from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
@@ -33,9 +34,12 @@ def create_app(data_dir: Path | None = None, registry=None):
         db.initialize()
         db.recover_jobs()
         app.state.jobs = JobQueue(db)
+        app.state.batches = refresh.BatchRunner(db, app.state.jobs)
+        app.state.batches.recover()
         try:
             yield
         finally:
+            app.state.batches.shutdown()
             app.state.jobs.shutdown()
 
     app = FastAPI(title="30A Studio", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None)
@@ -99,7 +103,12 @@ def create_app(data_dir: Path | None = None, registry=None):
                 "climate_runs": climate_runs(destination_id),
                 "lodging_runs": lodging_runs(destination_id),
                 "lodging_connector": {"name": bookdirect_lodging.BookDirectLodgingConnector.name, "method": "JSON",
-                                      "scope": bookdirect_lodging.SCOPE, "config": context.lodging},
+                                      "scope": bookdirect_lodging.SCOPE, "config": context.lodging,
+                                      "window_rule_text": windows.rule_text((context.lodging or {}).get("window_rule")) if (context.lodging or {}).get("window_rule") else None},
+                "refresh": refresh.status(db, destination_id),
+                "daily_needs_runs": daily_needs_runs(destination_id),
+                "daily_needs_connector": {"name": daily_needs.DailyNeedsConnector.name, "method": "API", "attribution": daily_needs.ATTRIBUTION,
+                                          "config": context.daily_needs and {k: context.daily_needs[k] for k in ("area", "categories")}},
                 "agency_runs": agency_runs(destination_id),
                 "agency_connector": {"name": agency_rates.AgencyRatesConnector.name, "method": "HTML/JSON", "scope": agency_rates.SCOPE,
                                      "sites": (context.agency or {}).get("sites", [])},
@@ -158,6 +167,24 @@ def create_app(data_dir: Path | None = None, registry=None):
         destination_id=body.destination_id or DEFAULT_DESTINATION_ID
         selected(destination_id)
         return request.app.state.jobs.submit_audit(destination_id)
+
+    @app.get("/api/refresh")
+    def refresh_status(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return refresh.status(db, destination_id)
+
+    @app.post("/api/refresh-batches", status_code=202)
+    def start_refresh(body: JobInput, request: Request):
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return request.app.state.batches.start(destination_id)
+
+    @app.post("/api/refresh-batches/{identifier}/cancel")
+    def cancel_refresh(identifier: str, request: Request):
+        result = request.app.state.batches.cancel(identifier)
+        if result is None:
+            raise HTTPException(404, "Toplu çalıştırma bulunamadı.")
+        return result
 
     @app.post("/api/jobs/{identifier}/cancel")
     def cancel_job(identifier: str, request: Request):
@@ -343,6 +370,38 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham işletme sitesi manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-isletme-siteleri-{identifier[:8]}.json")
+
+    @app.get("/api/daily-needs-runs")
+    def daily_needs_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id)
+                if run["connector_name"] == daily_needs.DailyNeedsConnector.name and run["status"] == "done"]
+
+    def find_daily_needs_run(identifier):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != daily_needs.DailyNeedsConnector.name or run["status"] != "done":
+            raise HTTPException(404, "Bu günlük ihtiyaç sürümü bulunamadı.")
+        return run
+
+    @app.get("/api/daily-needs-runs/{identifier}")
+    def daily_needs_run(identifier: str):
+        """Points of the run and per neighborhood the great-circle distances of the latest lodging run's listings; computed when read."""
+        run = find_daily_needs_run(identifier)
+        regions = db.context(run["destination_id"]).canonical_regions
+        with db.connect() as con:
+            summary = daily_needs.summarize(con, identifier, [r["id"] for r in regions], {r["id"]: r["name"] for r in regions})
+        if summary is None:
+            raise HTTPException(404, "Bu sürümün özeti bulunamadı.")
+        return {"run": run, **summary}
+
+    @app.get("/api/daily-needs-runs/{identifier}/raw")
+    def raw_daily_needs_run(identifier: str):
+        run = find_daily_needs_run(identifier)
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, "Ham OpenStreetMap manifesti bulunamadı.")
+        return FileResponse(path, media_type="application/json", filename=f"30a-gunluk-ihtiyac-{identifier[:8]}.json")
 
     @app.get("/api/neighborhood-runs")
     def neighborhood_runs(destination_id: str = DEFAULT_DESTINATION_ID):

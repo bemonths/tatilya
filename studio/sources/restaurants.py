@@ -291,6 +291,7 @@ def collect(raw_path,progress,canceled,*,client=None,regions=None):
 
 class RestaurantsConnector:
     name='south-walton-restaurants';version=VERSION;method='HTML';diff_enabled=True
+    produces = "restaurant_records"         # the restaurant-sites collector reads the latest run's restaurants
     raw_filename='manifest.json'
     def supports(self,source):
         return source.get('destination_id') == '30a' and https_source_identity(source['url'], host_aliases=SOURCE_HOST_ALIASES) == SOURCE_IDENTITY

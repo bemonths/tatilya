@@ -571,8 +571,9 @@ import {levelCell, reservationCell, kidsCell, factLine, siteDetail, regionSummar
 test('restaurant business-site cells keep unknown values unknown and label our price level',()=>{
   assert.equal(SITE_CONNECTOR,'restaurant-sites');
   assert.match(levelCell({price_level:'$$$',main:{median:34,count:5}}),/<strong>\$\$\$<\/strong><small>ana yemek ortancası \$34 · 5 kalem/);
-  assert.match(levelCell({price_level:null,main:{count:3}}),/hesaplanmadı \(3 ana yemek fiyatı\)/);
-  assert.match(levelCell({price_level:null,main:{count:0}}),/bilinmiyor/);
+  assert.match(levelCell({price_level:null,main:{count:3},level_reason:"5'ten az fiyatlı ana yemek (3)"}),/hesaplanmadı<\/span><small>5&#39;ten az fiyatlı ana yemek \(3\)/);
+  assert.match(levelCell({price_level:null,main:{count:0},level_reason:'tapas',small_plates:{count:6,median:14}}),/küçük tabak ortancası \$14 · 6 kalem/);
+  assert.equal(levelCell({price_level:null,main:{count:0}}),'<span class="muted">hesaplanmadı</span>');
   assert.match(reservationCell({reservation:'online',reservation_platform:'OpenTable'}),/çevrim içi<small>OpenTable/);
   assert.match(reservationCell({}),/bilinmiyor/);assert.match(kidsCell({kids_menu:'yes'}),/evet/);assert.match(kidsCell(undefined),/bilinmiyor/);
   const hours=factLine('hours',{value:'stated',detail:'Mon - Thu 11am - 9pm',data:{Mon:'11:00–21:00'},source_url:'https://x.example/contact',fetched_at:'2026-10-08T10:00:00Z',method:'sayfa metni',raw_sha256:'abcdef1234567890'});
@@ -591,4 +592,51 @@ test('restaurant business-site cells keep unknown values unknown and label our p
   const summary=regionSummary({level_note:'n',hours_note:'h',regions:[{region_name:'Seaside',restaurant_count:12,levels:{'$':1,'$$':5,'$$$':2,'$$$$':0},median_of_medians:21.5,online_reservation:4,kids_menu:6,no_information:3}]});
   assert.match(summary,/<td>Seaside<\/td><td>12<\/td><td>1<\/td><td>5<\/td><td>2<\/td><td>0<\/td><td>\$21\.50<\/td><td>4<\/td><td>6<\/td><td>3<\/td>/);
   assert.equal(regionSummary(null),'');
+});
+import {refreshSection, duration, STEP_LABELS} from '../studio/web/refresh.js';
+test('refresh section lists every collector, the due ones, the estimate and a running batch with its stop button',()=>{
+  assert.equal(duration(null),'bilinmiyor');assert.equal(duration(20),'~1 dk');assert.equal(duration(3*3600+20*60),'~3 sa 20 dk');assert.equal(duration(7200),'~2 sa');
+  const items=[{connector:'bookdirect-lodging',source_name:'Book>Direct <konaklama>',interval_months:1,due:true,last_done_on:null,estimate_seconds:null},
+    {connector:'restaurant-sites',source_name:'İşletme siteleri',interval_months:3,due:false,last_done_on:'2026-10-09',next_due_on:'2027-01-09',estimate_seconds:3600},
+    {connector:'nws-weather',source_name:'NWS',interval_months:null,due:false,last_done_on:'2026-10-01'}];
+  const html=refreshSection({items,note:'kendiliğinden çalışmaz',estimate_seconds:null,estimate_complete:false,batch:null});
+  assert.match(html,/<h2>Güncelleme zamanı gelenler<\/h2>/);assert.match(html,/Book&gt;Direct &lt;konaklama&gt;/);
+  assert.match(html,/zamanı geldi<\/span><small>hiç çekilmedi/);assert.match(html,/güncel<\/span><small>sonraki: 9 Ocak 2027/);
+  assert.match(html,/aralık tanımlı değil/);assert.match(html,/<span>1 toplayıcı · tahmini süre bilinmiyor<\/span>/);
+  assert.match(refreshSection({items,note:'',estimate_seconds:3600,estimate_complete:false,batch:null}),/tahmini süre ~1 sa \(bazılarının süresi bilinmiyor; yalnız bilinenler toplandı\)/);
+  assert.match(html,/data-action="refresh-start" >Zamanı gelenleri başlat/);assert.match(html,/son 6 yedek saklanır/);
+  assert.match(refreshSection({items,note:'',batch:null},true),/data-action="refresh-start" disabled/);
+  const running=refreshSection({items,note:'',estimate_seconds:60,estimate_complete:true,batch:{id:'b1',status:'running',created_at:'2026-10-09T10:00:00+00:00',backup_file:'backups/toplu-1.sqlite3',
+    message:'Uygulamanın yedeği alındı',plan:[{source_name:'Book>Direct',status:'done'},{source_name:'Kiralama',status:'skipped',message:'girdisi yok'}]}});
+  assert.match(running,/data-action="refresh-start" disabled/);assert.match(running,/Son toplu çalıştırma: Sürüyor/);assert.match(running,/yedek: backups\/toplu-1\.sqlite3/);
+  assert.match(running,/<li>Book&gt;Direct · tamamlandı<\/li>/);assert.match(running,/Kiralama · atlandı <small>\(girdisi yok\)/);
+  assert.match(running,/data-action="refresh-cancel" data-batch="b1">Toplu çalıştırmayı durdur/);
+  assert.match(refreshSection({items:[],note:'',batch:null}),/Zamanı gelen toplayıcı yok\./);assert.equal(refreshSection(null),'');
+  assert.equal(STEP_LABELS.skipped,'atlandı');
+});
+import {windowHeader, seasonTable, comparisonTable} from '../studio/web/lodging.js';
+test('monthly windows show the days from the query, our season groups and the same-week comparison with matched counts',()=>{
+  assert.match(windowHeader({label:'Temmuz 2027 · 10–17 Temmuz',checkin:'2027-07-10',checkout:'2027-07-17',nights:7,lead_days:274}),/Temmuz 2027 · 10–17 Temmuz<small>2027-07-10 → 2027-07-17 · 7 gece · sorgudan 274 gün sonra/);
+  const regions=[{region_id:'seaside',region_name:'Seaside'},{region_id:'alys',region_name:'Alys Beach'}];
+  const seasons=seasonTable({note:'bizim gruplamamızdır',rows:[{region_id:'seaside',season:'yaz',window_count:3,priced_count:9,median:450},{region_id:'alys',season:'yaz',window_count:3,priced_count:0,median:null}]},regions,'gecelik fiyat');
+  assert.match(seasons,/Mevsimlere göre \(bizim gruplamamız\)/);assert.match(seasons,/<th>YAZ<\/th>/);assert.ok(!seasons.includes('KIŞ'));
+  assert.match(seasons,/\$450<\/strong><small>9 fiyat · 3 pencere/);assert.match(seasons,/fiyat yok<\/span><small>3 pencere/);
+  assert.equal(seasonTable(null,regions,'x'),'');
+  assert.match(comparisonTable(null,regions),/karşılaştırma ikinci aylık çekimden sonra oluşur/);
+  const comparison=comparisonTable({label:'aynı evlerin aynı hafta için 2026-10-09 ve 2026-11-09 tarihlerinde sorgulanan fiyatları; bizim hesabımız',basis:'gecelik fiyat (Book>Direct)',
+    windows:[{window_key:'ay-2027-07',label:'Temmuz 2027 · 10–17 Temmuz',earlier_label:'Yaz',checkin:'2027-07-10',checkout:'2027-07-17'}],
+    rows:[{region_id:'seaside',window_key:'ay-2027-07',matched_count:4,median_change:0.05,median_amount:20},{region_id:'alys',window_key:'ay-2027-07',matched_count:0,median_change:null}]},regions);
+  assert.match(comparison,/aynı evlerin aynı hafta için 2026-10-09 ve 2026-11-09/);assert.match(comparison,/önceki: Yaz/);
+  assert.match(comparison,/<strong>\+%5<\/strong><small>\+\$20 · 4 eşleşen ilan/);assert.match(comparison,/eşleşen ilan yok/);
+});
+import {miles, pointSource, OUTCOME_LABELS} from '../studio/web/dailyneeds.js';
+import {fixedMenuLine} from '../studio/web/restaurants.js';
+test('daily needs show great-circle miles, the share within a mile and the source of each point',()=>{
+  assert.match(miles({median_km:1.2345,median_mi:0.77,within_1mi_share:0.625}),/<strong>0,77 mil<\/strong><small>1\.235 m · 1 mil içinde %63/);
+  assert.equal(miles({median_km:null}),'<span class="muted">—</span>');assert.equal(miles(undefined),'<span class="muted">—</span>');
+  assert.match(pointSource({source:'openstreetmap',source_url:'https://www.openstreetmap.org/node/1'}),/href="https:\/\/www\.openstreetmap\.org\/node\/1"[^>]*>OpenStreetMap ↗/);
+  assert.equal(pointSource({source:'zincirin kendi sitesi',source_url:'javascript:alert(1)'}),'zincirin kendi sitesi');
+  assert.equal(OUTCOME_LABELS.eklendi,"OpenStreetMap'te yok; zincirin sitesinden eklendi");
+  assert.match(fixedMenuLine({fixed_menus:[{name:'Chef <Menu>',price_text:'$95',price:95}]}),/Sabit menü fiyatı: Chef &lt;Menu&gt; \$95 <small>\(ana yemek ortancasına karışmaz/);
+  assert.equal(fixedMenuLine({}),'');
 });

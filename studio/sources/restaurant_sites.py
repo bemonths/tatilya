@@ -43,17 +43,30 @@ USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHT
 REQUEST_GAP = 2.0               # seconds between two requests to the same host
 WORKERS = 6
 MAX_BYTES = 20_000_000
-MAX_DOCUMENTS = 10              # menu documents read per restaurant
+MAX_DOCUMENTS = 12              # menu pages and documents fetched per restaurant
 MAX_INFO_PAGES = 3              # hours / contact / about pages read per restaurant
 MAX_REDIRECTS = 5
 PROGRESS_EVERY = 2.0
 
 SITE_STATUSES = ("working", "not_found", "closed_permanently", "closed_season", "other_business", "unreachable", "social_login", "no_site")
-FIELDS = ("hours", "reservation", "kids_menu", "outdoor_seating", "water_view", "dog_friendly", "site_price_range")
-METHODS = ("yapısal veri", "sayfa metni", "PDF metni", "platform verisi", "görüntüden okundu", "bağlantı")
-MENU_TYPES = ("dinner", "lunch", "general", "brunch", "breakfast", "kids", "drinks", "dessert", "happy_hour")
+FIELDS = ("hours", "reservation", "kids_menu", "outdoor_seating", "water_view", "dog_friendly", "site_price_range", "review_note")
+METHODS = ("yapısal veri", "sayfa metni", "PDF metni", "platform verisi", "görüntüden okundu", "elle okundu", "bağlantı", "gözden geçirme")
+MENU_TYPES = ("dinner", "lunch", "general", "brunch", "breakfast", "kids", "drinks", "dessert", "happy_hour", "catering", "special")
 MAIN_PRIORITY = ("dinner", "lunch", "general", "brunch", "breakfast")      # the main meal menu the price level is computed from
-SECTION_CLASSES = ("ana_yemek", "baslangic", "salata_corba", "tatli", "icecek", "cocuk", "yan_urun", "diger")
+# kucuk_tabak: tapas / small plates (their median is shown apart, never as mains); sabit_menu: a fixed price per person (prix fixe,
+# tasting menu), kept apart from the main-dish median.
+SECTION_CLASSES = ("ana_yemek", "baslangic", "salata_corba", "kucuk_tabak", "sabit_menu", "tatli", "icecek", "cocuk", "yan_urun", "diger")
+# An add-on, extra, topping, sauce or side is never a main dish, whatever section it is printed in.
+ADDON_NAME = re.compile(r"^(?:add|\+|sub|substitute|side of|extra|toppings?|sauces?|upgrade|make it|additional|each additional|gourmet toppings?|"
+                        r"all side choices|side choices?)\b|\bcrust available\b|\bgluten[- ]free (?:crust|option|bun|bread)\b", re.I)
+# A drink or a kids' item by its own name is never a main dish, whatever section a page's layout put it in (GÖREV-10 review of the
+# main dishes under $8: drinks and toppings read under a pizza heading).
+DRINK_NAME = re.compile(r"^(?:coffee|espresso|cappuccino|latte|(?:hot |iced |sweet |bottled sweet )?tea|coke|diet coke|coca[- ]cola|sprite|fanta|"
+                        r"(?:diet )?dr\.? pepper|root beer|lemonade|(?:orange |apple )?juice|(?:chocolate )?milk|sodas?|(?:32 oz )?fountain drinks?|"
+                        r"bottled drinks|(?:bottled |spring )?water|fronte bottles spring water|san pellegrino(?: mineral water)?|(?:asst\.? )?gatorade|"
+                        r"beers?|beverages?|(?:domestic|imported|italian|craft) (?:draft|bottled?|bottles|beer)s?(?: & (?:draft|bottled?|bottles))?|"
+                        r"refills?|red bull)$", re.I)
+KIDS_NAME = re.compile(r"^(?:kids?'?|kid's|children'?s)\b", re.I)
 PRICE_LEVELS = ((15, "$"), (25, "$$"), (40, "$$$"), (float("inf"), "$$$$"))
 MIN_MAIN_PRICES = 5
 SOCIAL_HOSTS = ("facebook.com", "instagram.com", "fb.com", "tiktok.com", "x.com", "twitter.com")
@@ -62,15 +75,21 @@ RESERVATION_PLATFORMS = {"opentable.com": "OpenTable", "resy.com": "Resy", "expl
 MENU_PLATFORMS = {"toasttab.com": "Toast", "square.site": "Square", "squareup.com": "Square", "popmenu.com": "Popmenu", "getbento.com": "BentoBox",
                   "spothopperapp.com": "SpotHopper", "spothopper.com": "SpotHopper", "chownow.com": "ChowNow", "olo.com": "Olo",
                   "clover.com": "Clover", "menufy.com": "Menufy", "order.online": "DoorDash Storefront", "singleplatform.com": "SinglePlatform",
+                  "ohbz.com": "ohbz", "toast.site": "Toast",
                   "menu.app": "Menu.app", "beyondmenu.com": "BeyondMenu", "touchbistro.com": "TouchBistro", "owner.com": "Owner.com"}
 MENU_WORD = re.compile(r"\bmenus?\b|\bdinner\b|\blunch\b|\bbrunch\b|\bbreakfast\b|\bkids\b|\bchildren'?s\b|\bdrinks?\b|\bcocktails?\b|\bwine list\b|"
-                       r"\bdesserts?\b|\bhappy hour\b|\bfood\b|\beat\b|\border online\b", re.I)
+                       r"\bdesserts?\b|\bhappy hour\b|\bfood\b|\beat\b|\border online\b|\btapas\b", re.I)
 INFO_WORD = re.compile(r"\bhours\b|\bcontact\b|\blocation|\bvisit\b|\babout\b|\bfaq\b|\bfind us\b", re.I)
-TYPE_WORDS = (("happy_hour", r"happy hour"), ("kids", r"\bkids?\b|\bchildren'?s?\b|\blittle ones\b"), ("dessert", r"\bdesserts?\b|\bsweets\b"),
+# Pages of a menu platform that are not a menu: one dish of an ordering menu (the whole menu is on the ordering page), legal pages.
+NOT_MENU_PAGE = re.compile(r"/item-[^/]*_[0-9a-f]{8}-|/(?:privacy|terms|terms-of-service|rewardssignup|rewardslookup|egiftcards?|giftcards?)\b", re.I)
+TYPE_WORDS = (("special", r"thanksgiving|christmas|\bholiday|new year|valentine|easter|mother'?s day|father'?s day"),
+              ("catering", r"\bcatering\b"), ("happy_hour", r"happy hour"), ("kids", r"\bkids?\b|\bchildren'?s?\b|\blittle ones\b"),
+              ("dessert", r"\bdesserts?\b|\bsweets\b"),
               ("drinks", r"\bdrinks?\b|\bcocktails?\b|\bwine\b|\bbeer\b|\bbar menu\b|\bbeverages?\b|\bspirits\b"),
               ("brunch", r"\bbrunch\b"), ("breakfast", r"\bbreakfast\b"), ("lunch", r"\blunch\b"), ("dinner", r"\bdinner\b|\bsupper\b|\bevening\b"))
 PARKED = re.compile(r"domain (?:is|may be) for sale|buy this domain|this domain has expired|domain name (?:is )?for sale|parked (?:free|domain)|"
                     r"hugedomains|sedo domain parking|is for sale!", re.I)
+PARKING_SCRIPT = re.compile(r"sk-park\.php|parkingcrew\.net|bodis\.com/|sedoparking\.com|window\.park\s*=", re.I)
 CLOSED_FOR_GOOD = re.compile(r"permanently closed|closed permanently|(?:we|restaurant) (?:have|has) (?:permanently )?closed (?:our|its) doors|"
                              r"closed for good|thank you for \d+ (?:wonderful )?years", re.I)
 CLOSED_SEASON = re.compile(r"closed for the (?:season|winter|off[- ]season)|seasonal(?:ly)? closed|closed for (?:our )?(?:winter|seasonal) break|"
@@ -332,6 +351,188 @@ def json_ld(html):
     return found
 
 
+def schema_menus(html, base):
+    """Menus a page publishes as schema.org structured data (Menu > MenuSection > MenuItem with offers), as
+    [{'name', 'url', 'items': [{'section', 'name', 'price_text', 'price', 'price_rule'}]}]. The price is the offer's price as
+    published (several offers: the lowest, 'lowest'); an item without a priced offer is left out, as on a printed menu."""
+    menus = []
+
+    def kinds(node):
+        kind = node.get("@type")
+        return set(kind if isinstance(kind, list) else [kind])
+
+    def items_of(node, section, out):
+        if isinstance(node, list):
+            for child in node:
+                items_of(child, section, out)
+            return
+        if not isinstance(node, dict):
+            return
+        if "MenuSection" in kinds(node):
+            section = clean(node.get("name")) or section
+        if "MenuItem" in kinds(node):
+            offers = node.get("offers")
+            offers = offers if isinstance(offers, list) else [offers] if offers else []
+            published = []
+            for offer in offers:
+                if not isinstance(offer, dict):
+                    continue
+                for key in ("price", "lowPrice"):
+                    raw = offer.get(key)
+                    try:
+                        value = float(str(raw).replace("$", "").replace(",", "").strip())
+                    except (TypeError, ValueError):
+                        continue
+                    if value > 0:
+                        published.append((value, str(raw).strip()))
+                        break
+            name = clean(node.get("name"))
+            if name and published:
+                values = sorted(published)
+                out.append({"section": section, "name": name, "price_text": " / ".join(text for _, text in published), "price": values[0][0],
+                            "price_rule": "lowest" if len(values) > 1 else "single"})
+        for key in ("hasMenuSection", "hasMenuItem"):
+            if key in node:
+                items_of(node[key], section, out)
+
+    def walk(node):
+        if isinstance(node, list):
+            for child in node:
+                walk(child)
+        elif isinstance(node, dict):
+            if "Menu" in kinds(node):
+                items = []
+                items_of([node.get("hasMenuSection") or [], node.get("hasMenuItem") or []], None, items)
+                if items:
+                    url = node.get("url") if isinstance(node.get("url"), str) else None
+                    menus.append({"name": clean(node.get("name")) or None, "url": urljoin(base, url) if url else None, "items": items})
+                return
+            for key in ("@graph", "hasMenu", "menu", "mainEntity", "itemListElement"):
+                if key in node:
+                    walk(node[key])
+
+    for block in re.findall(r'(?is)<script[^>]+application/ld\+json[^>]*>(.*?)</script>', html):
+        try:
+            walk(json.loads(block.strip()))
+        except ValueError:
+            continue
+    return menus
+
+
+def tab_panels(html):
+    """[(label, panel html)] of a page that shows its menus in tabs (role="tab" naming a role="tabpanel"; BentoBox and other site
+    builders): each tab is read as its own menu, so a kids or holiday tab never mixes into the dinner menu. Carousel buttons
+    ("1 of 7") are not tabs."""
+    labels = {}
+    for tag in re.findall(r'(?is)<(?:a|button|li)\b[^>]*\brole="tab"[^>]*>', html):
+        controls = re.search(r'aria-controls="([^"]+)"', tag)
+        label = re.search(r'aria-label="([^"]*)"', tag)
+        if controls and label and not re.fullmatch(r"\d+ of \d+", clean(label.group(1))):
+            labels[controls.group(1)] = clean(label.group(1))
+    if len(labels) < 2:
+        return []
+    starts = []
+    for match in re.finditer(r'(?is)<(?:section|div)\b[^>]*\brole="tabpanel"[^>]*>', html):
+        ident = re.search(r'\bid="([^"]+)"', match.group(0))
+        if ident and ident.group(1) in labels:
+            starts.append((match.start(), labels[ident.group(1)]))
+    panels = []
+    for index, (start, label) in enumerate(starts):
+        end = starts[index + 1][0] if index + 1 < len(starts) else min(len(html), start + 400_000)
+        panels.append((label, html[start:end]))
+    return panels if len(panels) >= 2 else []
+
+
+MHM_ITEM = re.compile(r'(?is)<div[^>]*class="item\b[^"]*"[^>]*data-source="mhm"[^>]*>')
+MHM_SECTION = re.compile(r'(?is)<div[^>]*class="mo-name\b[^"]*"[^>]*>(.*?)</div>')
+
+
+def mhm_menus(html):
+    """Menu items of a menu designed on ohbz.com (embedded by many restaurant sites): each dish is an element whose attributes name
+    it and its price (aria-label="Item name: …", aria-label="Price: …"); its section is the block title before it (class mo-name),
+    when the design has one. Same shape as schema_menus; one menu per page."""
+    sections = [(m.start(), clean(re.sub(r"<[^>]+>", " ", m.group(1)))) for m in MHM_SECTION.finditer(html)]
+    starts = [m.start() for m in MHM_ITEM.finditer(html)]
+    items = []
+    for index, start in enumerate(starts):
+        block = html[start:starts[index + 1] if index + 1 < len(starts) else start + 6000]
+        name = re.search(r'aria-label="Item name:\s*([^"]*)"', block)
+        price = re.search(r'aria-label="Price:\s*([^"]*)"', block)
+        if not name or not price:
+            continue
+        name_text, price_text = clean(name.group(1)), clean(price.group(1))
+        values = [float(v) for v in re.findall(r"\d{1,4}(?:\.\d{1,2})?", price_text.replace(",", ""))]
+        values = [v for v in values if v > 0]
+        if not name_text or not values or ADDON_NAME.match(name_text):
+            continue
+        section = next((title for position, title in reversed(sections) if position < start and title), None)
+        items.append({"section": section, "name": name_text, "price_text": price_text, "price": min(values),
+                      "price_rule": "lowest" if len(values) > 1 else "single"})
+    return [{"name": None, "url": None, "items": items}] if items else []
+
+
+def toast_menus(html):
+    """Menus of a Toast online-ordering page from the page's own data (window.__APOLLO_STATE__ / __OO_STATE__: Menu > groups >
+    items with prices), in the same shape as schema_menus. Several prices (sizes) give the lowest ('lowest')."""
+    states = []
+    for match in re.finditer(r"window\.__(?:APOLLO|OO)_STATE__\s*=\s*", html):
+        try:
+            states.append(json.JSONDecoder().raw_decode(html, match.end())[0])
+        except ValueError:
+            continue
+    menus, seen = [], set()
+    for state in states:
+        menus += toast_state_menus(state, seen)
+    return menus
+
+
+def toast_state_menus(state, seen):
+    def resolve(node):
+        return state.get(node["__ref"], {}) if isinstance(node, dict) and "__ref" in node else node
+
+    def group(node, section, out, depth=0):
+        node = resolve(node)
+        if not isinstance(node, dict) or depth > 4:
+            return
+        section = clean(node.get("name")) or section
+        for item in node.get("items") or []:
+            item = resolve(item)
+            if not isinstance(item, dict):
+                continue
+            prices = sorted(p for p in item.get("prices") or [] if isinstance(p, (int, float)) and not isinstance(p, bool) and p > 0)
+            name = clean(item.get("name"))
+            if name and prices:
+                out.append({"section": section, "name": name, "price_text": " / ".join(f"{p:.2f}" for p in prices), "price": float(prices[0]),
+                            "price_rule": "lowest" if len(prices) > 1 else "single"})
+        for child in (node.get("subgroups") or []) + (node.get("children") or []):
+            group(child, section, out, depth + 1)
+
+    menus = []
+
+    def walk(node, depth=0):
+        if depth > 12:
+            return
+        if isinstance(node, list):
+            for child in node:
+                walk(child, depth + 1)
+        elif isinstance(node, dict):
+            if node.get("__typename") == "Menu" and node.get("groups"):
+                key = node.get("id") or node.get("guid") or node.get("name")
+                if key not in seen:
+                    seen.add(key)
+                    items = []
+                    for child in node["groups"]:
+                        group(child, None, items)
+                    if items:
+                        menus.append({"name": clean(node.get("name")) or None, "url": None, "items": items})
+                return
+            for child in node.values():
+                walk(child, depth + 1)
+
+    walk(state)
+    return menus
+
+
 def schema_hours(objects):
     """{day index: 'HH:MM–HH:MM' or 'kapalı'} and the verbatim text from openingHoursSpecification / openingHours."""
     days, texts = {}, []
@@ -456,7 +657,36 @@ PHONE = re.compile(r"\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}")
 NOISE = re.compile(r"^(?:\d+\s+(?:likes?|reviews?|ratings?)|\d+(?:\s+\d+)+|order online|order now|add to (?:cart|order|bag)|view details|completed loading.*|"
                    r"n/a|sold out|popular|new|gluten[- ]free|gf|v|vg|df)$", re.I)
 NUTRITION = re.compile(r"nutrition(?:al)? (?:information|facts)|total fat \(g\)|sodium \(mg\)|calories\s+total fat", re.I)
+NAME_DASH = re.compile(r"^([A-Z][^-–—,]{1,60}?)\*?\s+[-–—]\s+\S")
+MIXED_HEADING = re.compile(r"^[A-Z][A-Z'’&]+(?: [A-Z'’&]+)*(?: [a-z][a-z'’&+]*)+$")
 TWIN_PRICE = re.compile(r"\$(\d{1,3}(?:\.\d{2})?)\s+\$\1(?=\s|$)")
+
+
+def same_page(first, second):
+    """The same page: scheme, 'www.', a trailing slash and the fragment do not matter; the query does."""
+    def key(url):
+        parts = urlsplit((url or "").strip())
+        return (parts.netloc.lower().removeprefix("www."), parts.path.rstrip("/").lower(), parts.query)
+    return bool(first and second) and key(first) == key(second)
+
+
+def flat(text):
+    import unicodedata
+    text = unicodedata.normalize("NFKD", html_module.unescape(text or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "", text)
+
+
+def shown(text, name, price_text, window=240):
+    """True when the page text shows the item's name and, near it (before or after), its price as read."""
+    body, needle, price = flat(text), flat(name), flat(price_text)
+    if not needle:
+        return False
+    start = body.find(needle)
+    while start >= 0:
+        if not price or price in body[max(0, start - window):start + len(needle) + window]:
+            return True
+        start = body.find(needle, start + 1)
+    return False
 
 
 def money_values(text):
@@ -480,14 +710,18 @@ def menu_line(line):
     text = re.sub(r"\s*[.·_]{3,}\s*", "  ", text)
     text = re.sub(r"(\d|\bMKT|\bMP)\*+$", r"\1", text, flags=re.I)
     text = re.sub(r"([A-Za-z\)])(\d{1,3}(?:\.\d{2})?)$", r"\1 \2", text)
+    text = re.sub(r"(\$\s?\d{1,3}),(\d{2})\b", r"\1.\2", text)      # "$11,00": a price the browser wrote with a decimal comma
+    if re.search(r"(?:\d|\bMKT|\bMP)\s*$", text, re.I):
+        text = re.sub(r"^\*+\s*(?=[A-Za-z\"'“‘(])", "", text)     # "*Simply Grilled Grouper 38": the mark of a raw / gluten-free dish
     return clean(text)
 
 
-def parse_menu(lines):
+def parse_menu(lines, known=None):
     """Menu items from text lines: [{'section', 'name', 'price_text', 'price', 'price_rule'}]. Several sizes or portions: the lowest
     price is used ('lowest'); 'market price' keeps its text and no number ('market'). A line that is only a description with the
     price at its end takes the short name line above it as the item name. A heading directly followed by its price (sites that
-    write each dish name as a heading) is an item of the section above it, not a new section."""
+    write each dish name as a heading) is an item of the section above it, not a new section, unless known(heading) says it is a
+    section heading of the reviewed table ("SEAFOOD DINNERS" followed by "MKT" on menus that print the price before the name)."""
     items, section, pending, headed = [], None, None, None
 
     def emit(name, price_text, values, *, market=False, under=None):
@@ -505,12 +739,15 @@ def parse_menu(lines):
         return []                                 # a nutrition table (calories, fat, sodium per dish): its numbers are not prices
     for kind, line in lines:
         text = menu_line(line)
-        if not text or NOISE.match(text) or len(re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])", text)) >= 6:
+        if not text or text in ("$", "USD") or NOISE.match(text) or len(re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])", text)) >= 6:
             continue                              # a table row of many numbers is not a dish with its price
         twin = TWIN_PRICE.search(text)
         if twin and kind != "h":
             text = f"${twin.group(1)}"            # "...lime juice$12 $12 Mashed avocado..." (description, price, description again)
-        if kind == "h" or heading_like(text) and not ITEM_LINE.match(text) and not MARKET.search(text):
+        if (kind == "h" or heading_like(text) and not ITEM_LINE.match(text) and not MARKET.search(text)
+                or known and MIXED_HEADING.match(text) and known(text)):          # "TO FEAST large plates"
+            if SKIP_NAME.match(text):
+                continue                          # "SERVED WITH A CHOICE OF ONE SIDE": a note in capitals, not a new section
             if len(text) <= 60 and not PHONE.search(text):
                 headed = (text, section)
                 section, pending = text, None
@@ -520,7 +757,10 @@ def parse_menu(lines):
             continue
         if pending and not looks_like_description(pending):
             name_above, under_h = pending, None
-        elif headed:
+        elif pending and NAME_DASH.match(pending):
+            # "BEC* - Benton's Bacon, Egg, Cheddar Cheese" with the price on the next line: the name is before the dash
+            name_above, under_h = NAME_DASH.match(pending).group(1).rstrip("* "), None
+        elif headed and not (known and known(headed[0])):
             name_above, under_h = headed[0], headed
         else:
             name_above, under_h = None, None
@@ -558,9 +798,10 @@ def parse_menu(lines):
             else:
                 pending = None
             continue
-        if MARKET.fullmatch(text) and name_above:
-            emit(name_above, text, [], market=True, under=under_h)
-            continue
+        if MARKET.fullmatch(text):
+            if name_above:
+                emit(name_above, text, [], market=True, under=under_h)
+            continue                              # a lone "MKT" printed before its dish name is not a name
         if SKIP_NAME.match(text):
             continue
         if not looks_like_description(text):
@@ -584,7 +825,8 @@ def load_sections(path=SECTIONS_TABLE):
 def heading_text(section):
     """A heading as plain lowercase words: accents dropped, letter-spaced words joined ('R E D W I N E' -> 'redwine')."""
     import unicodedata
-    text = unicodedata.normalize("NFKD", clean(section)).encode("ascii", "ignore").decode().lower().replace("&", " & ")
+    text = re.sub(r"['’‘`´]", "", clean(section))            # "CHEF’S FEATURE" and "chef's feature" are the same words
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower().replace("&", " & ")
     if re.fullmatch(r"(?:[a-z0-9] ){2,}[a-z0-9](?: .*)?", text):
         text = re.sub(r"\b([a-z0-9]) (?=[a-z0-9]\b)", r"\1", text)
     return re.sub(r"\s+", " ", text).strip(" :")
@@ -611,10 +853,25 @@ def classify(section, table):
     return "diger"
 
 
-def item_class(item, kind, table):
-    """(class, basis) of a menu item: its section heading by the table ('section'); when the heading gives no class (no heading,
-    or one the table does not know), the item's own name by the same table ('name'). Items of a kids menu are 'cocuk'; items of a
-    drinks menu that neither heading nor name classifies are 'icecek'."""
+def item_class(item, kind, table, reviewed=None):
+    """(class, basis) of a menu item: a reviewer's class for this item of this restaurant ('review'); an add-on, extra, topping,
+    sauce or side by its name ('add …', '+ …', 'sub …', 'side of …', 'additional topping') is 'yan_urun', a drink by its name
+    'icecek' and a kids' item by its name 'cocuk' ('name'); otherwise its section heading by the table ('section'); when the heading
+    gives no class (no heading, or one the table does not know), the item's own name by the same table ('name'). Items of a kids
+    menu are 'cocuk'; items of a drinks menu that neither heading nor name classifies are 'icecek'."""
+    name = clean(item.get("name") or "")
+    if reviewed and (name, clean(item.get("price_text") or "")) in reviewed:
+        return reviewed[(name, clean(item.get("price_text") or ""))], "review"
+    if reviewed and (name, "") in reviewed:
+        return reviewed[(name, "")], "review"
+    if ADDON_NAME.search(name) and (ADDON_NAME.match(name) or (item.get("price") or 0) < 8):
+        return "yan_urun", "name"
+    if DRINK_NAME.match(name):
+        return "icecek", "name"
+    if KIDS_NAME.match(name):
+        return "cocuk", "name"
+    if ADDON_NAME.match(clean(item.get("section") or "")):
+        return "yan_urun", "section"                  # items under "Add Protein", "Extras" …
     klass, basis = classify(item.get("section"), table), "section"
     if klass == "diger":
         by_name = classify(item.get("name"), [row for row in table if not (len(row) == 3 and row[2])])
@@ -651,9 +908,9 @@ def pdf_lines(body):
     return lines
 
 
-def main_stats(items):
-    """Count, median, lowest and highest of the main-dish prices (section class ana_yemek, a number)."""
-    prices = sorted(i["price"] for i in items if i.get("section_class") == "ana_yemek" and i.get("price") is not None and i["price"] > 0)
+def main_stats(items, klass="ana_yemek"):
+    """Count, median, lowest and highest of the main-dish prices (section class ana_yemek, a number); another class with klass."""
+    prices = sorted(i["price"] for i in items if i.get("section_class") == klass and i.get("price") is not None and i["price"] > 0)
     if not prices:
         return {"count": 0, "median": None, "min": None, "max": None}
     return {"count": len(prices), "median": round(statistics.median(prices), 2), "min": prices[0], "max": prices[-1]}
@@ -680,8 +937,9 @@ def same_business(text, restaurant):
 
 
 class RestaurantRun:
-    def __init__(self, fetcher, restaurant, override, readings, sections):
+    def __init__(self, fetcher, restaurant, override, readings, sections, item_reviews=None):
         self.fetcher, self.restaurant, self.override, self.readings, self.sections = fetcher, restaurant, override, readings, sections
+        self.item_reviews = item_reviews or {}     # {(item name, price text or ""): class} a reviewer set for this restaurant
         self.site = {"external_id": restaurant["external_id"], "name": restaurant["name"], "site_url": None, "site_source": "none",
                      "site_status": "no_site", "final_url": None, "http_status": None, "status_note": None, "fetched_at": None,
                      "raw_sha256": None, "page_count": 0}
@@ -691,6 +949,7 @@ class RestaurantRun:
         self.needs_browser = None      # 'challenge' (verification page) or 'render' (menus built with JavaScript): read again in a browser
         self.js_menus = False
         self.challenged = []           # (host, url) of a menu or info page that kept its verification page (the restaurant goes on)
+        self.seen_schema = set()       # structured-data menus already recorded (the same menu is published on several pages)
 
     def get(self, url, note):
         document = self.fetcher.get(url, restaurant=self.restaurant["external_id"], note=note)
@@ -742,9 +1001,20 @@ class RestaurantRun:
                 self.needs_browser = "refused"         # a real browser may be let in where a plain request was refused
             return self
         html = home.text
+        frame = re.search(r'(?is)<frameset\b.*?<frame\b[^>]*?\bsrc\s*=\s*["\']([^"\']+)["\']', html)
+        if frame and len(clean(re.sub(r"<[^>]+>", " ", html))) < 400:
+            # the domain only frames the real site (an old forwarding page): the framed site is the restaurant's site
+            try:
+                framed = self.get(urljoin(home.final_url, html_module.unescape(frame.group(1))), "site-home")
+            except (httpx.HTTPError, SourceError):
+                framed = None
+            if framed is not None and framed.status == 200 and framed.kind == "html":
+                home = framed
+                html = home.text
+                self.site.update({"final_url": home.final_url, "http_status": home.status, "fetched_at": home.fetched_at, "raw_sha256": home.sha256})
         lines = html_lines(html)
         flat = " ".join(t for _, t in lines)
-        if PARKED.search(flat) or PARKED.search(page_title(html)):
+        if PARKED.search(flat) or PARKED.search(page_title(html)) or PARKING_SCRIPT.search(html[:60000]):
             self.site.update({"site_status": "other_business", "status_note": "Alan adı satılık / park edilmiş sayfa."})
             return self
         notes = []
@@ -756,7 +1026,10 @@ class RestaurantRun:
         self.site["site_status"] = "working"
         self.read_pages.append((home, lines))
         self.structured(home, html)
+        self.structured_menus(home, html, home)
         found = links(html, home.final_url) + self.schema_menus
+        if platform_of(home.final_url, MENU_PLATFORMS):
+            found = [("menu", home.final_url)] + found        # the site is an ordering page: the page itself is the menu
         menu_targets, info_targets = self.targets(found, home.final_url)
         reviewed = [u.strip() for u in ((self.override or {}).get("menu_urls") or "").split(";") if u.strip()]
         menu_targets = [("gözden geçirilmiş menü bağlantısı", u) for u in reviewed] + [t for t in menu_targets if t[1] not in reviewed]
@@ -771,6 +1044,7 @@ class RestaurantRun:
             if page.status == 200 and page.kind == "html":
                 self.read_pages.append((page, html_lines(page.text)))
                 self.structured(page, page.text)
+                self.structured_menus(page, page.text, home)
         self.read_menus(menu_targets, home)
         self.text_facts()
         if not any(m["status"] == "read" for m in self.menus) and (self.js_menus or any(m["status"] == "no_items" and m["platform"] for m in self.menus)
@@ -792,6 +1066,8 @@ class RestaurantRun:
                 continue
             if platform and urlsplit(target).path.strip("/") == "" and not urlsplit(target).netloc.lower().removeprefix("www.").count(".") > 1:
                 continue                          # "powered by" credit to the platform's own home page, not a menu
+            if NOT_MENU_PAGE.search(urlsplit(target).path) or host_of(target) == "pos.toasttab.com":
+                continue                          # one dish of an ordering menu, or the platform's legal pages
             same_site = host_of(target) == site
             is_doc = re.search(r"\.(pdf|jpe?g|png|webp)$", path)
             menu_like = MENU_WORD.search(label) or re.search(r"menu|dinner|lunch|brunch|breakfast|kids|drink|cocktail|dessert|happy-hour", path)
@@ -807,13 +1083,14 @@ class RestaurantRun:
         return menus, infos
 
     def read_menus(self, targets, home):
-        queue, seen, documents = list(targets), set(), set()
-        while queue and len(self.menus) < MAX_DOCUMENTS:
+        queue, seen, documents, fetched = list(targets), set(), set(), 0
+        while queue and fetched < MAX_DOCUMENTS:
             label, target = queue.pop(0)
             key = target.split("#")[0]
             if key in seen:
                 continue
             seen.add(key)
+            fetched += 1
             try:
                 document = self.get(target, "menu")
             except (httpx.HTTPError, SourceError) as exc:
@@ -837,10 +1114,22 @@ class RestaurantRun:
                 self.read_pages.append((document, lines))
                 self.structured(document, html)
                 title = page_title(html)
-                items = parse_menu(lines)
                 platform = platform_of(document.final_url, MENU_PLATFORMS)
+                reading = self.reviewed_reading(target, label or title, home, document, " ".join(t for _, t in lines), "html")
+                if reading is True or self.structured_menus(document, html, home, label=label):
+                    continue                          # a person's reading of this page, or the menus it publishes as structured data
+                tabs = [(name, parse_menu(html_lines(part), self.known_heading)) for name, part in tab_panels(html)]
+                if any(found for _, found in tabs):
+                    for name, found in tabs:          # menus shown in tabs: each tab is a menu of its own
+                        if found:
+                            slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                            self.add_menu(target, name, home, document, "read", reading, items=found, platform=platform,
+                                          method="platform verisi" if platform else "sayfa metni", title=title, menu_kind=menu_type(name),
+                                          url=f"{document.final_url.split('#')[0]}#{slug}")
+                    continue
+                items = parse_menu(lines, self.known_heading)
                 if items:
-                    self.add_menu(target, label or title, home, document, "read", None, items=items, platform=platform,
+                    self.add_menu(target, label or title, home, document, "read", reading, items=items, platform=platform,
                                   method="platform verisi" if platform else "sayfa metni", title=title)
                 elif not platform:
                     # a menu hub page: its own menu links (same site, documents or platforms) are read next
@@ -863,10 +1152,13 @@ class RestaurantRun:
                 except Exception as exc:
                     self.add_menu(target, label, home, document, "error", f"PDF açılamadı: {type(exc).__name__}", fmt="pdf")
                     continue
-                items = parse_menu(lines)
                 text = " ".join(t for _, t in lines)
+                reading = self.reviewed_reading(target, label, home, document, text, "pdf")
+                if reading is True:
+                    continue
+                items = parse_menu(lines, self.known_heading)
                 if items:
-                    self.add_menu(target, label, home, document, "read", None, items=items, method="PDF metni", fmt="pdf",
+                    self.add_menu(target, label, home, document, "read", reading, items=items, method="PDF metni", fmt="pdf",
                                   text=" ".join(t for _, t in lines[:40]))
                 elif len(text) >= 200 and not any(r["raw_sha256"] == document.sha256 for r in self.readings):
                     # the PDF has a text layer but no prices in it: there is nothing for a reader to add
@@ -878,6 +1170,54 @@ class RestaurantRun:
                 self.image_or_unread(target, label, home, document, "image")
             else:
                 self.add_menu(target, label, home, document, "error", f"Desteklenmeyen içerik türü: {document.content_type}")
+
+    def known_heading(self, heading):
+        """A section heading printed in capitals that the reviewed table knows ("SEAFOOD DINNERS"); a dish name set as a heading
+        ("Grilled Grouper") is not one."""
+        return bool(heading_like(heading) or MIXED_HEADING.match(heading)) and classify(heading, self.sections) != "diger"
+
+    def structured_menus(self, document, html, home, label=None):
+        """The menus a page publishes as schema.org data (Popmenu, Toast and many site builders put the whole menu there). A menu
+        seen on several pages of the site is recorded once. True when the page publishes any."""
+        found = ([(m, "yapısal veri") for m in schema_menus(html, document.final_url)] + [(m, "platform verisi") for m in toast_menus(html)]
+                 + [(m, "platform verisi") for m in mhm_menus(html)])
+        title = page_title(html)
+        for menu, method in found:
+            key = (menu["name"], tuple((i["section"], i["name"], i["price"]) for i in menu["items"]))
+            if key in self.seen_schema:
+                continue
+            self.seen_schema.add(key)
+            url = menu["url"] or document.final_url
+            self.add_menu(url, menu["name"] or label or title, home, document, "read", None, items=menu["items"],
+                          platform=platform_of(document.final_url, MENU_PLATFORMS), method=method, url=url,
+                          menu_kind=menu_type(menu["name"] or label or title,
+                                              urlsplit(url).path.replace("-", " ") + " " + urlsplit(url).fragment.replace("-", " ")))
+        return bool(found)
+
+    def reviewed_reading(self, target, label, home, document, text, fmt):
+        """A person's reading of this menu page or PDF (reviewed file, method 'elle okundu'), used instead of the parser when it is
+        the same document (SHA-256) or the same page whose text in this run still shows every name read with its price.
+        True when used; otherwise None, or a note for the parser's menu when the page no longer shows what was read."""
+        rows = [r for r in self.readings if (r.get("yontem") or "").strip() == "elle okundu"
+                and (r["raw_sha256"] == document.sha256 or same_page(r["menu_url"], document.final_url) or same_page(r["menu_url"], target))]
+        if not rows:
+            return None
+        priced = [r for r in rows if (r.get("name") or "").strip()]
+        same = any(r["raw_sha256"] == document.sha256 for r in rows)
+        if not same:
+            missing = [r for r in priced if not shown(text, r["name"], r["price_text"])]
+            if missing:
+                return (f"Elle okuma ({rows[0]['okundu']}) bu çekimdeki belgeyle uyuşmadı ({len(missing)}/{len(priced)} kalem sayfada yok); "
+                        "ayrıştırıcının okuması kullanıldı.")
+        items = [{"section": r["section"] or None, "name": r["name"], "price_text": r["price_text"],
+                  "price": float(r["price"]) if r.get("price") not in (None, "") else None,
+                  "price_rule": r.get("price_rule") or ("market" if not r.get("price") else "single")} for r in priced]
+        note = (f"Elle okundu ({rows[0]['okundu']}); " + ("aynı belge (SHA-256)." if same else
+                f"okunan kopya SHA-256 {rows[0]['raw_sha256'][:12]}…; adlar ve fiyatlar bu çekimdeki belgede doğrulandı."))
+        self.add_menu(target, label or rows[0].get("menu_title"), home, document, "read" if items else "no_items",
+                      note if items else f"{note} Menüde fiyat yazmıyor.", items=items, method="elle okundu", fmt=fmt,
+                      menu_kind=rows[0].get("menu_type") or None)
+        return True
 
     def menu_images(self, html, base):
         images = []
@@ -911,17 +1251,22 @@ class RestaurantRun:
             self.add_menu(target, label, home, document, "image_unread", reason, fmt=fmt)
 
     def add_menu(self, target, label, home, document, status, message, *, items=(), platform=None, method=None, fmt=None, title=None, text=None,
-                 menu_kind=None):
+                 menu_kind=None, url=None):
         menu_id = len(self.menus) + 1
         kind = menu_kind or menu_type(label, urlsplit(target).path.replace("-", " ").replace("_", " "), title, text if text and len(text) < 400 else None)
+        if kind == "drinks" and items:
+            # "Oyster Bar Menu", "Food & Drinks": a menu called a drinks menu whose own headings are mostly food is a general menu
+            own = [item_class(item, "general", self.sections, self.item_reviews)[0] for item in items]
+            if sum(k == "icecek" for k in own) * 2 < len(own) and sum(k in ("ana_yemek", "baslangic", "salata_corba", "kucuk_tabak") for k in own):
+                kind = "general"
         if fmt is None:
             fmt = "platform" if platform else (document.kind if document is not None and document.kind in ("html", "pdf", "image") else "html")
-        self.menus.append({"menu_id": menu_id, "url": document.final_url if document else target, "format": fmt, "menu_type": kind,
+        self.menus.append({"menu_id": menu_id, "url": url or (document.final_url if document else target), "format": fmt, "menu_type": kind,
                            "title": clean(label or title or "")[:200] or None, "platform": platform, "linked_from": home.final_url,
                            "fetched_at": document.fetched_at if document else None, "raw_sha256": document.sha256 if document else None,
                            "method": method, "status": status, "message": message, "item_count": len(items)})
         for position, item in enumerate(items, 1):
-            section_class, basis = item_class(item, kind, self.sections)
+            section_class, basis = item_class(item, kind, self.sections, self.item_reviews)
             self.items.append({**item, "menu_id": menu_id, "position": position, "section_class": section_class, "class_basis": basis, "method": method})
 
     def structured(self, document, html):
@@ -1111,12 +1456,40 @@ class CdpPages:
             self.page.wait_for_load_state("networkidle", timeout=5_000)
         except Exception:
             pass
+        self.scroll()
         return self.current()
 
+    def scroll(self, step=800, limit=60):
+        """Scroll down the page as a reader would, so menus that load their sections as they come into view are on the page."""
+        try:
+            if CHALLENGE.search(self.page.content()[:40000]):
+                return
+            position = 0
+            for _ in range(limit):
+                position += step
+                self.page.evaluate(f"window.scrollTo(0, {position})")
+                time.sleep(0.4)
+                if position >= self.page.evaluate("document.body ? document.body.scrollHeight : 0"):
+                    break
+            time.sleep(0.8)
+        except Exception as exc:
+            if WINDOW_CLOSED.search(f"{type(exc).__name__} {exc}"):
+                raise
+
     def current(self):
+        """The page as the browser shows it; a menu embedded in a frame (SinglePlatform, Wix menus) is appended in a <section> naming
+        the frame's address, so the stored copy holds what the reader saw."""
         status = self.response.status if self.response is not None else None
         content_type = (self.response.headers.get("content-type") if self.response is not None else None) or "text/html"
-        return status, self.page.url, content_type, self.page.content().encode("utf-8")
+        html = self.page.content()
+        for frame in self.page.frames[1:]:
+            try:
+                if frame.url.startswith("http"):
+                    html += f'\n<section data-frame="{html_module.escape(frame.url)}">{frame.content()}</section>'
+            except Exception as exc:
+                if WINDOW_CLOSED.search(f"{type(exc).__name__} {exc}"):
+                    raise
+        return status, self.page.url, content_type, html.encode("utf-8")
 
     def request(self, url):
         """A document (PDF, image) from inside the page with the browser's fetch; when the page may not read it (another origin
@@ -1186,6 +1559,31 @@ def better(second, first):
     return score(second) > score(first)
 
 
+def item_classes(path):
+    """{external_id: {(item name, price text or ""): class}} from the reviewed item-class file (GÖREV-10: main dishes under $8 checked
+    one by one); an unknown class is an error."""
+    result = {}
+    for external_id, rows in read_reviewed(path, "external_id").items():
+        for row in rows:
+            klass = (row.get("sinif") or "").strip()
+            if klass not in SECTION_CLASSES:
+                raise SourceError(f"Kalem sınıfı dosyasında bilinmeyen sınıf: {klass!r}.")
+            result.setdefault(external_id, {})[(clean(row["kalem"]), clean(row.get("fiyat_metni") or ""))] = klass
+    return result
+
+
+def review_note(run):
+    """A reviewer's note from the reviewed site file, kept as a fact labelled 'gözden geçirme': 'ana_yemek_sunmuyor' (a coffee,
+    dessert, ice cream or drinks place; the text says what kind) or 'seviye_notu' (why the site gives no price level)."""
+    row = run.override or {}
+    for column, value in (("ana_yemek_sunmuyor", "no_mains"), ("seviye_notu", "note")):
+        text = clean(row.get(column) or "")
+        if text:
+            run.facts["review_note"] = {"field": "review_note", "value": value, "detail": text, "link_url": None, "data": None,
+                                        "source_url": row.get("site_url") or run.site["site_url"], "fetched_at": row.get("kontrol_tarihi") or None,
+                                        "raw_sha256": None, "method": "gözden geçirme"}
+
+
 def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None):
     """Read every restaurant's own site once (its pages, menus and documents) and return the facts with their provenance.
 
@@ -1199,6 +1597,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
         raise SourceError("Önce restoran dizini toplanmalı: işletme siteleri son restoran çekimindeki kayıtlardan okunur.")
     overrides = {k: v[0] for k, v in read_reviewed(config.get("site_overrides"), "external_id").items()}
     readings = read_reviewed(config.get("menu_readings"), "external_id")
+    item_reviews = item_classes(config.get("item_classes"))
     sections = load_sections(config.get("sections") or SECTIONS_TABLE)
     store, pacer = RawStore(raw_path), HostPacer()
     owns = client is None
@@ -1210,7 +1609,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
     progress(1, f"{len(restaurants)} restoranın kendi sitesi okunacak.")
 
     def one(restaurant):
-        run = RestaurantRun(fetcher, restaurant, overrides.get(restaurant["external_id"]), readings.get(restaurant["external_id"], []), sections)
+        run = RestaurantRun(fetcher, restaurant, overrides.get(restaurant["external_id"]), readings.get(restaurant["external_id"], []), sections,
+                            item_reviews.get(restaurant["external_id"]))
         url = (run.override or {}).get("site_url") or restaurant.get("website_url")         # a review row may add only menu links
         try:
             if url and host_key(url) in browser_hosts:
@@ -1261,7 +1661,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                     check(canceled)
                     first = runs[index]
                     progress(95, f"Tarayıcıyla ikinci okuma {count}/{len(second)} · {first.restaurant['name']}")
-                    retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections)
+                    retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections, first.item_reviews)
                     try:
                         retry.run()
                     except CollectionCanceled:
@@ -1299,7 +1699,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                             first.site["status_note"] = (f"{first.site['status_note'] or ''} Doğrulama sayfası {VERIFY_TIMEOUT // 60} dk içinde "
                                                          f"tamamlanmadı ({host}); tarayıcıyla okunamadı.").strip()
                             continue
-                        retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections)
+                        retry = RestaurantRun(pages, first.restaurant, first.override, first.readings, sections, first.item_reviews)
                         try:
                             retry.run()
                         except CollectionCanceled:
@@ -1315,6 +1715,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                 if isinstance(pages, BrowserPages):
                     pages.close()
             store.flush()
+        for run in runs:
+            review_note(run)
         sites = [r.site for r in runs]
         facts = [{"external_id": r.site["external_id"], **f} for r in runs for f in r.facts.values()]
         menus = [{"external_id": r.site["external_id"], **m} for r in runs for m in r.menus]
@@ -1353,9 +1755,51 @@ def restaurant_view(site, facts, menus, items, regions):
             best = typed[0]
             break
     stats = main_stats(by_menu.get(best["menu_id"], [])) if best else {"count": 0, "median": None, "min": None, "max": None}
-    return {**site, "regions": regions, "facts": {f["field"]: f for f in facts}, "menus": menus, "main_menu_id": best["menu_id"] if best else None,
+    # tapas / small plates: from the main menu, or else the meal menu with the most priced small plates; shown apart, never a level
+    small_menu = best if best and main_stats(by_menu.get(best["menu_id"], []), "kucuk_tabak")["count"] else max(
+        (m for m in menus if m["menu_type"] in MAIN_PRIORITY and m["status"] == "read"),
+        key=lambda m: main_stats(by_menu.get(m["menu_id"], []), "kucuk_tabak")["count"], default=None)
+    small = main_stats(by_menu.get(small_menu["menu_id"], []), "kucuk_tabak") if small_menu else main_stats([], "kucuk_tabak")
+    fixed = [{"name": i["name"], "price_text": i["price_text"], "price": i["price"], "menu_url": next((m["url"] for m in menus if m["menu_id"] == i["menu_id"]), None)}
+             for i in items if i.get("section_class") == "sabit_menu" and i.get("price") is not None]
+    view = {**site, "regions": regions, "facts": {f["field"]: f for f in facts}, "menus": menus, "main_menu_id": best["menu_id"] if best else None,
             "main_menu_type": best["menu_type"] if best else None, "main_menu_url": best["url"] if best else None, "main": stats,
-            "price_level": price_level(stats)}
+            "price_level": price_level(stats), "small_plates": small, "small_plates_menu_url": small_menu["url"] if small["count"] else None,
+            "fixed_menus": fixed}
+    view["level_reason"] = level_reason(view)
+    return view
+
+
+SITE_REASONS = {"not_found": "site bulunamadı (sayfa yok)", "closed_permanently": "sitesine göre kalıcı olarak kapanmış",
+                "closed_season": "sitesine göre sezon için kapalı", "other_business": "alan adı başka bir işletmede ya da satılık",
+                "unreachable": "sitesine ulaşılamadı", "social_login": "yalnız sosyal medya sayfası var (giriş gerekiyor)",
+                "no_site": "web sitesi yok"}
+MENU_STATUS_REASONS = {"image_unread": "menü görüntüsü okunmadı", "error": "menü sayfası açılamadı", "no_items": "menüde fiyat bulunamadı"}
+
+
+def level_reason(view):
+    """One line saying why a restaurant has no price level (None when it has one). A reviewer's note (reviewed site file) comes
+    first: 'ana yemek sunmuyor' for coffee, dessert, ice cream and drinks places, or a reason read on the site."""
+    if view["price_level"]:
+        return None
+    note = view["facts"].get("review_note")
+    if note and note["value"] == "no_mains" and not view["main"]["count"]:
+        return f"ana yemek sunmuyor ({note['detail']})"
+    if note and note["value"] == "note":
+        return note["detail"]
+    if view["site_status"] != "working":
+        return SITE_REASONS.get(view["site_status"], view["site_status"])
+    if not view["main"]["count"] and view["small_plates"]["count"]:
+        return "tapas / küçük tabak menüsü, ana yemek bölümü yok (küçük tabak ortancası ayrı verilir)"
+    menus = view["menus"]
+    if not menus:
+        return "sitede menü bulunamadı"
+    if not any(m["status"] == "read" for m in menus):
+        return "menü okunamadı: " + ", ".join(sorted({MENU_STATUS_REASONS.get(m["status"], m["status"]) for m in menus}))
+    count = view["main"]["count"]
+    if count == 0:
+        return "okunan menülerde fiyatlı ana yemek yok"
+    return f"5'ten az fiyatlı ana yemek ({count})"
 
 
 def load(con, run_id):
@@ -1397,7 +1841,7 @@ def summarize(con, run_id, region_order=(), region_names=None):
                      "kids_menu": sum((v["facts"].get("kids_menu") or {}).get("value") == "yes" for v in members),
                      "no_information": sum(v["site_status"] != "working" or (not v["menus"] and not v["facts"]) for v in members)})
     listing = [{k: v[k] for k in ("external_id", "name", "site_url", "site_status", "status_note", "regions", "price_level", "main", "main_menu_type",
-                                  "main_menu_url")} | {"reservation": (v["facts"].get("reservation") or {}).get("value"),
+                                  "main_menu_url", "level_reason", "small_plates", "fixed_menus")} | {"reservation": (v["facts"].get("reservation") or {}).get("value"),
                                                        "reservation_platform": (v["facts"].get("reservation") or {}).get("detail"),
                                                        "kids_menu": (v["facts"].get("kids_menu") or {}).get("value"),
                                                        "menu_count": len(v["menus"]), "menus_read": sum(m["status"] == "read" for m in v["menus"])}
@@ -1409,7 +1853,8 @@ def summarize(con, run_id, region_order=(), region_names=None):
                          "with_hours": sum("hours" in v["facts"] for v in views), "with_reservation": sum("reservation" in v["facts"] for v in views)},
             "level_note": ("Fiyat seviyesi bizim sınıflamamızdır: işletmenin kendi sitesindeki en kapsamlı ana öğün menüsünde (akşam, yoksa öğle, "
                            "yoksa genel, yoksa brunch, yoksa kahvaltı) ana yemek fiyatlarının ortancası $15 altı '$', $15–25 '$$', $25–40 '$$$', "
-                           "$40 ve üstü '$$$$'; 5'ten az ana yemek fiyatı varsa hesaplanmaz."),
+                           "$40 ve üstü '$$$$'; 5'ten az ana yemek fiyatı varsa hesaplanmaz. Ek malzeme, ekstra ve yan ürünler ana yemek sayılmaz; "
+                           "tapas / küçük tabaklar ve kişi başı sabit fiyatlı menüler ayrı verilir."),
             "hours_note": f"Çalışma saatleri: işletmenin sitesinde {snapshot['checked_on']} tarihinde yazan."}
 
 

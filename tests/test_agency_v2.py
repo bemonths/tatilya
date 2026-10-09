@@ -520,7 +520,9 @@ def test_fresh_database_has_v12_configuration_window_and_nws_method(tmp_path):
     assert sites["oversee.us"]["protected"] == 1 and sites["oversee.us"]["inventory"] == {"source": "platform", "origin": "https://oversee.us"}
     assert sites["grayt30avacations.com"]["aliases"] == ["royaldestinations.com"] and sites["benchmark30a.com"]["guest_rule"] == "two_adults"
     assert (sites["alysbeach.com"]["own_region_id"], sites["alysbeach.com"]["own_city"]) == ("alys-beach", "Alys Beach")
-    assert [w["window_key"] for w in context.lodging["windows"]][-1] == "fall-2027"
+    with db.connect() as con:      # v12 added the Fall 2027 window; v13 keeps the fixed windows (disabled) and uses the monthly rule
+        assert con.execute("SELECT enabled FROM destination_lodging_windows WHERE window_key='fall-2027'").fetchone()[0] == 0
+    assert len(context.lodging["windows"]) == 12 and context.lodging["window_rule"]["kind"] == "monthly"
     nws = next(s for s in db.sources() if s["url"] == "https://www.weather.gov/")
     assert nws["method"] == "API"
     with db.connect() as con:
@@ -569,7 +571,7 @@ def test_v11_to_v12_migration_backfills_old_runs_and_adds_configuration(tmp_path
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         for table in ("agency_rate_own_listings", "agency_rate_own_quotes", "agency_rate_published"):
@@ -611,7 +613,7 @@ def test_v11_to_v12_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
 
 
 def test_summary_counts_methods_own_inventory_and_published_rents_apart(tmp_path):

@@ -9,14 +9,16 @@ from pathlib import Path
 from .destinations import DEFAULT_PROFILE, DEFAULT_DESTINATION_ID, PROFILES
 from .destinations.context import ConnectorContext
 from .migration_v6 import upgrade_v6
+from .sources.windows import monthly_windows
 from .migration_v7 import upgrade_v7
 from .migration_v8 import upgrade_v8
 from .migration_v9 import upgrade_v9
 from .migration_v10 import upgrade_v10
 from .migration_v11 import upgrade_v11
 from .migration_v12 import upgrade_v12
+from .migration_v13 import upgrade_v13
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -57,14 +59,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -81,7 +83,9 @@ class Database:
                     upgrade_v10(con)
                 if version < 11:
                     upgrade_v11(con)
-                upgrade_v12(con)
+                if version < 12:
+                    upgrade_v12(con)
+                upgrade_v13(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -136,6 +140,7 @@ class Database:
             upgrade_v10(con)
             upgrade_v11(con)
             upgrade_v12(con)
+            upgrade_v13(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -148,7 +153,7 @@ class Database:
             if not row: raise KeyError(identifier)
             return dict(row)
 
-    def context(self, identifier=DEFAULT_DESTINATION_ID, inputs=()):
+    def context(self, identifier=DEFAULT_DESTINATION_ID, inputs=(), today=None):
         """Destination configuration for a connector; `inputs` adds data a connector reads from earlier runs (only for jobs)."""
         destination=self.destination(identifier)
         with self.connect() as con:
@@ -158,9 +163,13 @@ class Database:
             row=con.execute("SELECT * FROM destination_storm_corridors WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
             corridor={**dict(row),"radii_nmi":json.loads(row["radii_nmi"])} if row else None
             row=con.execute("SELECT * FROM destination_lodging_sources WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
+            rule=json.loads(row["window_rule"]) if row and row["window_rule"] else None
+            # a window rule gives the windows of the day the job runs (GÖREV-10: 12 monthly weeks); otherwise the fixed list
+            windows=(monthly_windows(today or datetime.now(timezone.utc).date(), rule) if rule else
+                     [dict(r) for r in con.execute("SELECT window_key,label,checkin,checkout FROM destination_lodging_windows WHERE destination_id=? AND enabled=1 ORDER BY sort_order,checkin",(identifier,))])
             lodging={"clone_host":row["clone_host"],
                      "locations":{r["source_location_name"]:r["region_id"] for r in con.execute("SELECT * FROM destination_lodging_locations WHERE destination_id=? ORDER BY source_location_name",(identifier,))},
-                     "windows":[dict(r) for r in con.execute("SELECT window_key,label,checkin,checkout FROM destination_lodging_windows WHERE destination_id=? AND enabled=1 ORDER BY sort_order,checkin",(identifier,))]} if row else None
+                     "windows":[{k:w[k] for k in ("window_key","label","checkin","checkout")} for w in windows],"window_rule":rule} if row else None
             sites=[{**dict(r),"aliases":json.loads(r["aliases"]),"inventory":json.loads(r["inventory"]) if r["inventory"] else None}
                    for r in con.execute("""SELECT domain,company,adapter,enabled,aliases,protected,guest_rule,inventory,own_region_id,own_city
                        FROM destination_agency_sites WHERE destination_id=? ORDER BY sort_order,domain""",(identifier,))]
@@ -168,11 +177,16 @@ class Database:
             if agency and "lodging_listings" in inputs:
                 agency["input"]=self.lodging_input(con,identifier)
             profile=PROFILES.get(identifier)
-            restaurants={"site_overrides":getattr(profile,"RESTAURANT_SITE_OVERRIDES",None),"menu_readings":getattr(profile,"MENU_READINGS",None)}
+            restaurants={"site_overrides":getattr(profile,"RESTAURANT_SITE_OVERRIDES",None),"menu_readings":getattr(profile,"MENU_READINGS",None),
+                         "item_classes":getattr(profile,"MENU_ITEM_CLASSES",None)}
             if "restaurant_records" in inputs:
                 restaurants["input"]=self.restaurant_input(con,identifier)
             browser_hosts=tuple(r[0] for r in con.execute("SELECT host FROM browser_hosts ORDER BY host"))
-        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts)
+            area=con.execute("SELECT south,west,north,east,note FROM destination_poi_areas WHERE destination_id=?",(identifier,)).fetchone()
+            categories=[{**dict(r),"filters":json.loads(r["filters"])} for r in con.execute(
+                "SELECT category_key,label,filters FROM destination_poi_categories WHERE destination_id=? AND enabled=1 ORDER BY sort_order",(identifier,))]
+            daily_needs={"area":dict(area),"categories":categories,"chain_checks":getattr(profile,"CHAIN_STORE_CHECKS",None)} if area and categories else None
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts,daily_needs)
 
     @staticmethod
     def restaurant_input(con, destination_id):

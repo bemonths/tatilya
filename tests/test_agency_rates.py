@@ -18,7 +18,7 @@ from studio.destinations import thirty_a
 from studio.sources import agency_adapters as aa
 from studio.sources import agency_rates as ar
 from studio.sources.base import CollectionCanceled, SourceError
-from tests.legacy import AGENCY_URL, V11_TABLES, V12_TABLES
+from tests.legacy import AGENCY_URL, V11_TABLES, V12_TABLES, V13_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_climate import table_counts
 from tests import test_lodging as tl
@@ -565,6 +565,7 @@ def test_api_collects_stores_and_summarizes(tmp_path, monkeypatch):
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         db = client.app.state.db
         use_test_sites(db)
+        tl.fixed_windows(db)
         early = tl.start(client, url=AGENCY_URL)
         assert early["status"] == "failed" and "Önce konaklama aramaları toplanmalı" in early["message"]
         lodging = tl.start(client)
@@ -727,24 +728,26 @@ def test_v10_to_v11_migration_adds_agency_tables_source_and_keeps_rows(tmp_path)
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
-        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, **V12_TABLES, "destination_lodging_windows": 5,
-                          "sources": len(before["sources"]) + 2}
+        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, **V12_TABLES, **V13_TABLES, "destination_lodging_windows": 5,
+                          "sources": len(before["sources"]) + 3}
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
-        changed = ("sources", "lodging_listings", "destination_lodging_windows")
+        changed = ("sources", "lodging_listings", "destination_lodging_windows", "destination_lodging_sources")
         unchanged = {t: r for t, r in after.items() if t not in changed}
         assert unchanged == {t: r for t, r in before.items() if t not in changed}
-        assert after["destination_lodging_windows"][:4] == before["destination_lodging_windows"]        # v12 adds Fall 2027
+        # v12 adds Fall 2027; v13 keeps every fixed window but disables them (the monthly rule gives the windows)
+        assert [row[:-1] for row in after["destination_lodging_windows"][:4]] == [row[:-1] for row in before["destination_lodging_windows"]]
+        assert {row[-1] for row in after["destination_lodging_windows"]} == {0}
         assert after["lodging_listings"] == [row + (None, None, None) for row in before["lodging_listings"]]
-        assert after["sources"][:len(before["sources"])] == before["sources"] and after["sources"][-2][2] == AGENCY_URL
+        assert after["sources"][:len(before["sources"])] == before["sources"] and after["sources"][-3][2] == AGENCY_URL
     backup, = (tmp_path / "backups").glob("*-v10-*.sqlite3")
     with sqlite3.connect(backup) as con:
         assert con.execute("PRAGMA user_version").fetchone()[0] == 10
     Database(path).initialize()                                                              # idempotent: nothing added twice
     with sqlite3.connect(path) as con:
-        assert table_counts(con)["sources"] == len(before["sources"]) + 2 and table_counts(con)["destination_agency_sites"] == 24
+        assert table_counts(con)["sources"] == len(before["sources"]) + 3 and table_counts(con)["destination_agency_sites"] == 24
 
 
 def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
@@ -764,4 +767,4 @@ def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 12
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
