@@ -223,7 +223,7 @@ Ortancalar, çeyrekler, oda gruplarına göre ortancalar, yöntem ve kendi envan
 
 - Tam takım art arda 3 kez: **650 Python** testi ve **54 frontend** testi geçti (görev başında main/v0.11.0: 587 + 52).
 - Yeni test dosyaları: `tests/test_agency_v2.py` (32), `tests/test_restaurant_sites.py` (30); güncellenenler: `test_agency_rates.py`, `test_restaurants.py`, `legacy.py`, iklim/konaklama/destinasyon/temel testleri (şema 12, 10 toplayıcı, 15 kaynak), `frontend.test.mjs`.
-- CI: dal push edildikten sonra eklenecek.
+- CI: `7087db1` için çalıştırma 37873893208 — başarılı (Python ve frontend testleri). Bu satırı ekleyen son commit yalnız raporu değiştirir.
 
 ## Sürprizler ve notlar
 
