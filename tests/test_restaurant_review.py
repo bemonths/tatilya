@@ -265,3 +265,37 @@ def test_a_pdf_reading_matches_by_its_sha_even_when_the_text_lacks_the_headings(
     _, _, menus, items = related(result, "/listing/bud/")
     assert menus[0]["format"] == "pdf" and "aynı belge" in menus[0]["message"]
     assert [(i["section"], i["section_class"]) for i in items] == [("ENTRÉES", "ana_yemek"), ("ENTRÉES", "ana_yemek")]
+
+
+# --- Browser reading: pop-ups and item pages ------------------------------------------------------------------------------
+
+class FakeTab:
+    def __init__(self, html, result):
+        self.html, self.result, self.keys, self.scripts = html, result, [], []
+        self.keyboard = self
+
+    def press(self, key):
+        self.keys.append(key)
+
+    def content(self):
+        return self.html
+
+    def evaluate(self, script):
+        self.scripts.append(script)
+        return self.result
+
+
+def test_a_popup_is_closed_with_escape_and_its_own_close_button_only(monkeypatch):
+    monkeypatch.setattr(rs.time, "sleep", lambda seconds: None)
+    pages = rs.CdpPages.__new__(rs.CdpPages)
+    pages.page = FakeTab("<h1>Pizza</h1><div role='dialog'>Order details</div>", {"dialogs": 1, "clicked": 1})
+    assert pages.dismiss() == {"dialogs": 1, "clicked": 1}
+    assert pages.page.keys == ["Escape"] and pages.page.scripts == [rs.DISMISS_POPUPS]
+    assert "close|dismiss" in rs.DISMISS_POPUPS and "accept" not in rs.DISMISS_POPUPS.lower()
+    pages.page = FakeTab("<title>Just a moment...</title>", None)                    # a verification page is left to the user
+    assert pages.dismiss() is None and pages.page.keys == [] and pages.page.scripts == []
+
+
+def test_single_item_pages_of_an_ordering_menu_are_not_menus():
+    assert rs.NOT_MENU_PAGE.search("https://pizzabythesea.com/menu/miramar-beach?item=16-cheese-tNfF&matchItemName=16%22%20Cheese")
+    assert not rs.NOT_MENU_PAGE.search("https://pizzabythesea.com/menu/miramar-beach")

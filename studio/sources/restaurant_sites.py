@@ -81,7 +81,7 @@ MENU_WORD = re.compile(r"\bmenus?\b|\bdinner\b|\blunch\b|\bbrunch\b|\bbreakfast\
                        r"\bdesserts?\b|\bhappy hour\b|\bfood\b|\beat\b|\border online\b|\btapas\b", re.I)
 INFO_WORD = re.compile(r"\bhours\b|\bcontact\b|\blocation|\bvisit\b|\babout\b|\bfaq\b|\bfind us\b", re.I)
 # Pages of a menu platform that are not a menu: one dish of an ordering menu (the whole menu is on the ordering page), legal pages.
-NOT_MENU_PAGE = re.compile(r"/item-[^/]*_[0-9a-f]{8}-|/(?:privacy|terms|terms-of-service|rewardssignup|rewardslookup|egiftcards?|giftcards?)\b", re.I)
+NOT_MENU_PAGE = re.compile(r"/item-[^/]*_[0-9a-f]{8}-|[?&]item=|/(?:privacy|terms|terms-of-service|rewardssignup|rewardslookup|egiftcards?|giftcards?)\b", re.I)
 TYPE_WORDS = (("special", r"thanksgiving|christmas|\bholiday|new year|valentine|easter|mother'?s day|father'?s day"),
               ("catering", r"\bcatering\b"), ("happy_hour", r"happy hour"), ("kids", r"\bkids?\b|\bchildren'?s?\b|\blittle ones\b"),
               ("dessert", r"\bdesserts?\b|\bsweets\b"),
@@ -1471,6 +1471,22 @@ class BrowserPages:
         return self.start().wait_all(sites, self.canceled, timeout, self.waiting)
 
 
+DISMISS_POPUPS = """() => {
+  const visible = el => { const s = getComputedStyle(el); return s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0; };
+  const dialogs = [...document.querySelectorAll('[role="dialog"],[role="alertdialog"],[aria-modal="true"],dialog[open]')].filter(visible);
+  let clicked = 0;
+  for (const dialog of dialogs) {
+    const close = [...dialog.querySelectorAll('button,[role="button"]')].filter(visible).find(b => {
+      const label = (b.getAttribute('aria-label') || b.getAttribute('title') || '').trim();
+      const text = (b.textContent || '').trim();
+      return /\\b(close|dismiss)\\b/i.test(label) || /^(close|dismiss|no,? thanks|×|✕|✖|x)$/i.test(text);
+    });
+    if (close) { close.click(); clicked += 1; }
+  }
+  return {dialogs: dialogs.length, clicked};
+}"""
+
+
 class CdpPages:
     """One tab of the computer's own browser (see BrowserPages); pages load with the browser's own navigation."""
 
@@ -1493,8 +1509,27 @@ class CdpPages:
             self.page.wait_for_load_state("networkidle", timeout=5_000)
         except Exception:
             pass
+        self.dismiss()
         self.scroll()
         return self.current()
+
+    def dismiss(self):
+        """Close a pop-up window the page opened over its content (an ordering site's location chooser, a newsletter box): Escape,
+        then only the pop-up's own close button (aria-label or text "Close", "Dismiss", "No thanks", "×"). Nothing else on the page is
+        clicked: no ordering, location or cookie-consent choice is made."""
+        try:
+            if CHALLENGE.search(self.page.content()[:40000]):
+                return None
+            self.page.keyboard.press("Escape")
+            time.sleep(0.5)
+            result = self.page.evaluate(DISMISS_POPUPS)
+            if result and result.get("clicked"):
+                time.sleep(1.0)
+            return result
+        except Exception as exc:
+            if WINDOW_CLOSED.search(f"{type(exc).__name__} {exc}"):
+                raise
+            return None
 
     def scroll(self, step=800, limit=60):
         """Scroll down the page as a reader would, so menus that load their sections as they come into view are on the page."""
