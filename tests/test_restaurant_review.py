@@ -387,3 +387,43 @@ def test_an_add_on_price_note_in_capitals_is_not_a_new_section():
     lines = [("h", "BURGERS"), ("p", "ADD EGG +2 | ADD PORK BELLY +4"), ("p", "Smash Burger $22"), ("h", "ADD-ONS"), ("p", "Shrimp $9")]
     items = [(i["section"], i["name"], i["price"]) for i in rs.parse_menu(lines)]
     assert items == [("BURGERS", "Smash Burger", 22.0), ("ADD-ONS", "Shrimp", 9.0)]
+
+
+def test_warm_up_leaves_open_only_the_tabs_waiting_for_the_user(monkeypatch):
+    from studio.sources import browser_verification as bv
+    monkeypatch.setattr(bv, "watch", lambda page, seconds, canceled: bv.page_state(page))
+
+    class Tab:
+        def __init__(self):
+            self.closed, self.url = False, None
+
+        def goto(self, url, **kwargs):
+            self.url = url
+
+        def title(self):
+            return "Just a moment..." if "guarded" in self.url else "Menu"
+
+        def content(self):
+            return "<title>Just a moment...</title>" if "guarded" in self.url else "<html></html>"
+
+        def close(self):
+            self.closed = True
+
+    class Session:
+        def __init__(self):
+            self.pages, self.tabs = [], []
+
+        def new_page(self):
+            tab = Tab()
+            self.pages.append(tab)
+            self.tabs.append(tab)
+            return tab
+
+        def close(self):
+            for tab in self.pages:
+                tab.close()
+
+    session = Session()
+    results = bv.warm_up([("open.example", "https://open.example/"), ("guarded.example", "https://guarded.example/")], session_factory=lambda: session)
+    assert [r[2] for r in results] == ["açık", "doğrulama bekliyor"]
+    assert [t.closed for t in session.tabs] == [True, False]

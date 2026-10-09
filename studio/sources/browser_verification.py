@@ -324,7 +324,7 @@ def warm_up(entries, profile=None, canceled=lambda: False, session_factory=None)
     """Open every 'read with the browser' site in its own tab of the profile's browser (left open for the user); returns
     [(host, url, state)] with state 'açık', 'doğrulama bekliyor' or 'engel sayfası'."""
     session = (session_factory or (lambda: ChromeSession(profile)))()
-    results = []
+    results, waiting = [], []
     for host, url in entries:
         page = session.new_page()
         try:
@@ -332,8 +332,10 @@ def warm_up(entries, profile=None, canceled=lambda: False, session_factory=None)
             state = watch(page, 8, canceled)
         except Exception as exc:
             state = f"açılamadı ({type(exc).__name__})"
+        if state == "challenge":
+            waiting.append(page)
         results.append((host, url, {"open": "açık", "challenge": "doğrulama bekliyor", "blocked": "engel sayfası"}.get(state, state)))
-    session.pages = []                        # the tabs stay open for the user
+    session.pages = [p for p in session.pages if p not in waiting]     # only the tabs waiting for the user stay open
     session.close()
     return results
 
