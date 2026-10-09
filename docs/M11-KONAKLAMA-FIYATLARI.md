@@ -14,7 +14,7 @@ Ziyaretçinin yer seçiminde "burada kalmak ne kadar tutar" sorusuna kanıt. Boo
 
 - Girdi: destinasyonun son başarılı Book>Direct konaklama çekimi (`lodging_listings`: Book>Direct kimliği, ad, `url`, yatak odası; mahalle, ilanın göründüğü konum filtrelerinden).
 - Sorgulanan siteler: destinasyon yapılandırmasındaki kiralama şirketleri (`destination_agency_sites`: alan adı, sitede görünen şirket adı, uyarlayıcı, takma alan adları, korumalı bayrağı, misafir kuralı, şirket ilan listesi kaynağı, kendi envanteri mahallesi). 30A için 24 şirket (`studio/destinations/thirty_a.py` → `AGENCY_SITES`, `AGENCY_SITES_V12`, `AGENCY_SITE_OPTIONS`); seçimin gerekçesi ve dışarıda kalan şirketler `docs/gorevler/GOREV-08/AJANS-KESFI.md`, `docs/gorevler/GOREV-09/AJANS-KESFI-2.md` ve `docs/gorevler/GOREV-09/ajanslar.csv`'de.
-- Tarih pencereleri: konaklama yapılandırmasındaki pencereler (Cumartesi–Cumartesi, 7 gece; varsayım, kaynak gerçeği değil). Geçmiş pencere sorulmaz ve "geçmiş" diye kaydedilir.
+- Tarih pencereleri: GÖREV-10'dan (şema 13) beri destinasyonun **aylık pencere kuralından** (aşağıda); kural tanımlı değilse konaklama yapılandırmasındaki sabit pencereler. Cumartesi–Cumartesi, 7 gece; varsayım, kaynak gerçeği değil. Geçmiş pencere sorulmaz ve "geçmiş" diye kaydedilir.
 - Kaynak kaydı: "Kiralama şirketleri · Konaklama fiyatları", adres `https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri` (ilanların ve şirket bağlantılarının geldiği ön yüz; sorgu dizesi bu kaynağı konaklama arama kaynağından ayırır).
 
 ## Genel çekirdek ve uyarlayıcılar
@@ -117,6 +117,18 @@ Gerçek çekimde Oversee'nin (oversee.us) VRP liste servisi JSON yerine HTML son
 3. ResCMS'te bazı sitelerin isteğe bağlı sigorta satırı "seçilmedi" işaretsizdi ve toplama girmiyordu; ara toplama göre ayrılıyor.
 4. 200 kodlu "Pages Not Found" sayfaları `not_found` sayılıyor.
 
+## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
+
+**Kural (bizim varsayımımız, kaynak gerçeği değil):** çekim ayından sonraki **12 ayın** her biri için ayın **15'ini içeren Cumartesi–Cumartesi haftası** (7 gece): hafta, 15'inden önceki ya da 15'i olan Cumartesi başlar, dolayısıyla her zaman ayın 9'u ile 22'si arasındadır. Başlangıcı çekim tarihine **21 günden yakın** olan pencere atlanır ve yerine 13. ay eklenir; her çekim aynı sayıda pencere sorar. Pencere anahtarı ayı adlandırır (`ay-2027-07`), etiket "Temmuz 2027 · 10–17 Temmuz". Kural destinasyon yapılandırmasındadır (`destination_lodging_sources.window_rule`, JSON: `kind, months, anchor_day, weekday, nights, min_lead_days`; 30A: `thirty_a.py` → `LODGING_WINDOW_RULE`); hesap `studio/sources/windows.py` içinde generic'tir. Book>Direct konaklama aramaları ve kiralama şirketi fiyatları aynı kuralı kullanır; her çekim kullandığı kuralı kaydına yazar (`metadata.window_rule`). Kural tanımlıyken eski sabit pencereler (`destination_lodging_windows`) kapalı kalır.
+
+**Sorgudan pencereye gün:** her pencerenin başlığında sorgu tarihinden pencerenin ilk gecesine kaç gün olduğu yazar ("sorgudan 274 gün sonra"); fiyatların ne kadar önceden sorulduğu böylece görünür.
+
+**Mevsim grupları (bizim gruplamamız):** Aralık–Şubat kış, Mart–Mayıs ilkbahar, Haziran–Ağustos yaz, Eylül–Kasım sonbahar. Mahalle başına mevsimdeki her fiyatlı ilan-pencere çifti bir kez sayılır ve ortancası verilir (Book>Direct'te gecelik fiyat, kiralama şirketlerinde 7 gecelik toplam); pencere ve fiyat sayısı yanında yazar. Okuma anında hesaplanır (`studio/sources/price_history.py`).
+
+**Aynı hafta, iki sorgu:** bir çekim, aynı giriş ve çıkış tarihli en az bir pencere sormuş en son önceki başarılı çekimle karşılaştırılır (pencere anahtarları farklı olabilir; tarihler belirler). Bir ilan yalnız **iki çekimde de fiyatlıysa** sayılır; değişim (sonraki − önceki) ÷ önceki; mahalle × pencere için ortanca değişim, ortanca tutar farkı ve **eşleşen ilan sayısı** gösterilir. Etiket: "aynı evlerin aynı hafta için <tarih1> ve <tarih2> tarihlerinde sorgulanan fiyatları; bizim hesabımız". Temel: Book>Direct'te gecelik fiyat (liste, canlı ya da takvim; öncelik M10'daki gibi), kiralama şirketlerinde sitenin 7 gecelik toplamı. İlk aylık çekimde yalnız eski sabit pencerelerden tarihi aylık haftayla aynı olanlar karşılaştırılır (30A: Bahar tatili 2027 = 13–20 Mart, Yaz 2027 = 10–17 Temmuz; iki sorgu arasında birkaç gün olduğundan bu karşılaştırma fiyatların değişimi için değil, yöntemin sınaması için anlamlıdır); bütün aylar ikinci aylık çekimle karşılaştırılır.
+
+**Güncelleme zamanı:** Book>Direct ve kiralama şirketi fiyatları için önerilen aralık 1 aydır; ana ekrandaki "Güncelleme zamanı gelenler" bölümü ve "Zamanı gelenleri başlat" düğmesi (CALISMA_MANTIGI.md §9.11). Pencere kuralı son çekimden sonra değiştiyse (sabit pencerelerden aylık kurala geçiş dahil) toplayıcı aralık dolmasa da "zamanı geldi" görünür, çünkü eski çekim aylık seriye ait değildir.
+
 ## Sınırlar
 
 - Yalnız yapılandırılmış şirketler sorulur; 360blue (engel sayfası), realjoy (doğrulama tamamlanmadı), oldseagrove, Cottage Rental Agency, 30A Beach Girls, Beach Escapes, Vrbo/Airbnb/Vacasa kapsam dışı. Fiyat örneği bu yüzden şirketlere ve mahallelere göre dengesizdir (WaterColor ve WaterSound ilanlarının çoğu 360blue'nun); özet "fiyatı alınabilen ilanlar" içindir, mahallenin tamamını temsil etmez.
@@ -127,7 +139,7 @@ Gerçek çekimde Oversee'nin (oversee.us) VRP liste servisi JSON yerine HTML son
 
 ## Video dili
 
-Kullanılabilir: "<Mahalle>'de kiralama şirketlerinin kendi sitelerinde, <tarih> tarihinde <pencere> haftası için sorduğumuz <n> evin, sitenin gösterdiği vergiler ve ücretler dahil haftalık toplamının ortancası yaklaşık $X'ti." Ortancanın yanında kaç ilandan hesaplandığı ve aralık (çeyrekler) söylenir. Kullanılmaz: "<Mahalle>'de bir hafta $X tutar" (genelleme), "fiyatlar şu kadar arttı" (tek tarih), ilan sayısı az olan hücrelerden mahalle karşılaştırması, 360blue'nun yoğun olduğu WaterColor/WaterSound için "mahallenin fiyatı".
+Kullanılabilir: "<Mahalle>'de kiralama şirketlerinin kendi sitelerinde, <tarih> tarihinde <pencere> haftası için sorduğumuz <n> evin, sitenin gösterdiği vergiler ve ücretler dahil haftalık toplamının ortancası yaklaşık $X'ti." Ortancanın yanında kaç ilandan hesaplandığı ve aralık (çeyrekler) söylenir. İki aylık çekimden sonra: "aynı <n> ev için <hafta> haftasının fiyatı <tarih1> ile <tarih2> arasında ortanca olarak %Y değişti (bizim hesabımız)"; eşleşen ev sayısı söylenir. Kullanılmaz: "<Mahalle>'de bir hafta $X tutar" (genelleme), "fiyatlar şu kadar arttı" (eşleşmemiş evlerden ya da tek tarihten), ilan sayısı az olan hücrelerden mahalle karşılaştırması, 360blue'nun yoğun olduğu WaterColor/WaterSound için "mahallenin fiyatı".
 
 ## Testler
 

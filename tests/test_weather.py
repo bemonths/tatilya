@@ -107,7 +107,7 @@ def test_anchors_exact_and_registry_metadata(tmp_path):
             assert s['connector'] == {'name': 'nws-weather', 'version': 'nws-weather/1', 'method': 'API'}
             beach = next(s for s in rows if s['url'] == beaches.SOURCE_URL)
             assert beach['connector']['method'] == 'JSON'
-        assert client.get('/api/health').json()['version'] == '0.12.0'
+        assert client.get('/api/health').json()['version'] == '0.13.0'
 
 
 def test_full_collection_counts_nulls_dedupe_provenance_and_raw(tmp_path):

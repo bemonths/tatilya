@@ -1,6 +1,7 @@
 # M12 — Restoran bilgileri (işletmelerin kendi siteleri)
 
-Tarih: 8 Ekim 2026 · Görev: GÖREV-09 · Dal: `gorev-09-kapsama-restoran` · Uygulama `0.12.0` · Şema `12` · Toplayıcı `restaurant-sites/1`
+Tarih: 8 Ekim 2026 · Görev: GÖREV-09 · Dal: `gorev-09-kapsama-restoran` · Uygulama `0.12.0` · Şema `12` · Toplayıcı `restaurant-sites/1`  
+Güncelleme: 9 Ekim 2026 · GÖREV-10 (fiyat seviyesi gözden geçirmesi) · Dal: `gorev-10-aylik-gunluk` · Şema `13`
 
 ## Durum
 
@@ -17,7 +18,7 @@ Restoran dizini (Visit South Walton, M4) ad, adres, telefon, mutfak ve web sites
 - **Platform sayfaları:** işletmenin kendi yayımladığı menü ve sipariş sayfaları (Toast, Square, Popmenu, BentoBox, SpotHopper, ChowNow, Olo, Clover, Menufy, DoorDash Storefront, SinglePlatform, BeyondMenu, TouchBistro, Owner.com vb.) işletmenin kendi kaynağı sayılır; yöntem etiketi "platform verisi".
 - **Sosyal medya:** yalnız giriş yapmadan okunabiliyorsa. Facebook ve Instagram sayfaları giriş istediği için okunmaz; site durumu `social_login`.
 - **Kullanılmayanlar:** Google, Yelp, Tripadvisor gibi yorum ve puan platformları (görev kuralı). Book>Direct ön yüzünün `restaurants` servisi (Adım 5a) incelendi: 30A çevresi için 18 kayıt; alanlar ad, mutfak türü, adres, telefon, OpenTable rezervasyon ve menü bağlantısı, OpenTable'ın `$`/`$$` fiyat işareti, koordinat; saat yok. Kayıtların çoğu 30A dışında (Miramar Beach/Sandestin) ve hepsi OpenTable'dan; işletmenin kendi beyanı olmadığı ve 30A restoranlarının küçük bir kısmını kapsadığı için kullanılmadı. İstemci anahtarı yalnız bellekte okundu, hiçbir yere yazılmadı.
-- **Görüntü menüler:** görüntü olarak yayımlanmış ya da metni okunamayan menüleri bir kişi okur; değerler **gözden geçirme dosyasına** yazılır (`studio/destinations/thirty_a_menu_readings.csv`: `external_id, menu_url, raw_sha256, menu_type, menu_title, section, name, price_text, price, price_rule, okundu`). Her satır görüntünün SHA-256'sına bağlıdır; toplayıcı yalnız aynı SHA'lı belge gelirse okumayı kullanır (görüntü değişirse okuma kullanılmaz, menü "okunmadı" kalır). Kurallar: `menu_type` "menü değil" → fotoğraf ya da logo, menü sayılmaz; adı boş tek satır → menü okundu ama fiyat yazmıyor. Şarap ve bira listeleri kalem kalem yazılmadı; yemekler, kokteyller ve tek fiyatlı içecekler yazıldı. Yöntem etiketi "görüntüden okundu".
+- **Görüntü menüler:** görüntü olarak yayımlanmış ya da metni okunamayan menüleri bir kişi okur; değerler **gözden geçirme dosyasına** yazılır (`studio/destinations/thirty_a_menu_readings.csv`: `external_id, menu_url, raw_sha256, menu_type, menu_title, section, name, price_text, price, price_rule, okundu`). Her satır görüntünün SHA-256'sına bağlıdır; toplayıcı yalnız aynı SHA'lı belge gelirse okumayı kullanır (görüntü değişirse okuma kullanılmaz, menü "okunmadı" kalır). GÖREV-10'dan beri dosyada `yontem` sütunu vardır: "görüntüden okundu" ya da "elle okundu" (metni olan ama düzeni ayrıştırılamayan sayfa ve PDF'lerin bir kişi tarafından okunması; aşağıda). Kurallar: `menu_type` "menü değil" → fotoğraf ya da logo, menü sayılmaz; adı boş tek satır → menü okundu ama fiyat yazmıyor. Şarap ve bira listeleri kalem kalem yazılmadı; yemekler, kokteyller ve tek fiyatlı içecekler yazıldı. Yöntem etiketi "görüntüden okundu".
 
 ## Toplanan bilgiler
 
@@ -45,6 +46,32 @@ Saatlerin etiketi: "işletmenin sitesinde <tarih> tarihinde yazan". Sezon notlar
 - **Ana yemek sayıları:** işletmenin en kapsamlı ana öğün menüsünden hesaplanır. Sıra: akşam, yoksa öğle, yoksa **genel** (öğün belirtmeyen tek menü), yoksa brunch, yoksa kahvaltı; aynı türde birden fazla menü varsa en çok ana yemek fiyatı olan. Görev "akşam, öğle, brunch, kahvaltı" sırasını veriyordu; restoranların çoğu öğün belirtmeyen tek bir menü yayımladığı için "genel" menü öğleden sonra eklendi (karar yöneticiye bırakıldı, RAPOR.md). Ortanca, en düşük, en yüksek ve kalem sayısı okunurken hesaplanır ve hangi menüden (tür ve url) hesaplandığı gösterilir.
 - **Fiyat seviyesi (bizim sınıflamamız, öyle etiketlenir):** ana yemek ortancası $15'in altı `$`, $15–25 `$$`, $25–40 `$$$`, $40 ve üstü `$$$$` (alt sınır dahil: tam $15 `$$`). **En az 5 ana yemek fiyatı** yoksa seviye hesaplanmaz. Sitenin kendi `priceRange` değeri ayrı alandır, seviyeye karışmaz.
 
+## Fiyat seviyesi gözden geçirmesi (GÖREV-10)
+
+Amaç: seviyesi hesaplanmayan her restoranın nedenini bulmak, giderilebilen nedenleri gidermek ve hesaplanmayan her restoran için tek satırlık nedeni göstermek. Menüden okunan her değer menüde yazdığı gibidir; menüde fiyatı olmayan kaleme fiyat yazılmaz, tahmin yok.
+
+**Yeni okuma yolları (generic, `restaurant_sites.py`):**
+- **schema.org menüsü:** sayfadaki JSON-LD `Menu` → `hasMenuSection` → `hasMenuItem` → `offers.price` (Popmenu sitelerinin menüsü sayfada geç yüklenir ama `@graph` içindeki yapısal veride tamdır). Fiyatı olmayan ya da 0 olan kalem alınmaz; birden çok teklifte en düşük fiyat. Yöntem "yapısal veri".
+- **Toast sipariş sayfası verisi:** sayfadaki `__OO_STATE__` / `__APOLLO_STATE__` içindeki menüler, gruplar ve alt gruplar; birden çok fiyatta en düşük. Yöntem "platform verisi".
+- **ohbz menü sayfaları:** kalem adı ve fiyatı sayfanın erişilebilirlik etiketlerinden ("Item name:", "Price:"), bölüm başlıkları blok başlığından. Yöntem "platform verisi".
+- **Sekmeli menüler:** ARIA sekme panelleri (BentoBox vb.) ayrı menü sayılır, her biri kendi sekme adıyla türlendirilir (çocuk sekmesi çocuk menüsüdür).
+- **Çerçeveli siteler ve park edilmiş alan adları:** tek çerçeveli (frameset) ana sayfa çerçevedeki siteye geçer; park sayfası betikleri (sedo, bodis, parkingcrew vb.) "başka işletmeye ait" sayılır. Menü merkez sayfasındaki ürün sayfası, gizlilik, hediye kartı gibi bağlantılar menü sayılmaz. Belge sınırı 12.
+- **Ayrıştırıcı düzeltmeleri:** satır başındaki yıldız işareti ve ondalık virgül ("$11,00"); "Ad – açıklama" satırları; büyük-küçük harf karışık bölüm başlıkları ("TO FEAST large plates") yalnız tablo bunları tanırsa başlık sayılır; bölüm notları ("SERVED WITH A CHOICE OF ONE SIDE") kalem değildir; tek başına "MKT" satırı bir önceki başlığa fiyat yazmaz; tek başına "$" satırı atlanır. Yeni menü türleri: `catering`, `special` (özel gün menüleri; ana yemek sayısına girmez).
+
+**Sınıflama kuralları:**
+- **Ekler hiçbir zaman ana yemek değildir:** adı "add", "+", "sub", "side of", "extra", "toppings", "each additional", "upgrade", "make it", "crust available", "gluten free crust/option" gibi başlayan ya da eki anlatan kalemler yan ürün; bölüm adı ek anlatıyorsa ("Add Protein") bölümün kalemleri yan ürün.
+- İçecek adları (kahve, soda, maden suyu, fıçı bira vb.) içecek, "Kids …" adları çocuk sayılır; bu kurallar bölüm sınıfından önce gelir.
+- **$8 altı ana yemek kontrolü:** gerçek veride $8'in altındaki 87 "ana yemek" tek tek gözden geçirildi; çoğu ek, içecek ya da yan ürün çıktı. Kişinin kalem kalem kararı gözden geçirilmiş dosyaya yazılır (`studio/destinations/thirty_a_menu_item_classes.csv`: `external_id, ad, kalem, fiyat_metni, sinif, not, kontrol_tarihi`); kalem adı ve fiyat metni eşleşirse sınıf bu dosyadan gelir (dayanak `review`). Gerçekten $8'in altında olan ana yemekler (ör. taco tabakları, kruvasan sandviçler) ana yemek kalır. Etkisi RAPOR.md'de.
+- **Tapas / küçük tabak:** "tapas", "small plates", "para picar" gibi bölümler `kucuk_tabak` sınıfıdır; ana yemek bölümü olmayan tapas menüsünde seviye hesaplanmaz, yerine "küçük tabak ortancası" (bizim hesabımız) ayrı gösterilir.
+- **Sabit menü (prix fixe, tasting menu, "three course"):** `sabit_menu` sınıfı; fiyatı "sabit menü fiyatı" olarak ayrı gösterilir, ana yemek ortancasına karışmaz.
+- **Ana yemek sunmayan yerler:** kahve, tatlı, dondurma, içecek ve market yerleri gözden geçirilmiş site dosyasında işaretlenir (`ana_yemek_sunmuyor` sütunu; kısa açıklamayla); nedenleri "ana yemek sunmuyor (…)" olur.
+
+**Elle okuma:** sayfası ya da PDF'i metin olarak alınabilen ama düzeni ayrıştırılamayan menüler (fiyatın adın önünde ya da ayrı sütunda olduğu, iki sütunun karıştığı belgeler) bir kişi tarafından okunur ve `thirty_a_menu_readings.csv`'ye "elle okundu" yöntemiyle yazılır. Bağlantı: aynı belge (SHA-256) gelirse okuma doğrudan kullanılır; belge değiştiyse (HTML sayfalar her yüklemede değişir) aynı adresteki okuma, **belgenin o anki metninde her kalemin adı ve fiyatı hâlâ görünüyorsa** kullanılır (menü mesajında "doğrulandı"); bir kalem bile görünmüyorsa okuma kullanılmaz, sayfa normal ayrıştırılır ve mesajda kaç kalemin uyuşmadığı yazar.
+
+**Gözden geçirilmiş site dosyası (`thirty_a_restaurant_sites.csv`):** `menu_urls` (toplayıcının bulamadığı menü sayfaları ve belgeleri), `ana_yemek_sunmuyor`, `seviye_notu` (sitede okunan, seviyeyi engelleyen neden: "sezon için kapalı", "menüde fiyat yazmıyor", "site Cloudflare ile bu bilgisayarı engelliyor" gibi). Not kayıtları `restaurant_facts`'e `review_note` alanı olarak "gözden geçirme" yöntemiyle yazılır.
+
+**Tek satırlık neden (`level_reason`):** seviye yoksa sıra: gözden geçirme notu (ana yemek sunmuyor / sitede okunan neden) → site durumu (bulunamadı, kalıcı kapalı, sezon için kapalı, başka işletme, ulaşılamadı, yalnız sosyal medya, site yok) → tapas menüsü → "sitede menü bulunamadı" → "menü okunamadı: …" → "okunan menülerde fiyatlı ana yemek yok" → "5'ten az fiyatlı ana yemek (n)". Arayüzde seviye hücresinin altında, teslimdeki restoranlar.csv'de ayrı sütunda.
+
 ## Toplama akışı
 
 1. Dizindeki her restoranın sitesi (ya da gözden geçirilmiş site) okunur; aynı siteye istekler sıralı ve **en az 2 sn arayla**, farklı restoranlar 6 iş parçacığıyla yan yana. Bir sitenin hatası diğerlerini durdurmaz; hata o restoranın kaydına yazılır.
@@ -53,9 +80,9 @@ Saatlerin etiketi: "işletmenin sitesinde <tarih> tarihinde yazan". Sezon notlar
 4. Görüntü menüler ve metinsiz PDF'ler gözden geçirme dosyasında aynı SHA'lı okuma varsa okunur, yoksa "görüntü okunmadı" diye kaydedilir. Metni olan ama fiyat içermeyen PDF "kalem yok" kaydedilir.
 5. Bütün ham yanıtlar gzip ile, SHA-256'larıyla ve `manifest.json` ile saklanır; kayıtlar tek işlemde (atomik) yazılır, hata olursa hiçbiri yazılmaz.
 
-## Şema (v12)
+## Şema (v12; v13 eklemeleri)
 
-`restaurant_site_snapshots` (çekim başına; girdi restoran çekimi, sayılar) · `restaurant_sites` (restoran başına site durumu, kaynağı, son url, HTTP durumu, not) · `restaurant_facts` (alan, değer, ayrıntı, bağlantı, veri, kaynak url, erişim zamanı, SHA, yöntem) · `restaurant_menus` (url, biçim, tür, başlık, platform, bağlantı veren sayfa, erişim zamanı, SHA, yöntem, durum, mesaj, kalem sayısı) · `restaurant_menu_items` (bölüm, ad, fiyat metni, fiyat, fiyat kuralı, bölüm sınıfı, sınıf dayanağı, yöntem). Fiyat kuralı `market` ise fiyat boş olmak zorundadır (CHECK).
+`restaurant_site_snapshots` (çekim başına; girdi restoran çekimi, sayılar) · `restaurant_sites` (restoran başına site durumu, kaynağı, son url, HTTP durumu, not) · `restaurant_facts` (alan, değer, ayrıntı, bağlantı, veri, kaynak url, erişim zamanı, SHA, yöntem) · `restaurant_menus` (url, biçim, tür, başlık, platform, bağlantı veren sayfa, erişim zamanı, SHA, yöntem, durum, mesaj, kalem sayısı) · `restaurant_menu_items` (bölüm, ad, fiyat metni, fiyat, fiyat kuralı, bölüm sınıfı, sınıf dayanağı, yöntem). Fiyat kuralı `market` ise fiyat boş olmak zorundadır (CHECK). v13: `restaurant_facts.field` + `review_note` (erişim zamanı ve SHA yalnız bu alan için boş olabilir); menü türü + `catering`, `special`; bölüm sınıfı + `kucuk_tabak`, `sabit_menu`; sınıf dayanağı + `review`; yöntem + "elle okundu", "gözden geçirme".
 
 ## Arayüz
 
