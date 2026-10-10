@@ -499,7 +499,9 @@ def lodging_bedrooms(data, spec):
             for group, stats in (cell or {}).get("bedrooms", {}).items():
                 label = f"{name} · {window['label']} · {group} yatak odası"
                 if not stats["count"]:
-                    rows.append(missing(f"{label}: 7 gecelik toplam fiyat ortancası", "Bu oda grubunda fiyatı okunan ilan yok.", scope=name))
+                    reason = ("Bu mahallenin fiyatları şirketin kendi envanterinden; oda grubu kırılımı yalnız Book>Direct ilanları için var."
+                              if not cell["priced_count"] and cell["own"]["priced_count"] else "Bu oda grubunda fiyatı okunan ilan yok.")
+                    rows.append(missing(f"{label}: 7 gecelik toplam fiyat ortancası", reason, scope=name))
                     continue
                 rows.append(row(f"{label}: 7 gecelik toplam fiyatın ortancası", round(stats["median"]), "USD (7 gece)", scope=name, source=source,
                                 label="bizim hesabımız", sample=stats["count"], usage=USAGE["lodging_prices"], note=summary["bedroom_note"]))

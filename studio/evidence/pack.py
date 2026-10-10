@@ -81,8 +81,8 @@ def known_gaps(data):
     run, sites = B.restaurant_summary(data)
     if sites:
         coverage = sites["coverage"]
-        gaps.append(f"Restoranlar: {coverage['restaurants']} restoranın {coverage['restaurants'] - coverage['with_level']}'inde fiyat seviyesi "
-                    f"hesaplanamadı (menü yok, fiyat yok ya da 5'ten az ana yemek fiyatı).")
+        gaps.append(f"Restoranlar: fiyat seviyesi hesaplanamayan restoran {coverage['restaurants'] - coverage['with_level']} / "
+                    f"{coverage['restaurants']} (menü yok, fiyat yok ya da 5'ten az ana yemek fiyatı).")
     run = data.run("openstreetmap-daily-needs")
     if run:
         meta = run["metadata"] or {}
@@ -93,7 +93,8 @@ def known_gaps(data):
             unread = [r[0] for r in con.execute("SELECT DISTINCT chain FROM poi_chain_checks WHERE run_id=? AND outcome='okunamadi' ORDER BY chain",
                                                 (run["id"],))]
         if unread:
-            gaps.append("Bu bilgisayardan sitesi okunamayan zincir ve kurumlar (noktaları doğrulanamadı): " + ", ".join(unread) + ".")
+            gaps.append("Sitesi bu bilgisayardan okunamayan ya da kendi sitesi bulunamayan zincir ve kurumlar (noktaları doğrulanamadı): "
+                        + ", ".join(unread) + ".")
     table, _ = B.reference_rows(data)
     unverified = [r["id"] for r in table if r["durum"] == "dogrulanamadi"]
     if unverified:
@@ -201,19 +202,50 @@ def markdown(pack):
     lines += ["", f"Etiketler: {labels}. 'veri yok' satırları eksik veriyi gösterir; paketten düşürülmez.", ""]
     for section in pack["sections"]:
         lines += [f"## {section['title']}", "", f"**Soru:** {section['question']}", ""]
-        current = None
-        for evidence in section["rows"]:
-            if evidence["blok"] != current:
-                current = evidence["blok"]
-                lines += ["", f"### Veri bloğu: {current}", ""]
-            lines.append(evidence_markdown(evidence))
+        for group in block_groups(section["rows"]):
+            lines += block_markdown(group)
         lines.append("")
     lines += ["## Sayı kontrol listesi", "", "| İfade | Değer | Birim | Kanıt |", "|---|---|---|---|"]
     lines += [f"| {cell(item['ifade'])} | {cell(item['deger'])} | {cell(item['birim'])} | {item['kanit']} |" for item in pack["checklist"]]
     return "\n".join(lines) + "\n"
 
 
-def evidence_markdown(evidence):
+SHARED = ("kapsam", "etiket", "kaynak", "not", "kullanim_notu")
+SHARED_LABELS = {"kapsam": "Kapsam", "etiket": "Etiket", "kaynak": "Kaynak", "not": "Not", "kullanim_notu": "Kullanım notu"}
+
+
+def block_groups(rows):
+    """Consecutive rows of the same block; the Markdown writes what they share once (the JSON keeps every field on every row)."""
+    groups = []
+    for evidence in rows:
+        if groups and groups[-1][0]["blok"] == evidence["blok"]:
+            groups[-1].append(evidence)
+        else:
+            groups.append([evidence])
+    return groups
+
+
+def field_text(key, value):
+    return source_text(value) if key == "kaynak" else str(value)
+
+
+def block_markdown(rows):
+    present = [r for r in rows if r["durum"] == "var"]
+    shared = {}
+    if len(present) > 1:
+        for key in SHARED:
+            values = [json.dumps(r.get(key), ensure_ascii=False, sort_keys=True) for r in present]
+            if len(set(values)) == 1 and present[0].get(key):
+                shared[key] = present[0][key]
+    lines = ["", f"### Veri bloğu: {rows[0]['blok']}", ""]
+    if shared:
+        lines += [f"Bu bloktaki satırların ortak bilgisi ({len(present)} satır):"] + [f"- {SHARED_LABELS[k]}: {field_text(k, v)}" for k, v in shared.items()] + [""]
+    lines += [evidence_markdown(r, shared if r["durum"] == "var" else {}) for r in rows]
+    return lines
+
+
+def evidence_markdown(evidence, shared=None):
+    shared = shared or {}
     if evidence["durum"] == B.MISSING:
         text = f"- **{evidence['id']}** · {evidence['ifade']} — **veri yok**: {evidence['not']} · kapsam: {evidence['kapsam']}"
         return text + (f"\n  - Kullanım notu: {evidence['kullanim_notu']}" if evidence.get("kullanim_notu") else "")
@@ -223,16 +255,20 @@ def evidence_markdown(evidence):
         head += f" — **{value}{' ' + evidence['birim'] if evidence.get('birim') else ''}**"
         if evidence.get("deger_ek"):
             head += f" ({evidence['deger_ek']})"
-    parts = [head, f"  - Kapsam: {evidence['kapsam']} · Etiket: {evidence['etiket']}"
-             + (f" · Örneklem: {evidence['orneklem']}" if evidence.get("orneklem") is not None else ""),
-             f"  - Kaynak: {source_text(evidence['kaynak'])}"]
+    facts = [f"{SHARED_LABELS[k]}: {evidence[k]}" for k in ("kapsam", "etiket") if k not in shared]
+    if evidence.get("orneklem") is not None:
+        facts.append(f"Örneklem: {evidence['orneklem']}")
+    parts = [head] + ([f"  - {' · '.join(facts)}"] if facts else [])
+    if "kaynak" not in shared:
+        parts.append(f"  - Kaynak: {source_text(evidence['kaynak'])}")
     if evidence.get("ifade_en"):
         parts.append(f"  - Kaynak satırının İngilizce ifadesi: {evidence['ifade_en']}")
     if evidence.get("alinti"):
         parts.append(f"  - Kaynaktan kısa alıntı: “{evidence['alinti']}”")
-    if evidence.get("not"):
+    if evidence.get("not") and "not" not in shared:
         parts.append(f"  - Not: {evidence['not']}")
-    parts.append(f"  - Kullanım notu: {evidence['kullanim_notu']}")
+    if "kullanim_notu" not in shared:
+        parts.append(f"  - Kullanım notu: {evidence['kullanim_notu']}")
     return "\n".join(parts)
 
 
