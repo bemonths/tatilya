@@ -706,6 +706,7 @@ import {editorHtml, versionRows, fileButtons} from '../studio/web/instructions.j
 import {suffixSection} from '../studio/web/claude.js';
 import {instructionLine} from '../studio/web/videos.js';
 import {editProblems, editForm, reviewSummary, runRow as videoRunRow, videoCard as videoCardOf} from '../studio/web/videos.js';
+import {packHead} from '../studio/web/workflow.js';
 
 const titleOptions={available:true,whole_region:'30A geneli',regions:[{id:'rosemary-beach',name:'Rosemary Beach'}],families:['Genel planlama','Deneyim'],all_families:'hepsi',
   claude:{found:true,api_key_warning:null}};
@@ -735,10 +736,10 @@ test('titles are listed first; a chosen title opens its details with the evidenc
   assert.match(candidateDetail({...titleCandidate,video_id:'v1'},view),/Bu başlık seçildi/);
 });
 
-test('a video record without a template cannot produce a pack; the Claude settings section shows path, version and inherit choices', () => {
+test('a video record without a template still produces its plan pack (GÖREV-14); the Claude settings section shows path, version and inherit choices', () => {
   const video={id:'v1',title_en:'T',title_tr:'B',family:'Deneyim',region_name:'Rosemary Beach',status:'baslik_secildi',status_label:'başlık seçildi',created_at:'',template_key:null,params:{},analysis:{},packs:[]};
-  assert.match(videoCard(video),/data-video-pack="v1" disabled.*yeni şablon gerekir/s);
-  assert.match(videoCard({...video,template_key:'mahalle-rehberi',packs:[{id:'p1'}]}),/data-video-pack="v1" >.*yazar-ozeti/s);
+  assert.match(videoCard(video),/yeni şablon gerekir \(bilgi\).*data-video-pack="v1">Kanıt paketi üret.*içerik planından kurulur/s);
+  assert.match(videoCard({...video,template_key:'mahalle-rehberi',packs:[{id:'p1'}]}),/data-video-pack="v1">.*yazar-ozeti/s);
   const section=claudeSection({settings:{claude_path:'',claude_model:'',claude_effort:'',claude_model_baslik:'claude-opus-5-5',claude_effort_baslik:'high',claude_max_turns_baslik:30},
     notes:[],info:{found:true,path:'D:/programs/claude.exe',version:'2.1.284',api_key_warning:'ANTHROPIC_API_KEY uyarısı'},
     options:{models:[{value:'',label:'Claude Code varsayılanı'},{value:'claude-opus-5-5',label:'Opus 5.5'}],efforts:[{value:'',label:'Otomatik'},{value:'high',label:'Yüksek'}],
@@ -872,4 +873,12 @@ test('app.js imports every name once (a repeated import name stops the whole pag
   const repeated=names.filter((name,index)=>names.indexOf(name)!==index);
   assert.deepEqual(repeated,[]);
   assert.ok(names.includes('claudeProgressText') && names.includes('progressText'));
+});
+
+// GÖREV-14 Adım 6: the head of a video pack's writer's summary on the Veri paketi step.
+
+test('pack head: everything before the first plan section', () => {
+  const text='# Başlık — yazar özeti\n\n## Video\n\nkanca\n\n## Bilinen boşluklar\n\n- boşluk\n\n## 1. Bölüm\n\nsatırlar';
+  assert.equal(packHead(text),'# Başlık — yazar özeti\n\n## Video\n\nkanca\n\n## Bilinen boşluklar\n\n- boşluk');
+  assert.equal(packHead('# Yalnız baş'),'# Yalnız baş');
 });

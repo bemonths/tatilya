@@ -54,6 +54,13 @@ export function toolNav(tools, page) {
     <span class="nav-sub" style="display:block">${tool.state==="planned"?"Planlanan aşama":esc(tool.subtitle)}</span></span></a>`).join("");
 }
 
+/** The head of a pack's writer's summary: everything before its first section ("## 1. …"), for the Veri paketi step. */
+export function packHead(text) {
+  const value=String(text || "");
+  const end=value.search(/\n## 1\. /);
+  return (end>0?value.slice(0,end):value).trim();
+}
+
 /** The line every step screen starts with: what has to be done next and which button does it. */
 export function nextTask(step) {
   if(!step) return "";

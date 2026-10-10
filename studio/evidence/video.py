@@ -65,6 +65,9 @@ def block(video, sections):
 def evidence_line(item):
     where = f"{item['kimlik']} (paket {str(item.get('paket_id') or '—')[:8]}, {item['dosya']})"
     text = f"{where}: {item.get('ifade') or ''} — {item.get('deger_metni')}"
+    if item.get("yeni_durum") in (SAME, CHANGED) and not item.get("yeni_kimlik"):     # a plan pack holds only the plan's blocks (GÖREV-14)
+        changed = f", değeri farklı: {item.get('yeni_deger_metni')}" if item["yeni_durum"] == CHANGED else ""
+        return f"{text} · kaynak paketin güncel hâlinde {item.get('kaynak_kimlik')}{changed}; bu paketin bölümlerinde yok"
     if item.get("yeni_durum") == SAME:
         return f"{text} · bu pakette {item['yeni_kimlik']}"
     if item.get("yeni_durum") == CHANGED:
@@ -80,6 +83,21 @@ def markdown_lines(video):
              "Başlık önerisindeki kimlikler önerinin okuduğu paketlere aittir; her birinin yanında bu paketteki karşılığı yazar.", "",
              "### Kanca", "", video["kanca"].get("metin") or "—", ""]
     lines += [f"- {evidence_line(i)}" for i in video["kanca"]["kanitlar"]] or ["- —"]
+    if video.get("plan_bolumlerde"):
+        # GÖREV-14: the plan is the pack's sections; the head lists their titles only
+        lines += ["", "### İçerik planı", "", "Paketin bölümleri planın bölümleridir (aynı sırayla):", ""]
+        lines += [f"{number}. **{part['bolum']}** — {part['ne_anlatir']}" for number, part in enumerate(video["icerik_plani"], 1)]
+        lines += ["", "### Eksik veri", ""] + ([f"- {m}" for m in video["eksik_veri"]] or ["- —"])
+        notes = []
+        if video.get("yeni_sablon_gerekir"):
+            notes.append("Öneride “yeni şablon gerekir” yazıyordu; paket içerik planından kurulduğu için bu bilgi olarak kalır.")
+        if video.get("kullanici_duzenledi"):
+            notes.append("Başlığı kullanıcı seçmeden önce düzenledi.")
+        sources = video.get("kaynak_paketler") or []
+        if sources:
+            notes.append("Kaynak paketler: " + "; ".join(f"{s['dosya']} → {s['sablon']} (paket {s['paket_id'][:8]}"
+                                                          f"{', bu üretimde yeniden üretildi' if s.get('uretildi') else ''})" for s in sources) + ".")
+        return lines + ([""] + [f"- {n}" for n in notes] if notes else []) + [""]
     lines += ["", "### İçerik planı", ""]
     for number, part in enumerate(video["icerik_plani"], 1):
         lines += [f"{number}. **{part['bolum']}** — {part['ne_anlatir']}"]

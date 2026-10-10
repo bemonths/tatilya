@@ -151,11 +151,11 @@ export function videoCard(video) {
   return `<article class="video-card"><div class="video-head"><div><strong>${esc(video.title_en)}</strong><small>${esc(video.title_tr)}</small></div>
     <span><span class="tag ${video.status==="paket_hazir"?"green":""}">${esc(video.status_label || video.status)}</span>${video.user_edited?' <span class="tag warm">kullanıcı düzenledi</span>':""}</span></div>
     ${video.user_edited?`<p class="muted">Önerilen başlık: ${esc(video.proposed_title_en)} · ${esc(video.proposed_title_tr)}</p>`:""}
-    <p class="muted">${esc(video.region_name)} · ${esc(video.family)} · ${esc(date(video.created_at))} · ${video.template_key?`şablon <code>${esc(video.template_key)}</code>`:"yeni şablon gerekir"}</p>
+    <p class="muted">${esc(video.region_name)} · ${esc(video.family)} · ${esc(date(video.created_at))} · ${video.template_key?`şablon <code>${esc(video.template_key)}</code>`:"yeni şablon gerekir (bilgi)"}</p>
     <details><summary>Analiz</summary><p><strong>İzleyicinin sorusu:</strong> ${esc(a.izleyici_sorusu)}</p><p><strong>Neden önerildi:</strong> ${esc(a.neden_onerildi)}</p>
       <p><strong>Kanca:</strong> ${esc(a.kanca?.metin)}</p><ol>${(a.icerik_plani||[]).map(p=>`<li>${esc(p.bolum)} — ${esc(p.ne_anlatir)}</li>`).join("")}</ol></details>
-    <div class="video-actions"><button data-video-pack="${esc(video.id)}" ${video.template_key?"":"disabled"}>Kanıt paketi üret</button>
-      ${video.template_key?"":'<small class="muted">Bu başlık için yeni şablon gerekir; paket üretilemez.</small>'}
+    <div class="video-actions"><button data-video-pack="${esc(video.id)}">Kanıt paketi üret</button>
+      <small class="muted">Paket seçilen başlığın içerik planından kurulur.</small>
       ${pack?`<a class="source-link" href="/api/${destinationPath(`evidence-packs/${pack.id}/yazar-ozeti`)}" download>Yazar özeti ↓</a><a class="source-link" href="/api/${destinationPath(`evidence-packs/${pack.id}/markdown`)}" download>Tam paket ↓</a>`:""}</div>
   </article>`;
 }

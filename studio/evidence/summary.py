@@ -394,8 +394,10 @@ def render(pack):
     lines += ["", "## Kısaltmalar", "", "[KG] kaynak gerçeği · [BH] bizim hesabımız · [T] türetilmiş · [Y] yaklaşık · \"—\" veri yok · "
               "\"*\" küçük örnek · (n) örnek büyüklüğü (tablonun başında ne saydığı yazar) · boş hücre: tam pakette o hücre için satır yok. "
               "Tablolarda her satırın sonunda o satırın tam paketteki K kimlikleri yazar."]
-    for section in pack["sections"]:
-        lines += ["", f"## {section['title']}", "", f"**Soru:** {section['question']}"]
+    from .plan import plan_lines
+    for number, section in enumerate(pack["sections"], 1):
+        title = f"{number}. {section['title']}" if section.get("plan") is not None else section["title"]
+        lines += ["", f"## {title}", "", f"**Soru:** {section['question']}", *plan_lines(section, summary=True)]
         for group in groups_of(section["rows"]):
             lines += block_lines(group)
     lines += ["", "## Kaynak listesi", "", "Her kaynak bir kez; satırın sonunda taşıdığı K kimlikleri.", ""] + sources(pack)

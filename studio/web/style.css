@@ -33,3 +33,4 @@
 
 /* GÖREV-14: own title, evaluation summary, editing a title before choosing it */
 .review-summary{padding:4px 19px 12px;font-size:12px}.review-summary h3{font-size:12px;margin:8px 0}.review-summary p{margin:0 0 6px;color:#c0cfda}.title-edit{border:1px solid #f5965e44;border-radius:8px;padding:12px 14px;margin-top:10px;background:#f5965e08}.title-edit label{display:block;font-size:11px;color:#baccd8;margin-bottom:10px}.title-edit input{margin-top:6px}.decision-actions [hidden]{display:none!important}
+.pack-head .pack-head-text{margin:0 19px 19px;max-height:520px;overflow:auto;white-space:pre-wrap;font-size:11px}

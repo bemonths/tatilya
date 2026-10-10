@@ -291,8 +291,12 @@ def markdown(pack):
               f"Şablonun oynak konuları ({', '.join(t.get('volatile_topics') or []) or '—'}) ve çelişkili bütün satırlar:", ""] + recheck_lines(pack)
     labels = ", ".join(B.LABELS)
     lines += ["", f"Etiketler: {labels}. 'veri yok' satırları eksik veriyi gösterir; paketten düşürülmez.", ""]
-    for section in pack["sections"]:
-        lines += [f"## {section['title']}", "", f"**Soru:** {section['question']}", ""]
+    if header.get("kurulus"):
+        lines += [f"Paketin kuruluşu: {header['kurulus']}", ""]
+    from .plan import plan_lines
+    for number, section in enumerate(pack["sections"], 1):
+        title = f"{number}. {section['title']}" if section.get("plan") is not None else section["title"]
+        lines += [f"## {title}", "", f"**Soru:** {section['question']}", *plan_lines(section), ""]
         for group in block_groups(section["rows"]):
             lines += block_markdown(group)
         lines.append("")
@@ -343,7 +347,7 @@ def evidence_markdown(evidence, shared=None):
         text = f"- **{evidence['id']}** · {evidence['ifade']} — **veri yok**: {evidence['not']} · kapsam: {evidence['kapsam']}"
         return text + (f"\n  - Kullanım notu: {evidence['kullanim_notu']}" if evidence.get("kullanim_notu") else "")
     value = value_text(evidence["deger"])
-    head = f"- **{evidence['id']}** · {evidence['ifade']}"
+    head = f"- **{evidence['id']}**{' · **plan**' if evidence.get('plan_satiri') else ''} · {evidence['ifade']}"
     if value not in (None, ""):
         head += f" — **{value}{' ' + evidence['birim'] if evidence.get('birim') else ''}**"
         if evidence.get("deger_ek"):
@@ -366,6 +370,9 @@ def evidence_markdown(evidence, shared=None):
         parts.append(f"  - Not: {evidence['not']}")
     if "kullanim_notu" not in shared:
         parts.append(f"  - Kullanım notu: {evidence['kullanim_notu']}")
+    if evidence.get("kaynak_ozet"):
+        origin = evidence["kaynak_ozet"]
+        parts.append(f"  - Kaynak özet: {origin['dosya']} {origin['kimlik']} (paket {origin['paket_id'][:8]})")
     return "\n".join(parts)
 
 

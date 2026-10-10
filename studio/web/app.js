@@ -13,7 +13,7 @@ import {BeachScreen} from "./collection.js";
 import {refreshSection} from "./refresh.js";
 import {EvidenceScreen} from "./evidence.js";
 import {VideosScreen, videoCard} from "./videos.js";
-import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask} from "./workflow.js";
+import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask, packHead} from "./workflow.js";
 import {renderClaudeSettings, renderSuffixSettings} from "./claude.js";
 import {UsagePanel, claudeBar, claudeProgress, progressText as claudeProgressText} from "./usage.js";
 import {InstructionEditor} from "./instructions.js";
@@ -128,6 +128,14 @@ async function renderPackStep(step) {
     if(ticket!==packSequence) return;
     const video=videos.find(v=>v.id===state.videoId);
     body.innerHTML=video?`<section class="library"><div class="library-title"><h2>Seçili video</h2><small>${esc(video.region_name)}</small></div><div class="video-list">${videoCard(video)}</div></section><div id="pack-head-slot"></div>`:'<p class="muted">Seçili video bulunamadı.</p>';
+    const pack=video?.packs?.[0];
+    if(pack) {
+      fetch(`/api/${destinationPath(`evidence-packs/${encodeURIComponent(pack.id)}/yazar-ozeti`)}`).then(r=>r.ok?r.text():Promise.reject(new Error("Paket okunamadı."))).then(text=>{
+        if(ticket!==packSequence) return;
+        const slot=$("#pack-head-slot");
+        if(slot) slot.innerHTML=`<section class="library pack-head"><div class="library-title"><h2>Paketin başı</h2><small>yazar özeti · paket ${esc(pack.id.slice(0,8))} · ${esc(date(pack.created_at))}</small></div><pre class="path pack-head-text">${esc(packHead(text))}</pre></section>`;
+      }).catch(error=>{const slot=$("#pack-head-slot");if(slot) slot.textContent=error.message;});
+    }
     body.querySelectorAll("[data-video-pack]").forEach(button=>button.addEventListener("click",async()=>{
       button.disabled=true;
       try {

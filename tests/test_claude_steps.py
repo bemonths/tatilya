@@ -267,8 +267,9 @@ def test_a_videos_evidence_pack_starts_with_its_analysis_and_maps_the_cited_rows
     general = start(app)
     no_template = next(c for c in general["candidates"] if c["sablon"] is None)
     other = app.post(f"/api/claude/runs/{general['id']}/select", json={"aday": no_template["sira"]}).json()
-    refused = app.post(f"/api/videos/{other['id']}/evidence-pack")
-    assert refused.status_code == 409 and "yeni bir şablon gerekir" in refused.json()["detail"]
+    made = app.post(f"/api/videos/{other['id']}/evidence-pack")             # GÖREV-14: "yeni şablon gerekir" no longer stops the pack
+    assert made.status_code == 201 and made.json()["template_key"] == "video-plani"
+    assert "yeni şablon gerekir” yazıyordu" in app.get(f"/api/evidence-packs/{made.json()['id']}/markdown").text
 
 
 def test_cited_rows_are_matched_by_source_row_and_value():

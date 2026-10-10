@@ -14,6 +14,7 @@ import csv
 import re
 import statistics
 from collections import Counter
+from datetime import date
 
 from ..destinations import beach_neighborhoods as beach_mapping
 from ..destinations import references as reference_table
@@ -118,6 +119,19 @@ def number(value, digits=0):
 def month_short(month_key):
     """'2027-01' -> 'Oca 2027'."""
     return f"{MONTHS_SHORT[int(month_key[5:7]) - 1]} {month_key[:4]}"
+
+
+def window_column(window):
+    """The column of a stay window with its dates (GÖREV-14): 'Mar 2027 (13–20)'; a stay over a month end names both months
+    ('May 2027 (29 May–5 Haz)'). Two windows of one month are two columns. Without dates, the month alone."""
+    checkin, checkout = window.get("checkin"), window.get("checkout")
+    head = month_short(window.get("month") or (checkin or "")[:7])
+    if not checkin or not checkout:
+        return head
+    start, end = date.fromisoformat(checkin[:10]), date.fromisoformat(checkout[:10])
+    if (start.year, start.month) == (end.year, end.month):
+        return f"{head} ({start.day}–{end.day})"
+    return f"{head} ({start.day} {MONTHS_SHORT[start.month - 1]}–{end.day} {MONTHS_SHORT[end.month - 1]})"
 
 
 def source_of(run, name=None, url=None, document_date=None, sha=None):
@@ -537,7 +551,7 @@ def lodging_inventory(data, spec):
         for window in windows_of(summary, spec):
             cell = cells.get((region, window["window_key"]))
             label = f"{name} · {window['label']}"
-            short = month_short(window["month"])
+            short = window_column(window)
             table = place(f"Görünen ilan sayısı ({searched} araması)", name, short)
             if not cell or cell["status"] != "searched":
                 rows.append(missing(f"{label}: görünen ilan sayısı", "Bu pencere için arama yapılamadı.", scope=name, table=table))
@@ -590,7 +604,7 @@ def lodging_prices(data, spec):
         for window in windows_of(summary, spec):
             cell = cells.get((region, window["window_key"]))
             label = f"{name} · {window['label']}"
-            table = place(title, row_label, month_short(window["month"]))
+            table = place(title, row_label, window_column(window))
             stats = cell if cell and cell["priced_count"] else (cell or {}).get("own") if cell and cell["own"]["priced_count"] else None
             if not stats:
                 rows.append(missing(f"{label}: 7 gecelik toplam fiyat ortancası", "Bu hücrede fiyatı okunan ilan yok.", scope=name,
@@ -617,7 +631,7 @@ def lodging_bedrooms(data, spec):
         name = data.names.get(region, region)
         for window in windows_of(summary, spec):
             cell = cells.get((region, window["window_key"]))
-            short = month_short(window["month"])
+            short = window_column(window)
             for group, stats in (cell or {}).get("bedrooms", {}).items():
                 label = f"{name} · {window['label']} · {group} yatak odası"
                 table = place(title, name, f"{short} · {group} oda")
@@ -646,6 +660,25 @@ def restaurant_summary(data):
     return run, data.cached("restaurants", compute)
 
 
+def overlap_note(summary, region_ids):
+    """Why the neighborhood rows add up to more than the restaurants (GÖREV-14): a restaurant the directory ties to several neighborhoods is
+    counted in each of them. Computed from the run; None when nothing overlaps."""
+    counts = {r["region_id"]: r["restaurant_count"] for r in summary["regions"]}
+    shown = [r for r in region_ids if counts.get(r)]
+    members = [item for item in summary["restaurants"] if set(item["regions"]) & set(shown)]
+    if len(shown) > 1:
+        total, multi = sum(counts[r] for r in shown), sum(1 for item in members if len(set(item["regions"]) & set(shown)) > 1)
+        if total > len(members):
+            return (f"Mahalle satırlarının toplamı ({total}) tekil restoran sayısından ({len(members)}) büyüktür: {multi} restoran dizinde birden "
+                    "çok mahalleye bağlı olduğu için bağlı olduğu her mahallede sayılır.")
+        return None
+    others = sum(1 for item in members if len(item["regions"]) > 1)
+    if shown and others:
+        return (f"Bu mahallenin {len(members)} restoranından {others} tanesi dizinde başka bir mahalleye de bağlı; o mahallenin satırında da "
+                "sayılır (mahalle satırları toplanınca restoran sayısını aşar).")
+    return None
+
+
 RESERVATION = {"online": "çevrimiçi rezervasyon bağlantısı var", "phone": "telefonla rezervasyon", "not_taken": "rezervasyon almıyor",
                "unknown": "sitede bilgi yok"}
 LEVELS = ("$", "$$", "$$$", "$$$$")
@@ -658,6 +691,7 @@ def restaurants(data, spec):
     source = source_of(run)
     regions = {r["region_id"]: r for r in summary["regions"]}
     overview = "Mahalle özeti"
+    overlap = overlap_note(summary, data.region_ids(spec))
     rows = []
     for region in data.region_ids(spec):
         name = data.names.get(region, region)
@@ -667,7 +701,7 @@ def restaurants(data, spec):
                                 table=place(overview, name, "Restoran")))
             continue
         rows.append(row(f"{name}: Visit South Walton restoran dizininde bu mahalleye bağlı restoran sayısı", info["restaurant_count"], "restoran",
-                        scope=name, source=source, usage=USAGE["restaurants"], table=place(overview, name, "Restoran")))
+                        scope=name, source=source, usage=USAGE["restaurants"], note=overlap, table=place(overview, name, "Restoran")))
         levels = info["levels"]
         rows.append(row(f"{name}: fiyat seviyesi hesaplanabilen restoran sayısı", sum(levels.values()), "restoran", scope=name, source=source,
                         label="bizim hesabımız", usage=USAGE["restaurants"], note=summary["level_note"], table=place(overview, name, "Seviyeli")))

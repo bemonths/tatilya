@@ -18,7 +18,8 @@ from pathlib import Path
 
 from ..database import Conflict
 from ..destinations import PROFILES
-from ..evidence import PackError, generate, store as store_pack
+from ..evidence import PackError, store as store_pack
+from ..evidence import plan as plan_pack
 from . import claude_info, instructions, runner, settings as claude_settings, steps, store, usage
 from . import title  # noqa: F401  (registers the title step)
 from . import title_review  # noqa: F401  (registers the evaluation step, GÖREV-14)
@@ -492,15 +493,14 @@ class ClaudeService:
         return store.videos(self.db, destination_id)
 
     def video_pack(self, video_id):
-        """The evidence pack of a video record: the record's template and parameters, the analysis at its head, linked to the video."""
+        """The evidence pack of a video record (GÖREV-14): built from the chosen candidate's content plan, its sections in the plan's order,
+        each with the rows the plan cites and their whole blocks; the analysis at its head; linked to the video. "Yeni şablon gerekir"
+        does not stop it."""
         video = store.video(self.db, video_id)
         if video is None:
             raise KeyError(video_id)
-        if not video["template_key"]:
-            raise Conflict("Bu başlık için yeni bir şablon gerekir; mevcut şablonlarla kanıt paketi kurulamaz. Paket üretilmedi.")
         try:
-            pack = generate(self.db, video["destination_id"], PROFILES.get(video["destination_id"]), video["template_key"], video["params"],
-                            video=video)
+            pack = plan_pack.build(self.db, video["destination_id"], PROFILES.get(video["destination_id"]), video)
         except PackError as exc:
             raise Conflict(str(exc)) from exc
         record = store_pack(self.db, pack, video_id=video["id"])
