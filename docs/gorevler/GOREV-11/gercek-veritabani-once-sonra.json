@@ -1,0 +1,131 @@
+{
+ "tam_yedek": {
+  "stamp": "20261010-1548",
+  "target": "work\\yedek\\20261010-1548",
+  "files": 45396,
+  "bytes": 1268402086,
+  "copy_matches": true,
+  "source_unchanged": true
+ },
+ "migration_denemesi_kopyada": {
+  "once": 13,
+  "sonra": 14,
+  "integrity_check": [
+   "ok"
+  ],
+  "foreign_key_check": [],
+  "degisen_tablolar": {
+   "destination_poi_categories": [
+    5,
+    7
+   ],
+   "evidence_packs": [
+    null,
+    0
+   ]
+  }
+ },
+ "gercek_veritabani": {
+  "once": {
+   "user_version": 13,
+   "integrity_check": [
+    "ok"
+   ],
+   "foreign_key_check": []
+  },
+  "sonra": {
+   "user_version": 14,
+   "integrity_check": [
+    "ok"
+   ],
+   "foreign_key_check": []
+  },
+  "degisen_tablolar": {
+   "destination_poi_categories": [
+    5,
+    7
+   ],
+   "evidence_packs": [
+    null,
+    2
+   ],
+   "jobs": [
+    31,
+    33
+   ],
+   "poi_chain_checks": [
+    10,
+    31
+   ],
+   "poi_points": [
+    44,
+    91
+   ],
+   "poi_snapshots": [
+    1,
+    2
+   ],
+   "source_runs": [
+    28,
+    30
+   ]
+  },
+  "yeni_cekimler": [
+   [
+    "b8c7bfa54cb442f7bbcca3f157e08399",
+    "openstreetmap-daily-needs",
+    "failed",
+    0,
+    0,
+    "2026-10-10T12:50:10.811+00:00",
+    null
+   ],
+   [
+    "080b04f1048c42388764fbe901543528",
+    "openstreetmap-daily-needs",
+    "done",
+    47,
+    0,
+    "2026-10-10T12:51:25.066+00:00",
+    "2026-10-10T12:49:51Z"
+   ]
+  ]
+ },
+ "gunluk_ihtiyac_cekimi": "080b04f1048c42388764fbe901543528",
+ "paketler": {
+  "kanit-paketi-ilk-video": {
+   "id": "d16d963335864ac9b5124b89be33e9ea",
+   "destination_id": "30a",
+   "template_key": "ilk-video",
+   "template_version": "1",
+   "title": "30A'ya ilk kez gidecekler için tam karar rehberi",
+   "params": "{}",
+   "created_at": "2026-10-10T12:51:35+00:00",
+   "markdown_file": "evidence/20261010-125135-ilk-video-d16d9633.md",
+   "markdown_sha256": "481a5dc2ee0c15257a7d84d1b3e3bdf0bf7a196c2c4b69d13f6b0d95d2fd7770",
+   "json_file": "evidence/20261010-125135-ilk-video-d16d9633.json",
+   "json_sha256": "d23ef012a26274f8eef1a247e2c447c7960539608ca0fe167d53d9a009115f9d",
+   "section_count": 11,
+   "evidence_count": 732,
+   "number_count": 3003,
+   "missing_count": 10
+  },
+  "kanit-paketi-rosemary-beach": {
+   "id": "60b1ce8396474b62b199734020c24bef",
+   "destination_id": "30a",
+   "template_key": "mahalle-rehberi",
+   "template_version": "1",
+   "title": "Mahalle rehberi",
+   "params": "{\"mahalle\": \"rosemary-beach\"}",
+   "created_at": "2026-10-10T12:51:37+00:00",
+   "markdown_file": "evidence/20261010-125137-mahalle-rehberi-rosemary-beach-60b1ce83.md",
+   "markdown_sha256": "13a8571dd6cf9c16feac53a39184a73dab18bbf773dda37639d7907214f3acae",
+   "json_file": "evidence/20261010-125137-mahalle-rehberi-rosemary-beach-60b1ce83.json",
+   "json_sha256": "05e0d73d632e9e0100c1007234792c9c450cca5402cf46dfbc939f72fa64bc51",
+   "section_count": 8,
+   "evidence_count": 174,
+   "number_count": 556,
+   "missing_count": 0
+  }
+ }
+}

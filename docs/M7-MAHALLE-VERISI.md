@@ -154,6 +154,7 @@ Yeni yöntemler hiçbir resmî eşlemede farklı sonuç vermedi. Zincirdeki tek 
 - "Resmî rehber" eşlemeleri kaynak gösterilerek söylenebilir (Visit South Walton park ve ulaşım rehberi, 2023-05-04).
 - "İlçe alt bölüm verisi" eşlemeleri kaynak gösterilerek söylenebilir: "Walton County subdivision verisine göre …".
 - "İlçe alt bölüm verisi (bitişik)" eşlemeleri kaynak gösterilerek söylenebilir: "Walton County subdivision verisine göre, erişimin bitiştiği alt bölüm …".
+- İlçe erişim listesindeki olanaklar (ADA erişimi, plaj tekerlekli sandalyesi) listenin söylediği kadarıyla ve liste anılarak söylenir; listede olmayan bir olanak "yok" anlamına gelmez (GÖREV-11, kanıt paketi).
 - "Komşu erişimlerle tutarlı" ve "program türetimi" eşlemeleri yalnız yaklaşık konum bilgisidir ("Seagrove civarında" gibi); kesin mahalle veya mahalle başına erişim sayısı iddiası yapılmaz.
 
 ### Yeniden üretim

@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.12.0 -> fdd59f6d417d7ba345de61e8931207b3791bce25
-main -> fdd59f6d417d7ba345de61e8931207b3791bce25
-app 0.12.0
-schema 12
+tag v0.13.0 -> 4187c1cb1b4b07650bb0c34b2122ec6ec9f20f6c
+main -> 4187c1cb1b4b07650bb0c34b2122ec6ec9f20f6c
+app 0.13.0
+schema 13
 ```
+
+10 Ekim 2026'da GÖREV-11 Adım 1 ile main `4187c1c`'ye (GÖREV-10) fast-forward edildi ve bu commit'e açıklamalı `v0.13.0` etiketi konuldu ("v0.13.0 — aylık konaklama fiyatları, güncelleme göstergesi, günlük ihtiyaç ölçüleri ve restoran gözden geçirmesi"). Görev dalı CI (38018479836), main CI (38048064609) ve etiket CI (38048065961) başarılı.
 
 9 Ekim 2026'da GÖREV-10 Adım 1 ile main `fdd59f6`'ya (GÖREV-09) fast-forward edildi ve bu commit'e açıklamalı `v0.12.0` etiketi konuldu ("v0.12.0 — konaklama fiyat kapsaması, gerçek tarayıcı kurulumu ve restoran bilgileri"). main CI (37919592454) ve etiket CI (37919601312): success.
 
@@ -24,22 +26,20 @@ schema 12
 ## Aktif branch
 
 ```text
-gorev-10-aylik-gunluk
-app 0.13.0
-schema 13
+gorev-11-kanit-paketi
+app 0.14.0
+schema 14
 ```
 
 Bu dal:
-- restoran fiyat seviyesini gözden geçirir: yeni yapısal menü okuyucuları (schema.org, Toast, ohbz, SinglePlatform, sekmeler, gömülü menüler), ek/içecek/çocuk kuralları, $8 altı kalem incelemesi, elle ve görüntüden okumalar, küçük tabak ve sabit menü, seviyesi olmayan her restorana tek satırlık neden (M12),
-- tarayıcıyı yalnız engel gösteren alan adı için açar (kullanıcı kararı, 9 Ekim 2026; CLAUDE.md, CALISMA_MANTIGI §4),
-- konaklama ve kiralama fiyatlarını aylık pencere kuralıyla sorar; mevsim grupları ve aynı hafta karşılaştırması okuma anında (M11),
-- ana ekranda "Güncelleme zamanı gelenler" bölümü ve "Zamanı gelenleri başlat" düğmesi (zamanlanmış görev yok),
-- OpenStreetMap günlük ihtiyaç noktaları ve ilanlardan kuş uçuşu uzaklıklar (M13),
-- gerçek veride çalıştı (9 Ekim 2026); main'e alınmadı, karar yöneticinin.
+- kanıt paketini ekler: destinasyon şablonları (`ilk-video`, `mahalle-rehberi`), yeniden kullanılabilir veri blokları, her satırda kaynak, etiket ve kullanım notu, "veri yok" satırları, bilinen boşluklar, sayı kontrol listesi; Markdown + JSON `data/evidence/` altında SHA-256'lı; "Kanıt paketi" ekranı (M14),
+- günlük ihtiyaçta büyük süpermarket / yerel market ayrımı, yalnız resmî kaynakla doğrulanan acil servis ve acil bakım, eczane zinciri kontrolü (M13),
+- referans tablosuna 47 satır (plaj erişimi hukuku, erişilebilirlik, ziyaretçi kökeni ve okul tatilleri, etkinlikler, tarihçe) ve Türkçe ifadeler; FDOT trafik tablosu (M9),
+- gerçek veride çalıştı (10 Ekim 2026); main'e alınmadı, karar yöneticinin.
 
 Test:
-- 692 Python
-- 57 frontend
+- 716 Python
+- 59 frontend
 
 ---
 
@@ -354,6 +354,21 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 - Konaklama: aylık pencere kuralı (12 ay, ayın 15'ini içeren hafta); Book>Direct araması tutarsız toplamda 3 kez yeniden okunuyor (ilk aylık çekim bu yüzden bir kez durdu). Konaklama ve kiralama fiyatları ilk kez 12 aylık pencereyle alındı (düğmeyle toplu çalıştırma, 10 Ekim 2026): Book>Direct 2.389 ilan (63 dk, 1.655 istek); kiralama şirketleri 21.129 istek, 7 sa 42 dk, 1.131 ilan şirket sitesinde bulundu, 1.080 ilana fiyat, Alys Beach kendi envanteri 73 ev (hepsi fiyatlı); Oversee tamamlandı (4 yeni adres eşlemesi); 360blue hâlâ engelli.
 - Günlük ihtiyaç: OpenStreetMap'ten 43 nokta + zincirin sitesinden 1 (Target Pier Park); Publix, Winn-Dixie ve The Fresh Market'in siteleri bu bilgisayardan liste vermedi.
 - v12 → v13 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261009-1851/`), v12 → v13, restoran dizini, işletme siteleri, OpenStreetMap; uygulama yeniden açılıp "Zamanı gelenleri başlat" düğmesiyle konaklama ve kiralama şirketi fiyatları (uygulamanın yedekleri `data/backups/toplu-*`). Sayılar `docs/gorevler/GOREV-10/RAPOR.md`.
+
+---
+
+## v0.13.0 — aylık konaklama fiyatları, güncelleme göstergesi, günlük ihtiyaç ölçüleri ve restoran gözden geçirmesi
+
+10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.13.0` → `4187c1c`). İçerik yukarıdaki GÖREV-10 bölümünde.
+
+## GÖREV-11 — kanıt paketi, günlük ihtiyaçta resmî acil sağlık, referans tablosu genişlemesi (dal)
+
+Dal: `gorev-11-kanit-paketi`, uygulama 0.14.0, şema 14.
+
+- Kanıt paketi: iki şablon; gerçek veride ilk video paketi 11 bölüm, 732 kanıt satırı, 3.003 sayı, 10 "veri yok" satırı; Rosemary Beach paketi 8 bölüm, 174 satır, 556 sayı.
+- Günlük ihtiyaç: büyük süpermarket / yerel market; acil servis ve acil bakım yalnız resmî kaynaklı (Ascension Sacred Heart, Emerald Coast Urgent Care); HCA Florida ve CVS bu bilgisayardan okunamadı (konum engeli); Walgreens'in bölgede mağazası yok.
+- Referans tablosu 152 satır; plaj erişimi hukukunun bugünkü durumu: 2025'te 163.035 kaldırıldı, 18 Şubat 2026'da temyiz mahkemesi 2024 kararını hükümsüz saydı, ilçe 2017 kararının yürürlükte olmadığını söyledi; "yeni yasa imzalandı, özel plaj kalmadı" iddiasının ikinci yarısı doğrulanamadı.
+- v13 → v14 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261010-1548/`), v13 → v14, günlük ihtiyaç toplayıcısı, referans tablosu, iki kanıt paketi; `integrity_check` ok, `foreign_key_check` boş.
 
 ---
 

@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.13.0 (geliştirme dalı `gorev-10-aylik-gunluk`) — aylık konaklama fiyatları, güncelleme zamanı göstergesi, günlük ihtiyaç ölçüleri ve restoran fiyat seviyesi gözden geçirmesi** · son stable etiket: v0.12.0 (konaklama fiyat kapsaması ve restoranların kendi sitelerinden bilgiler). Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
+30A veri ve içerik üretim uygulaması · **v0.14.0 (geliştirme dalı `gorev-11-kanit-paketi`) — kanıt paketi, günlük ihtiyaçta resmî kaynaklı acil sağlık ve büyük süpermarket ayrımı, referans tablosunda plaj erişimi hukuku, erişilebilirlik, okul tatilleri, etkinlikler ve trafik** · son stable etiket: v0.13.0 (aylık konaklama fiyatları, güncelleme göstergesi, günlük ihtiyaç ölçüleri ve restoran gözden geçirmesi). Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
 
 ## Açılış
 
@@ -47,6 +47,8 @@ v0.1–v0.12 veritabanı açılırken önce `data/backups/` içine SQLite yedeğ
 - [Konaklama profili: Book>Direct tarihli arama anlık görüntüleri](docs/M10-KONAKLAMA-PROFILI.md)
 - [Konaklama fiyatları: kiralama şirketlerinin kendi siteleri](docs/M11-KONAKLAMA-FIYATLARI.md)
 - [Restoran bilgileri: işletmelerin kendi siteleri](docs/M12-RESTORAN-BILGILERI.md)
+- [Günlük ihtiyaç ve arabasız tatil ölçüleri](docs/M13-GUNLUK-IHTIYAC.md)
+- [Kanıt paketi](docs/M14-KANIT-PAKETI.md)
 
 ## Geliştirme
 
@@ -137,6 +139,12 @@ Book>Direct konaklama aramaları ve kiralama şirketi fiyatları artık sabit be
 
 **Veri toplama → Mahalleler → Günlük ihtiyaç noktalarını topla**, OpenStreetMap'e (Overpass API) tek küçük bir sorgu gönderir: süpermarket ve market, küçük market, eczane, acil sağlık ve bisiklet kiralama noktaları. Süpermarketler zincirlerin kendi mağaza bulucularıyla elle karşılaştırılır; OpenStreetMap'te olmayan açık mağaza "zincirin kendi sitesi" kaynağıyla eklenir. Mahalleler sekmesindeki tabloda, son konaklama çekimindeki ilanlardan her kategorinin en yakın noktasına ve ilçenin listesindeki en yakın halka açık plaj erişimine **kuş uçuşu** uzaklığın mahalle ortancası ve 1 mil içinde kalan ilan payı görünür (yol üzerinden değil; "yürüme mesafesi" denmez). © OpenStreetMap katkıcıları, ODbL. Ayrıntılar: [M13](docs/M13-GUNLUK-IHTIYAC.md).
 
+v0.14.0 (GÖREV-11): süpermarketler **büyük süpermarket** (Publix, Walmart, Winn-Dixie, Aldi, Target, The Fresh Market, Whole Foods, Trader Joe's) ve **yerel ve gurme market** diye ayrı ölçülür; **acil servis** ve **acil bakım (urgent care)** yalnız hastane sistemlerinin ve acil bakım zincirlerinin kendi sitelerinde doğrulanan noktaları sayar (OpenStreetMap'te olup doğrulanamayan nokta ölçüye girmez, tabloda gösterilir). Eczane zincirleri (CVS, Walgreens) de kontrol edildi.
+
 ## Restoran fiyat seviyesi gözden geçirmesi · v0.13.0
 
 Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü verisi (schema.org, Toast, ohbz), sekmeli menüler ve elle okunan menüler eklendi; ekler, içecekler ve çocuk kalemleri ana yemek sayılmaz; tapas menülerinde küçük tabak ortancası, sabit menülerde "sabit menü fiyatı" ayrı gösterilir; kahve, tatlı ve dondurma yerleri "ana yemek sunmuyor" diye işaretlenir. Seviyesi olmayan her restoranın yanında tek satırlık nedeni yazar. Ayrıntılar: [M12](docs/M12-RESTORAN-BILGILERI.md).
+
+## Kanıt paketi · v0.14.0
+
+**Kanıt paketi** ekranında (İçerik atölyesi) bir şablon seçilir, gerekiyorsa mahalle verilir ve "Paketi üret" ile paket hazırlanır. Paket, her kaynağın son başarılı çekiminden ve referans tablosundan, videonun sorusuna göre bölümlere ayrılmış kanıt satırlarını toplar: her satırda Türkçe ifade, ABD birimleriyle değer (°F yanında °C), kapsam, kaynak, etiket (kaynak gerçeği, bizim hesabımız, türetilmiş, yaklaşık), örneklem ve verinin kullanım notu. Eksik veri "veri yok" diye yazılır; başlıkta kaynakların son çekimi ve bilinen boşluklar, sonda paketteki her sayının listesi (makaledeki sayılar buna karşı kontrol edilir). Paket yorum ve tavsiye içermez. Markdown ve JSON dosyaları tarihli ve SHA-256'lı olarak veri klasörüne (`data/evidence/`) kaydedilir ve ekrandan indirilir. 30A şablonları: "30A'ya ilk kez gidecekler için tam karar rehberi" ve "Mahalle rehberi". Ayrıntılar: [M14](docs/M14-KANIT-PAKETI.md).

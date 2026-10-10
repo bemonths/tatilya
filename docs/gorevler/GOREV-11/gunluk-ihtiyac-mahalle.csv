@@ -1,0 +1,20 @@
+﻿# OpenStreetMap'e göre, kuş uçuşu mesafe (yol üzerinden hesaplanmadı; 'yürüme mesafesi' denmez). Mahalle, ilanın Book>Direct konum filtresinden gelir. Ortanca ve 1 mil içindeki ilan payı bizim hesabımızdır.
+# Plaj erişimi ölçüsü yalnız ilçenin halka açık erişim listesine göredir; Seaside, WaterColor, Alys Beach, Rosemary Beach gibi toplulukların kendi misafirlerine açık özel erişimleri dahil değildir.
+# © OpenStreetMap katkıcıları, ODbL
+# Çekim 080b04f1048c42388764fbe901543528 · OpenStreetMap verisi 2026-10-10T12:49:51Z · konaklama çekimi 5b5d0115f73f4edda3ef7003dfb99325 (2026-10-09) · koordinatı olmayan 0 ilan ölçülmedi
+# Kategoriler: big_supermarket = Büyük süpermarket; local_market = Yerel ve gurme market; convenience = Küçük market; pharmacy = Eczane; emergency = Acil servis; urgent_care = Acil bakım (urgent care); bike_rental = Bisiklet kiralama; beach = Halka açık plaj erişimi (ilçe listesi)
+# Acil servis ve acil bakım yalnız resmî kaynakla (kurumun kendi sitesi) doğrulanan noktaları sayar.
+mahalle,ilan,olculen_ilan,restoran_dizin,big_supermarket_ortanca_mil,big_supermarket_ortanca_m,big_supermarket_1mil_ici_pay,local_market_ortanca_mil,local_market_ortanca_m,local_market_1mil_ici_pay,convenience_ortanca_mil,convenience_ortanca_m,convenience_1mil_ici_pay,pharmacy_ortanca_mil,pharmacy_ortanca_m,pharmacy_1mil_ici_pay,emergency_ortanca_mil,emergency_ortanca_m,emergency_1mil_ici_pay,urgent_care_ortanca_mil,urgent_care_ortanca_m,urgent_care_1mil_ici_pay,bike_rental_ortanca_mil,bike_rental_ortanca_m,bike_rental_1mil_ici_pay,beach_ortanca_mil,beach_ortanca_m,beach_1mil_ici_pay
+Dune Allen,114,114,2,2.36,3798,0.0,2.85,4592,0.018,0.75,1199,0.781,1.2,1938,0.43,3.9,6277,0.0,1.98,3189,0.061,2.85,4584,0.018,0.11,174,0.974
+Gulf Place,31,31,6,2.16,3478,0.0,1.72,2767,0.0,0.61,979,0.839,0.16,251,0.806,5.04,8110,0.0,2.96,4761,0.097,1.71,2760,0.0,0.18,290,0.968
+Santa Rosa Beach,246,246,28,2.07,3330,0.159,1.49,2393,0.268,0.93,1493,0.602,1.73,2785,0.402,5.72,9197,0.0,3.65,5877,0.033,1.53,2468,0.252,0.27,431,0.821
+Blue Mountain Beach,194,194,8,2.45,3937,0.0,0.29,462,0.747,0.3,485,0.83,1.75,2814,0.149,6.77,10900,0.0,4.69,7551,0.0,0.3,488,0.747,0.28,459,0.881
+Grayton Beach,86,86,15,2.51,4034,0.012,1.79,2875,0.07,0.54,875,0.93,3.91,6295,0.0,8.91,14341,0.0,6.8,10943,0.0,1.56,2516,0.07,0.26,418,0.953
+WaterColor,259,259,5,0.64,1030,0.695,0.53,855,0.981,1.58,2544,0.027,4.06,6539,0.0,10.78,17353,0.0,8.43,13562,0.0,0.38,606,0.865,0.65,1048,0.996
+Seaside,221,221,19,0.86,1378,0.855,0.15,241,0.928,1.58,2548,0.009,4.23,6814,0.0,10.92,17567,0.0,8.68,13977,0.0,0.46,737,0.928,0.34,547,0.946
+Seagrove,498,498,17,1.32,2118,0.255,1.46,2345,0.197,0.66,1067,0.673,3.28,5281,0.004,12.37,19905,0.0,7.33,11804,0.002,1.9,3058,0.116,0.12,201,0.968
+WaterSound,165,165,3,2.54,4084,0.006,3.18,5114,0.024,2.9,4660,0.006,2.97,4781,0.0,15.31,24638,0.0,4.41,7105,0.0,3.13,5033,0.024,0.96,1551,0.564
+Seacrest,301,301,8,1.25,2019,0.186,0.44,708,0.538,3.34,5376,0.0,3.28,5275,0.007,14.15,22771,0.0,1.64,2634,0.023,0.39,627,0.538,0.56,896,0.967
+Alys Beach,7,7,7,1.1,1776,0.143,0.75,1205,1.0,3.68,5921,0.0,3.61,5817,0.0,14.47,23291,0.0,1.96,3158,0.0,0.69,1104,1.0,1.05,1686,0.286
+Rosemary Beach,166,166,12,1.36,2183,0.012,0.25,401,0.91,2.77,4452,0.012,2.71,4358,0.006,13.57,21834,0.0,1.05,1692,0.361,0.3,476,0.91,0.37,595,0.928
+Inlet Beach,101,101,11,1.65,2662,0.0,0.75,1204,0.703,2.28,3673,0.01,2.22,3572,0.01,13.08,21052,0.0,0.6,967,0.861,0.81,1308,0.634,0.16,259,0.931
