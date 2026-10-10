@@ -351,7 +351,8 @@ class ClaudeService:
         count = len(data.get("adaylar") or [])
         if step.key == title_review.STEP.key:
             filled = (data.get("doluluk") or {}).get("dolar_mi")
-            message = f"Değerlendirme hazır: fikir veriyle {'doluyor' if filled else 'dolmuyor'}; {count} aday onay bekliyor"
+            message = (f"Değerlendirme hazır: fikir veriyle {'doluyor' if filled else 'dolmuyor'}; "
+                       + (f"{count} aday onay bekliyor" if count else "başlık adayı yok"))
         else:
             message = f"{count} başlık önerisi onay bekliyor"
         self.db.update_job(job_id, status="done", progress=100, result={"claude_run": run_id},

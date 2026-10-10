@@ -58,6 +58,8 @@ def test_an_idea_that_does_not_fill_a_video_may_have_no_candidates_but_must_say_
     assert view["review"]["doluluk"] == {"dolar_mi": False, "aciklama": "Bu fikre özgü kural verisi yok.",
                                          "eksik_veri": ["Mahalleye özgü köpek kuralı kaydı yok."]}
     assert "Aday yok (fikir veriyle dolmuyor)." in (folder(app, view) / "baslik_degerlendirme.md").read_text(encoding="utf-8")
+    job = next(j for j in app.get("/api/jobs").json() if j["kind"] == "claude_run")
+    assert job["message"] == "Değerlendirme hazır: fikir veriyle dolmuyor; başlık adayı yok."   # not "0 aday onay bekliyor" (real run)
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "no_missing")
     assert errors(review(app)) == ["Fikir dolmuyor denmiş ama eksik veri yazılmamış."]
 
