@@ -10,10 +10,11 @@ iş" line its screen starts with: what has to be done and which button does it.
 from . import refresh
 from .ai import store, title_review
 from .evidence.pack import latest_done_run, moment
+from .text import store as text_store
 
 STATUS_LABELS = {"waiting": "bekliyor", "ready": "hazır", "running": "çalışıyor", "awaiting_approval": "onay bekliyor",
                  "approved": "onaylandı", "done": "tamamlandı", "error": "hata", "stale": "eskidi", "due": "güncelleme zamanı geldi",
-                 "planned": "planlanan"}
+                 "planned": "planlanan", "paused": "duraklatıldı"}
 COMPLETE = ("approved", "done")
 TITLE_STEPS = ("baslik", "baslik_degerlendirme")
 STEPS = (
@@ -26,7 +27,7 @@ STEPS = (
     ("uretim", "Video üretimi"),
     ("yayin", "Yayın hazırlığı"),
 )
-PLANNED = {"metin", "kontrol", "gorsel", "uretim", "yayin"}
+PLANNED = {"kontrol", "gorsel", "uretim", "yayin"}
 HREFS = {"baslik": "#videos"}   # the topic and title step is the Videolar screen (proposals, approval, video records)
 PLANNED_NEXT = "Bu adım henüz kurulmadı (planlanan). Şimdilik yapılacak iş yok."
 
@@ -86,7 +87,41 @@ def pack_step(db, destination_id, video):
     made = moment(packs[0]["created_at"])
     if latest and (made is None or made < moment(latest)):
         return "stale", "Paket verinin son çekiminden eski: “Kanıt paketi üret” ile yeniden üret.", "veri paketten sonra yeniden çekildi"
-    return "done", "Paket hazır. Sonraki adım (Video metni) henüz kurulmadı.", None
+    return "done", "Paket hazır. Sonraki adım: Video metni.", None
+
+
+def text_step(db, destination_id, video):
+    """GÖREV-15 (Adım 8): the video text's status from its runs, versions and the choice."""
+    if not video:
+        return "waiting", "Önce bir başlık seç ve paketini üret (2. ve 3. adım).", None
+    if not (video.get("packs") or []):
+        return "waiting", "Önce paket üretilmeli (3. adım: Veri paketi).", None
+    runs = text_store.runs(db, video["id"])
+    active = [r for r in runs if r["status"] in text_store.ACTIVE]
+    if active:
+        run = active[0]
+        if run["status"] == "waiting_limit":
+            return "running", run.get("reason_text") or "Claude kullanım sınırı bekleniyor; çalışma kendiliğinden sürecek.", "kullanım sınırı bekleniyor"
+        return "running", "Video metni yazılıyor; ilerlemesi İşler panelinde.", None
+    chosen = text_store.selection(db, video["id"])
+    if chosen:
+        version = text_store.version(db, chosen["version_id"])
+        latest = latest_done_run(db, destination_id)
+        newest_pack = (video.get("packs") or [{}])[0].get("id")
+        made = moment(version["created_at"])
+        if (latest and made is not None and moment(latest) > made) or (newest_pack and newest_pack != version.get("pack_id")):
+            return ("stale", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Seçilen sürümden sonra veri yeniden çekildi ya "
+                    "da paket değişti (bilgi).", "veri ya da paket seçilen sürümden sonra değişti")
+        return ("done", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Sonraki adım: Kontrol (henüz kurulmadı).", None)
+    if runs and runs[0]["status"] in ("paused", "interrupted", "error"):
+        run = runs[0]
+        reason = run.get("reason_text") or run["status_label"]
+        if run["status"] == "error":
+            return "error", f"Metin çalışması hata verdi: {reason}", reason
+        return "paused", f"Metin çalışması durdu: {reason} “Devam” ile sürdürün.", reason
+    if text_store.versions(db, video_id=video["id"]):
+        return ("awaiting_approval", "Karşılaştırma ekranında tonları karşılaştır ve “Bu tonla devam et” de.", None)
+    return "ready", "Ton seç ve “Metni yaz”a bas.", None
 
 
 def compute(db, destination_id, video_id=None, today=None):
@@ -97,7 +132,7 @@ def compute(db, destination_id, video_id=None, today=None):
     data_status, data_next, data_detail = data_step(db, destination_id, jobs, today)
     has_data = latest_done_run(db, destination_id) is not None
     computed = {"veri": (data_status, data_next, data_detail), "baslik": title_step(db, destination_id, video, has_data),
-                "paket": pack_step(db, destination_id, video)}
+                "paket": pack_step(db, destination_id, video), "metin": text_step(db, destination_id, video)}
     steps = []
     for number, (key, title) in enumerate(STEPS, 1):
         if key in computed:

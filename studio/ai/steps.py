@@ -10,7 +10,8 @@ Tools: reading inside the run folder (`Read`, `Glob`, `Grep`; Claude Code applie
 
 Combined instructions = the destination's common instruction file + the step's file + the step's JSON schema as filled for this run (the
 schema is in the core, the destination's lists, e.g. content families and regions, are filled in for the run), so Claude does not need to open
-files outside its folder.
+files outside its folder. GÖREV-15: a step with `voice` (the writing steps of the video text, Ek N) gets the narrator's voice (the
+destination's `TEXT["voice"]`) and the chosen tone's file between the common file and its own: common, voice, tone, step, schema.
 """
 import copy
 import json
@@ -45,6 +46,8 @@ class RunContext:
     pack_rows: dict = field(default_factory=dict)    # input file -> {K id: row}
     previous: list = field(default_factory=list)     # earlier proposals (for the duplicate check)
     inputs: list = field(default_factory=list)
+    tone: dict | None = None                         # GÖREV-15: {"dosya", "ad", "path", "sha256"} of the tone a voice step writes in
+    extra: dict = field(default_factory=dict)        # GÖREV-15: what the video text chain hands a step (files, previous output, reasons)
 
     def say(self, text):
         if self.log:
@@ -65,6 +68,7 @@ class Step:
     check: object
     render: object
     tools: tuple = READ_TOOLS + WRITE_TOOLS
+    voice: bool = False                              # GÖREV-15: the narrator's voice and the chosen tone are part of the instructions
 
     @property
     def allowed(self):
@@ -72,10 +76,17 @@ class Step:
         return ("Read(./**)", f"Write(./{self.output})", f"Edit(./{self.output})")
 
     def instruction_paths(self, profile):
+        """The step's instruction files in the order they are combined (the tone is the run's, see `combined_instructions`)."""
         folder = getattr(profile, "CLAUDE_INSTRUCTIONS", None)
         if folder is None:
             raise StepError("Bu destinasyonun Claude talimatları yok.")
-        return [Path(folder) / name for name in self.instructions]
+        paths = [Path(folder) / name for name in self.instructions]
+        if self.voice:
+            voice = (getattr(profile, "TEXT", None) or {}).get("voice")
+            if voice is None:
+                raise StepError("Bu destinasyonun anlatıcı sesi dosyası yok.")
+            paths.insert(1, Path(voice))
+        return paths
 
     def schema_path(self):
         return SCHEMAS_DIR / self.schema
@@ -90,7 +101,12 @@ def run_schema(step, ctx):
 
 
 def combined_instructions(step, ctx, schema):
-    parts = [path.read_text(encoding="utf-8-sig").strip() for path in step.instruction_paths(ctx.profile)]
+    paths = step.instruction_paths(ctx.profile)
+    if step.voice:
+        if not ctx.tone:
+            raise StepError("Bu adım bir ton ister; ton seçilmedi.")
+        paths.insert(2, Path(ctx.tone["path"]))      # common, voice, tone, the step's own file
+    parts = [path.read_text(encoding="utf-8-sig").strip() for path in paths]
     parts.append(f"# Çıktı şeması: `{step.output}`\n\n`{step.output}` bu JSON şemasına (JSON Schema 2020-12) uymalı. Şema dosyası: "
                  f"`studio/ai/schemas/{step.schema}`; destinasyonun listeleri (içerik aileleri, bölgeler) bu çalışma için doldurulmuştur.\n\n"
                  f"```json\n{json.dumps(schema, ensure_ascii=False, indent=1)}\n```")

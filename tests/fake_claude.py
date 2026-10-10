@@ -23,6 +23,9 @@ The evaluation step (`Adım: baslik_degerlendirme`) writes `baslik_degerlendirme
 FAKE_CLAUDE_REVIEW_COUNT candidates (default 2; an "edited candidate" run gets the user's Turkish title as its Turkish title).
 Scenarios: dolmuyor (the idea does not fill a video: no candidates, missing data written) · too_many (4 candidates) · changed_idea
 (`kullanici_fikri` differs from what the user wrote) · no_missing (does not fill but no missing data).
+
+GÖREV-15: the video text's seven steps (`Adım: metin_…`) are answered by `tests/fake_claude_text.py` (outputs with evidence marks; invalid
+answers, transient failures, the usage limit and slow answers on request through FAKE_CLAUDE_TEXT and FAKE_CLAUDE_SCENARIO=slow).
 """
 import json
 import os
@@ -31,6 +34,8 @@ import sys
 import time
 import uuid
 from pathlib import Path
+
+import fake_claude_text  # noqa: E402  (GÖREV-15: the video text steps; this file runs as a script from tests/)
 
 FLAGS = {"-p", "--verbose", "--strict-mcp-config", "--disable-slash-commands"}
 VALUED = {"--output-format", "--append-system-prompt-file", "--tools", "--permission-mode", "--max-turns", "--setting-sources", "--model",
@@ -187,6 +192,40 @@ def build_review(cwd, system_text, scenario, prompt):
     return data
 
 
+def text_session(step, cwd, prompt, scenario, session):
+    """GÖREV-15: a video text step (`tests/fake_claude_text.py`): its output, or the trouble FAKE_CLAUDE_TEXT asks for."""
+    start = time.time()
+    if scenario == "slow":
+        time.sleep(float(os.environ.get("FAKE_CLAUDE_SLEEP", "30")))
+    trouble = fake_claude_text.trouble(step, prompt)
+    if trouble == "transient":
+        emit({"type": "result", "subtype": "success", "is_error": True, "api_error_status": 529, "result": "API Error: 529 Overloaded",
+              "session_id": session, "num_turns": 1, "duration_ms": 10})
+        fake_claude_text.log_session(step, start, time.time())
+        return 1
+    if trouble == "limit":
+        reset = int(time.time() + float(os.environ.get("FAKE_CLAUDE_LIMIT_RESET", "60")))
+        emit({"type": "rate_limit_event", "rate_limit_info": {"status": "rejected", "resetsAt": reset, "rateLimitType": "five_hour",
+              "unifiedWindows": {"five_hour": {"utilization": 1.0, "resetsAt": reset}, "seven_day": {"utilization": 0.5, "resetsAt": reset + 86400}}},
+              "session_id": session})
+        emit({"type": "result", "subtype": "success", "is_error": True, "api_error_status": 429, "session_id": session, "num_turns": 1,
+              "duration_ms": 10, "result": "You've hit your session limit · resets 3pm (Europe/Istanbul)"})
+        fake_claude_text.log_session(step, start, time.time())
+        return 1
+    usage = {"input_tokens": 900, "cache_creation_input_tokens": 200, "cache_read_input_tokens": 3000, "output_tokens": 600}
+    output = cwd / fake_claude_text.OUTPUTS[step]
+    data = fake_claude_text.output(step, cwd, prompt)
+    output.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    emit({"type": "assistant", "message": {"id": "msg_1", "content": [{"type": "thinking", "thinking": ""},
+          {"type": "tool_use", "id": "toolu_1", "name": "Write", "input": {"file_path": str(output), "content": "..."}}], "usage": usage}})
+    emit({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_1", "content": "ok"}]}})
+    emit({"type": "assistant", "message": {"id": "msg_2", "content": [{"type": "text", "text": "Yazdım."}], "usage": usage}})
+    emit({"type": "result", "subtype": "success", "is_error": False, "result": "Yazdım.", "session_id": session, "num_turns": 2,
+          "duration_ms": 900, "duration_api_ms": 700, "total_cost_usd": 0.0071, "usage": usage, "modelUsage": {}, "permission_denials": []})
+    fake_claude_text.log_session(step, start, time.time())
+    return 0
+
+
 def main():
     sys.stdin.reconfigure(encoding="utf-8")      # the runner writes and reads UTF-8, as Claude Code does
     sys.stdout.reconfigure(encoding="utf-8")
@@ -227,6 +266,9 @@ def main():
         emit({"type": "result", "subtype": "success", "is_error": False, "result": "tamam", "session_id": session, "num_turns": 1,
               "duration_ms": 300, "total_cost_usd": 0.0004, "usage": {"input_tokens": 20, "output_tokens": 2}})
         return 0
+    text_step = fake_claude_text.step_of(prompt)
+    if text_step:
+        return text_session(text_step, cwd, prompt, scenario, session)
     if scenario == "slow":
         time.sleep(float(os.environ.get("FAKE_CLAUDE_SLEEP", "30")))
     if scenario in ("usage_limit", "not_logged_in", "version_too_old"):

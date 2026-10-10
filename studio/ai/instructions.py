@@ -5,6 +5,10 @@ single source is the repository file itself: the manager edits the same file out
 checks that the file on disk is still the one that was opened (SHA-256 of its bytes); if it changed in between, nothing is written and the
 user reloads first. Before every save the previous content is kept in `<data>/claude/talimat_gecmisi/<file stem>/<time>.md`; versions are
 listed and "bu sürüme dön" writes an old one back (as a new save, so the current one is kept too). Line endings of the file are kept.
+
+GÖREV-15: the narrator's voice (`ses_ortak.md`, "Anlatıcının sesi (bütün tonlarda aynı)") comes before the video text's step files. Tones are
+not in this list; Settings → Tonlar manages them (`tones.py`). The warning phrases of the program's check (`uyari_ifadeleri.txt`) are a hidden
+item (kind "denetim"): the Tonlar page edits them with the same save and version rules.
 """
 import hashlib
 import re
@@ -24,11 +28,17 @@ class InstructionError(ValueError):
     pass
 
 
-def files(profile):
-    """[{key, name, title, kind ("talimat"|"bilgi"), path}] in Settings order: common file, the steps' files, the channel research."""
+VOICE_TITLE = "Anlatıcının sesi (bütün tonlarda aynı)"
+WARNINGS_TITLE = "Denetim: uyarı ifadeleri (her satırda bir ifade; Claude'a verilmez)"
+
+
+def files(profile, hidden=False):
+    """[{key, name, title, kind ("talimat"|"bilgi"|"denetim"), path}] in Settings order: common file, the steps' files (the narrator's
+    voice before the video text's files), the channel research; with `hidden` also the warning phrases of the program's check."""
     folder = getattr(profile, "CLAUDE_INSTRUCTIONS", None)
     if folder is None:
         return []
+    text = getattr(profile, "TEXT", None) or {}
     found, seen = [], set()
 
     def add(path, title, kind):
@@ -41,16 +51,20 @@ def files(profile):
     add(Path(folder) / COMMON, "Ortak kurallar (bütün adımlar)", "talimat")
     for step in steps.STEPS.values():
         for name in step.instructions:
+            if name.startswith("metin_") and text.get("voice"):
+                add(text["voice"], VOICE_TITLE, "talimat")
             if name != COMMON:
                 add(Path(folder) / name, step.title, "talimat")
     research = (getattr(profile, "CHANNEL", None) or {}).get("research")
     if research:
         add(research, "Kanal araştırması (bilgi dosyası; başlık çalışmalarına girdi olarak verilir)", "bilgi")
+    if hidden and text.get("warning_phrases"):
+        add(text["warning_phrases"], WARNINGS_TITLE, "denetim")
     return found
 
 
 def find(profile, key):
-    item = next((f for f in files(profile) if f["key"] == key), None)
+    item = next((f for f in files(profile, hidden=True) if f["key"] == key), None)
     if item is None:
         raise KeyError(key)
     return item
@@ -73,7 +87,7 @@ def versions(data_dir, item):
     if not folder.is_dir():
         return []
     found = []
-    for path in sorted(folder.glob("*.md"), reverse=True):
+    for path in sorted(folder.glob(f"*{item['path'].suffix or '.md'}"), reverse=True):
         if not VERSION_NAME.match(path.stem):
             continue
         saved = datetime.strptime(path.stem, "%Y%m%d-%H%M%S-%f").replace(tzinfo=timezone.utc)
@@ -113,7 +127,7 @@ def write(data_dir, profile, key, text, base_sha256):
     folder = history_dir(data_dir, item)
     folder.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
-    (folder / f"{stamp}.md").write_bytes(current)
+    (folder / f"{stamp}{item['path'].suffix or '.md'}").write_bytes(current)
     temporary = item["path"].with_name(f".{item['path'].name}.yaziliyor")
     temporary.write_bytes(new)
     temporary.replace(item["path"])
@@ -124,7 +138,7 @@ def version_text(data_dir, profile, key, version):
     item = find(profile, key)
     if not VERSION_NAME.match(version or ""):
         raise KeyError(version)
-    path = history_dir(data_dir, item) / f"{version}.md"
+    path = history_dir(data_dir, item) / f"{version}{item['path'].suffix or '.md'}"
     if not path.is_file():
         raise KeyError(version)
     return path.read_bytes().decode("utf-8-sig").replace("\r\n", "\n")

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bölümlerin birleştirilmesi (birlestirme.json)",
+  "description": "Geçişler (hangi iki bölüm arasında ve metni), yeniden kancalar (hangi bölümden sonra ve metni) ve birleşme yerlerindeki tekrar ya da çelişki notları. Geçişte bir bilgi kullanılırsa kanıt kimliği [K0123] biçiminde yazılır.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surum", "adim", "gecisler", "yeniden_kancalar", "notlar"],
+  "properties": {
+    "surum": {"const": 1},
+    "adim": {"const": "metin_birlestirme"},
+    "gecisler": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["onceki_bolum", "sonraki_bolum", "metin"],
+        "properties": {
+          "onceki_bolum": {"type": "integer", "minimum": 1},
+          "sonraki_bolum": {"type": "integer", "minimum": 1},
+          "metin": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "yeniden_kancalar": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bolumden_sonra", "metin"],
+        "properties": {
+          "bolumden_sonra": {"type": "integer", "minimum": 1},
+          "metin": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "notlar": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  }
+}

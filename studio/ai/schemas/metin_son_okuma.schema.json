@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Son okuma (son_okuma.json)",
+  "description": "Düzeltilen her cümlenin numarası (metin.md'deki numara), yeni hâli (kanıt kimlikleri korunarak) ve kısa gerekçesi. Düzeltecek bir şey yoksa liste boş kalır.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surum", "adim", "duzeltmeler"],
+  "properties": {
+    "surum": {"const": 1},
+    "adim": {"const": "metin_son_okuma"},
+    "duzeltmeler": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["no", "yeni", "gerekce"],
+        "properties": {
+          "no": {"type": "integer", "minimum": 1},
+          "yeni": {"type": "string", "minLength": 1},
+          "gerekce": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

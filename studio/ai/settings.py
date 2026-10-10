@@ -40,9 +40,29 @@ EFFORTS = tuple(value for value, _ in EFFORT_CHOICES)
 MODEL_LABELS = dict(MODEL_CHOICES)
 EFFORT_LABELS = dict(EFFORT_CHOICES)
 # Claude steps whose model, effort and turn limit are set apart (order of the Settings screen); later steps join this list.
-CLAUDE_STEPS = (("baslik", "Konu ve başlık"), ("baslik_degerlendirme", "Başlık değerlendirme"))
+CLAUDE_STEPS = (("baslik", "Konu ve başlık"), ("baslik_degerlendirme", "Başlık değerlendirme"),
+                # GÖREV-15: the video text's seven steps (Ek N gives their starting model and effort; family aliases)
+                ("metin_plan", "Video metni · plan"), ("metin_plan_elestiri", "Video metni · plan eleştirisi"),
+                ("metin_bolum", "Video metni · bölüm"), ("metin_birlestirme", "Video metni · birleştirme"),
+                ("metin_giris_kapanis", "Video metni · giriş ve kapanış"), ("metin_son_okuma", "Video metni · son okuma"),
+                ("metin_ceviri", "Video metni · çeviri"))
 STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30},
-                 "baslik_degerlendirme": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30}}
+                 "baslik_degerlendirme": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30},
+                 "metin_plan": {"model": "opus", "effort": "high", "max_turns": 30},
+                 "metin_plan_elestiri": {"model": "opus", "effort": "medium", "max_turns": 30},
+                 "metin_bolum": {"model": "opus", "effort": "high", "max_turns": 30},
+                 "metin_birlestirme": {"model": "opus", "effort": "medium", "max_turns": 30},
+                 "metin_giris_kapanis": {"model": "opus", "effort": "high", "max_turns": 30},
+                 "metin_son_okuma": {"model": "opus", "effort": "medium", "max_turns": 30},
+                 "metin_ceviri": {"model": "sonnet", "effort": "medium", "max_turns": 30}}
+# GÖREV-15 (Adım 5): the video text chain's own settings. Sessions at once (the section writers run side by side), the usage thresholds
+# at which no new session opens (5-hour and weekly window, percent) and "Plandan sonra dur" (the run stops after the plan for the user).
+TEXT_FIELDS = {"claude_max_sessions": (1, 6, 3), "claude_limit_five_hour": (1, 100, 90), "claude_limit_week": (1, 100, 95)}
+STOP_AFTER_PLAN = "claude_stop_after_plan"
+TEXT_HELP = {"claude_max_sessions": "Video metninin bölüm yazıcıları aynı anda çalışır; aynı anda en çok bu kadar Claude oturumu açılır (1–6).",
+             "claude_limit_five_hour": "5 saatlik kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer.",
+             "claude_limit_week": "Haftalık kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer.",
+             STOP_AFTER_PLAN: "Açıksa video metni çalışması plandan sonra durur; planı görüp “Devam” ile sürdürürsünüz."}
 MAX_TURNS_MIN, MAX_TURNS_MAX, MAX_TURNS_DEFAULT = 1, 200, 30
 MAX_TURNS_HELP = ("Tur, Claude'un bir cevabıdır: Claude her turda düşünür ve bir ya da birkaç iş ister (dosya okur ya da dosya yazar). Bu "
                   "sınır bir Claude çalışmasının en çok kaç cevap verebileceğidir; araç çağrılarını değil cevapları sayar. İş panelindeki "
@@ -59,6 +79,8 @@ class SettingsError(ValueError):
 
 def defaults():
     values = {"claude_path": "", "claude_model": "", "claude_effort": ""}
+    values.update({field: default for field, (_, _, default) in TEXT_FIELDS.items()})
+    values[STOP_AFTER_PLAN] = False
     for key, _ in CLAUDE_STEPS:
         step = STEP_DEFAULTS.get(key, {})
         values[f"claude_model_{key}"] = step.get("model", INHERIT)
@@ -78,6 +100,15 @@ def check(field, value):
         step_field = field not in ("claude_model", "claude_effort")
         if not isinstance(value, str) or value not in allowed and not (step_field and value == INHERIT):
             raise SettingsError(field, "Seçim listede yok.")
+        return value
+    if field in TEXT_FIELDS:
+        low, high, _ = TEXT_FIELDS[field]
+        if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+            raise SettingsError(field, f"{low} ile {high} arasında bir tam sayı olmalı.")
+        return value
+    if field == STOP_AFTER_PLAN:
+        if not isinstance(value, bool):
+            raise SettingsError(field, "Açık ya da kapalı olmalı.")
         return value
     if field.startswith("claude_max_turns_"):
         if isinstance(value, bool) or not isinstance(value, int) or not MAX_TURNS_MIN <= value <= MAX_TURNS_MAX:
@@ -220,4 +251,7 @@ def options():
             "inherit": {"value": INHERIT, "label": INHERIT_LABEL},
             "steps": [{"key": key, "label": title, "model_field": f"claude_model_{key}", "effort_field": f"claude_effort_{key}",
                        "max_turns_field": f"claude_max_turns_{key}"} for key, title in CLAUDE_STEPS],
-            "max_turns": {"min": MAX_TURNS_MIN, "max": MAX_TURNS_MAX, "help": MAX_TURNS_HELP}}
+            "max_turns": {"min": MAX_TURNS_MIN, "max": MAX_TURNS_MAX, "help": MAX_TURNS_HELP},
+            "text": {"fields": [{"field": field, "min": low, "max": high, "default": default, "help": TEXT_HELP[field]}
+                                for field, (low, high, default) in TEXT_FIELDS.items()],
+                     "stop_after_plan": {"field": STOP_AFTER_PLAN, "help": TEXT_HELP[STOP_AFTER_PLAN]}}}

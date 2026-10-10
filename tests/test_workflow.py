@@ -50,7 +50,8 @@ def test_without_data_or_video_only_the_data_step_has_work(app):
     assert "Zamanı gelenleri başlat" in s["veri"]["next"] and s["veri"]["detail"]          # the due collectors are named
     assert (s["baslik"]["status"], s["baslik"]["href"]) == ("waiting", "#videos") and "Önce veri gerekiyor" in s["baslik"]["next"]
     assert s["paket"]["status"] == "waiting" and "Önce bir başlık seç" in s["paket"]["next"]
-    for key in ("metin", "kontrol", "gorsel", "uretim", "yayin"):
+    assert (s["metin"]["status"], s["metin"]["planned"], s["metin"]["href"]) == ("waiting", False, "#adim/metin")   # GÖREV-15: built
+    for key in ("kontrol", "gorsel", "uretim", "yayin"):
         assert (s[key]["status"], s[key]["label"], s[key]["planned"]) == ("planned", "planlanan", True)
         assert s[key]["href"] == f"#adim/{key}" and "henüz kurulmadı" in s[key]["next"]
     assert (view["completed"], view["total"], view["dots"], view["video"]) == (0, 8, "○○○○○○○○", None)

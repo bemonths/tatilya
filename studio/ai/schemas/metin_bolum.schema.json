@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bir bölümün metni (bolum.json)",
+  "description": "Bölümün numarası ve paragrafları (düz metin). Bilgi taşıyan her cümlenin sonunda köşeli parantez içinde kanıt kimliği bulunur, örneğin [K0123]. Yazıcının notu isteğe bağlıdır.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surum", "adim", "bolum_no", "paragraflar", "yazici_notu"],
+  "properties": {
+    "surum": {"const": 1},
+    "adim": {"const": "metin_bolum"},
+    "bolum_no": {"type": "integer", "minimum": 1},
+    "paragraflar": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "yazici_notu": {"type": ["string", "null"]}
+  }
+}

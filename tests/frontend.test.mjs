@@ -985,3 +985,99 @@ test('GÖREV-15 1d: an evaluation without candidates is information, not "Onay b
   const html=runViewOf(view,null);
   assert.match(html,/onay beklemiyor/);assert.match(html,/id="run-reject" class="quiet" >/);
 });
+import {toneRows, toneForm, archiveRows, warningsBox} from '../studio/web/tones.js';
+import {toneChoice, writeBox, runRows, planView, compareView, versionView, textBar, routeOf} from '../studio/web/text.js';
+import {textSettings, formValues as claudeFormValues} from '../studio/web/claude.js';
+
+const TONES={tonlar:[{dosya:'arastirmaci_dost',ad:'Araştırmacı dost',ilk_satir:'Anlatıcı, 30A yı iyi tanıyan…',degisti:'2026-10-11T00:00:00+00:00',varsayilan:true,kullanim:2},
+  {dosya:'vlogger',ad:'Vlogger',ilk_satir:'Anlatıcı, kameraya konuşan…',degisti:'2026-10-11T00:00:00+00:00',varsayilan:false,kullanim:0}],
+  arsiv:[{id:'belgesel-20261011-000000-000000',dosya:'belgesel',ad:'Belgesel anlatıcı',ilk_satir:'Anlatıcı…',arsivlendi:'2026-10-11T00:00:00+00:00',kullanim:1}],
+  uzun_metin:1200,en_cok:6000,ad_en_cok:40,uzun_not:'Ton metni uzun. Kısa ve niyet anlatan metinler genellikle daha iyi sonuç verir.'};
+
+test('GÖREV-15 Tonlar: the list, the default, usage, delete and the archive',()=>{
+  const html=toneRows(TONES);
+  assert.match(html,/Araştırmacı dost/);assert.match(html,/<span class="tag green">varsayılan<\/span>/);
+  assert.match(html,/data-tone-default="vlogger"/);assert.doesNotMatch(html,/data-tone-default="arastirmaci_dost"/);
+  assert.match(html,/2 metin sürümü/);assert.match(html,/data-tone-delete="vlogger" >/);
+  assert.match(toneRows({tonlar:[TONES.tonlar[0]]}),/data-tone-delete="arastirmaci_dost" disabled/);
+  assert.match(archiveRows(TONES),/data-tone-unarchive="belgesel-20261011-000000-000000"/);
+  assert.match(archiveRows({arsiv:[]}),/Arşivde ton yok/);
+});
+test('GÖREV-15 Tonlar: the new tone form, the long text note and the edit form with versions',()=>{
+  const blank=toneForm({},TONES);
+  assert.match(blank,/Yeni ton/);assert.match(blank,/id="tone-name"/);assert.match(blank,/maxlength="40"/);assert.match(blank,/id="tone-long" hidden/);
+  const long=toneForm({ad:'Uzun',metin:'a'.repeat(1300)},TONES);
+  assert.doesNotMatch(long,/id="tone-long" hidden/);assert.match(long,/Kısa ve niyet anlatan/);
+  const edit=toneForm({dosya:'vlogger',ad:'Vlogger',metin:'x',sha256:'a'.repeat(64),surumler:[{id:'20261011-000000-000001',saklandi:'2026-10-11T00:00:00+00:00',ad:'Vlogger',ilk_satir:'eski'}]},TONES);
+  assert.match(edit,/Tonu düzenle/);assert.match(edit,/data-tone-version="20261011-000000-000001"/);assert.match(edit,/Yeniden yükle/);
+  assert.match(warningsBox({name:'uyari_ifadeleri.txt',sha256:'b'.repeat(64),modified_at:'2026-10-11T00:00:00+00:00',text:'amazing\nI\n',versions:[]}),/Denetim: uyarı ifadeleri/);
+});
+
+const OPTIONS={video:{id:'v1',title_en:'Deneme | 30A Florida Vacation'},tonlar:[{dosya:'arastirmaci_dost',ad:'Araştırmacı dost',ilk_cumle:'Anlatıcı, iyi tanıyan bir dost.',varsayilan:true},
+  {dosya:'hikaye_anlaticisi',ad:'Hikâye anlatıcısı',ilk_cumle:'Anlatıcı, izleyiciyi tutan sesi.',varsayilan:false}],paket:{var:false,eski:false,metin:'Paket önce yeniden üretilecek (bu videonun paketi yok).'},
+  calismalar:[],surumler:[],mesgul:false,claude_mesgul:false};
+test('GÖREV-15 Video metni: tone choice with the default ticked, "Tonları yönet" and the pack note',()=>{
+  const html=writeBox(OPTIONS,['arastirmaci_dost'],false);
+  assert.match(html,/data-tone="arastirmaci_dost" checked/);assert.match(html,/data-tone="hikaye_anlaticisi" >/);
+  assert.match(html,/Anlatıcı, iyi tanıyan bir dost\./);assert.match(html,/href="#settings\/tonlar"/);assert.match(html,/Paket önce yeniden üretilecek/);
+  assert.match(html,/id="text-start" >/);
+  assert.match(writeBox(OPTIONS,[],false),/id="text-start" disabled/);
+  assert.match(writeBox({...OPTIONS,mesgul:true},['arastirmaci_dost'],false),/Bir video metni çalışması sürüyor/);
+  assert.match(toneChoice(OPTIONS.tonlar,[]),/varsayılan/);
+});
+const RUN={id:'r1',video_id:'v1',status:'paused',status_label:'duraklatıldı',reason_text:'Durduruldu; “Devam” kalan adımları çalıştırır.',tones:[{dosya:'arastirmaci_dost',ad:'Araştırmacı dost'}],
+  created_at:'2026-10-11T00:00:00+00:00',replan_of:null,kullanim:{oturum:12,sure_s:600,token:120000,maliyet_usd:0.5},surumler:[{id:'s1',number:1,tone_file:'arastirmaci_dost',tone_name:'Araştırmacı dost'}],
+  eylemler:{devam:true,durdur:false,ton_ekle:true,plani_yeniden_yap:true,plani_goster:true}};
+test('GÖREV-15 Video metni: runs with Devam, the plan, the comparison and "Bu tonla da yaz"',()=>{
+  const html=runRows([RUN],OPTIONS.tonlar);
+  assert.match(html,/data-text-resume="r1"/);assert.match(html,/#adim\/metin\/plan\/r1/);assert.match(html,/#adim\/metin\/karsilastirma\/r1/);
+  assert.match(html,/data-add-tone-select="r1"/);assert.match(html,/<option value="hikaye_anlaticisi">Hikâye anlatıcısı<\/option>/);
+  assert.match(html,/12 oturum · 10 dk/);assert.match(html,/120 bin token · 0,50 \$/);
+  assert.match(runRows([{...RUN,status:'running',status_label:'çalışıyor',eylemler:{...RUN.eylemler,devam:false,durdur:true}}]),/data-text-stop="r1"/);
+  assert.deepEqual(routeOf('#adim/metin/surum/s1'),{view:'surum',id:'s1'});assert.deepEqual(routeOf('#adim/metin'),{view:'main',id:null});
+  const plan=planView({plan:{bolumler:[{no:1,ic_adi:'Bir',tek_fikir:'Tek',en_carpici_an:'An',kanitlar:['K0001'],kelime_butcesi:350,acilis_bicimi:'gecmis',acilis_notu:'Not'}],
+    kavramlar:[{kavram:'customary use',bolum:1}],yeniden_kancalar:[{bolumden_sonra:1,uzerine:'kanca'}],vaat_kontrolu:{karsilanan:[{vaat:'Soru',bolumler:[1]}],karsilanamayan:['Fiyat']},notlar:[]},
+    plan_uyarilari:['1. ve 2. bölüm aynı biçimde açılıyor (soru).'],elestiri:{notlar:['Plan iyi.'],yeniden_yap:false},plan_turu:1});
+  assert.match(plan,/geçmiş/);assert.match(plan,/customary use → 1\. bölüm/);assert.match(plan,/Karşılanamayan: Fiyat/);assert.match(plan,/aynı biçimde açılıyor/);assert.match(plan,/Plan iyi\./);
+});
+const COMPARE={sutunlar:[{id:'s1',number:1,tone_file:'arastirmaci_dost',tone_name:'Araştırmacı dost',words:2300,dakika:15.3,red:1,yellow:2,cost_usd:0.42,tokens:{input:1000,output:2000},elapsed_s:300,secili:false,ton_var:true,
+    parcalar:{giris:{baslik:'Giriş',tr:['Merhaba.'],en:['Hello.'],isaretler:0},'bolum-1':{baslik:'1. Bir',tr:['Bir.'],en:['One.'],isaretler:1}}},
+  {id:'s2',number:2,tone_file:'vlogger',tone_name:'Vlogger',words:2250,dakika:15,red:0,yellow:0,cost_usd:0.4,tokens:{},elapsed_s:280,secili:true,ton_var:false,
+    parcalar:{giris:{baslik:'Giriş',tr:['Selam.'],en:['Hi.'],isaretler:0}}}],satirlar:['giris','bolum-1']};
+test('GÖREV-15 Video metni: the comparison — columns, header numbers, Turkish first, the language switch and "Bu tonla devam et"',()=>{
+  const tr=compareView(COMPARE,'tr',OPTIONS.tonlar,'r1');
+  assert.match(tr,/repeat\(2, minmax\(320px, 1fr\)\)/);assert.match(tr,/2\.300 kelime · ~15,3 dk/);assert.match(tr,/1 kırmızı/);assert.match(tr,/0,42 \$/);
+  assert.match(tr,/<p>Merhaba\.<\/p>/);assert.doesNotMatch(tr,/<p>Hello\.<\/p>/);assert.match(tr,/data-choose="s1"/);assert.match(tr,/<span class="tag green">seçili<\/span>/);
+  assert.match(tr,/silinmiş ton/);assert.match(tr,/compare-cell empty/);assert.match(tr,/data-lang="tr" aria-pressed="true"/);
+  assert.match(tr,/id="compare-add"/);assert.match(tr,/<option value="hikaye_anlaticisi">/);
+  const en=compareView(COMPARE,'en');assert.match(en,/<p>Hello\.<\/p>/);assert.doesNotMatch(en,/<p>Merhaba\.<\/p>/);
+  const both=compareView(COMPARE,'both');assert.match(both,/<p>Merhaba\.<\/p><p class="en">Hello\.<\/p>/);
+});
+test('GÖREV-15 Video metni: a version — numbers, both languages, marks of the check, evidence on hover, terms and downloads',()=>{
+  const html=versionView({id:'s1',number:1,tone_name:'Araştırmacı dost',tone_file:'arastirmaci_dost',text_run_id:'r1',words:2300,sentences:2,red:1,yellow:1,created_at:'2026-10-11T00:00:00+00:00',secili:false,
+    not:'Türkçe düzeltme ve İngilizceye uyarlama bu görevde yok',denetim_md:'# Program denetimi',metin:{parcalar:[{kimlik:'bolum-1',baslik:'1. Bir',paragraflar:[{cumleler:[
+      {no:1,en:'It is within walking distance.',tr:'Yürüme mesafesinde.',kanitlar:['K0001'],uyarilar:[{tur:'denetim',seviye:'kirmizi',kural:'mesafe',metin:'Mesafe kuralı.'}]},
+      {no:2,en:'Amazing view.',tr:'Harika manzara.',kanitlar:[],uyarilar:[{tur:'denetim',seviye:'sari',kural:'ses',metin:'Uyarı ifadesi.'},{tur:'cevirmen',metin:'Belirsiz.'}]}]}]}],
+      terimler:[{en:'walkover',tr:'walkover',aciklama:'Geçit.'}],surum_bilgisi:{ton:{ad:'Araştırmacı dost',dosya:'arastirmaci_dost',sha256:'c'.repeat(64)},oturumlar:[{}]}}});
+  assert.match(html,/sentence-row has-red/);assert.match(html,/sentence-row has-yellow/);assert.match(html,/title="Kanıt: K0001"/);assert.match(html,/title="Kanıt işareti yok"/);
+  assert.match(html,/sentence-mark red" title="Mesafe kuralı\."/);assert.match(html,/Çevirmen: Belirsiz\./);assert.match(html,/<strong>walkover<\/strong>/);
+  assert.match(html,/dosya\/en" download>İngilizce/);assert.match(html,/dosya\/tr" download>Türkçe/);assert.match(html,/dosya\/seslendirme" download>Seslendirme/);
+  assert.match(html,/data-choose="s1"/);assert.match(html,/Türkçe düzeltme ve İngilizceye uyarlama bu görevde yok/);
+});
+test('GÖREV-15 İşler: the text run bar — stage text, elapsed and remaining time, and the usage limit wait',()=>{
+  const now=Date.parse('2026-10-11T10:10:00Z');
+  const job={id:'j1',kind:'claude_metin',status:'running',progress:40,created_at:'2026-10-11T10:00:00Z',progress_info:{tur:'metin',yuzde:40,asama:'Araştırmacı dost (1/2 ton) · bölümler 4/6 bitti',baslangic:'2026-10-11T10:00:00Z',kalan_s:900,bekleme:null}};
+  const html=textBar(job,now);
+  assert.match(html,/aria-valuenow="40"/);assert.match(html,/%40 · Araştırmacı dost \(1\/2 ton\) · bölümler 4\/6 bitti · geçen 10 dk · tahmini kalan ~15 dk/);
+  const waiting=textBar({...job,progress_info:{...job.progress_info,bekleme:{bitis:'2026-10-11T11:02:00Z',metin:'Claude kullanım sınırı: 14:02 te kendiliğinden sürecek.'}}},now);
+  assert.match(waiting,/<span class="tag warm">Bekliyor<\/span> Claude kullanım sınırı: 14:02 te kendiliğinden sürecek\./);
+  assert.match(textBar({...job,status:'done'},now),/aria-valuenow="100"/);
+  assert.equal(textBar({...job,progress_info:{tur:'claude'}},now),"");
+});
+test('GÖREV-15 Ayarlar → Claude: sessions at once, thresholds and "Plandan sonra dur"',()=>{
+  const html=textSettings({claude_max_sessions:3,claude_limit_five_hour:90,claude_limit_week:95,claude_stop_after_plan:true},
+    {fields:[{field:'claude_max_sessions',min:1,max:6,default:3,help:'h'},{field:'claude_limit_five_hour',min:1,max:100,default:90,help:'h'},{field:'claude_limit_week',min:1,max:100,default:95,help:'h'}],stop_after_plan:{field:'claude_stop_after_plan',help:'s'}});
+  assert.match(html,/Aynı anda en çok Claude oturumu/);assert.match(html,/min="1" max="6" value="3"/);assert.match(html,/data-field="claude_stop_after_plan" checked/);
+  const form={querySelectorAll:()=>[{dataset:{field:'claude_max_sessions'},type:'number',value:'4'},{dataset:{field:'claude_stop_after_plan'},type:'checkbox',checked:false,value:'on'}]};
+  assert.deepEqual(claudeFormValues(form),{claude_max_sessions:4,claude_stop_after_plan:false});
+});

@@ -2,7 +2,7 @@
 
 Housing Atlas validates with the `jsonschema` package; 30A Studio checks the subset its schemas use instead of adding a dependency: `type`
 (also a list), `const`, `enum`, `required`, `properties`, `additionalProperties` (false or a schema), `items`, `minItems`, `maxItems`,
-`minLength`, `maxLength`, `pattern` and local `$ref` (`#/$defs/<name>`). A keyword outside this subset is refused when the schema is loaded,
+`minLength`, `maxLength`, `pattern`, `minimum`, `maximum` (GÖREV-15) and local `$ref` (`#/$defs/<name>`). A keyword outside this subset is refused when the schema is loaded,
 so a schema cannot silently ask for more than is checked.
 """
 import json
@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 SUPPORTED = {"$schema", "$id", "title", "description", "$defs", "type", "const", "enum", "required", "properties", "additionalProperties",
-             "items", "minItems", "maxItems", "minLength", "maxLength", "pattern", "$ref"}
+             "items", "minItems", "maxItems", "minLength", "maxLength", "pattern", "$ref", "minimum", "maximum"}
 TYPE_NAMES = {"string": "metin", "number": "sayı", "integer": "tam sayı", "boolean": "true ya da false", "array": "liste", "object": "nesne",
               "null": "null"}
 MAX_ERRORS = 20
@@ -91,6 +91,11 @@ def errors(schema, data, limit=MAX_ERRORS):
                 found.append(f"{where}: en çok {node['maxLength']} karakter olmalı ({len(value)} karakter).")
             if "pattern" in node and not re.search(node["pattern"], value):
                 found.append(f"{where}: biçimi uygun değil ({value!r}; beklenen biçim {node['pattern']}).")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if "minimum" in node and value < node["minimum"]:
+                found.append(f"{where}: en az {node['minimum']} olmalı ({value}).")
+            if "maximum" in node and value > node["maximum"]:
+                found.append(f"{where}: en çok {node['maximum']} olmalı ({value}).")
         if isinstance(value, list):
             if len(value) < node.get("minItems", 0):
                 found.append(f"{where}: en az {node['minItems']} öğe olmalı.")

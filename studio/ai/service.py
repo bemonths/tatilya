@@ -64,6 +64,7 @@ class ClaudeService:
         self.closing = False
         self.refreshing = False
         self.lock = threading.Lock()
+        self.text = None            # GÖREV-15: the video text's service (set by the app); while it works no other Claude run starts
 
     # ------------------------------------------------------------------------------------------------------------- options
 
@@ -120,6 +121,7 @@ class ClaudeService:
         with self.lock:
             if self.closing:
                 raise Conflict("Uygulama kapanıyor.")
+            self.check_text_free()
             try:
                 job_id = self.db.add_job(kind=JOB_KIND, title=f"Claude · {step.title}{' · düzeltme' if previous else ''} · {label}",
                                          destination_id=destination_id)
@@ -278,6 +280,7 @@ class ClaudeService:
                 raise Conflict("Uygulama kapanıyor.")
             if any(r["status"] == "running" for r in self.running_runs()):
                 raise Conflict("Bir Claude çalışması sürüyor; kullanım bilgisi o çalışmanın her cevabıyla zaten güncelleniyor.")
+            self.check_text_free()
             if self.refreshing:
                 raise Conflict("Kullanım zaten yenileniyor.")
             self.refreshing = True
@@ -312,6 +315,10 @@ class ClaudeService:
         finally:
             with self.lock:
                 self.refreshing = False
+
+    def check_text_free(self):
+        if self.text is not None and self.text.busy():
+            raise Conflict("Bir video metni çalışması sürüyor; bitmesini bekleyin.")
 
     def running_runs(self):
         with self.db.connect() as con:

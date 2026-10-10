@@ -62,7 +62,7 @@ def existing_v5(tmp_path, url, method='Belirlenecek', notes=OLD_RESTAURANT_NOTE,
                     (url,method,notes,'My restaurant source','Genel','Seaside','Aylık',enabled,source['id']))
         con.execute('CREATE TABLE repair_writes (source_id TEXT)')
         con.execute('CREATE TRIGGER track_source_update AFTER UPDATE ON sources BEGIN INSERT INTO repair_writes VALUES (NEW.id); END')
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 16
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 17
     return db, db.source(source['id'])
 
 
@@ -91,7 +91,7 @@ def test_existing_v5_repairs_defaults_binds_api_and_collects(tmp_path, monkeypat
     db.initialize(); db.initialize()
     assert history_and_writes(db) == (history_before,1)
     assert db.source(before['id']) == {**before,'method':'HTML','notes':RESTAURANT_NOTE}
-    with db.connect() as con: assert con.execute('PRAGMA user_version').fetchone()[0] == 16
+    with db.connect() as con: assert con.execute('PRAGMA user_version').fetchone()[0] == 17
 
 
 @pytest.mark.parametrize('method', ['API','JSON','HTML','Belirlenecek'])

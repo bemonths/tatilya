@@ -15,6 +15,7 @@ from studio.app import create_app
 from studio.database import Database
 from studio.destinations import thirty_a
 from studio.evidence import video as V
+from tests.legacy import V17_TABLES, drop_v17
 from tests.test_beaches import HEADERS
 
 FAKE = Path(__file__).with_name("fake_claude.py")
@@ -306,6 +307,7 @@ def test_v14_to_v15_adds_runs_videos_and_the_pack_link_and_keeps_rows(tmp_path):
     path = tmp_path / "studio.sqlite3"
     Database(path).initialize()
     with sqlite3.connect(path) as con:       # a v14 file: without the v15 tables and column (and the v16 additions)
+        drop_v17(con)
         con.execute("DROP TABLE claude_usage")
         con.execute("DROP TABLE job_progress")
         con.execute("ALTER TABLE browser_hosts DROP COLUMN method")
@@ -321,11 +323,11 @@ def test_v14_to_v15_adds_runs_videos_and_the_pack_link_and_keeps_rows(tmp_path):
                   con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 17
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-        assert after == {**before, "claude_runs": 0, "videos": 0, "claude_usage": 0, "job_progress": 0}
+        assert after == {**before, "claude_runs": 0, "videos": 0, "claude_usage": 0, "job_progress": 0, **V17_TABLES}
         assert "video_id" in [r[1] for r in con.execute("PRAGMA table_info(evidence_packs)")]
     assert list((tmp_path / "backups").glob("*-v14-*.sqlite3"))
 

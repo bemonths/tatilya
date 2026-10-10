@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Türkçe çeviri (ceviri.json)",
+  "description": "Housing Atlas'taki makale_ceviri biçimi: her numara için tek Türkçe cümle ve varsa çevirmenin uyarısı; Türkçe metinde İngilizce bırakılan ya da açıklama gerektiren terimler (İngilizcesi, Türkçe metindeki biçimi, sade açıklaması).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surum", "adim", "cumleler", "terimler"],
+  "properties": {
+    "surum": {"const": 1},
+    "adim": {"const": "metin_ceviri"},
+    "cumleler": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["no", "tr", "uyari"],
+        "properties": {
+          "no": {"type": "integer", "minimum": 1},
+          "tr": {"type": "string", "minLength": 1},
+          "uyari": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "terimler": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["en", "tr", "aciklama"],
+        "properties": {
+          "en": {"type": "string", "minLength": 1},
+          "tr": {"type": "string"},
+          "aciklama": {"type": "string"}
+        }
+      }
+    }
+  }
+}

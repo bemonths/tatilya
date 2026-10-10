@@ -84,10 +84,16 @@ def latest(db):
 
 
 def week_runs(db, since_epoch):
-    """Claude runs of the steps started since then: their number and total duration (seconds; runs without a measurement add nothing)."""
+    """Claude runs of the steps started since then: their number and total duration (seconds; runs without a measurement add nothing).
+    GÖREV-15: the video text's sessions count too (each session is a Claude run)."""
     with db.connect() as con:
         count, total = con.execute("""SELECT COUNT(*), COALESCE(SUM(json_extract(metrics,'$.elapsed_s')),0) FROM claude_runs
             WHERE created_at >= ?""", (iso(since_epoch),)).fetchone()
+        has_text = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='text_sessions'").fetchone()
+        if has_text:
+            more, extra = con.execute("""SELECT COUNT(*), COALESCE(SUM(json_extract(metrics,'$.elapsed_s')),0) FROM text_sessions
+                WHERE created_at >= ?""", (iso(since_epoch),)).fetchone()
+            count, total = count + more, (total or 0) + (extra or 0)
     return {"count": count, "total_s": round(total or 0, 1)}
 
 

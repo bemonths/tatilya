@@ -18,10 +18,12 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from . import refresh, workflow
-from .models import EvidencePackInput, JobInput, ReviewRunInput, RunDecisionInput, SourceInput, SourceUpdate, TitleRunInput, TranslateInput
+from .models import (EvidencePackInput, JobInput, ReviewRunInput, RunDecisionInput, SourceInput, SourceUpdate, TextRunInput, TextSelectInput,
+                     TextToneInput, TitleRunInput, ToneInput, ToneRestoreInput, TranslateInput)
 from . import evidence
 from .ai import settings as claude_settings
 from .ai.service import ClaudeService
+from .text.engine import TextService
 from .watchdog import Watchdog
 from . import extension as ext
 from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
@@ -57,6 +59,9 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         db.recover_jobs()
         app.state.claude = ClaudeService(db, db.path.parent)
         app.state.claude.recover()
+        app.state.text = TextService(db, db.path.parent, app.state.claude)      # GÖREV-15: the video text's chain
+        app.state.text.recover()
+        app.state.claude.text = app.state.text
         app.state.jobs = JobQueue(db, extension=app.state.extension)
         app.state.batches = refresh.BatchRunner(db, app.state.jobs)
         app.state.batches.recover()
@@ -64,6 +69,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             yield
         finally:
             app.state.batches.shutdown()
+            app.state.text.shutdown()
             app.state.claude.shutdown()
             app.state.jobs.shutdown()
 
@@ -992,6 +998,135 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             return await asyncio.to_thread(claude().video_pack, identifier)
         except KeyError:
             raise HTTPException(404, "Video kaydı bulunamadı.") from None
+
+    # --- Video metni (GÖREV-15): the writing chain, its runs, the comparison of tones, versions and the choice; Settings → Tonlar ----------
+
+    def text():
+        return app.state.text
+
+    def text_or_404(action):
+        from .ai import tones
+        try:
+            return action()
+        except KeyError:
+            raise HTTPException(404, "Video, metin çalışması, sürüm ya da ton bulunamadı.") from None
+        except tones.ToneError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/videos/{video_id}/metin")
+    def text_options(video_id: str):
+        return text_or_404(lambda: text().options(video_id))
+
+    @app.post("/api/videos/{video_id}/metin", status_code=201)
+    def text_start(video_id: str, body: TextRunInput):
+        return text_or_404(lambda: text().start(video_id, body.tonlar))
+
+    @app.get("/api/videos/{video_id}/metin/karsilastirma")
+    def text_compare(video_id: str, calisma: str | None = None):
+        return text_or_404(lambda: text().compare(video_id, calisma))
+
+    @app.get("/api/metin/calismalar/{run_id}")
+    def text_run(run_id: str):
+        return text_or_404(lambda: text().view(run_id))
+
+    @app.post("/api/metin/calismalar/{run_id}/devam")
+    def text_resume(run_id: str):
+        return text_or_404(lambda: text().resume(run_id))
+
+    @app.post("/api/metin/calismalar/{run_id}/durdur")
+    def text_stop(run_id: str):
+        return text_or_404(lambda: text().stop(run_id))
+
+    @app.post("/api/metin/calismalar/{run_id}/ton", status_code=201)
+    def text_add_tone(run_id: str, body: TextToneInput):
+        return text_or_404(lambda: text().add_tone(run_id, body.ton))
+
+    @app.post("/api/metin/calismalar/{run_id}/yeniden-planla", status_code=201)
+    async def text_replan(run_id: str, request: Request):
+        try:
+            body = await request.json()
+        except ValueError:
+            body = {}
+        chosen = body.get("tonlar") if isinstance(body, dict) else None
+        if chosen is not None and (not isinstance(chosen, list) or not all(isinstance(i, str) for i in chosen)):
+            raise HTTPException(422, "Tonlar bir liste olmalı.")
+        return text_or_404(lambda: text().replan(run_id, chosen))
+
+    @app.get("/api/metin/surumler/{version_id}")
+    def text_version(version_id: str):
+        return text_or_404(lambda: text().version_view(version_id))
+
+    @app.get("/api/metin/surumler/{version_id}/dosya/{kind}")
+    def text_version_file(version_id: str, kind: str):
+        path, media, name = text_or_404(lambda: text().file(version_id, kind))
+        return FileResponse(path, media_type=f"{media}; charset=utf-8", filename=name)
+
+    @app.post("/api/metin/surumler/{version_id}/sec")
+    def text_select(version_id: str, body: TextSelectInput):
+        return text_or_404(lambda: text().select(version_id, body.not_))
+
+    def tone_profile(destination_id):
+        selected(destination_id)
+        profile = PROFILES.get(destination_id)
+        if not (getattr(profile, "TEXT", None) or {}).get("tones"):
+            raise HTTPException(404, "Bu destinasyonun tonları yok.")
+        return profile
+
+    @app.get("/api/tonlar")
+    def tones_list(destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        from .text import store as text_store
+        return tones.listing(db.path.parent, destination_id, tone_profile(destination_id), text_store.tone_usage(db))
+
+    @app.post("/api/tonlar", status_code=201)
+    def tones_create(body: ToneInput, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        return text_or_404(lambda: tones.create(db.path.parent, profile, body.ad, body.metin))
+
+    @app.get("/api/tonlar/{stem}")
+    def tones_read(stem: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        return text_or_404(lambda: tones.read(db.path.parent, profile, stem))
+
+    @app.put("/api/tonlar/{stem}")
+    def tones_update(stem: str, body: ToneInput, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        if not body.base_sha256:
+            raise HTTPException(422, "Dosyanın açıldığı hâlin karması gerekir.")
+        return text_or_404(lambda: tones.update(db.path.parent, profile, stem, body.ad, body.metin, body.base_sha256))
+
+    @app.delete("/api/tonlar/{stem}")
+    def tones_delete(stem: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        return text_or_404(lambda: tones.delete(db.path.parent, destination_id, profile, stem))
+
+    @app.post("/api/tonlar/{stem}/varsayilan")
+    def tones_default(stem: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        return text_or_404(lambda: {"varsayilan": tones.set_default(db.path.parent, destination_id, profile, stem)})
+
+    @app.get("/api/tonlar/{stem}/surumler/{version}")
+    def tones_version(stem: str, version: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        tone_profile(destination_id)
+        return text_or_404(lambda: tones.version_text(db.path.parent, stem, version))
+
+    @app.post("/api/tonlar/{stem}/surumler/{version}/geri-don")
+    def tones_restore_version(stem: str, version: str, body: ToneRestoreInput, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        return text_or_404(lambda: tones.restore_version(db.path.parent, profile, stem, version, body.base_sha256))
+
+    @app.post("/api/ton-arsivi/{archive_id}/geri-al")
+    def tones_unarchive(archive_id: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        from .ai import tones
+        profile = tone_profile(destination_id)
+        return text_or_404(lambda: tones.restore_archived(db.path.parent, profile, archive_id))
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

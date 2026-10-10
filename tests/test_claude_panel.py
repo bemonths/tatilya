@@ -12,6 +12,7 @@ import pytest
 from studio.ai import instructions, service as S, settings, title, usage
 from studio.database import Database
 from studio.destinations import thirty_a
+from tests.legacy import V17_TABLES, drop_v17
 from tests.test_claude_steps import FAKE, app, calls, finished, folder, start  # noqa: F401  (app: fixture with the fake Claude)
 
 
@@ -205,6 +206,7 @@ def test_v15_to_v16_adds_usage_progress_and_title_edit_and_keeps_rows(tmp_path):
     path = tmp_path / "studio.sqlite3"
     Database(path).initialize()
     with sqlite3.connect(path) as con:       # a v15 file with one video
+        drop_v17(con)
         con.execute("DROP TABLE claude_usage")
         con.execute("DROP TABLE job_progress")
         for column in ("method", "method_at"):
@@ -224,11 +226,11 @@ def test_v15_to_v16_adds_usage_progress_and_title_edit_and_keeps_rows(tmp_path):
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 17
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-        assert after == {**before, "claude_usage": 0, "job_progress": 0}
+        assert after == {**before, "claude_usage": 0, "job_progress": 0, **V17_TABLES}
         video = dict(con.execute("SELECT * FROM videos").fetchone())
         assert (video["proposed_title_en"], video["proposed_title_tr"], video["user_edited"]) == (video["title_en"], video["title_tr"], 0)
         assert dict(con.execute("SELECT method, method_at FROM browser_hosts").fetchone()) == {"method": None, "method_at": None}

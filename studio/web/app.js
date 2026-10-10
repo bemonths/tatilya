@@ -18,6 +18,8 @@ import {renderClaudeSettings, renderSuffixSettings} from "./claude.js";
 import {UsagePanel, claudeBar, claudeProgress, progressText as claudeProgressText} from "./usage.js";
 import {InstructionEditor} from "./instructions.js";
 import {ExtensionSettings} from "./extension.js";
+import {TextScreen, textBar} from "./text.js";
+import {ToneSettings} from "./tones.js";
 
 const $ = selector => document.querySelector(selector);
 const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:""};
@@ -46,6 +48,7 @@ const evidenceScreen=new EvidenceScreen();
 const videosScreen=new VideosScreen();
 let lastClaudeKey="";
 const usagePanel=new UsagePanel(document.querySelector("#usage-panel"));
+const textScreen=new TextScreen();
 let lastUsageLoad=0;
 let lastWorkflowKey="";
 let workflowSequence=0;
@@ -108,6 +111,7 @@ function renderStep() {
   if(!step) {$("#main").innerHTML='<p role="status" class="loading">İş akışı yükleniyor…</p>';return;}
   if(key==="veri") renderDataStep(step);
   else if(key==="paket") renderPackStep(step);
+  else if(key==="metin") textScreen.render($("#main"),{videoId:state.videoId, step, heading:pageHeading, nextTaskSlot, reload:loadWorkflow});
   else renderPlannedStep(step);
 }
 
@@ -148,7 +152,7 @@ async function renderPackStep(step) {
   } catch(error) {if(!error.stale && ticket===packSequence) body.textContent=error.message;}
 }
 
-const PLANNED_ROADMAP={metin:"article",kontrol:"check",gorsel:"visuals",uretim:"video",yayin:"publish"};
+const PLANNED_ROADMAP={kontrol:"check",gorsel:"visuals",uretim:"video",yayin:"publish"};
 
 function renderPlannedStep(step) {
   const plan=roadmap[PLANNED_ROADMAP[step.id]];
@@ -260,12 +264,15 @@ function renderSettings() {
     <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Veri, kanıt paketi ve konu önerisi hazır</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Videolar ekranında Claude ile konu ve başlık önerisi ve video kaydı kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Claude ile video metni ve metnin kontrolü. Görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div><div class="info-grid claude-grid" id="claude-settings-slot"><p class="muted">Claude ayarları yükleniyor…</p></div>
     <div class="info-grid claude-grid"><div id="suffix-settings-slot"><p class="muted">Başlık eki yükleniyor…</p></div><div id="usage-settings-slot"></div></div>
     <div class="info-grid claude-grid" id="instructions-slot"><p class="muted">Talimatlar yükleniyor…</p></div>
+    <div class="info-grid claude-grid" id="tones-slot"><p class="muted">Tonlar yükleniyor…</p></div>
+    <div class="info-grid claude-grid" id="warnings-slot"></div>
     <div class="info-grid claude-grid" id="extension-slot"><p class="muted">Tarayıcı eklentisi yükleniyor…</p></div>`;
   new ExtensionSettings($("#extension-slot")).load();
   renderClaudeSettings($("#claude-settings-slot"));
   renderSuffixSettings($("#suffix-settings-slot"));
   api("claude/usage").then(view=>{const slot=$("#usage-settings-slot");if(slot) slot.innerHTML=`<section class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p>${esc(view.refresh.text)}</p><p class="muted">Model: <code>${esc(view.refresh.model)}</code> · efor: ${view.refresh.effort==="low"?"düşük":esc(view.refresh.effort)}</p></section>`;}).catch(()=>{});
   new InstructionEditor($("#instructions-slot")).load();
+  new ToneSettings($("#tones-slot"),$("#warnings-slot")).load().then(()=>{if(location.hash==="#settings/tonlar") $("#tonlar")?.scrollIntoView({block:"start"});});
 }
 
 function renderJobResultLink(job) {
@@ -276,7 +283,7 @@ function renderJobResultLink(job) {
 function renderJobs() {
   const jobs = state.data.jobs;
   $("#jobs-count").textContent = jobs.filter(active).length;
-  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${claudeBar(job) || `<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress>`}${job.waiting_for?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor</span> ${esc(job.waiting_for)}</p>`:""}<p>${esc(job.message)}</p>${active(job) && job.progress_info?.tur==="eklenti" && job.progress_info.bekliyor?`<button data-handover-job="${job.id}">Programın tarayıcısına devret</button> `:""}${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${renderJobResultLink(job)}</article>`).join("") :
+  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${claudeBar(job) || textBar(job) || `<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress>`}${job.waiting_for?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor</span> ${esc(job.waiting_for)}</p>`:""}<p>${esc(job.message)}</p>${active(job) && job.progress_info?.tur==="eklenti" && job.progress_info.bekliyor?`<button data-handover-job="${job.id}">Programın tarayıcısına devret</button> `:""}${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${renderJobResultLink(job)}</article>`).join("") :
     '<div class="empty"><div class="empty-icon">⌁</div><h3>Henüz iş yok</h3><p>Kaynak ekranında “Kayıtları kontrol et” düğmesine bastığında işin durumu ve sonucu burada görünür.</p></div>';
   updateAuditButtons();
 }
@@ -512,6 +519,8 @@ async function start(destinationId=storedDestination(localStorage)) {
       const jobKey=state.data.jobs.map(j=>`${j.id}:${j.status}`).join(",");     // the section changes only when a job starts or ends
       if(["sources","adim"].includes(state.page) && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
       if(jobKey!==lastWorkflowKey) {lastWorkflowKey=jobKey;loadWorkflow().catch(()=>{});}   // statuses come from the records
+      if(textScreen.jobsChanged(state.data.jobs) && state.page==="adim" && stepOfHash(location.hash)==="metin") textScreen.rerender();   // GÖREV-15
+      if(state.data.jobs.some(j=>j.kind==="claude_metin" && active(j)) && Date.now()-lastUsageLoad>15000) {lastUsageLoad=Date.now();usagePanel.load();}
       const claudeJobs=state.data.jobs.filter(j=>j.kind==="claude_run");
       if(claudeJobs.some(active) && Date.now()-lastUsageLoad>15000) {lastUsageLoad=Date.now();usagePanel.load();}   // measurements come live
       const claudeKey=claudeJobs.map(j=>`${j.id}:${j.status}`).join(",");          // a Claude run started or ended: the Videolar screen reloads
@@ -614,6 +623,7 @@ setInterval(()=>{
   for(const job of state.data.jobs.filter(j=>active(j) && j.progress_info)) {
     const box=document.querySelector(`[data-progress-job="${job.id}"]`), progress=claudeProgress(job);
     if(!box || !progress) continue;
+    if(!box.querySelector(".claude-bar span")) continue;
     box.querySelector(".claude-bar span").style.width=`${progress.percent}%`;
     box.querySelector(".claude-bar").setAttribute("aria-valuenow",String(progress.percent));
     box.querySelector(".claude-progress-text").textContent=claudeProgressText(progress);

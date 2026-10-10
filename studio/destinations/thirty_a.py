@@ -88,6 +88,17 @@ CHANNEL = {
     # GÖREV-14 (Adım 4e): the starting values of Settings → title suffix; the program writes the current ones into every run's secim.md.
     "title_suffix": {"en": " | 30A Florida Vacation", "tr": " | 30A Florida Tatili"},
 }
+# GÖREV-15 (docs/M17-VIDEO-METNI.md): the video text's voice and tones. The narrator's voice (the same in every tone) and the tone files are
+# given to the writing steps (Ek N); tones are managed in Settings → Tonlar and live in this folder (the repository file is the single source;
+# a tone the user adds or edits shows as an uncommitted change in git, on purpose). The warning phrases are the program's check (Ek O), never
+# given to Claude; Settings → Tonlar edits them.
+TEXT = {
+    "voice": CLAUDE_INSTRUCTIONS / "ses_ortak.md",
+    "tones": CLAUDE_INSTRUCTIONS / "tonlar",
+    "default_tone": "arastirmaci_dost",
+    "warning_phrases": CLAUDE_INSTRUCTIONS / "uyari_ifadeleri.txt",
+    "published_videos": (),             # the publishing step will fill it (title, topic, address); empty until then
+}
 
 # GÖREV-14 (Adım 7): one page of each site the reports name as unreadable from this computer, for Settings → Tarayıcı eklentisi →
 # "Sorunlu sitelerden birer sayfa dene" (the user presses it). Addresses come from the records of earlier runs.

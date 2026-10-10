@@ -24,9 +24,21 @@ export function claudeSection(view, message="") {
       <label>Genel varsayılan efor<select data-field="claude_effort">${choiceOptions(options.efforts,settings.claude_effort)}</select></label></div>
       <div class="table-scroll"><table class="reference-table"><thead><tr><th>ADIM</th><th>MODEL</th><th>EFOR</th><th>EN FAZLA TUR</th></tr></thead><tbody>${steps}</tbody></table></div>
       <p class="muted form-note">${esc(options.max_turns.help)}</p>
+      ${textSettings(settings, options.text)}
       ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
       <button class="primary" type="submit">Claude ayarlarını kaydet</button>
     </form></section>`;
+}
+
+const TEXT_LABELS={claude_max_sessions:"Aynı anda en çok Claude oturumu", claude_limit_five_hour:"5 saatlik pencere eşiği (%)", claude_limit_week:"Haftalık pencere eşiği (%)"};
+
+/** GÖREV-15: the video text chain's settings — sessions at once, the usage thresholds and "Plandan sonra dur". */
+export function textSettings(settings, text) {
+  if(!text) return "";
+  const fields=text.fields.map(f=>`<label>${esc(TEXT_LABELS[f.field] || f.field)}<input type="number" data-field="${esc(f.field)}" min="${f.min}" max="${f.max}" value="${esc(settings[f.field])}"><span class="muted form-note">${esc(f.help)}</span></label>`).join("");
+  const stop=text.stop_after_plan;
+  return `<h3 style="margin-top:18px">Video metni çalışması</h3><div class="form-grid text-settings">${fields}
+    <label class="checkbox-label"><input type="checkbox" data-field="${esc(stop.field)}" ${settings[stop.field]?"checked":""}> Plandan sonra dur<span class="muted form-note">${esc(stop.help)}</span></label></div>`;
 }
 
 // GÖREV-14 (Adım 4e): the destination's title suffixes. The program writes them into every title and evaluation run and checks every title.
@@ -58,7 +70,7 @@ export async function renderSuffixSettings(container, message="") {
 
 export function formValues(form) {
   const values={};
-  form.querySelectorAll("[data-field]").forEach(el=>{values[el.dataset.field]=el.type==="number"?Number(el.value):el.value;});
+  form.querySelectorAll("[data-field]").forEach(el=>{values[el.dataset.field]=el.type==="checkbox"?el.checked:el.type==="number"?Number(el.value):el.value;});
   return values;
 }
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Planın eleştirisi (plan_elestirisi.json)",
+  "description": "Eleştirmenin notları ve planın yeniden yapılması gerekip gerekmediği.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surum", "adim", "notlar", "yeniden_yap"],
+  "properties": {
+    "surum": {"const": 1},
+    "adim": {"const": "metin_plan_elestiri"},
+    "notlar": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "yeniden_yap": {"type": "boolean"}
+  }
+}

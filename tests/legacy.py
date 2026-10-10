@@ -40,6 +40,15 @@ V13_TABLES = {"destination_refresh_intervals": 4, "refresh_batches": 0, "destina
 V14_TABLES = {"evidence_packs": 0}
 V15_TABLES = {"claude_runs": 0, "videos": 0}
 V16_TABLES = {"claude_usage": 0, "job_progress": 0}
+V17_TABLES = {"text_runs": 0, "text_sessions": 0, "text_versions": 0, "text_selections": 0}
+
+
+def drop_v17(con):
+    """A file of an older schema made from a fresh one: without the v17 tables (GÖREV-15: the video text)."""
+    for index in ("text_selections_video", "text_versions_run", "text_sessions_run", "text_runs_video"):
+        con.execute(f"DROP INDEX {index}")
+    for table in ("text_selections", "text_versions", "text_sessions", "text_runs"):
+        con.execute(f"DROP TABLE {table}")
 
 
 def without_added_sources(sources):

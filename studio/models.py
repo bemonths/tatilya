@@ -93,3 +93,34 @@ class TranslateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     aday: int = Field(ge=0, le=100)
     baslik_tr: str = Field(min_length=1, max_length=300)
+
+
+class TextRunInput(BaseModel):
+    """GÖREV-15: "Metni yaz" — the tones (file stems) a new text run writes, each with the same plan."""
+    model_config = ConfigDict(extra="forbid")
+    tonlar: list[str] = Field(min_length=1, max_length=12)
+
+
+class TextToneInput(BaseModel):
+    """GÖREV-15: "Bu tonla da yaz" — one more tone with a run's plan."""
+    model_config = ConfigDict(extra="forbid")
+    ton: str = Field(min_length=1, max_length=80)
+
+
+class TextSelectInput(BaseModel):
+    """GÖREV-15: "Bu tonla devam et"."""
+    model_config = ConfigDict(extra="forbid")
+    not_: str | None = Field(default=None, alias="not", max_length=2000)
+
+
+class ToneInput(BaseModel):
+    """GÖREV-15: Settings → Tonlar: a new tone, or a tone's new name and text (with the SHA-256 of the file as it was opened)."""
+    model_config = ConfigDict(extra="forbid")
+    ad: str = Field(max_length=200)
+    metin: str = Field(max_length=20000)
+    base_sha256: str | None = Field(default=None, max_length=64)
+
+
+class ToneRestoreInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    base_sha256: str = Field(min_length=64, max_length=64)
