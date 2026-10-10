@@ -12,11 +12,12 @@ import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 import {refreshSection} from "./refresh.js";
 import {EvidenceScreen} from "./evidence.js";
-import {VideosScreen} from "./videos.js";
+import {VideosScreen, videoCard} from "./videos.js";
+import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask} from "./workflow.js";
 import {renderClaudeSettings} from "./claude.js";
 
 const $ = selector => document.querySelector(selector);
-const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null};
+const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:""};
 const statusLabels = {queued:"Sırada", running:"Çalışıyor", done:"Tamamlandı", failed:"Hata", canceled:"İptal edildi", interrupted:"Yarıda kaldı"};
 const active = job => ["queued", "running"].includes(job.status);
 let toastTimer;
@@ -41,6 +42,9 @@ const referencesScreen=new ReferencesScreen();
 const evidenceScreen=new EvidenceScreen();
 const videosScreen=new VideosScreen();
 let lastClaudeKey="";
+let lastWorkflowKey="";
+let workflowSequence=0;
+let packSequence=0;
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
 const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
@@ -58,11 +62,86 @@ function options(values, selected="", empty=null) {
     `<option value="${esc(value)}" ${value === selected ? "selected" : ""}>${esc(value)}</option>`).join("");
 }
 
+// GÖREV-14: ADIMLAR (the selected video's eight steps with live statuses) and VERİ (the tool screens).
 function navigation() {
-  const groups = {0:"VERİ MERKEZİ", 3:"İÇERİK ATÖLYESİ", 8:"ÜRETİM & YAYIN"};
-  $("#navigation").innerHTML = state.data.steps.map((step,index) => `${groups[index] ? `<div class="group-label">${groups[index]}</div>` : ""}
-    <a href="#${step.id}" class="${state.page === step.id ? "active" : ""}" ${state.page === step.id ? 'aria-current="page"' : ""}>
-    <span class="step-no">${String(index+1).padStart(2,"0")}</span><span><span class="nav-title">${esc(step.title)}</span><span class="nav-sub" style="display:block">${step.state === "planned" ? "Planlanan aşama" : esc(step.subtitle)}</span></span></a>`).join("");
+  $("#navigation").innerHTML = stepNav(state.workflow, stepOfHash(location.hash)) + toolNav(state.data.steps, state.page);
+}
+
+function currentStep() {
+  return state.workflow?.steps.find(step=>step.id===stepOfHash(location.hash)) || null;
+}
+
+function nextTaskSlot(step) {
+  return `<div id="next-task-slot">${nextTask(step)}</div>`;
+}
+
+async function loadWorkflow() {
+  const ticket=++workflowSequence, first=!state.workflow;
+  const result=await api(state.videoId?`workflow?video_id=${encodeURIComponent(state.videoId)}`:"workflow");
+  if(ticket!==workflowSequence) return;
+  state.workflow=result;
+  if(state.videoId && !result.video) {state.videoId="";persistVideo(localStorage,state.data.selected_destination.id,"");}
+  $("#video-select").innerHTML=videoOptions(result,state.videoId);
+  $("#workflow-progress").textContent=progressText(result);
+  $("#workflow-progress").title=result.video?`${result.video.title_en} · ${result.video.region_name}`:"Video seçilmedi";
+  navigation();
+  if(first && ["adim","videos"].includes(state.page)) {render();return;}
+  const slot=document.querySelector("#next-task-slot");
+  if(slot) slot.innerHTML=nextTask(currentStep());
+}
+
+function selectVideo(videoId) {
+  state.videoId=videoId || "";
+  persistVideo(localStorage,state.data.selected_destination.id,state.videoId);
+  return loadWorkflow().then(()=>{if(["adim","videos"].includes(state.page)) render();});
+}
+
+function renderStep() {
+  const key=stepOfHash(location.hash);
+  if(key==="baslik") {location.hash="#videos";return;}
+  const step=currentStep();
+  if(!step) {$("#main").innerHTML='<p role="status" class="loading">İş akışı yükleniyor…</p>';return;}
+  if(key==="veri") renderDataStep(step);
+  else if(key==="paket") renderPackStep(step);
+  else renderPlannedStep(step);
+}
+
+function renderDataStep(step) {
+  $("#main").innerHTML = pageHeading("Veri", `${state.data.selected_destination.name} için toplanan verinin durumu: hangi kaynağın güncelleme zamanı geldi, hangisi güncel.`) +
+    nextTaskSlot(step) + `<div id="refresh-section">${refreshSection(state.data.refresh,state.data.jobs.some(active))}</div>
+    <div class="planned-grid tool-links">${state.data.steps.map(tool=>`<a class="planned-card" href="#${esc(tool.id)}"><span class="eyebrow">VERİ ARACI</span><h3>${esc(tool.title)}</h3><p>${esc(tool.subtitle)}</p></a>`).join("")}</div>`;
+  updateRefresh().catch(()=>{});
+}
+
+async function renderPackStep(step) {
+  const ticket=++packSequence;
+  $("#main").innerHTML = pageHeading("Veri paketi", "Seçilen başlığın içerik planından kurulan kanıt paketi: bölümler planın sırasıyla gelir, her bölümde dayandığı satırlar ve blokları bulunur.") +
+    nextTaskSlot(step) + '<div id="pack-step-body" aria-live="polite"><p>Yükleniyor…</p></div>';
+  const body=$("#pack-step-body");
+  if(!state.videoId) {body.innerHTML='<section class="quality-result empty"><h2>Video seçilmedi</h2><p>Üst çubuktaki video seçiciden bir video seçin ya da 2. adımda (Konu ve başlık) bir başlık seçin.</p><a class="return-link" href="#videos">Konu ve başlık →</a></section>';return;}
+  try {
+    const videos=await api("videos");
+    if(ticket!==packSequence) return;
+    const video=videos.find(v=>v.id===state.videoId);
+    body.innerHTML=video?`<section class="library"><div class="library-title"><h2>Seçili video</h2><small>${esc(video.region_name)}</small></div><div class="video-list">${videoCard(video)}</div></section><div id="pack-head-slot"></div>`:'<p class="muted">Seçili video bulunamadı.</p>';
+    body.querySelectorAll("[data-video-pack]").forEach(button=>button.addEventListener("click",async()=>{
+      button.disabled=true;
+      try {
+        await api(`videos/${encodeURIComponent(button.dataset.videoPack)}/evidence-pack`,{method:"POST",body:"{}"});
+        toast("Video için kanıt paketi üretildi.");
+        await loadWorkflow();renderPackStep(currentStep());
+      } catch(error) {if(!error.stale) toast(error.message);button.disabled=false;}
+    }));
+  } catch(error) {if(!error.stale && ticket===packSequence) body.textContent=error.message;}
+}
+
+const PLANNED_ROADMAP={metin:"article",kontrol:"check",gorsel:"visuals",uretim:"video",yayin:"publish"};
+
+function renderPlannedStep(step) {
+  const plan=roadmap[PLANNED_ROADMAP[step.id]];
+  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu adım geliştirme planında; henüz kurulmadı.")}${nextTaskSlot(step)}
+    ${plan?`<section class="planned-hero"><span class="tag warm">Planlanan adım · Henüz bağlı değil</span><h2>${esc(plan.headline)}</h2><p>${esc(plan.description)}</p><a class="return-link" href="#videos">← Konu ve başlık</a></section>
+    <div class="planned-grid">${plan.cards.map(([label,title,description])=>`<section class="planned-card"><span class="eyebrow">${esc(label)}</span><h3>${esc(title)}</h3><p>${esc(description)}</p></section>`).join("")}</div>`:""}</div>`;
 }
 
 function pageHeading(title, description, actions="") {
@@ -73,7 +152,7 @@ function pageHeading(title, description, actions="") {
 function render() {
   if (!state.data) return;
   state.page = location.hash.slice(1).split("/")[0] || "sources";
-  if (![...state.data.steps.map(step=>step.id),"settings"].includes(state.page)) state.page="sources";
+  if (![...state.data.steps.map(step=>step.id),"settings","videos","adim"].includes(state.page)) state.page="sources";
   navigation();
   beachScreen.invalidate();
   weatherScreen.invalidate();
@@ -84,15 +163,15 @@ function render() {
   referencesScreen.invalidate();
   evidenceScreen.invalidate();
   videosScreen.invalidate();
-  const title = state.data.steps.find(step=>step.id===state.page)?.title || "Ayarlar";
+  const title = currentStep()?.title || state.data.steps.find(step=>step.id===state.page)?.title || (state.page==="videos"?"Konu ve başlık":"Ayarlar");
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
   else if (state.page === "collect") (collectionScreens[location.hash] || beachScreen).render($("#main"),state.data,pageHeading);
   else if (state.page === "quality") renderQuality();
   else if (state.page === "evidence") evidenceScreen.render($("#main"),state.data,pageHeading);
-  else if (state.page === "videos") videosScreen.render($("#main"),state.data,pageHeading);
+  else if (state.page === "videos") videosScreen.render($("#main"),state.data,(title,description,actions)=>pageHeading(title,description,actions)+nextTaskSlot(currentStep()));
+  else if (state.page === "adim") renderStep();
   else if (state.page === "settings") renderSettings();
-  else renderPlanned();
   updateAuditButtons();
 }
 
@@ -145,14 +224,6 @@ function renderRows() {
     <a class="source-link" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">Kaynağın sitesini aç ↗</a>
     <div class="detail-actions"><button data-action="edit" data-id="${source.id}">Düzenle</button><button class="quiet" data-action="archive" data-id="${source.id}">${source.enabled?"Arşivle":"Geri al"}</button></div><div class="detail-foot">${sourceDomainLink(source)}</div>` :
     `<div class="empty"><span class="empty-icon">▤</span><h3>Kaynak ayrıntıları</h3><p>Listedeki bir kaynağı seçerek açıklamasını ve toplama planını görebilirsin.</p></div>`;
-}
-
-function renderPlanned() {
-  const step = state.data.steps.find(step=>step.id===state.page);
-  const plan = roadmap[state.page];
-  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu aşama geliştirme planında. Kaynak kütüphanesi ile plaj, hava, restoran ve mahalle verisi toplama kullanılabilir.")}
-    <section class="planned-hero"><span class="tag warm">Planlanan aşama · Henüz bağlı değil</span><h2>${esc(plan.headline)}</h2><p>${esc(plan.description)}</p><a class="return-link" href="#sources">← Kaynak kütüphanesine dön</a></section>
-    <div class="planned-grid">${plan.cards.map(([label,title,description])=>`<section class="planned-card"><span class="eyebrow">${esc(label)}</span><h3>${esc(title)}</h3><p>${esc(description)}</p></section>`).join("")}</div></div>`;
 }
 
 function reportStale(report) {
@@ -398,7 +469,10 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastDailyId=state.data.daily_needs_runs?.[0]?.id || null;
     climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
+    state.workflow=null;state.videoId=storedVideo(localStorage,data.selected_destination.id);lastWorkflowKey="";
+    $("#video-select").innerHTML=videoOptions(null,"");$("#workflow-progress").textContent="";
     render();renderJobs();
+    loadWorkflow().catch(error=>{if(!error.stale) toast(error.message);});
     events=new EventSource(`/api/${destinationPath("events")}`);
     events.addEventListener("open",()=>{
       if(ticket!==destinationRevision()) return;
@@ -410,14 +484,15 @@ async function start(destinationId=storedDestination(localStorage)) {
       state.data.jobs=JSON.parse(event.data).filter(job=>job.destination_id===state.data.selected_destination.id);renderJobs();
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
       const jobKey=state.data.jobs.map(j=>`${j.id}:${j.status}`).join(",");     // the section changes only when a job starts or ends
-      if(state.page==="sources" && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
+      if(["sources","adim"].includes(state.page) && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
+      if(jobKey!==lastWorkflowKey) {lastWorkflowKey=jobKey;loadWorkflow().catch(()=>{});}   // statuses come from the records
       const claudeJobs=state.data.jobs.filter(j=>j.kind==="claude_run");
       const claudeKey=claudeJobs.map(j=>`${j.id}:${j.status}`).join(",");          // a Claude run started or ended: the Videolar screen reloads
       if(claudeKey!==lastClaudeKey) {
         const finished=lastClaudeKey && claudeJobs.find(j=>!active(j) && !lastClaudeKey.includes(`${j.id}:${j.status}`));
         lastClaudeKey=claudeKey;
         if(state.page==="videos") videosScreen.refresh($("#main"));
-        if(finished) toast(finished.status==="done"?"Claude bitti: başlık önerileri Videolar ekranında onay bekliyor.":`Claude çalışması bitmedi: ${finished.message}`);
+        if(finished) toast(finished.status==="done"?"Claude bitti: başlık önerileri Konu ve başlık ekranında onay bekliyor.":`Claude çalışması bitmedi: ${finished.message}`);
       }
       const restaurantLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-restaurants");
       if(restaurantLatest && restaurantLatest.id!==lastRestaurantId) {
@@ -504,5 +579,8 @@ async function start(destinationId=storedDestination(localStorage)) {
 }
 
 $("#destination-select").addEventListener("change",event=>start(event.target.value));
+$("#video-select").addEventListener("change",event=>selectVideo(event.target.value).catch(error=>{if(!error.stale) toast(error.message);}));
+document.addEventListener("studio:video-chosen",event=>selectVideo(event.detail).catch(()=>{}));
+document.addEventListener("studio:workflow-changed",()=>loadWorkflow().catch(()=>{}));
 startHeartbeat();
 start();

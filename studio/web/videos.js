@@ -116,7 +116,7 @@ export class VideosScreen {
     const runId=this.runFromHash();
     if(runId!==this.runId) {this.open=null;this.message="";}
     this.runId=runId;
-    main.innerHTML=heading("Videolar", `${data.selected_destination?.name || "Destinasyon"} için Claude'dan konu ve başlık önerisi alın; seçtiğiniz başlık bir video kaydı olur ve kanıt paketi bu kayıtla kurulur.`)+
+    main.innerHTML=heading("Konu ve başlık", `${data.selected_destination?.name || "Destinasyon"} için Claude'dan konu ve başlık önerisi alın; seçtiğiniz başlık bir video kaydı olur ve kanıt paketi bu kayıtla kurulur.`)+
       `<div id="videos-body" aria-live="polite"><p>Yükleniyor…</p></div>`;
     Promise.all([api("claude/options"),api("claude/runs"),api("videos"),runId?api(`claude/runs/${encodeURIComponent(runId)}`):Promise.resolve(null)]).then(([options,runs,videos,view])=>{
       if(sequence!==this.sequence) return;
@@ -140,7 +140,7 @@ export class VideosScreen {
       ${(this.runs||[]).length?`<div class="table-scroll"><table class="reference-table"><thead><tr><th>BÖLGE · AİLE</th><th>ZAMAN</th><th>DURUM</th><th>MODEL · ÖLÇÜM</th></tr></thead><tbody>${this.runs.map(runRow).join("")}</tbody></table></div>`:'<p class="muted run-empty">Henüz öneri çalışması yok.</p>'}</section>`;
     const videos=`<section class="library"><div class="library-title"><h2>Video kayıtları</h2><small>${(this.videos||[]).length} video</small></div>
       ${(this.videos||[]).length?`<div class="video-list">${this.videos.map(videoCard).join("")}</div>`:'<p class="muted run-empty">Henüz seçilmiş başlık yok.</p>'}</section>`;
-    body.innerHTML=this.view?`<a href="#videos" class="return-link">← Videolar</a>${runView(this.view,this.open,this.message,this.busy)}${videos}`:`${form}${runs}${videos}`;
+    body.innerHTML=this.view?`<a href="#videos" class="return-link">← Konu ve başlık</a>${runView(this.view,this.open,this.message,this.busy)}${videos}`:`${form}${runs}${videos}`;
     body.querySelector("#title-region")?.addEventListener("change",e=>{this.form.bolge=e.target.value;});
     body.querySelector("#title-family")?.addEventListener("change",e=>{this.form.aile=e.target.value;});
     body.querySelector("#title-note")?.addEventListener("input",e=>{this.form.not=e.target.value;});
@@ -170,6 +170,8 @@ export class VideosScreen {
       const result=await api(`claude/runs/${encodeURIComponent(id)}/${kind}`,{method:"POST",body:JSON.stringify(kind==="select"?{aday:index,not:note}:{not:note})});
       this.message=kind==="select"?`Video kaydı oluşturuldu: ${result.title_en}`:kind==="reject"?"Çalışma reddedildi.":"Düzeltme için yeni bir Claude çalışması başladı; ilerleme İşler panelinde.";
       if(kind==="correct") {location.hash=`#videos/run/${result.id}`;return;}
+      if(kind==="select") document.dispatchEvent(new CustomEvent("studio:video-chosen",{detail:result.id}));
+      else document.dispatchEvent(new CustomEvent("studio:workflow-changed"));
       [this.view,this.videos,this.runs]=await Promise.all([api(`claude/runs/${encodeURIComponent(id)}`),api("videos"),api("claude/runs")]);
     } catch(error) {if(error.stale) return;this.message=error.message;}
     finally {this.busy=false;this.draw(main);}
@@ -179,6 +181,7 @@ export class VideosScreen {
     try {
       await api(`videos/${encodeURIComponent(videoId)}/evidence-pack`,{method:"POST",body:"{}"});
       this.message="Video için kanıt paketi üretildi.";this.videos=await api("videos");
+      document.dispatchEvent(new CustomEvent("studio:workflow-changed"));
     } catch(error) {if(error.stale) return;this.message=error.message;}
     finally {this.busy=false;this.draw(main);}
   }

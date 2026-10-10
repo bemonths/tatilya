@@ -19,6 +19,10 @@ export const roadmap = {
     ["GİRDİ", "Onaylı brief", "Kapsam ve kullanılmasına karar verilen veriler."],
     ["ÇALIŞMA", "Yazım ve denetim", "Taslak, kaynak kontrolü ve düzenleme döngüsü."],
     ["ÇIKTI", "Makale sürümleri", "Önceki sürümleri koruyan, düzenlenebilir metin."]]},
+  check: {headline:"Video metnini veriyle karşılaştır", description:"Video metnindeki sayılar, tarihler ve iddialar veri paketindeki satırlarla karşılaştırılacak; kaynağın söylemediği bir şey metinde kalmayacak.", cards:[
+    ["GİRDİ", "Video metni ve veri paketi", "Metnin son sürümü ve videonun kanıt paketi."],
+    ["ÇALIŞMA", "Kesin kontroller", "Sayı, tarih ve kaynak denetimi; Claude ile anlam kontrolü."],
+    ["ÇIKTI", "Kontrol raporu", "Düzeltilmesi gereken yerler ve açık sorunlar listesi."]]},
   visuals: {headline:"Anlatıyı sahnelere dönüştür", description:"Makalenin her bölümü için görsel, grafik, harita ve video ihtiyaçları belirlenecek.", cards:[
     ["GİRDİ", "Makale", "Son metin ve metindeki kaynaklı sayısal bilgiler."],
     ["ÇALIŞMA", "Sahne planı", "Sahne amacı, görsel türü, süre ve gereken varlıklar."],

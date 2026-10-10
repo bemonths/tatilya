@@ -16,7 +16,7 @@ from . import __version__
 from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
-from . import refresh
+from . import refresh, workflow
 from .models import EvidencePackInput, JobInput, RunDecisionInput, SourceInput, SourceUpdate, TitleRunInput
 from . import evidence
 from .ai import settings as claude_settings
@@ -133,6 +133,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                                       "provenance": {"scope":"Destinasyonda yapılandırılmış hava örnek noktaları."}},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
                                     "feature_labels": beaches.FEATURE_LABELS}}
+
+    @app.get("/api/workflow")
+    def workflow_view(destination_id: str = DEFAULT_DESTINATION_ID, video_id: str | None = None):
+        """The eight steps of the selected video with live statuses, computed from the records (GÖREV-14)."""
+        selected(destination_id)
+        return workflow.compute(db, destination_id, video_id)
 
     @app.get("/api/sources")
     def sources(destination_id: str = DEFAULT_DESTINATION_ID):

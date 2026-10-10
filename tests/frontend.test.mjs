@@ -700,6 +700,7 @@ test('a pack lists its neighborhood by name whichever template is selected (GÖR
 
 import {regionOptions, familyOptions, warnings, runRow, candidateList, candidateDetail, videoCard} from '../studio/web/videos.js';
 import {claudeSection} from '../studio/web/claude.js';
+import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask} from '../studio/web/workflow.js';
 
 const titleOptions={available:true,whole_region:'30A geneli',regions:[{id:'rosemary-beach',name:'Rosemary Beach'}],families:['Genel planlama','Deneyim'],all_families:'hepsi',
   claude:{found:true,api_key_warning:null}};
@@ -742,4 +743,42 @@ test('a video record without a template cannot produce a pack; the Claude settin
   assert.match(section,/ANTHROPIC_API_KEY uyarısı/);
   assert.match(section,/data-field="claude_model_baslik".*<option value="inherit" >Genel varsayılan<\/option>.*<option value="claude-opus-5-5" selected>Opus 5.5/s);
   assert.match(section,/data-field="claude_max_turns_baslik" min="1" max="200" value="30"/);
+});
+
+// GÖREV-14: workflow sidebar helpers.
+
+const flow={video:null,videos:[{id:'v1',title_en:'Rosemary <Beach> Guide',title_tr:'Rehber',region_name:'Rosemary Beach'}],completed:2,total:8,dots:'●●○○○○○○',
+  steps:[{id:'veri',number:1,title:'Veri',status:'done',label:'güncel',next:'Veri güncel.',href:'#adim/veri',planned:false,detail:null},
+    {id:'baslik',number:2,title:'Konu ve başlık',status:'awaiting_approval',label:'onay bekliyor',next:'Başlık seçilmedi: onay bekleyen öneriden bir başlık seç ya da yeni öneri al.',href:'#videos',planned:false,detail:'1 çalışma onay bekliyor'},
+    {id:'metin',number:4,title:'Video metni',status:'planned',label:'planlanan',next:'Bu adım henüz kurulmadı.',href:'#adim/metin',planned:true,detail:null}]};
+
+test('workflow: progress, video selector, routes and the remembered video', () => {
+  assert.equal(progressText(flow),'●●○○○○○○ 2/8 adım');
+  assert.equal(progressText(null),'');
+  const options=videoOptions(flow,'v1');
+  assert.match(options,/^<option value="">Video seçilmedi<\/option><option value="v1" selected>Rosemary &lt;Beach&gt; Guide<\/option>$/);
+  assert.equal(videoOptions(null),'<option value="">Video seçilmedi</option>');
+  assert.equal(stepOfHash('#adim/paket'),'paket');
+  assert.equal(stepOfHash('#videos'),'baslik');
+  assert.equal(stepOfHash('#videos/run/abc'),'baslik');
+  assert.equal(stepOfHash('#sources'),null);
+  const memory=new Map(), storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+  assert.equal(storedVideo(storage,'30a'),'');
+  persistVideo(storage,'30a','v1');assert.equal(storedVideo(storage,'30a'),'v1');assert.equal(storedVideo(storage,'other'),'');
+  persistVideo(storage,'30a','');assert.equal(storedVideo(storage,'30a'),'');
+  const broken={getItem(){throw new Error('kapalı');},setItem(){throw new Error('kapalı');},removeItem(){throw new Error('kapalı');}};
+  assert.equal(storedVideo(broken,'30a'),'');persistVideo(broken,'30a','v1');
+});
+
+test('workflow: ADIMLAR shows each step with its live status, VERİ the tool screens; every step screen starts with the next task', () => {
+  const nav=stepNav(flow,'baslik');
+  assert.match(nav,/ADIMLAR · video seçilmedi.*href="#adim\/veri".*Veri.*step-status green.*güncel.*href="#videos" class="workflow-step active.*aria-current="page".*onay bekliyor.*planned-step.*planlanan/s);
+  assert.equal(stepNav(null,'veri'),'');
+  assert.match(stepNav({...flow,video:{id:'v1'}},null),/^<div class="group-label">ADIMLAR<\/div>/);
+  const tools=toolNav([{id:'sources',title:'Veri kaynakları',subtitle:'Kaynak kütüphanesi',state:'active'},{id:'evidence',title:'Kanıt paketi',subtitle:'Şablondan kanıt',state:'active'}],'evidence');
+  assert.match(tools,/VERİ.*href="#sources".*Veri kaynakları.*href="#evidence" class="active"/s);
+  assert.ok(!tools.includes('Rakip analizi') && !tools.includes('İçerik briefi'));
+  const line=nextTask(flow.steps[1]);
+  assert.match(line,/Sıradaki iş.*Başlık seçilmedi: onay bekleyen öneriden bir başlık seç ya da yeni öneri al\..*onay bekliyor.*1 çalışma onay bekliyor/s);
+  assert.equal(nextTask(null),'');
 });

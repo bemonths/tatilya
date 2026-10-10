@@ -9,16 +9,11 @@ CADENCES = ["Günlük", "Haftalık", "Aylık", "Gerektiğinde"]
 
 from .destinations.thirty_a import SEEDS
 
+# The VERİ group of the sidebar: tool screens (GÖREV-14). The steps of a video (Veri … Yayın hazırlığı) come from `workflow.py`;
+# "Rakip analizi" and "İçerik briefi" were removed (competitor research is in the channel research file, the brief is the data pack).
 STEPS = [
     ("sources", "Veri kaynakları", "Kaynak kütüphanesi", "active"),
     ("collect", "Veri toplama", "Üç kaynak hazır", "active"),
     ("quality", "Veri kontrolü", "Katalog kontrolü hazır", "partial"),
     ("evidence", "Kanıt paketi", "Şablondan kanıt", "active"),
-    ("videos", "Videolar", "Konu ve başlık önerisi", "active"),
-    ("competitors", "Rakip analizi", "İçerik fırsatları", "planned"),
-    ("brief", "İçerik briefi", "Kapsam ve kaynaklar", "planned"),
-    ("article", "Makale", "Kaynaklı içerik", "planned"),
-    ("visuals", "Görsel plan", "Sahne ve varlıklar", "planned"),
-    ("video", "Video üretimi", "Kurgu ve render", "planned"),
-    ("publish", "Yayın hazırlığı", "Son kontrol ve çıktı", "planned"),
 ]
