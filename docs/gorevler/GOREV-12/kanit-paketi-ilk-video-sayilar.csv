@@ -1,0 +1,1724 @@
+kanit,tur,deger,birim,etiket
+K0001,ana,18.561,mil (FDOT kilometre taşı aralığı),kaynak gerçeği
+K0003,ana,16 mahalle,,kaynak gerçeği
+K0004,ana,16,mahalle,kaynak gerçeği
+K0005,ana,16,kayıt,kaynak gerçeği
+K0006,ana,13,mahalle,türetilmiş
+K0020,ana,114,ilan,kaynak gerçeği
+K0021,ana,31,ilan,kaynak gerçeği
+K0022,ana,246,ilan,kaynak gerçeği
+K0023,ana,194,ilan,kaynak gerçeği
+K0024,ana,86,ilan,kaynak gerçeği
+K0025,ana,259,ilan,kaynak gerçeği
+K0026,ana,221,ilan,kaynak gerçeği
+K0027,ana,498,ilan,kaynak gerçeği
+K0028,ana,165,ilan,kaynak gerçeği
+K0029,ana,301,ilan,kaynak gerçeği
+K0030,ana,7,ilan,kaynak gerçeği
+K0031,ana,166,ilan,kaynak gerçeği
+K0032,ana,101,ilan,kaynak gerçeği
+K0033,ana,53,erişim,kaynak gerçeği
+K0034,ana,5,erişim,türetilmiş
+K0035,ana,9,erişim,yaklaşık
+K0036,ana,1,erişim,türetilmiş
+K0037,ana,1,erişim,türetilmiş
+K0038,ana,3,erişim,yaklaşık
+K0039,ana,4,erişim,türetilmiş
+K0040,ana,4,erişim,türetilmiş
+K0041,ana,0,erişim,türetilmiş
+K0042,ana,0,erişim,türetilmiş
+K0043,ana,13,erişim,türetilmiş
+K0044,ana,24,erişim,yaklaşık
+K0045,ana,0,erişim,türetilmiş
+K0046,ana,1,erişim,türetilmiş
+K0047,ana,3,erişim,yaklaşık
+K0048,ana,0,erişim,türetilmiş
+K0049,ana,0,erişim,türetilmiş
+K0050,ana,2,erişim,türetilmiş
+K0051,ana,5,erişim,yaklaşık
+K0054,ana,11,bölgesel erişim,kaynak gerçeği
+K0056,ana,26,mil,kaynak gerçeği
+K0057,ana,5 / 15,USD (saat / gün),kaynak gerçeği
+K0058,ana,5 / 15,USD (saat / gün),kaynak gerçeği
+K0059,ana,06:00–21:45,saat aralığı,kaynak gerçeği
+K0060,ana,4,durak,kaynak gerçeği
+K0061,ana,06:00–24:00,saat aralığı,kaynak gerçeği
+K0063,ana,06:00–24:00,saat aralığı,kaynak gerçeği
+K0070,ana,2016-10-25 (kabul); 2017-04-01 (yürürlük); 15 ft tampon,,kaynak gerçeği
+K0071,ana,2018-07-01 (yürürlük),,kaynak gerçeği
+K0072,ana,1194,özel mülk,kaynak gerçeği
+K0073,ana,95 parsel; 20 ft geçiş alanı (uzlaşanlarda),,kaynak gerçeği
+K0074,ana,2025-06-24,,kaynak gerçeği
+K0075,ana,en az 3 belediye ve 275.000'den az nüfus,,kaynak gerçeği
+K0076,ana,2018 öncesi düzene dönüş,,kaynak gerçeği
+K0077,ana,2026-02-18,,kaynak gerçeği
+K0078,ana,2017 kararı yürürlükte değil (ilçenin beyanı),,kaynak gerçeği
+K0079,ana,0,customary use kararı (2026-01…2026-10),bizim hesabımız
+K0080,ana,20 ft geçiş alanı; plajların yaklaşık üçte ikisi,,kaynak gerçeği
+K0083,ana,Highway 20'nin güneyi,,kaynak gerçeği
+K0085,ana,15:30–08:30,saat aralığı,kaynak gerçeği
+K0087,ana,10×10,ft,kaynak gerçeği
+K0088,ana,kara tarafındaki yarı; çadırlar arası 4,ft,kaynak gerçeği
+K0089,ana,8×8,ft,kaynak gerçeği
+K0090,ana,15,ft,kaynak gerçeği
+K0091,ana,gün batımı + 1 saat → gün doğumu + 1 saat,,kaynak gerçeği
+K0094,ana,200 / 50 / 100,ft,kaynak gerçeği
+K0095,ana,17:00–24:00,saat aralığı,kaynak gerçeği
+K0096,ana,16:00–23:00,saat aralığı,kaynak gerçeği
+K0100,ana,"3×3, derinlik en fazla 2",ft,kaynak gerçeği
+K0103,ana,1 Mayıs–31 Ekim,,kaynak gerçeği
+K0104,ana,22:00–08:00,saat aralığı,kaynak gerçeği
+K0106,ana,500,USD (üst sınır),kaynak gerçeği
+K0110,ana,21,yaş (en az),kaynak gerçeği
+K0118,ana,2,kez/gün,kaynak gerçeği
+K0120,ana,18,yaş (en az),kaynak gerçeği
+K0121,ana,500,USD,kaynak gerçeği
+K0122,ana,1 Mart–31 Ekim 2026; 10:00–18:00,,kaynak gerçeği
+K0123,ana,63.1,°F,kaynak gerçeği
+K0123,donusum,17.3,°C,kaynak gerçeği
+K0123,orneklem,19,örnek,kaynak gerçeği
+K0124,ana,65.8,°F,kaynak gerçeği
+K0124,donusum,18.8,°C,kaynak gerçeği
+K0124,orneklem,20,örnek,kaynak gerçeği
+K0125,ana,70.7,°F,kaynak gerçeği
+K0125,donusum,21.5,°C,kaynak gerçeği
+K0125,orneklem,20,örnek,kaynak gerçeği
+K0126,ana,76.2,°F,kaynak gerçeği
+K0126,donusum,24.6,°C,kaynak gerçeği
+K0126,orneklem,20,örnek,kaynak gerçeği
+K0127,ana,83.5,°F,kaynak gerçeği
+K0127,donusum,28.6,°C,kaynak gerçeği
+K0127,orneklem,19,örnek,kaynak gerçeği
+K0128,ana,88.9,°F,kaynak gerçeği
+K0128,donusum,31.6,°C,kaynak gerçeği
+K0128,orneklem,18,örnek,kaynak gerçeği
+K0129,ana,90.9,°F,kaynak gerçeği
+K0129,donusum,32.7,°C,kaynak gerçeği
+K0129,orneklem,18,örnek,kaynak gerçeği
+K0130,ana,90.6,°F,kaynak gerçeği
+K0130,donusum,32.6,°C,kaynak gerçeği
+K0130,orneklem,18,örnek,kaynak gerçeği
+K0131,ana,88.5,°F,kaynak gerçeği
+K0131,donusum,31.4,°C,kaynak gerçeği
+K0131,orneklem,18,örnek,kaynak gerçeği
+K0132,ana,80.9,°F,kaynak gerçeği
+K0132,donusum,27.2,°C,kaynak gerçeği
+K0132,orneklem,18,örnek,kaynak gerçeği
+K0133,ana,72.1,°F,kaynak gerçeği
+K0133,donusum,22.3,°C,kaynak gerçeği
+K0133,orneklem,18,örnek,kaynak gerçeği
+K0134,ana,65.6,°F,kaynak gerçeği
+K0134,donusum,18.7,°C,kaynak gerçeği
+K0134,orneklem,18,örnek,kaynak gerçeği
+K0135,ana,45.3,°F,kaynak gerçeği
+K0135,donusum,7.4,°C,kaynak gerçeği
+K0135,orneklem,22,örnek,kaynak gerçeği
+K0136,ana,47.9,°F,kaynak gerçeği
+K0136,donusum,8.8,°C,kaynak gerçeği
+K0136,orneklem,22,örnek,kaynak gerçeği
+K0137,ana,53.6,°F,kaynak gerçeği
+K0137,donusum,12.0,°C,kaynak gerçeği
+K0137,orneklem,22,örnek,kaynak gerçeği
+K0138,ana,60.1,°F,kaynak gerçeği
+K0138,donusum,15.6,°C,kaynak gerçeği
+K0138,orneklem,22,örnek,kaynak gerçeği
+K0139,ana,68.0,°F,kaynak gerçeği
+K0139,donusum,20.0,°C,kaynak gerçeği
+K0139,orneklem,22,örnek,kaynak gerçeği
+K0140,ana,74.1,°F,kaynak gerçeği
+K0140,donusum,23.4,°C,kaynak gerçeği
+K0140,orneklem,22,örnek,kaynak gerçeği
+K0141,ana,76.2,°F,kaynak gerçeği
+K0141,donusum,24.6,°C,kaynak gerçeği
+K0141,orneklem,21,örnek,kaynak gerçeği
+K0142,ana,75.8,°F,kaynak gerçeği
+K0142,donusum,24.3,°C,kaynak gerçeği
+K0142,orneklem,22,örnek,kaynak gerçeği
+K0143,ana,72.4,°F,kaynak gerçeği
+K0143,donusum,22.4,°C,kaynak gerçeği
+K0143,orneklem,22,örnek,kaynak gerçeği
+K0144,ana,63.2,°F,kaynak gerçeği
+K0144,donusum,17.3,°C,kaynak gerçeği
+K0144,orneklem,22,örnek,kaynak gerçeği
+K0145,ana,53.0,°F,kaynak gerçeği
+K0145,donusum,11.7,°C,kaynak gerçeği
+K0145,orneklem,22,örnek,kaynak gerçeği
+K0146,ana,47.5,°F,kaynak gerçeği
+K0146,donusum,8.6,°C,kaynak gerçeği
+K0146,orneklem,22,örnek,kaynak gerçeği
+K0147,ana,4.52,inç,kaynak gerçeği
+K0147,donusum,115.0,mm,kaynak gerçeği
+K0147,orneklem,21,örnek,kaynak gerçeği
+K0148,ana,4.96,inç,kaynak gerçeği
+K0148,donusum,126.0,mm,kaynak gerçeği
+K0148,orneklem,21,örnek,kaynak gerçeği
+K0149,ana,4.7,inç,kaynak gerçeği
+K0149,donusum,119.0,mm,kaynak gerçeği
+K0149,orneklem,21,örnek,kaynak gerçeği
+K0150,ana,4.55,inç,kaynak gerçeği
+K0150,donusum,116.0,mm,kaynak gerçeği
+K0150,orneklem,23,örnek,kaynak gerçeği
+K0151,ana,3.22,inç,kaynak gerçeği
+K0151,donusum,82.0,mm,kaynak gerçeği
+K0151,orneklem,21,örnek,kaynak gerçeği
+K0152,ana,4.7,inç,kaynak gerçeği
+K0152,donusum,119.0,mm,kaynak gerçeği
+K0152,orneklem,22,örnek,kaynak gerçeği
+K0153,ana,5.77,inç,kaynak gerçeği
+K0153,donusum,147.0,mm,kaynak gerçeği
+K0153,orneklem,20,örnek,kaynak gerçeği
+K0154,ana,6.08,inç,kaynak gerçeği
+K0154,donusum,154.0,mm,kaynak gerçeği
+K0154,orneklem,19,örnek,kaynak gerçeği
+K0155,ana,5.18,inç,kaynak gerçeği
+K0155,donusum,132.0,mm,kaynak gerçeği
+K0155,orneklem,16,örnek,kaynak gerçeği
+K0156,ana,2.82,inç,kaynak gerçeği
+K0156,donusum,72.0,mm,kaynak gerçeği
+K0156,orneklem,18,örnek,kaynak gerçeği
+K0157,ana,4.13,inç,kaynak gerçeği
+K0157,donusum,105.0,mm,kaynak gerçeği
+K0157,orneklem,22,örnek,kaynak gerçeği
+K0158,ana,4.72,inç,kaynak gerçeği
+K0158,donusum,120.0,mm,kaynak gerçeği
+K0158,orneklem,21,örnek,kaynak gerçeği
+K0159,ana,5.6,gün,kaynak gerçeği
+K0159,orneklem,22,örnek,kaynak gerçeği
+K0160,ana,5.3,gün,kaynak gerçeği
+K0160,orneklem,22,örnek,kaynak gerçeği
+K0161,ana,5.2,gün,kaynak gerçeği
+K0161,orneklem,22,örnek,kaynak gerçeği
+K0162,ana,4.0,gün,kaynak gerçeği
+K0162,orneklem,23,örnek,kaynak gerçeği
+K0163,ana,3.7,gün,kaynak gerçeği
+K0163,orneklem,23,örnek,kaynak gerçeği
+K0164,ana,6.1,gün,kaynak gerçeği
+K0164,orneklem,23,örnek,kaynak gerçeği
+K0165,ana,7.2,gün,kaynak gerçeği
+K0165,orneklem,23,örnek,kaynak gerçeği
+K0166,ana,8.1,gün,kaynak gerçeği
+K0166,orneklem,23,örnek,kaynak gerçeği
+K0167,ana,5.3,gün,kaynak gerçeği
+K0167,orneklem,23,örnek,kaynak gerçeği
+K0168,ana,3.5,gün,kaynak gerçeği
+K0168,orneklem,23,örnek,kaynak gerçeği
+K0169,ana,4.3,gün,kaynak gerçeği
+K0169,orneklem,23,örnek,kaynak gerçeği
+K0170,ana,6.5,gün,kaynak gerçeği
+K0170,orneklem,23,örnek,kaynak gerçeği
+K0171,ana,0.0,gün,kaynak gerçeği
+K0171,orneklem,19,örnek,kaynak gerçeği
+K0172,ana,0.0,gün,kaynak gerçeği
+K0172,orneklem,20,örnek,kaynak gerçeği
+K0173,ana,0.0,gün,kaynak gerçeği
+K0173,orneklem,20,örnek,kaynak gerçeği
+K0174,ana,0.0,gün,kaynak gerçeği
+K0174,orneklem,20,örnek,kaynak gerçeği
+K0175,ana,1.1,gün,kaynak gerçeği
+K0175,orneklem,19,örnek,kaynak gerçeği
+K0176,ana,7.8,gün,kaynak gerçeği
+K0176,orneklem,18,örnek,kaynak gerçeği
+K0177,ana,14.9,gün,kaynak gerçeği
+K0177,orneklem,18,örnek,kaynak gerçeği
+K0178,ana,16.9,gün,kaynak gerçeği
+K0178,orneklem,18,örnek,kaynak gerçeği
+K0179,ana,8.7,gün,kaynak gerçeği
+K0179,orneklem,18,örnek,kaynak gerçeği
+K0180,ana,0.9,gün,kaynak gerçeği
+K0180,orneklem,18,örnek,kaynak gerçeği
+K0181,ana,0.0,gün,kaynak gerçeği
+K0181,orneklem,18,örnek,kaynak gerçeği
+K0182,ana,0.0,gün,kaynak gerçeği
+K0182,orneklem,18,örnek,kaynak gerçeği
+K0183,ana,60.2,°F,bizim hesabımız
+K0183,donusum,15.7,°C,bizim hesabımız
+K0183,orneklem,15,örnek,bizim hesabımız
+K0184,ana,60.6,°F,bizim hesabımız
+K0184,donusum,15.9,°C,bizim hesabımız
+K0184,orneklem,14,örnek,bizim hesabımız
+K0185,ana,65.7,°F,bizim hesabımız
+K0185,donusum,18.7,°C,bizim hesabımız
+K0185,orneklem,14,örnek,bizim hesabımız
+K0186,ana,70.7,°F,bizim hesabımız
+K0186,donusum,21.5,°C,bizim hesabımız
+K0186,orneklem,15,örnek,bizim hesabımız
+K0187,ana,77.2,°F,bizim hesabımız
+K0187,donusum,25.1,°C,bizim hesabımız
+K0187,orneklem,15,örnek,bizim hesabımız
+K0188,ana,82.3,°F,bizim hesabımız
+K0188,donusum,28.0,°C,bizim hesabımız
+K0188,orneklem,15,örnek,bizim hesabımız
+K0189,ana,84.3,°F,bizim hesabımız
+K0189,donusum,29.0,°C,bizim hesabımız
+K0189,orneklem,13,örnek,bizim hesabımız
+K0190,ana,85.8,°F,bizim hesabımız
+K0190,donusum,29.9,°C,bizim hesabımız
+K0190,orneklem,14,örnek,bizim hesabımız
+K0191,ana,84.2,°F,bizim hesabımız
+K0191,donusum,29.0,°C,bizim hesabımız
+K0191,orneklem,13,örnek,bizim hesabımız
+K0192,ana,78.5,°F,bizim hesabımız
+K0192,donusum,25.9,°C,bizim hesabımız
+K0192,orneklem,15,örnek,bizim hesabımız
+K0193,ana,70.3,°F,bizim hesabımız
+K0193,donusum,21.3,°C,bizim hesabımız
+K0193,orneklem,16,örnek,bizim hesabımız
+K0194,ana,63.8,°F,bizim hesabımız
+K0194,donusum,17.7,°C,bizim hesabımız
+K0194,orneklem,16,örnek,bizim hesabımız
+K0195,ana,5,fırtına,bizim hesabımız
+K0196,ana,13,fırtına,bizim hesabımız
+K0197,ana,1,fırtına,bizim hesabımız
+K0198,ana,1,fırtına,bizim hesabımız
+K0199,ana,1,fırtına,bizim hesabımız
+K0200,ana,2,fırtına,bizim hesabımız
+K0201,ana,35.1,deniz mili,bizim hesabımız
+K0201,donusum,65.0,km,bizim hesabımız
+K0202,ana,39.7,deniz mili,bizim hesabımız
+K0202,donusum,73.4,km,bizim hesabımız
+K0203,ana,18.2,deniz mili,bizim hesabımız
+K0203,donusum,33.8,km,bizim hesabımız
+K0204,ana,40.6,deniz mili,bizim hesabımız
+K0204,donusum,75.1,km,bizim hesabımız
+K0205,ana,30.5,deniz mili,bizim hesabımız
+K0205,donusum,56.4,km,bizim hesabımız
+K0206,ana,1 Haziran–30 Kasım,,kaynak gerçeği
+K0207,ana,10 Eylül,,kaynak gerçeği
+K0208,ana,6.5,%,bizim hesabımız
+K0208,orneklem,5,örnek,bizim hesabımız
+K0209,ana,3.0,%,bizim hesabımız
+K0209,orneklem,5,örnek,bizim hesabımız
+K0210,ana,2.6,%,bizim hesabımız
+K0210,orneklem,5,örnek,bizim hesabımız
+K0211,ana,2.1,%,bizim hesabımız
+K0211,orneklem,5,örnek,bizim hesabımız
+K0212,ana,2.4,%,bizim hesabımız
+K0212,orneklem,5,örnek,bizim hesabımız
+K0213,ana,8.5,%,bizim hesabımız
+K0213,orneklem,5,örnek,bizim hesabımız
+K0214,ana,8.6,%,bizim hesabımız
+K0214,orneklem,5,örnek,bizim hesabımız
+K0215,ana,10.6,%,bizim hesabımız
+K0215,orneklem,5,örnek,bizim hesabımız
+K0216,ana,18.3,%,bizim hesabımız
+K0216,orneklem,5,örnek,bizim hesabımız
+K0217,ana,20.0,%,bizim hesabımız
+K0217,orneklem,5,örnek,bizim hesabımız
+K0218,ana,10.2,%,bizim hesabımız
+K0218,orneklem,5,örnek,bizim hesabımız
+K0219,ana,7.1,%,bizim hesabımız
+K0219,orneklem,5,örnek,bizim hesabımız
+K0220,ana,4586000,ziyaretçi,kaynak gerçeği
+K0221,ana,3497200,oda-gece,kaynak gerçeği
+K0222,ana,354.10,USD,kaynak gerçeği
+K0223,ana,48.3,%,kaynak gerçeği
+K0224,ana,69.1,%,kaynak gerçeği
+K0225,ana,500.54,USD,kaynak gerçeği
+K0226,ana,35.7,%,kaynak gerçeği
+K0227,ana,335.96,USD,kaynak gerçeği
+K0228,ana,32.1,%,kaynak gerçeği
+K0229,ana,213.82,USD,kaynak gerçeği
+K0230,ana,56.6,%,kaynak gerçeği
+K0231,ana,389.17,USD,kaynak gerçeği
+K0232,ana,5,%,kaynak gerçeği
+K0233,ana,"11,1 / 7,5 / 4,8 / 4,0 / 3,6",% ziyaretçi,kaynak gerçeği
+K0234,ana,Güz: 12–16 Ekim 2026; Bahar: 5–9 Nisan 2027,,bizim hesabımız
+K0235,ana,Güz: 12–16 Ekim 2026; Bahar: 22–26 Mart 2027,,bizim hesabımız
+K0236,ana,Güz: 8–9 Ekim 2026; Bahar: 15–19 Mart 2027,,bizim hesabımız
+K0237,ana,Bahar: 22–26 Mart 2027; güz tatili yok (12 Ekim tek gün),,bizim hesabımız
+K0238,ana,Bahar: 8–12 Mart 2027 (+26 Mart); güz tatili yok,,bizim hesabımız
+K0239,ana,Ocak (2027: 15–18 Ocak),,kaynak gerçeği
+K0240,ana,Şubat (2027: 17–21 Şubat),,kaynak gerçeği
+K0241,ana,Şubat (2026: 15 Şubat),,kaynak gerçeği
+K0243,ana,"Mayıs, iki yılda bir (sonraki: 19–20 Mayıs 2028)",,kaynak gerçeği
+K0244,ana,4 Temmuz,,kaynak gerçeği
+K0245,ana,Ekim sonu (2026: 24 Ekim),,kaynak gerçeği
+K0246,ana,Kasım başı (2026: 5–8 Kasım),,kaynak gerçeği
+K0247,ana,Kasım (2026: 14 Kasım),,kaynak gerçeği
+K0248,ana,Şükran Günü (2026: 26 Kasım),,kaynak gerçeği
+K0249,ana,Kasım sonu (2026: 28 Kasım),,kaynak gerçeği
+K0250,ana,31 Aralık,,kaynak gerçeği
+K0251,ana,2027'de yok,,kaynak gerçeği
+K0252,ana,0.82,oran,bizim hesabımız
+K0253,ana,0.947,oran,bizim hesabımız
+K0254,ana,1.076,oran,bizim hesabımız
+K0255,ana,1.142,oran,bizim hesabımız
+K0256,ana,1.161,oran,bizim hesabımız
+K0257,ana,1.176,oran,bizim hesabımız
+K0258,ana,1.146,oran,bizim hesabımız
+K0259,ana,0.96,oran,bizim hesabımız
+K0260,ana,0.939,oran,bizim hesabımız
+K0261,ana,0.901,oran,bizim hesabımız
+K0262,ana,0.873,oran,bizim hesabımız
+K0263,ana,0.821,oran,bizim hesabımız
+K0264,aralik_alt,2025-04-20,tarih,kaynak gerçeği
+K0264,aralik_ust,2025-07-19,tarih,kaynak gerçeği
+K0265,ana,0.846,oran,bizim hesabımız
+K0266,ana,0.957,oran,bizim hesabımız
+K0267,ana,1.018,oran,bizim hesabımız
+K0268,ana,1.055,oran,bizim hesabımız
+K0269,ana,1.079,oran,bizim hesabımız
+K0270,ana,1.108,oran,bizim hesabımız
+K0271,ana,1.102,oran,bizim hesabımız
+K0272,ana,1.043,oran,bizim hesabımız
+K0273,ana,1.015,oran,bizim hesabımız
+K0274,ana,0.996,oran,bizim hesabımız
+K0275,ana,0.92,oran,bizim hesabımız
+K0276,ana,0.87,oran,bizim hesabımız
+K0277,aralik_alt,2025-05-04,tarih,kaynak gerçeği
+K0277,aralik_ust,2025-08-02,tarih,kaynak gerçeği
+K0278,ana,3091,USD (7 gece),bizim hesabımız
+K0278,alt_ceyrek,2240,USD (7 gece),bizim hesabımız
+K0278,ust_ceyrek,3823,USD (7 gece),bizim hesabımız
+K0278,orneklem,30,örnek,bizim hesabımız
+K0279,ana,3091,USD (7 gece),bizim hesabımız
+K0279,alt_ceyrek,2398,USD (7 gece),bizim hesabımız
+K0279,ust_ceyrek,4011,USD (7 gece),bizim hesabımız
+K0279,orneklem,46,örnek,bizim hesabımız
+K0280,ana,3080,USD (7 gece),bizim hesabımız
+K0280,alt_ceyrek,2331,USD (7 gece),bizim hesabımız
+K0280,ust_ceyrek,4037,USD (7 gece),bizim hesabımız
+K0280,orneklem,35,örnek,bizim hesabımız
+K0281,ana,3091,USD (7 gece),bizim hesabımız
+K0281,alt_ceyrek,2355,USD (7 gece),bizim hesabımız
+K0281,ust_ceyrek,4076,USD (7 gece),bizim hesabımız
+K0281,orneklem,36,örnek,bizim hesabımız
+K0282,ana,3875,USD (7 gece),bizim hesabımız
+K0282,alt_ceyrek,3063,USD (7 gece),bizim hesabımız
+K0282,ust_ceyrek,5169,USD (7 gece),bizim hesabımız
+K0282,orneklem,45,örnek,bizim hesabımız
+K0283,ana,3539,USD (7 gece),bizim hesabımız
+K0283,alt_ceyrek,2514,USD (7 gece),bizim hesabımız
+K0283,ust_ceyrek,4884,USD (7 gece),bizim hesabımız
+K0283,orneklem,43,örnek,bizim hesabımız
+K0284,ana,5506,USD (7 gece),bizim hesabımız
+K0284,alt_ceyrek,4040,USD (7 gece),bizim hesabımız
+K0284,ust_ceyrek,7488,USD (7 gece),bizim hesabımız
+K0284,orneklem,45,örnek,bizim hesabımız
+K0285,ana,5506,USD (7 gece),bizim hesabımız
+K0285,alt_ceyrek,4305,USD (7 gece),bizim hesabımız
+K0285,ust_ceyrek,10084,USD (7 gece),bizim hesabımız
+K0285,orneklem,43,örnek,bizim hesabımız
+K0286,ana,5608,USD (7 gece),bizim hesabımız
+K0286,alt_ceyrek,4174,USD (7 gece),bizim hesabımız
+K0286,ust_ceyrek,9042,USD (7 gece),bizim hesabımız
+K0286,orneklem,46,örnek,bizim hesabımız
+K0287,ana,4071,USD (7 gece),bizim hesabımız
+K0287,alt_ceyrek,3455,USD (7 gece),bizim hesabımız
+K0287,ust_ceyrek,5736,USD (7 gece),bizim hesabımız
+K0287,orneklem,53,örnek,bizim hesabımız
+K0288,ana,3875,USD (7 gece),bizim hesabımız
+K0288,alt_ceyrek,3409,USD (7 gece),bizim hesabımız
+K0288,ust_ceyrek,5539,USD (7 gece),bizim hesabımız
+K0288,orneklem,50,örnek,bizim hesabımız
+K0289,ana,3593,USD (7 gece),bizim hesabımız
+K0289,alt_ceyrek,3065,USD (7 gece),bizim hesabımız
+K0289,ust_ceyrek,5627,USD (7 gece),bizim hesabımız
+K0289,orneklem,43,örnek,bizim hesabımız
+K0290,ana,1939,USD (7 gece),bizim hesabımız
+K0290,alt_ceyrek,1628,USD (7 gece),bizim hesabımız
+K0290,ust_ceyrek,2185,USD (7 gece),bizim hesabımız
+K0290,orneklem,8,örnek,bizim hesabımız
+K0291,ana,2013,USD (7 gece),bizim hesabımız
+K0291,alt_ceyrek,1676,USD (7 gece),bizim hesabımız
+K0291,ust_ceyrek,2341,USD (7 gece),bizim hesabımız
+K0291,orneklem,14,örnek,bizim hesabımız
+K0292,ana,1944,USD (7 gece),bizim hesabımız
+K0292,alt_ceyrek,1662,USD (7 gece),bizim hesabımız
+K0292,ust_ceyrek,2420,USD (7 gece),bizim hesabımız
+K0292,orneklem,12,örnek,bizim hesabımız
+K0293,ana,2313,USD (7 gece),bizim hesabımız
+K0293,alt_ceyrek,1911,USD (7 gece),bizim hesabımız
+K0293,ust_ceyrek,2872,USD (7 gece),bizim hesabımız
+K0293,orneklem,12,örnek,bizim hesabımız
+K0294,ana,3529,USD (7 gece),bizim hesabımız
+K0294,alt_ceyrek,2708,USD (7 gece),bizim hesabımız
+K0294,ust_ceyrek,3972,USD (7 gece),bizim hesabımız
+K0294,orneklem,11,örnek,bizim hesabımız
+K0295,ana,2802,USD (7 gece),bizim hesabımız
+K0295,alt_ceyrek,2232,USD (7 gece),bizim hesabımız
+K0295,ust_ceyrek,4085,USD (7 gece),bizim hesabımız
+K0295,orneklem,13,örnek,bizim hesabımız
+K0296,ana,3570,USD (7 gece),bizim hesabımız
+K0296,alt_ceyrek,2832,USD (7 gece),bizim hesabımız
+K0296,ust_ceyrek,4169,USD (7 gece),bizim hesabımız
+K0296,orneklem,14,örnek,bizim hesabımız
+K0297,ana,4529,USD (7 gece),bizim hesabımız
+K0297,alt_ceyrek,3668,USD (7 gece),bizim hesabımız
+K0297,ust_ceyrek,5050,USD (7 gece),bizim hesabımız
+K0297,orneklem,14,örnek,bizim hesabımız
+K0298,ana,4803,USD (7 gece),bizim hesabımız
+K0298,alt_ceyrek,4173,USD (7 gece),bizim hesabımız
+K0298,ust_ceyrek,5959,USD (7 gece),bizim hesabımız
+K0298,orneklem,15,örnek,bizim hesabımız
+K0299,ana,2979,USD (7 gece),bizim hesabımız
+K0299,alt_ceyrek,2609,USD (7 gece),bizim hesabımız
+K0299,ust_ceyrek,3734,USD (7 gece),bizim hesabımız
+K0299,orneklem,15,örnek,bizim hesabımız
+K0300,ana,2525,USD (7 gece),bizim hesabımız
+K0300,alt_ceyrek,2326,USD (7 gece),bizim hesabımız
+K0300,ust_ceyrek,3418,USD (7 gece),bizim hesabımız
+K0300,orneklem,15,örnek,bizim hesabımız
+K0301,ana,3036,USD (7 gece),bizim hesabımız
+K0301,alt_ceyrek,2380,USD (7 gece),bizim hesabımız
+K0301,ust_ceyrek,4098,USD (7 gece),bizim hesabımız
+K0301,orneklem,12,örnek,bizim hesabımız
+K0302,ana,2365,USD (7 gece),bizim hesabımız
+K0302,alt_ceyrek,1673,USD (7 gece),bizim hesabımız
+K0302,ust_ceyrek,4241,USD (7 gece),bizim hesabımız
+K0302,orneklem,31,örnek,bizim hesabımız
+K0303,ana,2483,USD (7 gece),bizim hesabımız
+K0303,alt_ceyrek,1685,USD (7 gece),bizim hesabımız
+K0303,ust_ceyrek,4207,USD (7 gece),bizim hesabımız
+K0303,orneklem,51,örnek,bizim hesabımız
+K0304,ana,2470,USD (7 gece),bizim hesabımız
+K0304,alt_ceyrek,1861,USD (7 gece),bizim hesabımız
+K0304,ust_ceyrek,4414,USD (7 gece),bizim hesabımız
+K0304,orneklem,46,örnek,bizim hesabımız
+K0305,ana,2980,USD (7 gece),bizim hesabımız
+K0305,alt_ceyrek,2121,USD (7 gece),bizim hesabımız
+K0305,ust_ceyrek,4626,USD (7 gece),bizim hesabımız
+K0305,orneklem,34,örnek,bizim hesabımız
+K0306,ana,3995,USD (7 gece),bizim hesabımız
+K0306,alt_ceyrek,2727,USD (7 gece),bizim hesabımız
+K0306,ust_ceyrek,6530,USD (7 gece),bizim hesabımız
+K0306,orneklem,44,örnek,bizim hesabımız
+K0307,ana,3085,USD (7 gece),bizim hesabımız
+K0307,alt_ceyrek,2487,USD (7 gece),bizim hesabımız
+K0307,ust_ceyrek,4759,USD (7 gece),bizim hesabımız
+K0307,orneklem,46,örnek,bizim hesabımız
+K0308,ana,4420,USD (7 gece),bizim hesabımız
+K0308,alt_ceyrek,3268,USD (7 gece),bizim hesabımız
+K0308,ust_ceyrek,6561,USD (7 gece),bizim hesabımız
+K0308,orneklem,48,örnek,bizim hesabımız
+K0309,ana,6100,USD (7 gece),bizim hesabımız
+K0309,alt_ceyrek,4459,USD (7 gece),bizim hesabımız
+K0309,ust_ceyrek,8771,USD (7 gece),bizim hesabımız
+K0309,orneklem,48,örnek,bizim hesabımız
+K0310,ana,6512,USD (7 gece),bizim hesabımız
+K0310,alt_ceyrek,4540,USD (7 gece),bizim hesabımız
+K0310,ust_ceyrek,9215,USD (7 gece),bizim hesabımız
+K0310,orneklem,51,örnek,bizim hesabımız
+K0311,ana,3844,USD (7 gece),bizim hesabımız
+K0311,alt_ceyrek,2712,USD (7 gece),bizim hesabımız
+K0311,ust_ceyrek,6382,USD (7 gece),bizim hesabımız
+K0311,orneklem,53,örnek,bizim hesabımız
+K0312,ana,3065,USD (7 gece),bizim hesabımız
+K0312,alt_ceyrek,2431,USD (7 gece),bizim hesabımız
+K0312,ust_ceyrek,4895,USD (7 gece),bizim hesabımız
+K0312,orneklem,53,örnek,bizim hesabımız
+K0313,ana,4722,USD (7 gece),bizim hesabımız
+K0313,alt_ceyrek,3190,USD (7 gece),bizim hesabımız
+K0313,ust_ceyrek,6369,USD (7 gece),bizim hesabımız
+K0313,orneklem,42,örnek,bizim hesabımız
+K0314,ana,2027,USD (7 gece),bizim hesabımız
+K0314,alt_ceyrek,1621,USD (7 gece),bizim hesabımız
+K0314,ust_ceyrek,2565,USD (7 gece),bizim hesabımız
+K0314,orneklem,50,örnek,bizim hesabımız
+K0315,ana,2100,USD (7 gece),bizim hesabımız
+K0315,alt_ceyrek,1648,USD (7 gece),bizim hesabımız
+K0315,ust_ceyrek,2694,USD (7 gece),bizim hesabımız
+K0315,orneklem,59,örnek,bizim hesabımız
+K0316,ana,2273,USD (7 gece),bizim hesabımız
+K0316,alt_ceyrek,1766,USD (7 gece),bizim hesabımız
+K0316,ust_ceyrek,2956,USD (7 gece),bizim hesabımız
+K0316,orneklem,52,örnek,bizim hesabımız
+K0317,ana,2474,USD (7 gece),bizim hesabımız
+K0317,alt_ceyrek,2036,USD (7 gece),bizim hesabımız
+K0317,ust_ceyrek,3247,USD (7 gece),bizim hesabımız
+K0317,orneklem,36,örnek,bizim hesabımız
+K0318,ana,3707,USD (7 gece),bizim hesabımız
+K0318,alt_ceyrek,3068,USD (7 gece),bizim hesabımız
+K0318,ust_ceyrek,4486,USD (7 gece),bizim hesabımız
+K0318,orneklem,55,örnek,bizim hesabımız
+K0319,ana,3125,USD (7 gece),bizim hesabımız
+K0319,alt_ceyrek,2613,USD (7 gece),bizim hesabımız
+K0319,ust_ceyrek,4143,USD (7 gece),bizim hesabımız
+K0319,orneklem,61,örnek,bizim hesabımız
+K0320,ana,4085,USD (7 gece),bizim hesabımız
+K0320,alt_ceyrek,3386,USD (7 gece),bizim hesabımız
+K0320,ust_ceyrek,5436,USD (7 gece),bizim hesabımız
+K0320,orneklem,65,örnek,bizim hesabımız
+K0321,ana,5724,USD (7 gece),bizim hesabımız
+K0321,alt_ceyrek,4461,USD (7 gece),bizim hesabımız
+K0321,ust_ceyrek,7594,USD (7 gece),bizim hesabımız
+K0321,orneklem,68,örnek,bizim hesabımız
+K0322,ana,5694,USD (7 gece),bizim hesabımız
+K0322,alt_ceyrek,4466,USD (7 gece),bizim hesabımız
+K0322,ust_ceyrek,6864,USD (7 gece),bizim hesabımız
+K0322,orneklem,67,örnek,bizim hesabımız
+K0323,ana,3545,USD (7 gece),bizim hesabımız
+K0323,alt_ceyrek,2689,USD (7 gece),bizim hesabımız
+K0323,ust_ceyrek,4775,USD (7 gece),bizim hesabımız
+K0323,orneklem,68,örnek,bizim hesabımız
+K0324,ana,3107,USD (7 gece),bizim hesabımız
+K0324,alt_ceyrek,2588,USD (7 gece),bizim hesabımız
+K0324,ust_ceyrek,4163,USD (7 gece),bizim hesabımız
+K0324,orneklem,66,örnek,bizim hesabımız
+K0325,ana,3746,USD (7 gece),bizim hesabımız
+K0325,alt_ceyrek,3331,USD (7 gece),bizim hesabımız
+K0325,ust_ceyrek,5004,USD (7 gece),bizim hesabımız
+K0325,orneklem,63,örnek,bizim hesabımız
+K0326,ana,3704,USD (7 gece),bizim hesabımız
+K0326,alt_ceyrek,2556,USD (7 gece),bizim hesabımız
+K0326,ust_ceyrek,5189,USD (7 gece),bizim hesabımız
+K0326,orneklem,18,örnek,bizim hesabımız
+K0327,ana,2848,USD (7 gece),bizim hesabımız
+K0327,alt_ceyrek,2159,USD (7 gece),bizim hesabımız
+K0327,ust_ceyrek,4563,USD (7 gece),bizim hesabımız
+K0327,orneklem,35,örnek,bizim hesabımız
+K0328,ana,2914,USD (7 gece),bizim hesabımız
+K0328,alt_ceyrek,2248,USD (7 gece),bizim hesabımız
+K0328,ust_ceyrek,4650,USD (7 gece),bizim hesabımız
+K0328,orneklem,26,örnek,bizim hesabımız
+K0329,ana,2832,USD (7 gece),bizim hesabımız
+K0329,alt_ceyrek,2203,USD (7 gece),bizim hesabımız
+K0329,ust_ceyrek,4524,USD (7 gece),bizim hesabımız
+K0329,orneklem,22,örnek,bizim hesabımız
+K0330,ana,4145,USD (7 gece),bizim hesabımız
+K0330,alt_ceyrek,3271,USD (7 gece),bizim hesabımız
+K0330,ust_ceyrek,6027,USD (7 gece),bizim hesabımız
+K0330,orneklem,28,örnek,bizim hesabımız
+K0331,ana,3358,USD (7 gece),bizim hesabımız
+K0331,alt_ceyrek,2495,USD (7 gece),bizim hesabımız
+K0331,ust_ceyrek,5584,USD (7 gece),bizim hesabımız
+K0331,orneklem,33,örnek,bizim hesabımız
+K0332,ana,4829,USD (7 gece),bizim hesabımız
+K0332,alt_ceyrek,3417,USD (7 gece),bizim hesabımız
+K0332,ust_ceyrek,6894,USD (7 gece),bizim hesabımız
+K0332,orneklem,34,örnek,bizim hesabımız
+K0333,ana,5707,USD (7 gece),bizim hesabımız
+K0333,alt_ceyrek,4592,USD (7 gece),bizim hesabımız
+K0333,ust_ceyrek,9021,USD (7 gece),bizim hesabımız
+K0333,orneklem,34,örnek,bizim hesabımız
+K0334,ana,5452,USD (7 gece),bizim hesabımız
+K0334,alt_ceyrek,3967,USD (7 gece),bizim hesabımız
+K0334,ust_ceyrek,8515,USD (7 gece),bizim hesabımız
+K0334,orneklem,31,örnek,bizim hesabımız
+K0335,ana,4342,USD (7 gece),bizim hesabımız
+K0335,alt_ceyrek,2746,USD (7 gece),bizim hesabımız
+K0335,ust_ceyrek,6781,USD (7 gece),bizim hesabımız
+K0335,orneklem,40,örnek,bizim hesabımız
+K0336,ana,3205,USD (7 gece),bizim hesabımız
+K0336,alt_ceyrek,2442,USD (7 gece),bizim hesabımız
+K0336,ust_ceyrek,4809,USD (7 gece),bizim hesabımız
+K0336,orneklem,37,örnek,bizim hesabımız
+K0337,ana,4094,USD (7 gece),bizim hesabımız
+K0337,alt_ceyrek,3280,USD (7 gece),bizim hesabımız
+K0337,ust_ceyrek,7556,USD (7 gece),bizim hesabımız
+K0337,orneklem,39,örnek,bizim hesabımız
+K0338,ana,5616,USD (7 gece),bizim hesabımız
+K0338,alt_ceyrek,4541,USD (7 gece),bizim hesabımız
+K0338,ust_ceyrek,7522,USD (7 gece),bizim hesabımız
+K0338,orneklem,37,örnek,bizim hesabımız
+K0339,ana,5901,USD (7 gece),bizim hesabımız
+K0339,alt_ceyrek,4572,USD (7 gece),bizim hesabımız
+K0339,ust_ceyrek,7557,USD (7 gece),bizim hesabımız
+K0339,orneklem,50,örnek,bizim hesabımız
+K0340,ana,6467,USD (7 gece),bizim hesabımız
+K0340,alt_ceyrek,5104,USD (7 gece),bizim hesabımız
+K0340,ust_ceyrek,8570,USD (7 gece),bizim hesabımız
+K0340,orneklem,48,örnek,bizim hesabımız
+K0341,ana,6448,USD (7 gece),bizim hesabımız
+K0341,alt_ceyrek,5139,USD (7 gece),bizim hesabımız
+K0341,ust_ceyrek,8090,USD (7 gece),bizim hesabımız
+K0341,orneklem,41,örnek,bizim hesabımız
+K0342,ana,8747,USD (7 gece),bizim hesabımız
+K0342,alt_ceyrek,6796,USD (7 gece),bizim hesabımız
+K0342,ust_ceyrek,10391,USD (7 gece),bizim hesabımız
+K0342,orneklem,45,örnek,bizim hesabımız
+K0343,ana,8070,USD (7 gece),bizim hesabımız
+K0343,alt_ceyrek,7093,USD (7 gece),bizim hesabımız
+K0343,ust_ceyrek,10668,USD (7 gece),bizim hesabımız
+K0343,orneklem,47,örnek,bizim hesabımız
+K0344,ana,8866,USD (7 gece),bizim hesabımız
+K0344,alt_ceyrek,6781,USD (7 gece),bizim hesabımız
+K0344,ust_ceyrek,11695,USD (7 gece),bizim hesabımız
+K0344,orneklem,49,örnek,bizim hesabımız
+K0345,ana,10322,USD (7 gece),bizim hesabımız
+K0345,alt_ceyrek,9046,USD (7 gece),bizim hesabımız
+K0345,ust_ceyrek,13057,USD (7 gece),bizim hesabımız
+K0345,orneklem,45,örnek,bizim hesabımız
+K0346,ana,10765,USD (7 gece),bizim hesabımız
+K0346,alt_ceyrek,9222,USD (7 gece),bizim hesabımız
+K0346,ust_ceyrek,13834,USD (7 gece),bizim hesabımız
+K0346,orneklem,52,örnek,bizim hesabımız
+K0347,ana,8175,USD (7 gece),bizim hesabımız
+K0347,alt_ceyrek,6445,USD (7 gece),bizim hesabımız
+K0347,ust_ceyrek,10313,USD (7 gece),bizim hesabımız
+K0347,orneklem,62,örnek,bizim hesabımız
+K0348,ana,7246,USD (7 gece),bizim hesabımız
+K0348,alt_ceyrek,5771,USD (7 gece),bizim hesabımız
+K0348,ust_ceyrek,9924,USD (7 gece),bizim hesabımız
+K0348,orneklem,53,örnek,bizim hesabımız
+K0349,ana,8927,USD (7 gece),bizim hesabımız
+K0349,alt_ceyrek,7211,USD (7 gece),bizim hesabımız
+K0349,ust_ceyrek,9987,USD (7 gece),bizim hesabımız
+K0349,orneklem,38,örnek,bizim hesabımız
+K0350,ana,4950,USD (7 gece),bizim hesabımız
+K0350,alt_ceyrek,3543,USD (7 gece),bizim hesabımız
+K0350,ust_ceyrek,6494,USD (7 gece),bizim hesabımız
+K0350,orneklem,62,örnek,bizim hesabımız
+K0351,ana,4630,USD (7 gece),bizim hesabımız
+K0351,alt_ceyrek,3127,USD (7 gece),bizim hesabımız
+K0351,ust_ceyrek,5717,USD (7 gece),bizim hesabımız
+K0351,orneklem,94,örnek,bizim hesabımız
+K0352,ana,4316,USD (7 gece),bizim hesabımız
+K0352,alt_ceyrek,3052,USD (7 gece),bizim hesabımız
+K0352,ust_ceyrek,5616,USD (7 gece),bizim hesabımız
+K0352,orneklem,86,örnek,bizim hesabımız
+K0353,ana,4905,USD (7 gece),bizim hesabımız
+K0353,alt_ceyrek,3538,USD (7 gece),bizim hesabımız
+K0353,ust_ceyrek,6101,USD (7 gece),bizim hesabımız
+K0353,orneklem,57,örnek,bizim hesabımız
+K0354,ana,7288,USD (7 gece),bizim hesabımız
+K0354,alt_ceyrek,5142,USD (7 gece),bizim hesabımız
+K0354,ust_ceyrek,8636,USD (7 gece),bizim hesabımız
+K0354,orneklem,71,örnek,bizim hesabımız
+K0355,ana,6557,USD (7 gece),bizim hesabımız
+K0355,alt_ceyrek,4392,USD (7 gece),bizim hesabımız
+K0355,ust_ceyrek,7765,USD (7 gece),bizim hesabımız
+K0355,orneklem,90,örnek,bizim hesabımız
+K0356,ana,6433,USD (7 gece),bizim hesabımız
+K0356,alt_ceyrek,4959,USD (7 gece),bizim hesabımız
+K0356,ust_ceyrek,8008,USD (7 gece),bizim hesabımız
+K0356,orneklem,84,örnek,bizim hesabımız
+K0357,ana,7892,USD (7 gece),bizim hesabımız
+K0357,alt_ceyrek,5595,USD (7 gece),bizim hesabımız
+K0357,ust_ceyrek,9976,USD (7 gece),bizim hesabımız
+K0357,orneklem,87,örnek,bizim hesabımız
+K0358,ana,8680,USD (7 gece),bizim hesabımız
+K0358,alt_ceyrek,6154,USD (7 gece),bizim hesabımız
+K0358,ust_ceyrek,10653,USD (7 gece),bizim hesabımız
+K0358,orneklem,97,örnek,bizim hesabımız
+K0359,ana,6236,USD (7 gece),bizim hesabımız
+K0359,alt_ceyrek,4545,USD (7 gece),bizim hesabımız
+K0359,ust_ceyrek,7299,USD (7 gece),bizim hesabımız
+K0359,orneklem,119,örnek,bizim hesabımız
+K0360,ana,6259,USD (7 gece),bizim hesabımız
+K0360,alt_ceyrek,4133,USD (7 gece),bizim hesabımız
+K0360,ust_ceyrek,7373,USD (7 gece),bizim hesabımız
+K0360,orneklem,103,örnek,bizim hesabımız
+K0361,ana,6465,USD (7 gece),bizim hesabımız
+K0361,alt_ceyrek,4509,USD (7 gece),bizim hesabımız
+K0361,ust_ceyrek,7901,USD (7 gece),bizim hesabımız
+K0361,orneklem,99,örnek,bizim hesabımız
+K0362,ana,1942,USD (7 gece),bizim hesabımız
+K0362,alt_ceyrek,1299,USD (7 gece),bizim hesabımız
+K0362,ust_ceyrek,2847,USD (7 gece),bizim hesabımız
+K0362,orneklem,152,örnek,bizim hesabımız
+K0363,ana,1874,USD (7 gece),bizim hesabımız
+K0363,alt_ceyrek,1289,USD (7 gece),bizim hesabımız
+K0363,ust_ceyrek,2753,USD (7 gece),bizim hesabımız
+K0363,orneklem,226,örnek,bizim hesabımız
+K0364,ana,1885,USD (7 gece),bizim hesabımız
+K0364,alt_ceyrek,1305,USD (7 gece),bizim hesabımız
+K0364,ust_ceyrek,2816,USD (7 gece),bizim hesabımız
+K0364,orneklem,207,örnek,bizim hesabımız
+K0365,ana,2231,USD (7 gece),bizim hesabımız
+K0365,alt_ceyrek,1531,USD (7 gece),bizim hesabımız
+K0365,ust_ceyrek,3304,USD (7 gece),bizim hesabımız
+K0365,orneklem,145,örnek,bizim hesabımız
+K0366,ana,3130,USD (7 gece),bizim hesabımız
+K0366,alt_ceyrek,2363,USD (7 gece),bizim hesabımız
+K0366,ust_ceyrek,5194,USD (7 gece),bizim hesabımız
+K0366,orneklem,221,örnek,bizim hesabımız
+K0367,ana,2595,USD (7 gece),bizim hesabımız
+K0367,alt_ceyrek,2014,USD (7 gece),bizim hesabımız
+K0367,ust_ceyrek,4049,USD (7 gece),bizim hesabımız
+K0367,orneklem,235,örnek,bizim hesabımız
+K0368,ana,3546,USD (7 gece),bizim hesabımız
+K0368,alt_ceyrek,2761,USD (7 gece),bizim hesabımız
+K0368,ust_ceyrek,5213,USD (7 gece),bizim hesabımız
+K0368,orneklem,245,örnek,bizim hesabımız
+K0369,ana,4901,USD (7 gece),bizim hesabımız
+K0369,alt_ceyrek,4003,USD (7 gece),bizim hesabımız
+K0369,ust_ceyrek,6960,USD (7 gece),bizim hesabımız
+K0369,orneklem,265,örnek,bizim hesabımız
+K0370,ana,5234,USD (7 gece),bizim hesabımız
+K0370,alt_ceyrek,4116,USD (7 gece),bizim hesabımız
+K0370,ust_ceyrek,7090,USD (7 gece),bizim hesabımız
+K0370,orneklem,262,örnek,bizim hesabımız
+K0371,ana,3056,USD (7 gece),bizim hesabımız
+K0371,alt_ceyrek,2367,USD (7 gece),bizim hesabımız
+K0371,ust_ceyrek,4201,USD (7 gece),bizim hesabımız
+K0371,orneklem,269,örnek,bizim hesabımız
+K0372,ana,2716,USD (7 gece),bizim hesabımız
+K0372,alt_ceyrek,2039,USD (7 gece),bizim hesabımız
+K0372,ust_ceyrek,3715,USD (7 gece),bizim hesabımız
+K0372,orneklem,265,örnek,bizim hesabımız
+K0373,ana,3556,USD (7 gece),bizim hesabımız
+K0373,alt_ceyrek,2770,USD (7 gece),bizim hesabımız
+K0373,ust_ceyrek,4689,USD (7 gece),bizim hesabımız
+K0373,orneklem,247,örnek,bizim hesabımız
+K0374,ana,2517,USD (7 gece),bizim hesabımız
+K0374,alt_ceyrek,2170,USD (7 gece),bizim hesabımız
+K0374,ust_ceyrek,3757,USD (7 gece),bizim hesabımız
+K0374,orneklem,34,örnek,bizim hesabımız
+K0375,ana,2603,USD (7 gece),bizim hesabımız
+K0375,alt_ceyrek,2251,USD (7 gece),bizim hesabımız
+K0375,ust_ceyrek,4024,USD (7 gece),bizim hesabımız
+K0375,orneklem,47,örnek,bizim hesabımız
+K0376,ana,2679,USD (7 gece),bizim hesabımız
+K0376,alt_ceyrek,2342,USD (7 gece),bizim hesabımız
+K0376,ust_ceyrek,4235,USD (7 gece),bizim hesabımız
+K0376,orneklem,41,örnek,bizim hesabımız
+K0377,ana,3696,USD (7 gece),bizim hesabımız
+K0377,alt_ceyrek,2436,USD (7 gece),bizim hesabımız
+K0377,ust_ceyrek,4890,USD (7 gece),bizim hesabımız
+K0377,orneklem,29,örnek,bizim hesabımız
+K0378,ana,4163,USD (7 gece),bizim hesabımız
+K0378,alt_ceyrek,3251,USD (7 gece),bizim hesabımız
+K0378,ust_ceyrek,6549,USD (7 gece),bizim hesabımız
+K0378,orneklem,43,örnek,bizim hesabımız
+K0379,ana,3456,USD (7 gece),bizim hesabımız
+K0379,alt_ceyrek,2631,USD (7 gece),bizim hesabımız
+K0379,ust_ceyrek,4875,USD (7 gece),bizim hesabımız
+K0379,orneklem,44,örnek,bizim hesabımız
+K0380,ana,4047,USD (7 gece),bizim hesabımız
+K0380,alt_ceyrek,3287,USD (7 gece),bizim hesabımız
+K0380,ust_ceyrek,6014,USD (7 gece),bizim hesabımız
+K0380,orneklem,45,örnek,bizim hesabımız
+K0381,ana,5806,USD (7 gece),bizim hesabımız
+K0381,alt_ceyrek,4659,USD (7 gece),bizim hesabımız
+K0381,ust_ceyrek,8044,USD (7 gece),bizim hesabımız
+K0381,orneklem,48,örnek,bizim hesabımız
+K0382,ana,6797,USD (7 gece),bizim hesabımız
+K0382,alt_ceyrek,5486,USD (7 gece),bizim hesabımız
+K0382,ust_ceyrek,8036,USD (7 gece),bizim hesabımız
+K0382,orneklem,48,örnek,bizim hesabımız
+K0383,ana,3627,USD (7 gece),bizim hesabımız
+K0383,alt_ceyrek,3018,USD (7 gece),bizim hesabımız
+K0383,ust_ceyrek,5538,USD (7 gece),bizim hesabımız
+K0383,orneklem,48,örnek,bizim hesabımız
+K0384,ana,3208,USD (7 gece),bizim hesabımız
+K0384,alt_ceyrek,2611,USD (7 gece),bizim hesabımız
+K0384,ust_ceyrek,4950,USD (7 gece),bizim hesabımız
+K0384,orneklem,49,örnek,bizim hesabımız
+K0385,ana,4040,USD (7 gece),bizim hesabımız
+K0385,alt_ceyrek,3388,USD (7 gece),bizim hesabımız
+K0385,ust_ceyrek,5807,USD (7 gece),bizim hesabımız
+K0385,orneklem,38,örnek,bizim hesabımız
+K0386,ana,2723,USD (7 gece),bizim hesabımız
+K0386,alt_ceyrek,2093,USD (7 gece),bizim hesabımız
+K0386,ust_ceyrek,3517,USD (7 gece),bizim hesabımız
+K0386,orneklem,92,örnek,bizim hesabımız
+K0387,ana,2810,USD (7 gece),bizim hesabımız
+K0387,alt_ceyrek,2213,USD (7 gece),bizim hesabımız
+K0387,ust_ceyrek,3322,USD (7 gece),bizim hesabımız
+K0387,orneklem,127,örnek,bizim hesabımız
+K0388,ana,3025,USD (7 gece),bizim hesabımız
+K0388,alt_ceyrek,2296,USD (7 gece),bizim hesabımız
+K0388,ust_ceyrek,3579,USD (7 gece),bizim hesabımız
+K0388,orneklem,122,örnek,bizim hesabımız
+K0389,ana,3358,USD (7 gece),bizim hesabımız
+K0389,alt_ceyrek,2761,USD (7 gece),bizim hesabımız
+K0389,ust_ceyrek,3938,USD (7 gece),bizim hesabımız
+K0389,orneklem,91,örnek,bizim hesabımız
+K0390,ana,5298,USD (7 gece),bizim hesabımız
+K0390,alt_ceyrek,4323,USD (7 gece),bizim hesabımız
+K0390,ust_ceyrek,6669,USD (7 gece),bizim hesabımız
+K0390,orneklem,115,örnek,bizim hesabımız
+K0391,ana,4561,USD (7 gece),bizim hesabımız
+K0391,alt_ceyrek,3507,USD (7 gece),bizim hesabımız
+K0391,ust_ceyrek,5682,USD (7 gece),bizim hesabımız
+K0391,orneklem,116,örnek,bizim hesabımız
+K0392,ana,5557,USD (7 gece),bizim hesabımız
+K0392,alt_ceyrek,4408,USD (7 gece),bizim hesabımız
+K0392,ust_ceyrek,6856,USD (7 gece),bizim hesabımız
+K0392,orneklem,128,örnek,bizim hesabımız
+K0393,ana,7371,USD (7 gece),bizim hesabımız
+K0393,alt_ceyrek,5624,USD (7 gece),bizim hesabımız
+K0393,ust_ceyrek,9000,USD (7 gece),bizim hesabımız
+K0393,orneklem,130,örnek,bizim hesabımız
+K0394,ana,7787,USD (7 gece),bizim hesabımız
+K0394,alt_ceyrek,6055,USD (7 gece),bizim hesabımız
+K0394,ust_ceyrek,9203,USD (7 gece),bizim hesabımız
+K0394,orneklem,128,örnek,bizim hesabımız
+K0395,ana,4642,USD (7 gece),bizim hesabımız
+K0395,alt_ceyrek,3777,USD (7 gece),bizim hesabımız
+K0395,ust_ceyrek,5679,USD (7 gece),bizim hesabımız
+K0395,orneklem,154,örnek,bizim hesabımız
+K0396,ana,4062,USD (7 gece),bizim hesabımız
+K0396,alt_ceyrek,3303,USD (7 gece),bizim hesabımız
+K0396,ust_ceyrek,4965,USD (7 gece),bizim hesabımız
+K0396,orneklem,145,örnek,bizim hesabımız
+K0397,ana,4635,USD (7 gece),bizim hesabımız
+K0397,alt_ceyrek,3587,USD (7 gece),bizim hesabımız
+K0397,ust_ceyrek,5745,USD (7 gece),bizim hesabımız
+K0397,orneklem,82,örnek,bizim hesabımız
+K0398,ana,8319,USD (7 gece),bizim hesabımız
+K0398,alt_ceyrek,7325,USD (7 gece),bizim hesabımız
+K0398,ust_ceyrek,10461,USD (7 gece),bizim hesabımız
+K0398,orneklem,29,örnek,bizim hesabımız
+K0399,ana,9785,USD (7 gece),bizim hesabımız
+K0399,alt_ceyrek,7383,USD (7 gece),bizim hesabımız
+K0399,ust_ceyrek,10820,USD (7 gece),bizim hesabımız
+K0399,orneklem,58,örnek,bizim hesabımız
+K0400,ana,9117,USD (7 gece),bizim hesabımız
+K0400,alt_ceyrek,7330,USD (7 gece),bizim hesabımız
+K0400,ust_ceyrek,10660,USD (7 gece),bizim hesabımız
+K0400,orneklem,49,örnek,bizim hesabımız
+K0401,ana,8445,USD (7 gece),bizim hesabımız
+K0401,alt_ceyrek,7356,USD (7 gece),bizim hesabımız
+K0401,ust_ceyrek,10530,USD (7 gece),bizim hesabımız
+K0401,orneklem,47,örnek,bizim hesabımız
+K0402,ana,14066,USD (7 gece),bizim hesabımız
+K0402,alt_ceyrek,11701,USD (7 gece),bizim hesabımız
+K0402,ust_ceyrek,16720,USD (7 gece),bizim hesabımız
+K0402,orneklem,54,örnek,bizim hesabımız
+K0403,ana,12203,USD (7 gece),bizim hesabımız
+K0403,alt_ceyrek,9920,USD (7 gece),bizim hesabımız
+K0403,ust_ceyrek,13780,USD (7 gece),bizim hesabımız
+K0403,orneklem,62,örnek,bizim hesabımız
+K0404,ana,13615,USD (7 gece),bizim hesabımız
+K0404,alt_ceyrek,10954,USD (7 gece),bizim hesabımız
+K0404,ust_ceyrek,15345,USD (7 gece),bizim hesabımız
+K0404,orneklem,62,örnek,bizim hesabımız
+K0405,ana,14684,USD (7 gece),bizim hesabımız
+K0405,alt_ceyrek,10680,USD (7 gece),bizim hesabımız
+K0405,ust_ceyrek,19882,USD (7 gece),bizim hesabımız
+K0405,orneklem,67,örnek,bizim hesabımız
+K0406,ana,15081,USD (7 gece),bizim hesabımız
+K0406,alt_ceyrek,10677,USD (7 gece),bizim hesabımız
+K0406,ust_ceyrek,20353,USD (7 gece),bizim hesabımız
+K0406,orneklem,62,örnek,bizim hesabımız
+K0407,ana,10560,USD (7 gece),bizim hesabımız
+K0407,alt_ceyrek,7698,USD (7 gece),bizim hesabımız
+K0407,ust_ceyrek,12414,USD (7 gece),bizim hesabımız
+K0407,orneklem,72,örnek,bizim hesabımız
+K0408,ana,10567,USD (7 gece),bizim hesabımız
+K0408,alt_ceyrek,8371,USD (7 gece),bizim hesabımız
+K0408,ust_ceyrek,11823,USD (7 gece),bizim hesabımız
+K0408,orneklem,70,örnek,bizim hesabımız
+K0409,ana,13518,USD (7 gece),bizim hesabımız
+K0409,alt_ceyrek,11180,USD (7 gece),bizim hesabımız
+K0409,ust_ceyrek,15381,USD (7 gece),bizim hesabımız
+K0409,orneklem,65,örnek,bizim hesabımız
+K0410,ana,3727,USD (7 gece),bizim hesabımız
+K0410,alt_ceyrek,2491,USD (7 gece),bizim hesabımız
+K0410,ust_ceyrek,6264,USD (7 gece),bizim hesabımız
+K0410,orneklem,48,örnek,bizim hesabımız
+K0411,ana,3487,USD (7 gece),bizim hesabımız
+K0411,alt_ceyrek,2482,USD (7 gece),bizim hesabımız
+K0411,ust_ceyrek,5655,USD (7 gece),bizim hesabımız
+K0411,orneklem,70,örnek,bizim hesabımız
+K0412,ana,4159,USD (7 gece),bizim hesabımız
+K0412,alt_ceyrek,2512,USD (7 gece),bizim hesabımız
+K0412,ust_ceyrek,6108,USD (7 gece),bizim hesabımız
+K0412,orneklem,67,örnek,bizim hesabımız
+K0413,ana,4090,USD (7 gece),bizim hesabımız
+K0413,alt_ceyrek,2951,USD (7 gece),bizim hesabımız
+K0413,ust_ceyrek,6543,USD (7 gece),bizim hesabımız
+K0413,orneklem,70,örnek,bizim hesabımız
+K0414,ana,5872,USD (7 gece),bizim hesabımız
+K0414,alt_ceyrek,4014,USD (7 gece),bizim hesabımız
+K0414,ust_ceyrek,9367,USD (7 gece),bizim hesabımız
+K0414,orneklem,82,örnek,bizim hesabımız
+K0415,ana,4685,USD (7 gece),bizim hesabımız
+K0415,alt_ceyrek,3465,USD (7 gece),bizim hesabımız
+K0415,ust_ceyrek,7174,USD (7 gece),bizim hesabımız
+K0415,orneklem,67,örnek,bizim hesabımız
+K0416,ana,5369,USD (7 gece),bizim hesabımız
+K0416,alt_ceyrek,4226,USD (7 gece),bizim hesabımız
+K0416,ust_ceyrek,8732,USD (7 gece),bizim hesabımız
+K0416,orneklem,70,örnek,bizim hesabımız
+K0417,ana,6994,USD (7 gece),bizim hesabımız
+K0417,alt_ceyrek,4804,USD (7 gece),bizim hesabımız
+K0417,ust_ceyrek,12522,USD (7 gece),bizim hesabımız
+K0417,orneklem,89,örnek,bizim hesabımız
+K0418,ana,7223,USD (7 gece),bizim hesabımız
+K0418,alt_ceyrek,4665,USD (7 gece),bizim hesabımız
+K0418,ust_ceyrek,12028,USD (7 gece),bizim hesabımız
+K0418,orneklem,91,örnek,bizim hesabımız
+K0419,ana,4929,USD (7 gece),bizim hesabımız
+K0419,alt_ceyrek,3535,USD (7 gece),bizim hesabımız
+K0419,ust_ceyrek,8704,USD (7 gece),bizim hesabımız
+K0419,orneklem,92,örnek,bizim hesabımız
+K0420,ana,4771,USD (7 gece),bizim hesabımız
+K0420,alt_ceyrek,3355,USD (7 gece),bizim hesabımız
+K0420,ust_ceyrek,8467,USD (7 gece),bizim hesabımız
+K0420,orneklem,87,örnek,bizim hesabımız
+K0421,ana,6219,USD (7 gece),bizim hesabımız
+K0421,alt_ceyrek,4665,USD (7 gece),bizim hesabımız
+K0421,ust_ceyrek,9524,USD (7 gece),bizim hesabımız
+K0421,orneklem,58,örnek,bizim hesabımız
+K0422,ana,2929,USD (7 gece),bizim hesabımız
+K0422,alt_ceyrek,1861,USD (7 gece),bizim hesabımız
+K0422,ust_ceyrek,4908,USD (7 gece),bizim hesabımız
+K0422,orneklem,38,örnek,bizim hesabımız
+K0423,ana,2914,USD (7 gece),bizim hesabımız
+K0423,alt_ceyrek,1869,USD (7 gece),bizim hesabımız
+K0423,ust_ceyrek,4958,USD (7 gece),bizim hesabımız
+K0423,orneklem,43,örnek,bizim hesabımız
+K0424,ana,2956,USD (7 gece),bizim hesabımız
+K0424,alt_ceyrek,1982,USD (7 gece),bizim hesabımız
+K0424,ust_ceyrek,5060,USD (7 gece),bizim hesabımız
+K0424,orneklem,43,örnek,bizim hesabımız
+K0425,ana,3373,USD (7 gece),bizim hesabımız
+K0425,alt_ceyrek,2221,USD (7 gece),bizim hesabımız
+K0425,ust_ceyrek,5719,USD (7 gece),bizim hesabımız
+K0425,orneklem,38,örnek,bizim hesabımız
+K0426,ana,5312,USD (7 gece),bizim hesabımız
+K0426,alt_ceyrek,3636,USD (7 gece),bizim hesabımız
+K0426,ust_ceyrek,7284,USD (7 gece),bizim hesabımız
+K0426,orneklem,38,örnek,bizim hesabımız
+K0427,ana,4479,USD (7 gece),bizim hesabımız
+K0427,alt_ceyrek,2963,USD (7 gece),bizim hesabımız
+K0427,ust_ceyrek,8103,USD (7 gece),bizim hesabımız
+K0427,orneklem,41,örnek,bizim hesabımız
+K0428,ana,5671,USD (7 gece),bizim hesabımız
+K0428,alt_ceyrek,3746,USD (7 gece),bizim hesabımız
+K0428,ust_ceyrek,7857,USD (7 gece),bizim hesabımız
+K0428,orneklem,43,örnek,bizim hesabımız
+K0429,ana,6845,USD (7 gece),bizim hesabımız
+K0429,alt_ceyrek,4995,USD (7 gece),bizim hesabımız
+K0429,ust_ceyrek,9766,USD (7 gece),bizim hesabımız
+K0429,orneklem,44,örnek,bizim hesabımız
+K0430,ana,7115,USD (7 gece),bizim hesabımız
+K0430,alt_ceyrek,4659,USD (7 gece),bizim hesabımız
+K0430,ust_ceyrek,12673,USD (7 gece),bizim hesabımız
+K0430,orneklem,41,örnek,bizim hesabımız
+K0431,ana,4418,USD (7 gece),bizim hesabımız
+K0431,alt_ceyrek,3157,USD (7 gece),bizim hesabımız
+K0431,ust_ceyrek,7702,USD (7 gece),bizim hesabımız
+K0431,orneklem,48,örnek,bizim hesabımız
+K0432,ana,4130,USD (7 gece),bizim hesabımız
+K0432,alt_ceyrek,2903,USD (7 gece),bizim hesabımız
+K0432,ust_ceyrek,7675,USD (7 gece),bizim hesabımız
+K0432,orneklem,48,örnek,bizim hesabımız
+K0433,ana,4815,USD (7 gece),bizim hesabımız
+K0433,alt_ceyrek,3038,USD (7 gece),bizim hesabımız
+K0433,ust_ceyrek,8857,USD (7 gece),bizim hesabımız
+K0433,orneklem,38,örnek,bizim hesabımız
+K0434,ana,2262,USD (7 gece),bizim hesabımız
+K0434,orneklem,8,örnek,bizim hesabımız
+K0435,ana,2699,USD (7 gece),bizim hesabımız
+K0435,orneklem,7,örnek,bizim hesabımız
+K0436,ana,3734,USD (7 gece),bizim hesabımız
+K0436,orneklem,11,örnek,bizim hesabımız
+K0437,ana,4378,USD (7 gece),bizim hesabımız
+K0437,orneklem,8,örnek,bizim hesabımız
+K0438,ana,4080,USD (7 gece),bizim hesabımız
+K0438,orneklem,16,örnek,bizim hesabımız
+K0439,ana,5608,USD (7 gece),bizim hesabımız
+K0439,orneklem,10,örnek,bizim hesabımız
+K0440,ana,8532,USD (7 gece),bizim hesabımız
+K0440,orneklem,11,örnek,bizim hesabımız
+K0441,ana,13016,USD (7 gece),bizim hesabımız
+K0441,orneklem,8,örnek,bizim hesabımız
+K0442,ana,1654,USD (7 gece),bizim hesabımız
+K0442,orneklem,4,örnek,bizim hesabımız
+K0443,ana,2119,USD (7 gece),bizim hesabımız
+K0443,orneklem,5,örnek,bizim hesabımız
+K0445,ana,3618,USD (7 gece),bizim hesabımız
+K0445,orneklem,1,örnek,bizim hesabımız
+K0446,ana,4624,USD (7 gece),bizim hesabımız
+K0446,orneklem,5,örnek,bizim hesabımız
+K0447,ana,5050,USD (7 gece),bizim hesabımız
+K0447,orneklem,7,örnek,bizim hesabımız
+K0449,ana,12235,USD (7 gece),bizim hesabımız
+K0449,orneklem,1,örnek,bizim hesabımız
+K0450,ana,1183,USD (7 gece),bizim hesabımız
+K0450,orneklem,5,örnek,bizim hesabımız
+K0451,ana,1992,USD (7 gece),bizim hesabımız
+K0451,orneklem,12,örnek,bizim hesabımız
+K0452,ana,2470,USD (7 gece),bizim hesabımız
+K0452,orneklem,16,örnek,bizim hesabımız
+K0453,ana,4713,USD (7 gece),bizim hesabımız
+K0453,orneklem,10,örnek,bizim hesabımız
+K0454,ana,3100,USD (7 gece),bizim hesabımız
+K0454,orneklem,5,örnek,bizim hesabımız
+K0455,ana,6216,USD (7 gece),bizim hesabımız
+K0455,orneklem,18,örnek,bizim hesabımız
+K0456,ana,7296,USD (7 gece),bizim hesabımız
+K0456,orneklem,16,örnek,bizim hesabımız
+K0457,ana,13251,USD (7 gece),bizim hesabımız
+K0457,orneklem,9,örnek,bizim hesabımız
+K0458,ana,1924,USD (7 gece),bizim hesabımız
+K0458,orneklem,10,örnek,bizim hesabımız
+K0459,ana,2066,USD (7 gece),bizim hesabımız
+K0459,orneklem,19,örnek,bizim hesabımız
+K0460,ana,2868,USD (7 gece),bizim hesabımız
+K0460,orneklem,15,örnek,bizim hesabımız
+K0461,ana,4504,USD (7 gece),bizim hesabımız
+K0461,orneklem,7,örnek,bizim hesabımız
+K0462,ana,4073,USD (7 gece),bizim hesabımız
+K0462,orneklem,13,örnek,bizim hesabımız
+K0463,ana,5343,USD (7 gece),bizim hesabımız
+K0463,orneklem,25,örnek,bizim hesabımız
+K0464,ana,6386,USD (7 gece),bizim hesabımız
+K0464,orneklem,23,örnek,bizim hesabımız
+K0465,ana,10384,USD (7 gece),bizim hesabımız
+K0465,orneklem,5,örnek,bizim hesabımız
+K0466,ana,2874,USD (7 gece),bizim hesabımız
+K0466,orneklem,3,örnek,bizim hesabımız
+K0467,ana,2246,USD (7 gece),bizim hesabımız
+K0467,orneklem,7,örnek,bizim hesabımız
+K0468,ana,2953,USD (7 gece),bizim hesabımız
+K0468,orneklem,7,örnek,bizim hesabımız
+K0469,ana,4748,USD (7 gece),bizim hesabımız
+K0469,orneklem,9,örnek,bizim hesabımız
+K0470,ana,3862,USD (7 gece),bizim hesabımız
+K0470,orneklem,7,örnek,bizim hesabımız
+K0471,ana,3967,USD (7 gece),bizim hesabımız
+K0471,orneklem,8,örnek,bizim hesabımız
+K0472,ana,7047,USD (7 gece),bizim hesabımız
+K0472,orneklem,8,örnek,bizim hesabımız
+K0473,ana,9819,USD (7 gece),bizim hesabımız
+K0473,orneklem,8,örnek,bizim hesabımız
+K0474,ana,4426,USD (7 gece),bizim hesabımız
+K0474,orneklem,5,örnek,bizim hesabımız
+K0475,ana,5238,USD (7 gece),bizim hesabımız
+K0475,orneklem,8,örnek,bizim hesabımız
+K0476,ana,6042,USD (7 gece),bizim hesabımız
+K0476,orneklem,10,örnek,bizim hesabımız
+K0477,ana,8342,USD (7 gece),bizim hesabımız
+K0477,orneklem,25,örnek,bizim hesabımız
+K0478,ana,6631,USD (7 gece),bizim hesabımız
+K0478,orneklem,10,örnek,bizim hesabımız
+K0479,ana,9733,USD (7 gece),bizim hesabımız
+K0479,orneklem,7,örnek,bizim hesabımız
+K0480,ana,10063,USD (7 gece),bizim hesabımız
+K0480,orneklem,12,örnek,bizim hesabımız
+K0481,ana,13762,USD (7 gece),bizim hesabımız
+K0481,orneklem,23,örnek,bizim hesabımız
+K0482,ana,3020,USD (7 gece),bizim hesabımız
+K0482,orneklem,40,örnek,bizim hesabımız
+K0483,ana,4819,USD (7 gece),bizim hesabımız
+K0483,orneklem,24,örnek,bizim hesabımız
+K0484,ana,5898,USD (7 gece),bizim hesabımız
+K0484,orneklem,14,örnek,bizim hesabımız
+K0485,ana,7687,USD (7 gece),bizim hesabımız
+K0485,orneklem,7,örnek,bizim hesabımız
+K0486,ana,6020,USD (7 gece),bizim hesabımız
+K0486,orneklem,41,örnek,bizim hesabımız
+K0487,ana,9479,USD (7 gece),bizim hesabımız
+K0487,orneklem,32,örnek,bizim hesabımız
+K0488,ana,10411,USD (7 gece),bizim hesabımız
+K0488,orneklem,17,örnek,bizim hesabımız
+K0489,ana,13841,USD (7 gece),bizim hesabımız
+K0489,orneklem,6,örnek,bizim hesabımız
+K0490,ana,1349,USD (7 gece),bizim hesabımız
+K0490,orneklem,88,örnek,bizim hesabımız
+K0491,ana,2012,USD (7 gece),bizim hesabımız
+K0491,orneklem,41,örnek,bizim hesabımız
+K0492,ana,2743,USD (7 gece),bizim hesabımız
+K0492,orneklem,38,örnek,bizim hesabımız
+K0493,ana,4371,USD (7 gece),bizim hesabımız
+K0493,orneklem,28,örnek,bizim hesabımız
+K0494,ana,4704,USD (7 gece),bizim hesabımız
+K0494,orneklem,122,örnek,bizim hesabımız
+K0495,ana,6106,USD (7 gece),bizim hesabımız
+K0495,orneklem,55,örnek,bizim hesabımız
+K0496,ana,7630,USD (7 gece),bizim hesabımız
+K0496,orneklem,40,örnek,bizim hesabımız
+K0497,ana,12051,USD (7 gece),bizim hesabımız
+K0497,orneklem,31,örnek,bizim hesabımız
+K0498,ana,2075,USD (7 gece),bizim hesabımız
+K0498,orneklem,8,örnek,bizim hesabımız
+K0499,ana,2523,USD (7 gece),bizim hesabımız
+K0499,orneklem,19,örnek,bizim hesabımız
+K0500,ana,3925,USD (7 gece),bizim hesabımız
+K0500,orneklem,11,örnek,bizim hesabımız
+K0501,ana,3363,USD (7 gece),bizim hesabımız
+K0501,orneklem,2,örnek,bizim hesabımız
+K0502,ana,5220,USD (7 gece),bizim hesabımız
+K0502,orneklem,10,örnek,bizim hesabımız
+K0503,ana,6698,USD (7 gece),bizim hesabımız
+K0503,orneklem,23,örnek,bizim hesabımız
+K0504,ana,8645,USD (7 gece),bizim hesabımız
+K0504,orneklem,12,örnek,bizim hesabımız
+K0505,ana,8526,USD (7 gece),bizim hesabımız
+K0505,orneklem,2,örnek,bizim hesabımız
+K0506,ana,2641,USD (7 gece),bizim hesabımız
+K0506,orneklem,24,örnek,bizim hesabımız
+K0507,ana,2634,USD (7 gece),bizim hesabımız
+K0507,orneklem,44,örnek,bizim hesabımız
+K0508,ana,2933,USD (7 gece),bizim hesabımız
+K0508,orneklem,24,örnek,bizim hesabımız
+K0509,ana,4017,USD (7 gece),bizim hesabımız
+K0509,orneklem,28,örnek,bizim hesabımız
+K0510,ana,6445,USD (7 gece),bizim hesabımız
+K0510,orneklem,27,örnek,bizim hesabımız
+K0511,ana,7328,USD (7 gece),bizim hesabımız
+K0511,orneklem,45,örnek,bizim hesabımız
+K0512,ana,8138,USD (7 gece),bizim hesabımız
+K0512,orneklem,28,örnek,bizim hesabımız
+K0513,ana,10792,USD (7 gece),bizim hesabımız
+K0513,orneklem,26,örnek,bizim hesabımız
+K0522,ana,2793,USD (7 gece),bizim hesabımız
+K0522,orneklem,31,örnek,bizim hesabımız
+K0523,ana,4752,USD (7 gece),bizim hesabımız
+K0523,orneklem,16,örnek,bizim hesabımız
+K0524,ana,5956,USD (7 gece),bizim hesabımız
+K0524,orneklem,9,örnek,bizim hesabımız
+K0525,ana,8640,USD (7 gece),bizim hesabımız
+K0525,orneklem,10,örnek,bizim hesabımız
+K0526,ana,4440,USD (7 gece),bizim hesabımız
+K0526,orneklem,40,örnek,bizim hesabımız
+K0527,ana,8376,USD (7 gece),bizim hesabımız
+K0527,orneklem,24,örnek,bizim hesabımız
+K0528,ana,12817,USD (7 gece),bizim hesabımız
+K0528,orneklem,16,örnek,bizim hesabımız
+K0529,ana,15287,USD (7 gece),bizim hesabımız
+K0529,orneklem,10,örnek,bizim hesabımız
+K0530,ana,1584,USD (7 gece),bizim hesabımız
+K0530,orneklem,8,örnek,bizim hesabımız
+K0531,ana,2253,USD (7 gece),bizim hesabımız
+K0531,orneklem,9,örnek,bizim hesabımız
+K0532,ana,3290,USD (7 gece),bizim hesabımız
+K0532,orneklem,14,örnek,bizim hesabımız
+K0533,ana,6794,USD (7 gece),bizim hesabımız
+K0533,orneklem,10,örnek,bizim hesabımız
+K0534,ana,3364,USD (7 gece),bizim hesabımız
+K0534,orneklem,6,örnek,bizim hesabımız
+K0535,ana,4936,USD (7 gece),bizim hesabımız
+K0535,orneklem,11,örnek,bizim hesabımız
+K0536,ana,8145,USD (7 gece),bizim hesabımız
+K0536,orneklem,13,örnek,bizim hesabımız
+K0537,ana,20344,USD (7 gece),bizim hesabımız
+K0537,orneklem,9,örnek,bizim hesabımız
+K0538,ana,2,restoran,kaynak gerçeği
+K0539,ana,2,restoran,bizim hesabımız
+K0540,ana,0,restoran,bizim hesabımız
+K0541,ana,1,restoran,bizim hesabımız
+K0542,ana,1,restoran,bizim hesabımız
+K0543,ana,0,restoran,bizim hesabımız
+K0544,ana,0,restoran,kaynak gerçeği
+K0545,ana,2,restoran,kaynak gerçeği
+K0546,ana,6,restoran,kaynak gerçeği
+K0547,ana,4,restoran,bizim hesabımız
+K0548,ana,0,restoran,bizim hesabımız
+K0549,ana,1,restoran,bizim hesabımız
+K0550,ana,3,restoran,bizim hesabımız
+K0551,ana,0,restoran,bizim hesabımız
+K0552,ana,0,restoran,kaynak gerçeği
+K0553,ana,3,restoran,kaynak gerçeği
+K0554,ana,28,restoran,kaynak gerçeği
+K0555,ana,10,restoran,bizim hesabımız
+K0556,ana,1,restoran,bizim hesabımız
+K0557,ana,8,restoran,bizim hesabımız
+K0558,ana,1,restoran,bizim hesabımız
+K0559,ana,0,restoran,bizim hesabımız
+K0560,ana,1,restoran,kaynak gerçeği
+K0561,ana,7,restoran,kaynak gerçeği
+K0562,ana,8,restoran,kaynak gerçeği
+K0563,ana,3,restoran,bizim hesabımız
+K0564,ana,2,restoran,bizim hesabımız
+K0565,ana,1,restoran,bizim hesabımız
+K0566,ana,0,restoran,bizim hesabımız
+K0567,ana,0,restoran,bizim hesabımız
+K0568,ana,2,restoran,kaynak gerçeği
+K0569,ana,2,restoran,kaynak gerçeği
+K0570,ana,15,restoran,kaynak gerçeği
+K0571,ana,9,restoran,bizim hesabımız
+K0572,ana,0,restoran,bizim hesabımız
+K0573,ana,6,restoran,bizim hesabımız
+K0574,ana,3,restoran,bizim hesabımız
+K0575,ana,0,restoran,bizim hesabımız
+K0576,ana,1,restoran,kaynak gerçeği
+K0577,ana,8,restoran,kaynak gerçeği
+K0578,ana,5,restoran,kaynak gerçeği
+K0579,ana,5,restoran,bizim hesabımız
+K0580,ana,1,restoran,bizim hesabımız
+K0581,ana,1,restoran,bizim hesabımız
+K0582,ana,3,restoran,bizim hesabımız
+K0583,ana,0,restoran,bizim hesabımız
+K0584,ana,0,restoran,kaynak gerçeği
+K0585,ana,4,restoran,kaynak gerçeği
+K0586,ana,19,restoran,kaynak gerçeği
+K0587,ana,10,restoran,bizim hesabımız
+K0588,ana,3,restoran,bizim hesabımız
+K0589,ana,3,restoran,bizim hesabımız
+K0590,ana,3,restoran,bizim hesabımız
+K0591,ana,1,restoran,bizim hesabımız
+K0592,ana,3,restoran,kaynak gerçeği
+K0593,ana,6,restoran,kaynak gerçeği
+K0594,ana,17,restoran,kaynak gerçeği
+K0595,ana,8,restoran,bizim hesabımız
+K0596,ana,2,restoran,bizim hesabımız
+K0597,ana,2,restoran,bizim hesabımız
+K0598,ana,2,restoran,bizim hesabımız
+K0599,ana,2,restoran,bizim hesabımız
+K0600,ana,4,restoran,kaynak gerçeği
+K0601,ana,5,restoran,kaynak gerçeği
+K0602,ana,3,restoran,kaynak gerçeği
+K0603,ana,1,restoran,bizim hesabımız
+K0604,ana,0,restoran,bizim hesabımız
+K0605,ana,1,restoran,bizim hesabımız
+K0606,ana,0,restoran,bizim hesabımız
+K0607,ana,0,restoran,bizim hesabımız
+K0608,ana,0,restoran,kaynak gerçeği
+K0609,ana,0,restoran,kaynak gerçeği
+K0610,ana,8,restoran,kaynak gerçeği
+K0611,ana,3,restoran,bizim hesabımız
+K0612,ana,0,restoran,bizim hesabımız
+K0613,ana,2,restoran,bizim hesabımız
+K0614,ana,1,restoran,bizim hesabımız
+K0615,ana,0,restoran,bizim hesabımız
+K0616,ana,0,restoran,kaynak gerçeği
+K0617,ana,2,restoran,kaynak gerçeği
+K0618,ana,7,restoran,kaynak gerçeği
+K0619,ana,4,restoran,bizim hesabımız
+K0620,ana,0,restoran,bizim hesabımız
+K0621,ana,1,restoran,bizim hesabımız
+K0622,ana,1,restoran,bizim hesabımız
+K0623,ana,2,restoran,bizim hesabımız
+K0624,ana,3,restoran,kaynak gerçeği
+K0625,ana,4,restoran,kaynak gerçeği
+K0626,ana,12,restoran,kaynak gerçeği
+K0627,ana,3,restoran,bizim hesabımız
+K0628,ana,0,restoran,bizim hesabımız
+K0629,ana,0,restoran,bizim hesabımız
+K0630,ana,2,restoran,bizim hesabımız
+K0631,ana,1,restoran,bizim hesabımız
+K0632,ana,1,restoran,kaynak gerçeği
+K0633,ana,5,restoran,kaynak gerçeği
+K0634,ana,11,restoran,kaynak gerçeği
+K0635,ana,4,restoran,bizim hesabımız
+K0636,ana,0,restoran,bizim hesabımız
+K0637,ana,2,restoran,bizim hesabımız
+K0638,ana,2,restoran,bizim hesabımız
+K0639,ana,0,restoran,bizim hesabımız
+K0640,ana,1,restoran,kaynak gerçeği
+K0641,ana,3,restoran,kaynak gerçeği
+K0642,ana,17.0,USD (ana yemek ortancası),bizim hesabımız
+K0642,orneklem,17,örnek,bizim hesabımız
+K0643,ana,25.5,USD (ana yemek ortancası),bizim hesabımız
+K0643,orneklem,18,örnek,bizim hesabımız
+K0644,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0644,orneklem,49,örnek,bizim hesabımız
+K0645,ana,19.5,USD (ana yemek ortancası),bizim hesabımız
+K0645,orneklem,8,örnek,bizim hesabımız
+K0646,ana,25.5,USD (ana yemek ortancası),bizim hesabımız
+K0646,orneklem,8,örnek,bizim hesabımız
+K0647,ana,28.0,USD (ana yemek ortancası),bizim hesabımız
+K0647,orneklem,17,örnek,bizim hesabımız
+K0648,ana,17.95,USD (ana yemek ortancası),bizim hesabımız
+K0648,orneklem,24,örnek,bizim hesabımız
+K0649,ana,15.95,USD (ana yemek ortancası),bizim hesabımız
+K0649,orneklem,15,örnek,bizim hesabımız
+K0650,ana,12.49,USD (ana yemek ortancası),bizim hesabımız
+K0650,orneklem,16,örnek,bizim hesabımız
+K0651,ana,21.0,USD (ana yemek ortancası),bizim hesabımız
+K0651,orneklem,30,örnek,bizim hesabımız
+K0652,ana,21.0,USD (ana yemek ortancası),bizim hesabımız
+K0652,orneklem,18,örnek,bizim hesabımız
+K0653,ana,39.5,USD (ana yemek ortancası),bizim hesabımız
+K0653,orneklem,6,örnek,bizim hesabımız
+K0654,ana,21.0,USD (ana yemek ortancası),bizim hesabımız
+K0654,orneklem,17,örnek,bizim hesabımız
+K0655,ana,18.0,USD (ana yemek ortancası),bizim hesabımız
+K0655,orneklem,17,örnek,bizim hesabımız
+K0656,ana,20.0,USD (ana yemek ortancası),bizim hesabımız
+K0656,orneklem,23,örnek,bizim hesabımız
+K0657,ana,16.0,USD (ana yemek ortancası),bizim hesabımız
+K0657,orneklem,148,örnek,bizim hesabımız
+K0658,ana,11.75,USD (ana yemek ortancası),bizim hesabımız
+K0658,orneklem,16,örnek,bizim hesabımız
+K0659,ana,18.0,USD (ana yemek ortancası),bizim hesabımız
+K0659,orneklem,17,örnek,bizim hesabımız
+K0660,ana,13.99,USD (ana yemek ortancası),bizim hesabımız
+K0660,orneklem,5,örnek,bizim hesabımız
+K0661,ana,18.0,USD (ana yemek ortancası),bizim hesabımız
+K0661,orneklem,57,örnek,bizim hesabımız
+K0662,ana,16.0,USD (ana yemek ortancası),bizim hesabımız
+K0662,orneklem,19,örnek,bizim hesabımız
+K0663,ana,29.0,USD (ana yemek ortancası),bizim hesabımız
+K0663,orneklem,7,örnek,bizim hesabımız
+K0664,ana,22.0,USD (ana yemek ortancası),bizim hesabımız
+K0664,orneklem,19,örnek,bizim hesabımız
+K0665,ana,16.99,USD (ana yemek ortancası),bizim hesabımız
+K0665,orneklem,16,örnek,bizim hesabımız
+K0666,ana,18.0,USD (ana yemek ortancası),bizim hesabımız
+K0666,orneklem,21,örnek,bizim hesabımız
+K0667,ana,29.95,USD (ana yemek ortancası),bizim hesabımız
+K0667,orneklem,8,örnek,bizim hesabımız
+K0668,ana,20.0,USD (ana yemek ortancası),bizim hesabımız
+K0668,orneklem,20,örnek,bizim hesabımız
+K0669,ana,29.5,USD (ana yemek ortancası),bizim hesabımız
+K0669,orneklem,6,örnek,bizim hesabımız
+K0670,ana,30.0,USD (ana yemek ortancası),bizim hesabımız
+K0670,orneklem,12,örnek,bizim hesabımız
+K0671,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0671,orneklem,49,örnek,bizim hesabımız
+K0672,ana,12.0,USD (ana yemek ortancası),bizim hesabımız
+K0672,orneklem,7,örnek,bizim hesabımız
+K0673,ana,36.0,USD (ana yemek ortancası),bizim hesabımız
+K0673,orneklem,12,örnek,bizim hesabımız
+K0674,ana,21.0,USD (ana yemek ortancası),bizim hesabımız
+K0674,orneklem,11,örnek,bizim hesabımız
+K0675,ana,20.0,USD (ana yemek ortancası),bizim hesabımız
+K0675,orneklem,5,örnek,bizim hesabımız
+K0676,ana,19.0,USD (ana yemek ortancası),bizim hesabımız
+K0676,orneklem,22,örnek,bizim hesabımız
+K0677,ana,43.5,USD (ana yemek ortancası),bizim hesabımız
+K0677,orneklem,8,örnek,bizim hesabımız
+K0678,ana,9.0,USD (ana yemek ortancası),bizim hesabımız
+K0678,orneklem,9,örnek,bizim hesabımız
+K0679,ana,28.0,USD (ana yemek ortancası),bizim hesabımız
+K0679,orneklem,18,örnek,bizim hesabımız
+K0680,ana,17.0,USD (ana yemek ortancası),bizim hesabımız
+K0680,orneklem,20,örnek,bizim hesabımız
+K0681,ana,25.5,USD (ana yemek ortancası),bizim hesabımız
+K0681,orneklem,16,örnek,bizim hesabımız
+K0682,ana,12.0,USD (ana yemek ortancası),bizim hesabımız
+K0682,orneklem,9,örnek,bizim hesabımız
+K0683,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0683,orneklem,17,örnek,bizim hesabımız
+K0684,ana,13.5,USD (ana yemek ortancası),bizim hesabımız
+K0684,orneklem,10,örnek,bizim hesabımız
+K0685,ana,17.0,USD (ana yemek ortancası),bizim hesabımız
+K0685,orneklem,81,örnek,bizim hesabımız
+K0686,ana,13.0,USD (ana yemek ortancası),bizim hesabımız
+K0686,orneklem,16,örnek,bizim hesabımız
+K0687,ana,43.5,USD (ana yemek ortancası),bizim hesabımız
+K0687,orneklem,8,örnek,bizim hesabımız
+K0688,ana,35.0,USD (ana yemek ortancası),bizim hesabımız
+K0688,orneklem,8,örnek,bizim hesabımız
+K0689,ana,10.75,USD (ana yemek ortancası),bizim hesabımız
+K0689,orneklem,15,örnek,bizim hesabımız
+K0690,ana,17.0,USD (ana yemek ortancası),bizim hesabımız
+K0690,orneklem,27,örnek,bizim hesabımız
+K0691,ana,45.0,USD (ana yemek ortancası),bizim hesabımız
+K0691,orneklem,9,örnek,bizim hesabımız
+K0692,ana,32.0,USD (ana yemek ortancası),bizim hesabımız
+K0692,orneklem,10,örnek,bizim hesabımız
+K0693,ana,17.0,USD (ana yemek ortancası),bizim hesabımız
+K0693,orneklem,5,örnek,bizim hesabımız
+K0694,ana,16.0,USD (ana yemek ortancası),bizim hesabımız
+K0694,orneklem,17,örnek,bizim hesabımız
+K0695,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0695,orneklem,49,örnek,bizim hesabımız
+K0696,ana,21.0,USD (ana yemek ortancası),bizim hesabımız
+K0696,orneklem,15,örnek,bizim hesabımız
+K0697,ana,17.0,USD (ana yemek ortancası),bizim hesabımız
+K0697,orneklem,8,örnek,bizim hesabımız
+K0698,ana,40.0,USD (ana yemek ortancası),bizim hesabımız
+K0698,orneklem,9,örnek,bizim hesabımız
+K0699,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0699,orneklem,5,örnek,bizim hesabımız
+K0700,ana,45.0,USD (ana yemek ortancası),bizim hesabımız
+K0700,orneklem,9,örnek,bizim hesabımız
+K0701,ana,35.0,USD (ana yemek ortancası),bizim hesabımız
+K0701,orneklem,8,örnek,bizim hesabımız
+K0702,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0702,orneklem,5,örnek,bizim hesabımız
+K0703,ana,47.0,USD (ana yemek ortancası),bizim hesabımız
+K0703,orneklem,9,örnek,bizim hesabımız
+K0704,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0704,orneklem,27,örnek,bizim hesabımız
+K0705,ana,37.5,USD (ana yemek ortancası),bizim hesabımız
+K0705,orneklem,12,örnek,bizim hesabımız
+K0706,ana,18.0,USD (ana yemek ortancası),bizim hesabımız
+K0706,orneklem,23,örnek,bizim hesabımız
+K0707,ana,19.0,USD (ana yemek ortancası),bizim hesabımız
+K0707,orneklem,21,örnek,bizim hesabımız
+K0708,ana,2.36,mil,bizim hesabımız
+K0708,pay,0,% (1 mil içinde),bizim hesabımız
+K0708,donusum,3.8,km,bizim hesabımız
+K0708,orneklem,114,örnek,bizim hesabımız
+K0709,ana,2.85,mil,bizim hesabımız
+K0709,pay,2,% (1 mil içinde),bizim hesabımız
+K0709,donusum,4.59,km,bizim hesabımız
+K0709,orneklem,114,örnek,bizim hesabımız
+K0710,ana,1.2,mil,bizim hesabımız
+K0710,pay,43,% (1 mil içinde),bizim hesabımız
+K0710,donusum,1.94,km,bizim hesabımız
+K0710,orneklem,114,örnek,bizim hesabımız
+K0711,ana,3.9,mil,bizim hesabımız
+K0711,pay,0,% (1 mil içinde),bizim hesabımız
+K0711,donusum,6.28,km,bizim hesabımız
+K0711,orneklem,114,örnek,bizim hesabımız
+K0712,ana,1.98,mil,bizim hesabımız
+K0712,pay,6,% (1 mil içinde),bizim hesabımız
+K0712,donusum,3.19,km,bizim hesabımız
+K0712,orneklem,114,örnek,bizim hesabımız
+K0713,ana,2.16,mil,bizim hesabımız
+K0713,pay,0,% (1 mil içinde),bizim hesabımız
+K0713,donusum,3.48,km,bizim hesabımız
+K0713,orneklem,31,örnek,bizim hesabımız
+K0714,ana,1.72,mil,bizim hesabımız
+K0714,pay,0,% (1 mil içinde),bizim hesabımız
+K0714,donusum,2.77,km,bizim hesabımız
+K0714,orneklem,31,örnek,bizim hesabımız
+K0715,ana,0.16,mil,bizim hesabımız
+K0715,pay,81,% (1 mil içinde),bizim hesabımız
+K0715,donusum,0.25,km,bizim hesabımız
+K0715,orneklem,31,örnek,bizim hesabımız
+K0716,ana,5.04,mil,bizim hesabımız
+K0716,pay,0,% (1 mil içinde),bizim hesabımız
+K0716,donusum,8.11,km,bizim hesabımız
+K0716,orneklem,31,örnek,bizim hesabımız
+K0717,ana,2.96,mil,bizim hesabımız
+K0717,pay,10,% (1 mil içinde),bizim hesabımız
+K0717,donusum,4.76,km,bizim hesabımız
+K0717,orneklem,31,örnek,bizim hesabımız
+K0718,ana,2.07,mil,bizim hesabımız
+K0718,pay,16,% (1 mil içinde),bizim hesabımız
+K0718,donusum,3.33,km,bizim hesabımız
+K0718,orneklem,246,örnek,bizim hesabımız
+K0719,ana,1.49,mil,bizim hesabımız
+K0719,pay,27,% (1 mil içinde),bizim hesabımız
+K0719,donusum,2.39,km,bizim hesabımız
+K0719,orneklem,246,örnek,bizim hesabımız
+K0720,ana,1.73,mil,bizim hesabımız
+K0720,pay,40,% (1 mil içinde),bizim hesabımız
+K0720,donusum,2.79,km,bizim hesabımız
+K0720,orneklem,246,örnek,bizim hesabımız
+K0721,ana,5.72,mil,bizim hesabımız
+K0721,pay,0,% (1 mil içinde),bizim hesabımız
+K0721,donusum,9.2,km,bizim hesabımız
+K0721,orneklem,246,örnek,bizim hesabımız
+K0722,ana,3.65,mil,bizim hesabımız
+K0722,pay,3,% (1 mil içinde),bizim hesabımız
+K0722,donusum,5.88,km,bizim hesabımız
+K0722,orneklem,246,örnek,bizim hesabımız
+K0723,ana,2.45,mil,bizim hesabımız
+K0723,pay,0,% (1 mil içinde),bizim hesabımız
+K0723,donusum,3.94,km,bizim hesabımız
+K0723,orneklem,194,örnek,bizim hesabımız
+K0724,ana,0.29,mil,bizim hesabımız
+K0724,pay,75,% (1 mil içinde),bizim hesabımız
+K0724,donusum,0.46,km,bizim hesabımız
+K0724,orneklem,194,örnek,bizim hesabımız
+K0725,ana,1.75,mil,bizim hesabımız
+K0725,pay,15,% (1 mil içinde),bizim hesabımız
+K0725,donusum,2.81,km,bizim hesabımız
+K0725,orneklem,194,örnek,bizim hesabımız
+K0726,ana,6.77,mil,bizim hesabımız
+K0726,pay,0,% (1 mil içinde),bizim hesabımız
+K0726,donusum,10.9,km,bizim hesabımız
+K0726,orneklem,194,örnek,bizim hesabımız
+K0727,ana,4.69,mil,bizim hesabımız
+K0727,pay,0,% (1 mil içinde),bizim hesabımız
+K0727,donusum,7.55,km,bizim hesabımız
+K0727,orneklem,194,örnek,bizim hesabımız
+K0728,ana,2.51,mil,bizim hesabımız
+K0728,pay,1,% (1 mil içinde),bizim hesabımız
+K0728,donusum,4.03,km,bizim hesabımız
+K0728,orneklem,86,örnek,bizim hesabımız
+K0729,ana,1.79,mil,bizim hesabımız
+K0729,pay,7,% (1 mil içinde),bizim hesabımız
+K0729,donusum,2.88,km,bizim hesabımız
+K0729,orneklem,86,örnek,bizim hesabımız
+K0730,ana,3.91,mil,bizim hesabımız
+K0730,pay,0,% (1 mil içinde),bizim hesabımız
+K0730,donusum,6.29,km,bizim hesabımız
+K0730,orneklem,86,örnek,bizim hesabımız
+K0731,ana,8.91,mil,bizim hesabımız
+K0731,pay,0,% (1 mil içinde),bizim hesabımız
+K0731,donusum,14.34,km,bizim hesabımız
+K0731,orneklem,86,örnek,bizim hesabımız
+K0732,ana,6.8,mil,bizim hesabımız
+K0732,pay,0,% (1 mil içinde),bizim hesabımız
+K0732,donusum,10.94,km,bizim hesabımız
+K0732,orneklem,86,örnek,bizim hesabımız
+K0733,ana,0.64,mil,bizim hesabımız
+K0733,pay,70,% (1 mil içinde),bizim hesabımız
+K0733,donusum,1.03,km,bizim hesabımız
+K0733,orneklem,259,örnek,bizim hesabımız
+K0734,ana,0.53,mil,bizim hesabımız
+K0734,pay,98,% (1 mil içinde),bizim hesabımız
+K0734,donusum,0.85,km,bizim hesabımız
+K0734,orneklem,259,örnek,bizim hesabımız
+K0735,ana,4.06,mil,bizim hesabımız
+K0735,pay,0,% (1 mil içinde),bizim hesabımız
+K0735,donusum,6.54,km,bizim hesabımız
+K0735,orneklem,259,örnek,bizim hesabımız
+K0736,ana,10.78,mil,bizim hesabımız
+K0736,pay,0,% (1 mil içinde),bizim hesabımız
+K0736,donusum,17.35,km,bizim hesabımız
+K0736,orneklem,259,örnek,bizim hesabımız
+K0737,ana,8.43,mil,bizim hesabımız
+K0737,pay,0,% (1 mil içinde),bizim hesabımız
+K0737,donusum,13.56,km,bizim hesabımız
+K0737,orneklem,259,örnek,bizim hesabımız
+K0738,ana,0.86,mil,bizim hesabımız
+K0738,pay,86,% (1 mil içinde),bizim hesabımız
+K0738,donusum,1.38,km,bizim hesabımız
+K0738,orneklem,221,örnek,bizim hesabımız
+K0739,ana,0.15,mil,bizim hesabımız
+K0739,pay,93,% (1 mil içinde),bizim hesabımız
+K0739,donusum,0.24,km,bizim hesabımız
+K0739,orneklem,221,örnek,bizim hesabımız
+K0740,ana,4.23,mil,bizim hesabımız
+K0740,pay,0,% (1 mil içinde),bizim hesabımız
+K0740,donusum,6.81,km,bizim hesabımız
+K0740,orneklem,221,örnek,bizim hesabımız
+K0741,ana,10.92,mil,bizim hesabımız
+K0741,pay,0,% (1 mil içinde),bizim hesabımız
+K0741,donusum,17.57,km,bizim hesabımız
+K0741,orneklem,221,örnek,bizim hesabımız
+K0742,ana,8.68,mil,bizim hesabımız
+K0742,pay,0,% (1 mil içinde),bizim hesabımız
+K0742,donusum,13.98,km,bizim hesabımız
+K0742,orneklem,221,örnek,bizim hesabımız
+K0743,ana,1.32,mil,bizim hesabımız
+K0743,pay,26,% (1 mil içinde),bizim hesabımız
+K0743,donusum,2.12,km,bizim hesabımız
+K0743,orneklem,498,örnek,bizim hesabımız
+K0744,ana,1.46,mil,bizim hesabımız
+K0744,pay,20,% (1 mil içinde),bizim hesabımız
+K0744,donusum,2.35,km,bizim hesabımız
+K0744,orneklem,498,örnek,bizim hesabımız
+K0745,ana,3.28,mil,bizim hesabımız
+K0745,pay,0,% (1 mil içinde),bizim hesabımız
+K0745,donusum,5.28,km,bizim hesabımız
+K0745,orneklem,498,örnek,bizim hesabımız
+K0746,ana,12.37,mil,bizim hesabımız
+K0746,pay,0,% (1 mil içinde),bizim hesabımız
+K0746,donusum,19.91,km,bizim hesabımız
+K0746,orneklem,498,örnek,bizim hesabımız
+K0747,ana,7.33,mil,bizim hesabımız
+K0747,pay,0,% (1 mil içinde),bizim hesabımız
+K0747,donusum,11.8,km,bizim hesabımız
+K0747,orneklem,498,örnek,bizim hesabımız
+K0748,ana,2.54,mil,bizim hesabımız
+K0748,pay,1,% (1 mil içinde),bizim hesabımız
+K0748,donusum,4.08,km,bizim hesabımız
+K0748,orneklem,165,örnek,bizim hesabımız
+K0749,ana,3.18,mil,bizim hesabımız
+K0749,pay,2,% (1 mil içinde),bizim hesabımız
+K0749,donusum,5.11,km,bizim hesabımız
+K0749,orneklem,165,örnek,bizim hesabımız
+K0750,ana,2.97,mil,bizim hesabımız
+K0750,pay,0,% (1 mil içinde),bizim hesabımız
+K0750,donusum,4.78,km,bizim hesabımız
+K0750,orneklem,165,örnek,bizim hesabımız
+K0751,ana,15.31,mil,bizim hesabımız
+K0751,pay,0,% (1 mil içinde),bizim hesabımız
+K0751,donusum,24.64,km,bizim hesabımız
+K0751,orneklem,165,örnek,bizim hesabımız
+K0752,ana,4.41,mil,bizim hesabımız
+K0752,pay,0,% (1 mil içinde),bizim hesabımız
+K0752,donusum,7.11,km,bizim hesabımız
+K0752,orneklem,165,örnek,bizim hesabımız
+K0753,ana,1.25,mil,bizim hesabımız
+K0753,pay,19,% (1 mil içinde),bizim hesabımız
+K0753,donusum,2.02,km,bizim hesabımız
+K0753,orneklem,301,örnek,bizim hesabımız
+K0754,ana,0.44,mil,bizim hesabımız
+K0754,pay,54,% (1 mil içinde),bizim hesabımız
+K0754,donusum,0.71,km,bizim hesabımız
+K0754,orneklem,301,örnek,bizim hesabımız
+K0755,ana,3.28,mil,bizim hesabımız
+K0755,pay,1,% (1 mil içinde),bizim hesabımız
+K0755,donusum,5.28,km,bizim hesabımız
+K0755,orneklem,301,örnek,bizim hesabımız
+K0756,ana,14.15,mil,bizim hesabımız
+K0756,pay,0,% (1 mil içinde),bizim hesabımız
+K0756,donusum,22.77,km,bizim hesabımız
+K0756,orneklem,301,örnek,bizim hesabımız
+K0757,ana,1.64,mil,bizim hesabımız
+K0757,pay,2,% (1 mil içinde),bizim hesabımız
+K0757,donusum,2.63,km,bizim hesabımız
+K0757,orneklem,301,örnek,bizim hesabımız
+K0758,ana,1.1,mil,bizim hesabımız
+K0758,pay,14,% (1 mil içinde),bizim hesabımız
+K0758,donusum,1.78,km,bizim hesabımız
+K0758,orneklem,7,örnek,bizim hesabımız
+K0759,ana,0.75,mil,bizim hesabımız
+K0759,pay,100,% (1 mil içinde),bizim hesabımız
+K0759,donusum,1.21,km,bizim hesabımız
+K0759,orneklem,7,örnek,bizim hesabımız
+K0760,ana,3.61,mil,bizim hesabımız
+K0760,pay,0,% (1 mil içinde),bizim hesabımız
+K0760,donusum,5.82,km,bizim hesabımız
+K0760,orneklem,7,örnek,bizim hesabımız
+K0761,ana,14.47,mil,bizim hesabımız
+K0761,pay,0,% (1 mil içinde),bizim hesabımız
+K0761,donusum,23.29,km,bizim hesabımız
+K0761,orneklem,7,örnek,bizim hesabımız
+K0762,ana,1.96,mil,bizim hesabımız
+K0762,pay,0,% (1 mil içinde),bizim hesabımız
+K0762,donusum,3.16,km,bizim hesabımız
+K0762,orneklem,7,örnek,bizim hesabımız
+K0763,ana,1.36,mil,bizim hesabımız
+K0763,pay,1,% (1 mil içinde),bizim hesabımız
+K0763,donusum,2.18,km,bizim hesabımız
+K0763,orneklem,166,örnek,bizim hesabımız
+K0764,ana,0.25,mil,bizim hesabımız
+K0764,pay,91,% (1 mil içinde),bizim hesabımız
+K0764,donusum,0.4,km,bizim hesabımız
+K0764,orneklem,166,örnek,bizim hesabımız
+K0765,ana,2.71,mil,bizim hesabımız
+K0765,pay,1,% (1 mil içinde),bizim hesabımız
+K0765,donusum,4.36,km,bizim hesabımız
+K0765,orneklem,166,örnek,bizim hesabımız
+K0766,ana,13.57,mil,bizim hesabımız
+K0766,pay,0,% (1 mil içinde),bizim hesabımız
+K0766,donusum,21.83,km,bizim hesabımız
+K0766,orneklem,166,örnek,bizim hesabımız
+K0767,ana,1.05,mil,bizim hesabımız
+K0767,pay,36,% (1 mil içinde),bizim hesabımız
+K0767,donusum,1.69,km,bizim hesabımız
+K0767,orneklem,166,örnek,bizim hesabımız
+K0768,ana,1.65,mil,bizim hesabımız
+K0768,pay,0,% (1 mil içinde),bizim hesabımız
+K0768,donusum,2.66,km,bizim hesabımız
+K0768,orneklem,101,örnek,bizim hesabımız
+K0769,ana,0.75,mil,bizim hesabımız
+K0769,pay,70,% (1 mil içinde),bizim hesabımız
+K0769,donusum,1.2,km,bizim hesabımız
+K0769,orneklem,101,örnek,bizim hesabımız
+K0770,ana,2.22,mil,bizim hesabımız
+K0770,pay,1,% (1 mil içinde),bizim hesabımız
+K0770,donusum,3.57,km,bizim hesabımız
+K0770,orneklem,101,örnek,bizim hesabımız
+K0771,ana,13.08,mil,bizim hesabımız
+K0771,pay,0,% (1 mil içinde),bizim hesabımız
+K0771,donusum,21.05,km,bizim hesabımız
+K0771,orneklem,101,örnek,bizim hesabımız
+K0772,ana,0.6,mil,bizim hesabımız
+K0772,pay,86,% (1 mil içinde),bizim hesabımız
+K0772,donusum,0.97,km,bizim hesabımız
+K0772,orneklem,101,örnek,bizim hesabımız
+K0778,ana,21.5,km (kuş uçuşu),bizim hesabımız
+K0779,ana,28.9,km (kuş uçuşu),bizim hesabımız
+K0780,ana,89.5,km (kuş uçuşu),bizim hesabımız
+K0781,ana,19,mil,kaynak gerçeği
+K0782,ana,18.5,mil,kaynak gerçeği
+K0783,ana,26+,mil (bakımı yapılan çok amaçlı yol),kaynak gerçeği
+K0786,ana,18 yaş altı ehliyet şartı,,kaynak gerçeği
+K0787,ana,35,mph (en fazla),kaynak gerçeği
+K0792,ana,35,mph (en fazla),kaynak gerçeği
+K0795,ana,35,mph (önerilen azami),kaynak gerçeği
+K0796,ana,kabul (5–0),,kaynak gerçeği
+K0797,ana,5 / 4 / 2,"USD (araç / tek kişilik araç / yaya, bisikletli, ek yolcu)",kaynak gerçeği
+K0798,ana,08:00–gün batımı,saat aralığı,kaynak gerçeği
+K0799,ana,6 / 4 / 2,"USD (araç / tek kişilik araç veya motosiklet / yaya, bisikletli)",kaynak gerçeği
+K0800,ana,08:00–gün batımı,saat aralığı,kaynak gerçeği
+K0801,ana,3 / 2,"USD (araç / yaya, bisikletli, ek yolcu)",kaynak gerçeği
+K0802,ana,08:00–gün batımı,saat aralığı,kaynak gerçeği
+K0804,ana,2,USD (günlük),kaynak gerçeği
+K0805,ana,37500,araç/gün (iki yön),kaynak gerçeği
+K0806,ana,48093,araç/gün (iki yön),kaynak gerçeği
+K0807,ana,8300,araç/gün (iki yön),kaynak gerçeği
+K0808,ana,6800,araç/gün (iki yön),kaynak gerçeği
+K0809,ana,9700,araç/gün (iki yön),kaynak gerçeği
+K0810,ana,43500,araç/gün (iki yön),kaynak gerçeği
+K0811,ana,56500,araç/gün (iki yön),kaynak gerçeği
+K0812,ana,50000,araç/gün (iki yön),kaynak gerçeği
+K0813,ana,7900,araç/gün (iki yön),kaynak gerçeği
+K0814,ana,50500,araç/gün (iki yön),kaynak gerçeği
+K0815,ana,41500,araç/gün (iki yön),kaynak gerçeği
+K0816,ana,6200,araç/gün (iki yön),kaynak gerçeği
+K0817,ana,35000,araç/gün (iki yön),kaynak gerçeği
+K0818,ana,7600,araç/gün (iki yön),kaynak gerçeği
+K0819,ana,14000,araç/gün (iki yön),kaynak gerçeği
+K0820,ana,30000,araç/gün (iki yön),kaynak gerçeği
+K0821,ana,"ücretsiz; 1 Mart–31 Ekim, 10:30–17:30",,kaynak gerçeği
+K0822,ana,4,yer,kaynak gerçeği
+K0823,ana,6,bölgesel erişim,kaynak gerçeği
+K0824,ana,5 × 120,ft (genişlik × uzunluk),kaynak gerçeği
+K0825,ana,8,erişim,kaynak gerçeği
+K0826,ana,3,erişim,kaynak gerçeği
+K0836,ana,1946; 1978,,kaynak gerçeği
+K0837,ana,1981,,kaynak gerçeği
+K0838,ana,tasarım 1980; temel 1982; 80 akre,,kaynak gerçeği
+K0839,ana,çekim 1997; gösterim Mayıs 1998 sonu,,kaynak gerçeği
+K0840,ana,1995,,kaynak gerçeği
+K0841,ana,2003,,kaynak gerçeği
+K0843,ana,1996,,kaynak gerçeği

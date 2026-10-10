@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.13.0 -> 4187c1cb1b4b07650bb0c34b2122ec6ec9f20f6c
-main -> 4187c1cb1b4b07650bb0c34b2122ec6ec9f20f6c
-app 0.13.0
-schema 13
+tag v0.14.0 -> 9adc235661700dbe0f0bf117fa532f86149a79c1
+main -> 9adc235661700dbe0f0bf117fa532f86149a79c1
+app 0.14.0
+schema 14
 ```
+
+10 Ekim 2026'da GÖREV-12 Adım 1 ile main `9adc235`'e (GÖREV-11) fast-forward edildi ve bu commit'e açıklamalı `v0.14.0` etiketi konuldu ("v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar"). Görev dalı CI (38054575393), main CI (38058332541) ve etiket CI (38058336127) başarılı.
 
 10 Ekim 2026'da GÖREV-11 Adım 1 ile main `4187c1c`'ye (GÖREV-10) fast-forward edildi ve bu commit'e açıklamalı `v0.13.0` etiketi konuldu ("v0.13.0 — aylık konaklama fiyatları, güncelleme göstergesi, günlük ihtiyaç ölçüleri ve restoran gözden geçirmesi"). Görev dalı CI (38018479836), main CI (38048064609) ve etiket CI (38048065961) başarılı.
 
@@ -26,16 +28,29 @@ schema 13
 ## Aktif branch
 
 ```text
-gorev-11-kanit-paketi
+gorev-12-yazar-ozeti
 app 0.14.0
 schema 14
 ```
 
 Bu dal:
+- kanıt paketinden **yazar özeti** üretir (aynı üretim, aynı paket nesnesi; Türkçe, ABD birimleriyle; tablolar ve K kimlik aralıkları; blok başına bir kez kullanım notu; kaynak listesi),
+- sayı listesini ayrı CSV'ye taşır ve yalnız yapılandırılmış alanlardan üretir (`ek_degerler`); ad, adres, yol ve karar numarası gürültüsü kalktı (ilk video: 3.003 → 1.723 sayı),
+- şablonlara oynak konuları ekler; plaj erişimi hukuku ve çelişkili satırlar paketin ve özetin başında "yayından önce kontrol" listesinde,
+- yönetici kararlarını belgelere ve referans tablosuna işler (okul bölgesi video dili, bölge kutusu dışındaki acil servis, HCA/CVS okunamadı olarak kalır, küçük örnek eşiği 20),
+- gerçek veride "Kanıt paketi" ekranından iki paket yeniden üretildi (10 Ekim 2026); main'e alınmadı, karar yöneticinin.
+
+Test:
+- 733 Python
+- 60 frontend
+
+---
+
+Önceki aktif dal `gorev-11-kanit-paketi` (v0.14.0 olarak main'e alındı):
 - kanıt paketini ekler: destinasyon şablonları (`ilk-video`, `mahalle-rehberi`), yeniden kullanılabilir veri blokları, her satırda kaynak, etiket ve kullanım notu, "veri yok" satırları, bilinen boşluklar, sayı kontrol listesi; Markdown + JSON `data/evidence/` altında SHA-256'lı; "Kanıt paketi" ekranı (M14),
 - günlük ihtiyaçta büyük süpermarket / yerel market ayrımı, yalnız resmî kaynakla doğrulanan acil servis ve acil bakım, eczane zinciri kontrolü (M13),
 - referans tablosuna 47 satır (plaj erişimi hukuku, erişilebilirlik, ziyaretçi kökeni ve okul tatilleri, etkinlikler, tarihçe) ve Türkçe ifadeler; FDOT trafik tablosu (M9),
-- gerçek veride çalıştı (10 Ekim 2026); main'e alınmadı, karar yöneticinin.
+- gerçek veride çalıştı (10 Ekim 2026); 10 Ekim 2026'da main'e alındı (`v0.14.0`).
 
 Test:
 - 716 Python
@@ -361,9 +376,21 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.13.0` → `4187c1c`). İçerik yukarıdaki GÖREV-10 bölümünde.
 
-## GÖREV-11 — kanıt paketi, günlük ihtiyaçta resmî acil sağlık, referans tablosu genişlemesi (dal)
+## v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar
 
-Dal: `gorev-11-kanit-paketi`, uygulama 0.14.0, şema 14.
+10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
+
+## GÖREV-12 — yazar özeti, ayrı sayı listesi, oynak konular (dal)
+
+Dal: `gorev-12-yazar-ozeti`, uygulama 0.14.0, şema 14 (değişmedi), paket biçimi `30a-studio-kanit-paketi/2`.
+
+- Gerçek veride ilk video paketi: 11 bölüm, 843 satır, 1.723 sayı, 10 "veri yok"; Markdown 466 KB (GÖREV-11: 903 KB), yazar özeti 110 KB, sayı listesi 77 KB. Rosemary Beach: 179 satır, 385 sayı (556); Markdown 55 KB (130 KB), özet 28 KB, liste 16 KB.
+- İlk video özeti 100 KB hedefini aştı; içerik düşürülmedi. Kalan büyüklüğün çoğu referans satırlarının notları ve kaynak listesindeki uzun resmî adresler (rapor).
+- Gerçek DB: `data/` tam yedeği (`work/yedek/20261010-1739/`), uygulama gerçek veriyle açıldı, iki paket ekrandan üretildi; yalnız `evidence_packs` 2 → 4; `integrity_check` ok, `foreign_key_check` boş. Toplayıcı çalışmadı.
+
+## GÖREV-11 — kanıt paketi, günlük ihtiyaçta resmî acil sağlık, referans tablosu genişlemesi
+
+Dal: `gorev-11-kanit-paketi`, uygulama 0.14.0, şema 14 (v0.14.0 olarak main'e alındı).
 
 - Kanıt paketi: iki şablon; gerçek veride ilk video paketi 11 bölüm, 732 kanıt satırı, 3.003 sayı, 10 "veri yok" satırı; Rosemary Beach paketi 8 bölüm, 174 satır, 556 sayı.
 - Günlük ihtiyaç: büyük süpermarket / yerel market; acil servis ve acil bakım yalnız resmî kaynaklı (Ascension Sacred Heart, Emerald Coast Urgent Care); HCA Florida ve CVS bu bilgisayardan okunamadı (konum engeli); Walgreens'in bölgede mağazası yok.
@@ -381,7 +408,7 @@ Dal: `gorev-11-kanit-paketi`, uygulama 0.14.0, şema 14.
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.11.0 — kiralama şirketlerinden konaklama fiyatları**
+**v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar**
 
 Çalışan veri domain'leri:
 **beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu + konaklama profili + kiralama şirketlerinden konaklama fiyatları** ve plaj–mahalle eşlemesi v3; `gorev-09-kapsama-restoran` dalında ayrıca **genişletilmiş fiyat kapsaması** ve **restoranların kendi sitelerinden bilgiler**
@@ -393,4 +420,4 @@ Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-09-kapsama-restoran` yönetici incelemesinden sonra main'e alınır; sıradaki aşama kanıt paketi ve makaledir (yönetici kararı).
+`gorev-12-yazar-ozeti` yönetici incelemesinden sonra main'e alınır; makale yazar özetinden yazılır, metindeki her sayı sayı listesine (CSV) karşı, plaj hukuku ve çelişkili satırlar yayından önce yeniden kontrol edilir (yönetici kararı).

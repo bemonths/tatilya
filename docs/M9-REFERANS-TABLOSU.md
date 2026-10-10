@@ -57,8 +57,11 @@ Toplayıcıyla alınamayan ama ilk videoda söylenecek her bilgiyi (plaj kuralla
 - **`dogrulanamadi`** — videoda kullanılmaz.
 - **`yerine_gecildi`** — kayıt için durur, videoda kullanılmaz; yerine geçen satır kullanılır.
 - Değeri bizim hesapladığımız satırlar (havalimanı uzaklıkları) `not` sütununda "bizim hesabımız" diye işaretlidir.
+- Bir satırın kendine özgü video dili kuralı varsa `not` sütununun sonuna "Video dili: …" diye yazılır. Kanıt paketi bu kısmı nottan ayırıp satırın kullanım notunun sonuna ekler (GÖREV-12); notun geri kalanı not olarak kalır.
 
 ## Yeniden kontrol kuralı
+
+**Plaj erişimi hukuku satırları her videodan önce yeniden kontrol edilir** (yönetici kararı, GÖREV-12). Kanıt paketi şablonlarında `plaj-hukuku` oynak konudur: bu konunun satırları ve bütün çelişkili satırlar paketin ve yazar özetinin başındaki "Yayından önce kontrol edilecek satırlar" listesinde, K kimliği, kısa ifadesi ve yeniden kontrol tarihiyle yer alır (M14).
 
 Kurallar, ücretler, saatler ve tanımlar yılda bir yeniden kontrol edilir (7 Ekim 2026'da alınanlar için 2027-10-07). Ziyaretçi ve konaklama raporlarından gelen satırlar her yeni rapor çıktığında kontrol edilir (ilk kontrol 2026-12-01). Çelişkili cankurtaran satırları bir sonraki sezondan önce, 2027-02-01'de. Sekme, tarihi geçmiş satırları işaretler ve sayar.
 
@@ -158,7 +161,7 @@ GÖREV-11 tabloya 47 satır ekledi (152 satır); yeni konular `plaj-hukuku`, `er
 
 - **Plaj erişimi hukuku:** Florida Anayasası Madde X Bölüm 11; Walton County 2016-23 sayılı kararı; 2018 kanunu (HB 631, s. 163.035) ve süreci; ilçenin 1.194 mülk için açtığı dava ve sonucu (Senato analizi); 2025'te 163.035'in kaldırılması (Ch. 2025-178) ve aynı kanunun erozyon kontrol çizgisi hükmü; 1. Bölge Temyiz Mahkemesi'nin 18 Şubat 2026 kararı (2024 nihai kararı hükümsüz) ve ilçenin aynı davadaki tutumu (2017 kararı yürürlükte değil); 2026-01…2026-10 sayılı ilçe kararları arasında customary use kararı yok; ilçe turizm dairesinin 20 feet geçiş alanı ifadesi (`celiskili`); "yeni yasa imzalandı, özel plaj kalmadı" iddiası (`dogrulanamadi`); video için tek satırlık özet (`türetilmiş`).
 - **Erişilebilirlik:** ücretsiz plaj tekerlekli sandalyesi ve yerleri, ADA uygun bölgesel erişimler (`celiskili`: aynı kurum başka sayfada 11 bölgesel erişim diyor), Ed Walline erişim matları.
-- **Ziyaretçiler ve okul tatilleri:** 2025 ziyaretçi çalışmasının ilk beş pazarı; Atlanta (Gwinnett), Nashville (MNPS), Dallas–Fort Worth (Dallas ISD), Birmingham (Jefferson County Schools), Houston (Houston ISD) 2026–27 güz ve bahar tatilleri. Metronun en büyük okul bölgesinin seçimi bizim seçimimizdir (notta yazılı).
+- **Ziyaretçiler ve okul tatilleri:** 2025 ziyaretçi çalışmasının ilk beş pazarı; Atlanta (Gwinnett), Nashville (MNPS), Dallas–Fort Worth (Dallas ISD), Birmingham (Jefferson County Schools), Houston (Houston ISD) 2026–27 güz ve bahar tatilleri. Metronun en büyük okul bölgesinin seçimi bizim seçimimizdir (notta yazılı); yönetici bu seçimi "bizim seçimimiz" olarak kabul etti (GÖREV-12). Beş okul satırının notunun sonunda video dili kuralı var: "Video dilinde 'örneğin Atlanta bölgesindeki Gwinnett County okulları' denir; resmî öğrenci sayısıyla doğrulanmadıkça 'en büyük okul bölgesi' denmez."
 - **Etkinlikler:** 30A Songwriters Festival, 30A Wine Festival, Seaside School Half Marathon, South Walton Beaches Wine & Food Festival, Digital Graffiti (iki yılda bir; 2027'de yok), Seaside 4 Temmuz, Halloweener Derby, Seeing Red Wine Festival, Rosemary Beach Uncorked, 30A 10K, Seaside Holiday Parade, Seaside yılbaşı, Escape to Create (2027'de ara).
 - **Tarihçe:** Seaside'ın arazisi ve kuruluşu, DPZ'nin Seaside, Rosemary Beach ve Alys Beach kayıtları, The Truman Show, New Urbanism tüzüğü; Alys Beach'in kuruluş yılı `dogrulanamadi`.
 - **Genel:** 30A'nın FDOT envanterindeki adı (W/E CO HWY 30A) ve Destin ile Fort Walton Beach'in Okaloosa County'de olduğu (ABD Nüfus Bürosu adres servisi).
@@ -169,21 +172,6 @@ GÖREV-11 tabloya 47 satır ekledi (152 satır); yeni konular `plaj-hukuku`, `er
 
 ### Trafik tablosu (FDOT)
 
-`studio/destinations/thirty_a_traffic.csv` (profil sabiti `TRAFFIC_| Konu | Satır | Doğrulandı | Çelişkili | Doğrulanamadı | Yerine geçildi |
-|---|---|---|---|---|---|
-| Plaj kuralları | 29 | 29 | 0 | 0 | 0 |
-| Güvenlik | 13 | 11 | 0 | 0 | 2 |
-| Plaj erişimi | 17 | 17 | 0 | 0 | 0 |
-| Ulaşım | 19 | 17 | 2 | 0 | 0 |
-| Parklar | 8 | 8 | 0 | 0 | 0 |
-| Kasırga sezonu | 2 | 2 | 0 | 0 | 0 |
-| Sezon ve maliyet | 14 | 13 | 0 | 0 | 1 |
-| Genel | 5 | 5 | 0 | 0 | 0 |
-| Plaj erişimi hukuku | 14 | 12 | 1 | 1 | 0 |
-| Erişilebilirlik | 4 | 3 | 1 | 0 | 0 |
-| Ziyaretçiler ve okul tatilleri | 6 | 6 | 0 | 0 | 0 |
-| Etkinlikler | 13 | 13 | 0 | 0 | 0 |
-| Tarihçe | 8 | 6 | 1 | 1 | 0 |
-| **Toplam** | **152** | **142** | **5** | **2** | **3** |`) referans tablosunun yanında, aynı kaynak sütunlarıyla (`kaynak_adi, kaynak_sahibi, kaynak_url, belge_konumu, belge_tarihi, erisim_tarihi, belge_sha256, guven, durum, yeniden_kontrol_tarihi, not`) tutulur; ek sütunlar `tur, yol, sayim_noktasi, aciklama, yil, ay, kategori, deger, birim, isaret, etiket`. İçerik: FDOT'un 2025 Walton County AADT raporundaki CR 30A (7) ve US 98 (9) sayım noktaları (iki yön, araç/gün; işaret C hesaplanmış, F ilk yıl tahmini — raporun kendi açıklaması) ve 2025 Peak Season Factor Category raporundaki dört Walton kategorisi (6000 countywide, 6001 recreational, 6010 I-10, 6098 US98) için aylık oran ve yoğun sezon haftaları. FDOT haftalık mevsim faktörü (SF) yayımlar; **aylık oran bizim hesabımızdır**: ayın her günü kendi haftasının SF değerini alır, ay ortalaması alınır, trafiğin yıllık ortalamaya oranı 1/SF kabul edilir (FDOT: AADT = sayım × SF). Raporda sayım noktalarının hangi kategoriye bağlı olduğu yazmaz. Üretim betiği `work/gorev-11/trafik.py`.
+`studio/destinations/thirty_a_traffic.csv` (profil sabiti `TRAFFIC_TABLE`) referans tablosunun yanında, aynı kaynak sütunlarıyla (`kaynak_adi, kaynak_sahibi, kaynak_url, belge_konumu, belge_tarihi, erisim_tarihi, belge_sha256, guven, durum, yeniden_kontrol_tarihi, not`) tutulur; ek sütunlar `tur, yol, sayim_noktasi, aciklama, yil, ay, kategori, deger, birim, isaret, etiket`. İçerik: FDOT'un 2025 Walton County AADT raporundaki CR 30A (7) ve US 98 (9) sayım noktaları (iki yön, araç/gün; işaret C hesaplanmış, F ilk yıl tahmini — raporun kendi açıklaması) ve 2025 Peak Season Factor Category raporundaki dört Walton kategorisi (6000 countywide, 6001 recreational, 6010 I-10, 6098 US98) için aylık oran ve yoğun sezon haftaları. FDOT haftalık mevsim faktörü (SF) yayımlar; **aylık oran bizim hesabımızdır**: ayın her günü kendi haftasının SF değerini alır, ay ortalaması alınır, trafiğin yıllık ortalamaya oranı 1/SF kabul edilir (FDOT: AADT = sayım × SF). Raporda sayım noktalarının hangi kategoriye bağlı olduğu yazmaz. Üretim betiği `work/gorev-11/trafik.py`; GÖREV-12'de ay ortalaması nottan ayrı sütuna (`sf_ay_ortalamasi`) taşındı ve aylık oran satırlarının notu bütün aylarda aynı oldu ("Oran = 1 / SF; SF, FDOT haftalık mevsim faktörlerinin gün ağırlıklı ay ortalamasıdır. …"); betik `work/gorev-12/trafik_not.py` (değerler değişmedi). Kanıt paketinin sayı listesine bu sütun girmez; oranın kendisi girer.
 
 **Trafik video dili:** FDOT AADT bir sayım noktasındaki yıllık ortalama günlük araç sayısıdır (iki yön); "<yer> sayım noktasında 2025 yıllık ortalaması" denir, yolun tamamı için tek sayı söylenmez. Aylık oranlar FDOT'un haftalık mevsim faktörlerinden bizim hesabımızdır ve kategori söylenir; sıkışıklık ya da yolculuk süresi iddiası yapılmaz.

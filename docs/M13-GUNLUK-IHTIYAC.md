@@ -39,6 +39,8 @@ Bir nokta, etiket setlerinden birini tam taşıdığı (ve marka listesi varsa m
 
 **30A bölgesi:** güney 30,20 · batı −86,40 · kuzey 30,45 · doğu −85,84. 30A kıyısı ve arkasındaki US-98 koridoru; iki uçtaki ilanların en yakın noktası kesilmesin diye batıda Miramar Beach'in doğu ucu, doğuda Panama City Beach'in batı ucu da alana dahil (en yakın nokta 30A dışında olabilir). Gözden geçirilmiş dosyadaki bir resmî nokta kutunun dışında olabilir; bu durumda notunda yazılır (30A: doğu mahallelerine en yakın resmî acil servis olabileceği için kutunun hemen güneydoğusundaki Ascension Sacred Heart Emergency Care – Panama City Beach eklendi).
 
+**Kural (yönetici kararı, GÖREV-12):** en yakın resmî acil servis bölge kutusunun dışındaysa notuyla eklenir. Not, noktanın kutunun neresinde kaldığını ve neden eklendiğini söyler; mesafeler bu noktayı da hesaba katar. Kutu bu yüzden büyütülmez (OpenStreetMap sorgusu küçük kalır).
+
 ## Gözden geçirilmiş dosyaların birleştirilmesi
 
 - Açık görünen bir yer OpenStreetMap'te aynı kategoride, aynı marka ya da kurumla 400 m içinde (ya da dosyadaki `osm_id` ile) varsa sonuç "OpenStreetMap'te de var" ve noktaya "<kaynak> sitesinde doğrulandı (tarih)" notu düşülür. Kurum adı eşlemesi, noktanın markasında, adında ya da işletmecisinde (`operator`) kurum adının geçmesine ya da noktanın ilk kelimesinin kurum adında geçmesine bakar ("Sacred Heart Hospital …" ile "Ascension Sacred Heart").
@@ -70,7 +72,7 @@ Mahalleler sekmesinin altında: "Günlük ihtiyaç noktalarını topla" düğmes
 
 ## Sınırlar
 
-- OpenStreetMap gönüllülerin haritasıdır; bir noktanın olmaması işletmenin olmadığı anlamına gelmez, olan bir nokta da kapanmış olabilir. Süpermarketler ve eczaneler zincirlerin siteleriyle kısmen doğrulandı; bu bilgisayardan okunamayan siteler (Publix, Winn-Dixie, The Fresh Market, CVS: ABD dışı bağlantıya kapalı ya da engelli; HCA Florida: konum engeli) raporda.
+- OpenStreetMap gönüllülerin haritasıdır; bir noktanın olmaması işletmenin olmadığı anlamına gelmez, olan bir nokta da kapanmış olabilir. Süpermarketler ve eczaneler zincirlerin siteleriyle kısmen doğrulandı; bu bilgisayardan okunamayan siteler (Publix, Winn-Dixie, The Fresh Market, CVS: ABD dışı bağlantıya kapalı ya da engelli; HCA Florida: konum engeli) raporda. Yönetici kararı (GÖREV-12): HCA Florida ve CVS "bu bilgisayardan okunamadı" olarak kalır; başka bir yol denenmez (vekil sunucu, başka ağ ya da üçüncü taraf dizin kullanılmaz).
 - Acil servis ve acil bakım ölçüleri yalnız resmî sayfası okunan noktalara dayanır; resmî sayfası okunamayan bir acil servis (ör. HCA Florida Breakfast Point Emergency) ölçüde yoktur ve en yakın acil servis mesafesi bu yüzden olduğundan uzun görünebilir.
 - Adres servisinden alınan koordinat (ABD Nüfus Bürosu adres aralığı eşlemesi) yaklaşıktır; notunda yazılır.
 - Mesafe kuş uçuşudur; yol üzerinden mesafe, yürüme ya da bisiklet süresi değildir. "Yürüme mesafesi" denmez.

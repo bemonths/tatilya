@@ -1,0 +1,386 @@
+kanit,tur,deger,birim,etiket
+K0002,ana,0,erişim,türetilmiş
+K0003,ana,0,erişim,kaynak gerçeği
+K0004,ana,0,erişim,kaynak gerçeği
+K0008,ana,163,ilan,kaynak gerçeği
+K0009,ana,164,ilan,kaynak gerçeği
+K0010,ana,164,ilan,kaynak gerçeği
+K0011,ana,166,ilan,kaynak gerçeği
+K0012,ana,166,ilan,kaynak gerçeği
+K0013,ana,166,ilan,kaynak gerçeği
+K0014,ana,166,ilan,kaynak gerçeği
+K0015,ana,166,ilan,kaynak gerçeği
+K0016,ana,166,ilan,kaynak gerçeği
+K0017,ana,166,ilan,kaynak gerçeği
+K0018,ana,166,ilan,kaynak gerçeği
+K0019,ana,166,ilan,kaynak gerçeği
+K0020,ana,166,ilan,kaynak gerçeği
+K0021,ana,117,ilan,kaynak gerçeği
+K0022,ana,1,ilan,kaynak gerçeği
+K0023,ana,44,ilan,kaynak gerçeği
+K0024,ana,2,ilan,kaynak gerçeği
+K0025,ana,2,ilan,kaynak gerçeği
+K0026,ana,1,ilan,kaynak gerçeği
+K0027,ana,0,ilan,kaynak gerçeği
+K0027,orneklem,154,örnek,kaynak gerçeği
+K0028,ana,27,ilan,kaynak gerçeği
+K0028,orneklem,154,örnek,kaynak gerçeği
+K0029,ana,36,ilan,kaynak gerçeği
+K0029,orneklem,154,örnek,kaynak gerçeği
+K0030,ana,43,ilan,kaynak gerçeği
+K0030,orneklem,154,örnek,kaynak gerçeği
+K0031,ana,25,ilan,kaynak gerçeği
+K0031,orneklem,154,örnek,kaynak gerçeği
+K0032,ana,16,ilan,kaynak gerçeği
+K0032,orneklem,154,örnek,kaynak gerçeği
+K0033,ana,7,ilan,kaynak gerçeği
+K0033,orneklem,154,örnek,kaynak gerçeği
+K0034,ana,3727,USD (7 gece),bizim hesabımız
+K0034,alt_ceyrek,2491,USD (7 gece),bizim hesabımız
+K0034,ust_ceyrek,6264,USD (7 gece),bizim hesabımız
+K0034,orneklem,48,örnek,bizim hesabımız
+K0035,ana,3487,USD (7 gece),bizim hesabımız
+K0035,alt_ceyrek,2482,USD (7 gece),bizim hesabımız
+K0035,ust_ceyrek,5655,USD (7 gece),bizim hesabımız
+K0035,orneklem,70,örnek,bizim hesabımız
+K0036,ana,4159,USD (7 gece),bizim hesabımız
+K0036,alt_ceyrek,2512,USD (7 gece),bizim hesabımız
+K0036,ust_ceyrek,6108,USD (7 gece),bizim hesabımız
+K0036,orneklem,67,örnek,bizim hesabımız
+K0037,ana,4090,USD (7 gece),bizim hesabımız
+K0037,alt_ceyrek,2951,USD (7 gece),bizim hesabımız
+K0037,ust_ceyrek,6543,USD (7 gece),bizim hesabımız
+K0037,orneklem,70,örnek,bizim hesabımız
+K0038,ana,5872,USD (7 gece),bizim hesabımız
+K0038,alt_ceyrek,4014,USD (7 gece),bizim hesabımız
+K0038,ust_ceyrek,9367,USD (7 gece),bizim hesabımız
+K0038,orneklem,82,örnek,bizim hesabımız
+K0039,ana,4685,USD (7 gece),bizim hesabımız
+K0039,alt_ceyrek,3465,USD (7 gece),bizim hesabımız
+K0039,ust_ceyrek,7174,USD (7 gece),bizim hesabımız
+K0039,orneklem,67,örnek,bizim hesabımız
+K0040,ana,5369,USD (7 gece),bizim hesabımız
+K0040,alt_ceyrek,4226,USD (7 gece),bizim hesabımız
+K0040,ust_ceyrek,8732,USD (7 gece),bizim hesabımız
+K0040,orneklem,70,örnek,bizim hesabımız
+K0041,ana,6994,USD (7 gece),bizim hesabımız
+K0041,alt_ceyrek,4804,USD (7 gece),bizim hesabımız
+K0041,ust_ceyrek,12522,USD (7 gece),bizim hesabımız
+K0041,orneklem,89,örnek,bizim hesabımız
+K0042,ana,7223,USD (7 gece),bizim hesabımız
+K0042,alt_ceyrek,4665,USD (7 gece),bizim hesabımız
+K0042,ust_ceyrek,12028,USD (7 gece),bizim hesabımız
+K0042,orneklem,91,örnek,bizim hesabımız
+K0043,ana,4929,USD (7 gece),bizim hesabımız
+K0043,alt_ceyrek,3535,USD (7 gece),bizim hesabımız
+K0043,ust_ceyrek,8704,USD (7 gece),bizim hesabımız
+K0043,orneklem,92,örnek,bizim hesabımız
+K0044,ana,4771,USD (7 gece),bizim hesabımız
+K0044,alt_ceyrek,3355,USD (7 gece),bizim hesabımız
+K0044,ust_ceyrek,8467,USD (7 gece),bizim hesabımız
+K0044,orneklem,87,örnek,bizim hesabımız
+K0045,ana,6219,USD (7 gece),bizim hesabımız
+K0045,alt_ceyrek,4665,USD (7 gece),bizim hesabımız
+K0045,ust_ceyrek,9524,USD (7 gece),bizim hesabımız
+K0045,orneklem,58,örnek,bizim hesabımız
+K0046,ana,2793,USD (7 gece),bizim hesabımız
+K0046,orneklem,31,örnek,bizim hesabımız
+K0047,ana,4752,USD (7 gece),bizim hesabımız
+K0047,orneklem,16,örnek,bizim hesabımız
+K0048,ana,5956,USD (7 gece),bizim hesabımız
+K0048,orneklem,9,örnek,bizim hesabımız
+K0049,ana,8640,USD (7 gece),bizim hesabımız
+K0049,orneklem,10,örnek,bizim hesabımız
+K0050,ana,4440,USD (7 gece),bizim hesabımız
+K0050,orneklem,40,örnek,bizim hesabımız
+K0051,ana,8376,USD (7 gece),bizim hesabımız
+K0051,orneklem,24,örnek,bizim hesabımız
+K0052,ana,12817,USD (7 gece),bizim hesabımız
+K0052,orneklem,16,örnek,bizim hesabımız
+K0053,ana,15287,USD (7 gece),bizim hesabımız
+K0053,orneklem,10,örnek,bizim hesabımız
+K0054,ana,12,restoran,kaynak gerçeği
+K0055,ana,3,restoran,bizim hesabımız
+K0056,ana,0,restoran,bizim hesabımız
+K0057,ana,0,restoran,bizim hesabımız
+K0058,ana,2,restoran,bizim hesabımız
+K0059,ana,1,restoran,bizim hesabımız
+K0060,ana,1,restoran,kaynak gerçeği
+K0061,ana,5,restoran,kaynak gerçeği
+K0066,ana,35.0,USD (ana yemek ortancası),bizim hesabımız
+K0066,orneklem,8,örnek,bizim hesabımız
+K0069,ana,25.0,USD (ana yemek ortancası),bizim hesabımız
+K0069,orneklem,5,örnek,bizim hesabımız
+K0070,ana,49.0,USD (ana yemek ortancası),bizim hesabımız
+K0070,orneklem,3,örnek,bizim hesabımız
+K0071,ana,47.0,USD (ana yemek ortancası),bizim hesabımız
+K0071,orneklem,9,örnek,bizim hesabımız
+K0073,ana,49.0,USD (ana yemek ortancası),bizim hesabımız
+K0073,orneklem,3,örnek,bizim hesabımız
+K0074,ana,1.36,mil,bizim hesabımız
+K0074,pay,1,% (1 mil içinde),bizim hesabımız
+K0074,donusum,2.18,km,bizim hesabımız
+K0074,orneklem,166,örnek,bizim hesabımız
+K0075,ana,0.25,mil,bizim hesabımız
+K0075,pay,91,% (1 mil içinde),bizim hesabımız
+K0075,donusum,0.4,km,bizim hesabımız
+K0075,orneklem,166,örnek,bizim hesabımız
+K0076,ana,2.77,mil,bizim hesabımız
+K0076,pay,1,% (1 mil içinde),bizim hesabımız
+K0076,donusum,4.45,km,bizim hesabımız
+K0076,orneklem,166,örnek,bizim hesabımız
+K0077,ana,2.71,mil,bizim hesabımız
+K0077,pay,1,% (1 mil içinde),bizim hesabımız
+K0077,donusum,4.36,km,bizim hesabımız
+K0077,orneklem,166,örnek,bizim hesabımız
+K0078,ana,13.57,mil,bizim hesabımız
+K0078,pay,0,% (1 mil içinde),bizim hesabımız
+K0078,donusum,21.83,km,bizim hesabımız
+K0078,orneklem,166,örnek,bizim hesabımız
+K0079,ana,1.05,mil,bizim hesabımız
+K0079,pay,36,% (1 mil içinde),bizim hesabımız
+K0079,donusum,1.69,km,bizim hesabımız
+K0079,orneklem,166,örnek,bizim hesabımız
+K0080,ana,0.3,mil,bizim hesabımız
+K0080,pay,91,% (1 mil içinde),bizim hesabımız
+K0080,donusum,0.48,km,bizim hesabımız
+K0080,orneklem,166,örnek,bizim hesabımız
+K0081,ana,0.37,mil,bizim hesabımız
+K0081,pay,93,% (1 mil içinde),bizim hesabımız
+K0081,donusum,0.59,km,bizim hesabımız
+K0081,orneklem,166,örnek,bizim hesabımız
+K0082,ana,1995,,kaynak gerçeği
+K0083,ana,Kasım (2026: 14 Kasım),,kaynak gerçeği
+K0084,ana,Şükran Günü (2026: 26 Kasım),,kaynak gerçeği
+K0085,ana,63.1,°F,kaynak gerçeği
+K0085,donusum,17.3,°C,kaynak gerçeği
+K0085,orneklem,19,örnek,kaynak gerçeği
+K0086,ana,65.8,°F,kaynak gerçeği
+K0086,donusum,18.8,°C,kaynak gerçeği
+K0086,orneklem,20,örnek,kaynak gerçeği
+K0087,ana,70.7,°F,kaynak gerçeği
+K0087,donusum,21.5,°C,kaynak gerçeği
+K0087,orneklem,20,örnek,kaynak gerçeği
+K0088,ana,76.2,°F,kaynak gerçeği
+K0088,donusum,24.6,°C,kaynak gerçeği
+K0088,orneklem,20,örnek,kaynak gerçeği
+K0089,ana,83.5,°F,kaynak gerçeği
+K0089,donusum,28.6,°C,kaynak gerçeği
+K0089,orneklem,19,örnek,kaynak gerçeği
+K0090,ana,88.9,°F,kaynak gerçeği
+K0090,donusum,31.6,°C,kaynak gerçeği
+K0090,orneklem,18,örnek,kaynak gerçeği
+K0091,ana,90.9,°F,kaynak gerçeği
+K0091,donusum,32.7,°C,kaynak gerçeği
+K0091,orneklem,18,örnek,kaynak gerçeği
+K0092,ana,90.6,°F,kaynak gerçeği
+K0092,donusum,32.6,°C,kaynak gerçeği
+K0092,orneklem,18,örnek,kaynak gerçeği
+K0093,ana,88.5,°F,kaynak gerçeği
+K0093,donusum,31.4,°C,kaynak gerçeği
+K0093,orneklem,18,örnek,kaynak gerçeği
+K0094,ana,80.9,°F,kaynak gerçeği
+K0094,donusum,27.2,°C,kaynak gerçeği
+K0094,orneklem,18,örnek,kaynak gerçeği
+K0095,ana,72.1,°F,kaynak gerçeği
+K0095,donusum,22.3,°C,kaynak gerçeği
+K0095,orneklem,18,örnek,kaynak gerçeği
+K0096,ana,65.6,°F,kaynak gerçeği
+K0096,donusum,18.7,°C,kaynak gerçeği
+K0096,orneklem,18,örnek,kaynak gerçeği
+K0097,ana,45.3,°F,kaynak gerçeği
+K0097,donusum,7.4,°C,kaynak gerçeği
+K0097,orneklem,22,örnek,kaynak gerçeği
+K0098,ana,47.9,°F,kaynak gerçeği
+K0098,donusum,8.8,°C,kaynak gerçeği
+K0098,orneklem,22,örnek,kaynak gerçeği
+K0099,ana,53.6,°F,kaynak gerçeği
+K0099,donusum,12.0,°C,kaynak gerçeği
+K0099,orneklem,22,örnek,kaynak gerçeği
+K0100,ana,60.1,°F,kaynak gerçeği
+K0100,donusum,15.6,°C,kaynak gerçeği
+K0100,orneklem,22,örnek,kaynak gerçeği
+K0101,ana,68.0,°F,kaynak gerçeği
+K0101,donusum,20.0,°C,kaynak gerçeği
+K0101,orneklem,22,örnek,kaynak gerçeği
+K0102,ana,74.1,°F,kaynak gerçeği
+K0102,donusum,23.4,°C,kaynak gerçeği
+K0102,orneklem,22,örnek,kaynak gerçeği
+K0103,ana,76.2,°F,kaynak gerçeği
+K0103,donusum,24.6,°C,kaynak gerçeği
+K0103,orneklem,21,örnek,kaynak gerçeği
+K0104,ana,75.8,°F,kaynak gerçeği
+K0104,donusum,24.3,°C,kaynak gerçeği
+K0104,orneklem,22,örnek,kaynak gerçeği
+K0105,ana,72.4,°F,kaynak gerçeği
+K0105,donusum,22.4,°C,kaynak gerçeği
+K0105,orneklem,22,örnek,kaynak gerçeği
+K0106,ana,63.2,°F,kaynak gerçeği
+K0106,donusum,17.3,°C,kaynak gerçeği
+K0106,orneklem,22,örnek,kaynak gerçeği
+K0107,ana,53.0,°F,kaynak gerçeği
+K0107,donusum,11.7,°C,kaynak gerçeği
+K0107,orneklem,22,örnek,kaynak gerçeği
+K0108,ana,47.5,°F,kaynak gerçeği
+K0108,donusum,8.6,°C,kaynak gerçeği
+K0108,orneklem,22,örnek,kaynak gerçeği
+K0109,ana,4.52,inç,kaynak gerçeği
+K0109,donusum,115.0,mm,kaynak gerçeği
+K0109,orneklem,21,örnek,kaynak gerçeği
+K0110,ana,4.96,inç,kaynak gerçeği
+K0110,donusum,126.0,mm,kaynak gerçeği
+K0110,orneklem,21,örnek,kaynak gerçeği
+K0111,ana,4.7,inç,kaynak gerçeği
+K0111,donusum,119.0,mm,kaynak gerçeği
+K0111,orneklem,21,örnek,kaynak gerçeği
+K0112,ana,4.55,inç,kaynak gerçeği
+K0112,donusum,116.0,mm,kaynak gerçeği
+K0112,orneklem,23,örnek,kaynak gerçeği
+K0113,ana,3.22,inç,kaynak gerçeği
+K0113,donusum,82.0,mm,kaynak gerçeği
+K0113,orneklem,21,örnek,kaynak gerçeği
+K0114,ana,4.7,inç,kaynak gerçeği
+K0114,donusum,119.0,mm,kaynak gerçeği
+K0114,orneklem,22,örnek,kaynak gerçeği
+K0115,ana,5.77,inç,kaynak gerçeği
+K0115,donusum,147.0,mm,kaynak gerçeği
+K0115,orneklem,20,örnek,kaynak gerçeği
+K0116,ana,6.08,inç,kaynak gerçeği
+K0116,donusum,154.0,mm,kaynak gerçeği
+K0116,orneklem,19,örnek,kaynak gerçeği
+K0117,ana,5.18,inç,kaynak gerçeği
+K0117,donusum,132.0,mm,kaynak gerçeği
+K0117,orneklem,16,örnek,kaynak gerçeği
+K0118,ana,2.82,inç,kaynak gerçeği
+K0118,donusum,72.0,mm,kaynak gerçeği
+K0118,orneklem,18,örnek,kaynak gerçeği
+K0119,ana,4.13,inç,kaynak gerçeği
+K0119,donusum,105.0,mm,kaynak gerçeği
+K0119,orneklem,22,örnek,kaynak gerçeği
+K0120,ana,4.72,inç,kaynak gerçeği
+K0120,donusum,120.0,mm,kaynak gerçeği
+K0120,orneklem,21,örnek,kaynak gerçeği
+K0121,ana,5.6,gün,kaynak gerçeği
+K0121,orneklem,22,örnek,kaynak gerçeği
+K0122,ana,5.3,gün,kaynak gerçeği
+K0122,orneklem,22,örnek,kaynak gerçeği
+K0123,ana,5.2,gün,kaynak gerçeği
+K0123,orneklem,22,örnek,kaynak gerçeği
+K0124,ana,4.0,gün,kaynak gerçeği
+K0124,orneklem,23,örnek,kaynak gerçeği
+K0125,ana,3.7,gün,kaynak gerçeği
+K0125,orneklem,23,örnek,kaynak gerçeği
+K0126,ana,6.1,gün,kaynak gerçeği
+K0126,orneklem,23,örnek,kaynak gerçeği
+K0127,ana,7.2,gün,kaynak gerçeği
+K0127,orneklem,23,örnek,kaynak gerçeği
+K0128,ana,8.1,gün,kaynak gerçeği
+K0128,orneklem,23,örnek,kaynak gerçeği
+K0129,ana,5.3,gün,kaynak gerçeği
+K0129,orneklem,23,örnek,kaynak gerçeği
+K0130,ana,3.5,gün,kaynak gerçeği
+K0130,orneklem,23,örnek,kaynak gerçeği
+K0131,ana,4.3,gün,kaynak gerçeği
+K0131,orneklem,23,örnek,kaynak gerçeği
+K0132,ana,6.5,gün,kaynak gerçeği
+K0132,orneklem,23,örnek,kaynak gerçeği
+K0133,ana,0.0,gün,kaynak gerçeği
+K0133,orneklem,19,örnek,kaynak gerçeği
+K0134,ana,0.0,gün,kaynak gerçeği
+K0134,orneklem,20,örnek,kaynak gerçeği
+K0135,ana,0.0,gün,kaynak gerçeği
+K0135,orneklem,20,örnek,kaynak gerçeği
+K0136,ana,0.0,gün,kaynak gerçeği
+K0136,orneklem,20,örnek,kaynak gerçeği
+K0137,ana,1.1,gün,kaynak gerçeği
+K0137,orneklem,19,örnek,kaynak gerçeği
+K0138,ana,7.8,gün,kaynak gerçeği
+K0138,orneklem,18,örnek,kaynak gerçeği
+K0139,ana,14.9,gün,kaynak gerçeği
+K0139,orneklem,18,örnek,kaynak gerçeği
+K0140,ana,16.9,gün,kaynak gerçeği
+K0140,orneklem,18,örnek,kaynak gerçeği
+K0141,ana,8.7,gün,kaynak gerçeği
+K0141,orneklem,18,örnek,kaynak gerçeği
+K0142,ana,0.9,gün,kaynak gerçeği
+K0142,orneklem,18,örnek,kaynak gerçeği
+K0143,ana,0.0,gün,kaynak gerçeği
+K0143,orneklem,18,örnek,kaynak gerçeği
+K0144,ana,0.0,gün,kaynak gerçeği
+K0144,orneklem,18,örnek,kaynak gerçeği
+K0145,ana,60.2,°F,bizim hesabımız
+K0145,donusum,15.7,°C,bizim hesabımız
+K0145,orneklem,15,örnek,bizim hesabımız
+K0146,ana,60.6,°F,bizim hesabımız
+K0146,donusum,15.9,°C,bizim hesabımız
+K0146,orneklem,14,örnek,bizim hesabımız
+K0147,ana,65.7,°F,bizim hesabımız
+K0147,donusum,18.7,°C,bizim hesabımız
+K0147,orneklem,14,örnek,bizim hesabımız
+K0148,ana,70.7,°F,bizim hesabımız
+K0148,donusum,21.5,°C,bizim hesabımız
+K0148,orneklem,15,örnek,bizim hesabımız
+K0149,ana,77.2,°F,bizim hesabımız
+K0149,donusum,25.1,°C,bizim hesabımız
+K0149,orneklem,15,örnek,bizim hesabımız
+K0150,ana,82.3,°F,bizim hesabımız
+K0150,donusum,28.0,°C,bizim hesabımız
+K0150,orneklem,15,örnek,bizim hesabımız
+K0151,ana,84.3,°F,bizim hesabımız
+K0151,donusum,29.0,°C,bizim hesabımız
+K0151,orneklem,13,örnek,bizim hesabımız
+K0152,ana,85.8,°F,bizim hesabımız
+K0152,donusum,29.9,°C,bizim hesabımız
+K0152,orneklem,14,örnek,bizim hesabımız
+K0153,ana,84.2,°F,bizim hesabımız
+K0153,donusum,29.0,°C,bizim hesabımız
+K0153,orneklem,13,örnek,bizim hesabımız
+K0154,ana,78.5,°F,bizim hesabımız
+K0154,donusum,25.9,°C,bizim hesabımız
+K0154,orneklem,15,örnek,bizim hesabımız
+K0155,ana,70.3,°F,bizim hesabımız
+K0155,donusum,21.3,°C,bizim hesabımız
+K0155,orneklem,16,örnek,bizim hesabımız
+K0156,ana,63.8,°F,bizim hesabımız
+K0156,donusum,17.7,°C,bizim hesabımız
+K0156,orneklem,16,örnek,bizim hesabımız
+K0157,ana,6.5,%,bizim hesabımız
+K0157,orneklem,5,örnek,bizim hesabımız
+K0158,ana,3.0,%,bizim hesabımız
+K0158,orneklem,5,örnek,bizim hesabımız
+K0159,ana,2.6,%,bizim hesabımız
+K0159,orneklem,5,örnek,bizim hesabımız
+K0160,ana,2.1,%,bizim hesabımız
+K0160,orneklem,5,örnek,bizim hesabımız
+K0161,ana,2.4,%,bizim hesabımız
+K0161,orneklem,5,örnek,bizim hesabımız
+K0162,ana,8.5,%,bizim hesabımız
+K0162,orneklem,5,örnek,bizim hesabımız
+K0163,ana,8.6,%,bizim hesabımız
+K0163,orneklem,5,örnek,bizim hesabımız
+K0164,ana,10.6,%,bizim hesabımız
+K0164,orneklem,5,örnek,bizim hesabımız
+K0165,ana,18.3,%,bizim hesabımız
+K0165,orneklem,5,örnek,bizim hesabımız
+K0166,ana,20.0,%,bizim hesabımız
+K0166,orneklem,5,örnek,bizim hesabımız
+K0167,ana,10.2,%,bizim hesabımız
+K0167,orneklem,5,örnek,bizim hesabımız
+K0168,ana,7.1,%,bizim hesabımız
+K0168,orneklem,5,örnek,bizim hesabımız
+K0169,ana,5,fırtına,bizim hesabımız
+K0170,ana,13,fırtına,bizim hesabımız
+K0171,ana,1,fırtına,bizim hesabımız
+K0172,ana,1,fırtına,bizim hesabımız
+K0173,ana,1,fırtına,bizim hesabımız
+K0174,ana,2,fırtına,bizim hesabımız
+K0175,ana,35.1,deniz mili,bizim hesabımız
+K0175,donusum,65.0,km,bizim hesabımız
+K0176,ana,39.7,deniz mili,bizim hesabımız
+K0176,donusum,73.4,km,bizim hesabımız
+K0177,ana,18.2,deniz mili,bizim hesabımız
+K0177,donusum,33.8,km,bizim hesabımız
+K0178,ana,40.6,deniz mili,bizim hesabımız
+K0178,donusum,75.1,km,bizim hesabımız
+K0179,ana,30.5,deniz mili,bizim hesabımız
+K0179,donusum,56.4,km,bizim hesabımız
