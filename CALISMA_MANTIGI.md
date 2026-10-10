@@ -4,7 +4,7 @@
 >
 > Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M10`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 8–9 Ekim 2026'da GÖREV-09 (v0.11.0 yayını, gerçek Chrome ile tarayıcı kurulumu, konaklama fiyat kapsaması, restoranların kendi sitelerinden bilgiler) ile güncellenmiştir.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 9–10 Ekim 2026'da GÖREV-10 (v0.12.0 yayını, aylık konaklama pencereleri, güncelleme zamanı göstergesi, OpenStreetMap günlük ihtiyaç ölçüleri, restoran fiyat seviyesi gözden geçirmesi, tarayıcının yalnız engelde kullanılması) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
@@ -13,20 +13,20 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` @ `9f2d65ae85a2adccd1e7f4605406271dbc4d952f` (GÖREV-08: kiralama şirketlerinden konaklama fiyatları; 8 Ekim 2026'da GÖREV-09 Adım 1 ile fast-forward) |
-| Stable tag | `v0.11.0` → `9f2d65a` — **v0.11.0 — kiralama şirketlerinden konaklama fiyatları** (önceki: `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.11.0` / `11` (main ve `v0.11.0`) |
-| Aktif geliştirme dalı | `gorev-09-kapsama-restoran` — gerçek Chrome ile tarayıcı kurulumu (CDP, tek kalıcı profil, `browser_hosts`), konaklama fiyat kapsaması (`agency-lodging-rates/2`: 24 şirket, adres/konum eşlemesi, kendi envanteri, yayımlanmış kira, misafir sayısı, korumalı siteler, Sonbahar 2027), restoranların kendi sitelerinden bilgiler (`restaurant-sites/1`), restoran adres düzeltmesi (`south-walton-restaurants/2`) |
-| Aktif dal durumu | Uygulama `0.12.0`, şema `12`; geçici klasörde denendi, gerçek veride dört toplayıcı çalıştırıldı; main'e alınmadı; karar yöneticinin |
+| Stable branch | `main` @ `fdd59f6d417d7ba345de61e8931207b3791bce25` (GÖREV-09: konaklama fiyat kapsaması, gerçek tarayıcı kurulumu, restoran bilgileri; 9 Ekim 2026'da GÖREV-10 Adım 1 ile fast-forward) |
+| Stable tag | `v0.12.0` → `fdd59f6` — **v0.12.0 — konaklama fiyat kapsaması, gerçek tarayıcı kurulumu ve restoran bilgileri** (önceki: `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
+| Stable uygulama sürümü / şema | `0.12.0` / `12` (main ve `v0.12.0`) |
+| Aktif geliştirme dalı | `gorev-10-aylik-gunluk` — aylık konaklama pencereleri (12 ay; mevsim grupları ve aynı hafta karşılaştırması), ana ekranda "Güncelleme zamanı gelenler" ve "Zamanı gelenleri başlat" (zamanlanmış görev yok), OpenStreetMap günlük ihtiyaç noktaları ve kuş uçuşu ölçüler (`openstreetmap-daily-needs/1`), restoran fiyat seviyesi gözden geçirmesi, tarayıcı yalnız engelde |
+| Aktif dal durumu | Uygulama `0.13.0`, şema `13`; geçici klasörde denendi, gerçek veride restoran dizini, işletme siteleri, OpenStreetMap ve düğmeyle konaklama + kiralama şirketi fiyatları çalıştı; main'e alınmadı; karar yöneticinin |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main @ 9f2d65a ve etiket `v0.11.0` başarılı; görev dalının sonucu `docs/gorevler/GOREV-09/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 650 Python testi + 54 frontend testi (main/v0.11.0: 587 + 52) |
+| Son CI | main @ fdd59f6 (37919592454) ve etiket `v0.12.0` (37919601312) başarılı; görev dalının sonucu `docs/gorevler/GOREV-10/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 692 Python testi + 57 frontend testi (main/v0.12.0: 650 + 54) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
-| Gerçek veritabanı | 8 Ekim 2026'da (GÖREV-09) tam yedekten (`work/yedek/20261008-2310/`) sonra normal kullanımla şema 12'ye yükseltildi; restoran dizini, işletme siteleri, konaklama ve kiralama şirketi fiyat toplayıcıları çalıştı; 9 Ekim 2026'da besin değeri tablosu düzeltmesinden sonra ikinci tam yedek (`work/yedek/20261009-0419/`) alınıp işletme siteleri toplayıcısı yeniden çalıştırıldı. Şema 12 dosyasını main'deki 0.11.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-09-kapsama-restoran` dalından çalıştırılır. |
+| Gerçek veritabanı | 9 Ekim 2026'da (GÖREV-10) tam yedekten (`work/yedek/20261009-1851/`) sonra normal kullanımla şema 13'e yükseltildi; restoran dizini, işletme siteleri ve OpenStreetMap çalıştı; uygulama yeniden açılıp "Zamanı gelenleri başlat" düğmesiyle konaklama ve kiralama şirketi fiyatları (ilk aylık anlık görüntü, 12 pencere) alındı (uygulamanın yedekleri `data/backups/toplu-*`). Şema 13 dosyasını main'deki 0.12.0 "daha yeni sürüme ait" diye açmaz; uygulama bu dal main'e alınana kadar `gorev-10-aylik-gunluk` dalından çalıştırılır. |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
-| Konaklama durumu | Tarihli arama anlık görüntüleri; kiralama şirketlerinin kendi sitelerinden fiyat (main'de 9 şirket, görev dalında 24): GÖREV-09 gerçek çekiminde 1.127 ilan şirket sitesinde bulundu, 1.066 ilana en az bir pencerede fiyat alındı (Book>Direct ilanlarıyla 12/13 mahallede); Alys Beach'in kendi envanterinden 73 ev (69 fiyatlı). Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
-| Restoran bilgileri | Görev dalında işletmelerin kendi sitelerinden: 113 sitesi çalışan restoran, 33 restoranda fiyat seviyesi, 85 restoranda saat, 87 restoranda menü (138 restoranda). Ayrıntı `docs/M12-RESTORAN-BILGILERI.md` |
+| Konaklama durumu | Tarihli arama anlık görüntüleri, aylık pencere kuralıyla (çekim ayından sonraki 12 ayın 15'ini içeren hafta); kiralama şirketlerinin kendi sitelerinden fiyat (24 şirket): 10 Ekim 2026 aylık çekiminde 1.131 ilan şirket sitesinde bulundu, 1.080 ilana en az bir ayda fiyat alındı; Alys Beach'in kendi envanterinden 73 ev (hepsi fiyatlı); 12/13 mahallede Book>Direct ilanlarıyla fiyat. Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
+| Restoran bilgileri | Görev dalında işletmelerin kendi sitelerinden: 138 restoranın 113'ünde site çalışıyor; 66 restoranda fiyat seviyesi (GÖREV-09'da 33), seviyesi olmayan her restoranın tek satırlık nedeni; 91 restoranda saat, 94'ünde menü, 46'sında rezervasyon bilgisi. Günlük ihtiyaç: OpenStreetMap'ten 43 nokta + zincirin sitesinden 1. Ayrıntı `docs/M12-RESTORAN-BILGILERI.md`, `docs/M13-GUNLUK-IHTIYAC.md` |
 
 ## 2. Projenin amacı
 
@@ -273,6 +273,18 @@ GÖREV-09: `south-walton-restaurants/2` posta kodu olmayan şehir satırını ay
 
 Generic `restaurant-sites/1` toplayıcısı: girdi destinasyonun son restoran dizini çekimi; her restoranın kendi sitesi (ve yayımladığı menü/sipariş platformu sayfaları) okunur: site durumu, menüler ve kalemler (fiyat metniyle; birden fazla boyda en düşük fiyat; "market price" sayıya çevrilmez), saatler, rezervasyon, çocuk menüsü, açık hava, su kenarı, köpek; her değer kaynak url, erişim zamanı, SHA-256 ve yöntem etiketiyle. Menü bölümleri gözden geçirilmiş tabloyla sınıflanır (`studio/sources/menu_sections.csv`); ana yemek ortancası ve fiyat seviyesi ($ <15, $$ 15–25, $$$ 25–40, $$$$ ≥40; en az 5 ana yemek) okuma anında hesaplanır ve "bizim sınıflamamız" diye etiketlenir. Görüntü menüleri bir kişi okur (`studio/destinations/thirty_a_menu_readings.csv`, SHA'ya bağlı); dizinde sitesi olmayanların resmî sitesi gözden geçirilmiş dosyada (`thirty_a_restaurant_sites.csv`). Doğrulama gösteren ya da JavaScript ile menü çizen siteler gerçek Chrome ile okunur (§4 madde 14). GÖREV-09 gerçek çekimi: 952 istek, 42 dk; 112 çalışan site, 33 fiyat seviyesi. Ayrıntı: `docs/M12-RESTORAN-BILGILERI.md`.
 
+GÖREV-10 (`gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13) — fiyat seviyesi gözden geçirmesi: seviyesi olmayan her restoran tek tek incelendi. Yeni okuma yolları: schema.org menüleri (Popmenu), Toast sipariş sayfası verisi, ohbz menü tasarımları (iki biçim), SinglePlatform menü sayfaları (gömme kodunun yüklediği `places.singleplatform.com/<yer>/menu_widget` sayfası doğrudan okunur; her menü kendi adıyla), menü platformu iframe'leri, ARIA sekmeli menüler, çerçeveli siteler. Kurallar: ekler, içecek ve çocuk kalemleri hiçbir zaman ana yemek değildir; "ADD EGG +2" gibi ek notları başlık sayılmaz; $8 altı 87 "ana yemek" tek tek gözden geçirildi (`thirty_a_menu_item_classes.csv`); tapas menüsünde "küçük tabak ortancası", prix fixe'de "sabit menü fiyatı" ayrı; kahve/tatlı/dondurma yerleri "ana yemek sunmuyor"; elle okunan menüler "elle okundu" (aynı belge ya da sayfada hâlâ görünen ad ve fiyatlarla); seviyesi olmayan her restoranın tek satırlık nedeni (`level_reason`); inceleyen kişinin `seviye_notu` kararı seviyeden önce gelir. **Tarayıcı yalnız engelde (kullanıcı kararı, 9 Ekim 2026):** her sayfa önce doğrudan istenir; yalnız doğrulama sayfası ya da ret gösteren alan adının sayfaları tarayıcıyla okunur (`RoutedPages`); JavaScript ile çizilen menü için tarayıcı açılmaz; tarayıcı okumadan önce açılır pencereyi (Escape ve pencerenin kendi "Kapat" düğmesi) kapatır. Ayrıntı: `docs/M12-RESTORAN-BILGILERI.md`, sayılar `docs/gorevler/GOREV-10/RAPOR.md`.
+
+### 9.11 Aylık konaklama pencereleri ve güncelleme zamanı göstergesi (GÖREV-10, şema 13)
+
+**Pencere kuralı (bizim varsayımımız):** çekim ayından sonraki 12 ayın her biri için ayın 15'ini içeren Cumartesi–Cumartesi haftası (7 gece); 21 günden yakın pencere atlanır, 13. ay eklenir. Destinasyon yapılandırmasında (`destination_lodging_sources.window_rule`), generic hesap `studio/sources/windows.py`. Book>Direct ve kiralama şirketi toplayıcıları aynı kuralı kullanır ve kuralı çekim kaydına yazar. Okuma anında: sorgudan pencereye gün, mevsim grupları (Aralık–Şubat kış …; "bizim gruplamamız") ve aynı hafta karşılaştırması (yalnız iki çekimde de fiyatlı aynı ilanlar; eşleşen ilan sayısı her zaman yazılır; etiket "aynı evlerin aynı hafta için <tarih1> ve <tarih2> tarihlerinde sorgulanan fiyatları; bizim hesabımız"). Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`.
+
+**Güncelleme zamanı göstergesi (zamanlanmış görev yok):** ana ekranda (Veri kaynakları) "Güncelleme zamanı gelenler" bölümü: her toplayıcının son başarılı çekimi, önerilen aralık (`destination_refresh_intervals`; 30A: Book>Direct ve kiralama şirketi fiyatları 1 ay, restoran dizini ve işletme siteleri 3 ay; diğerleri tanımsız), zamanı gelip gelmediği ve nedeni (hiç çekilmedi · önerilen aralık doldu · pencere kuralı son çekimden sonra değişti), tahmini süre. "Zamanı gelenleri başlat" düğmesi önce uygulamanın kendi yedeğini alır (`data/backups/toplu-*.sqlite3`, son 6), sonra zamanı gelenleri sırayla (konaklama → kiralama şirketleri; restoran dizini → işletme siteleri) normal iş akışıyla başlatır; girdisini üreten adım tamamlanmazsa sonraki adım atlanır; "Toplu çalıştırmayı durdur" ile durdurulur; uygulama kapanırken süren toplu çalıştırma "yarıda kaldı" olur (`refresh_batches`, `studio/refresh.py`). Kullanıcı düğmeyle kendisi başlatabilir; bu uygulamanın normal kullanımıdır (CLAUDE.md). Bilgisayarda zamanlanmış görev oluşturulmaz (kullanıcı kararı, 9 Ekim 2026).
+
+### 9.12 Günlük ihtiyaç ve arabasız tatil ölçüleri (GÖREV-10, şema 13)
+
+Generic `openstreetmap-daily-needs/1` toplayıcısı: destinasyonun bölge kutusu ve kategorileri için OpenStreetMap'e (Overpass API) çekim başına tek küçük sorgu (süpermarket ve market, küçük market, eczane, acil sağlık, bisiklet kiralama); ham yanıt SHA-256'sıyla. Süpermarketler zincirlerin kendi mağaza bulucularıyla elle karşılaştırılır (`thirty_a_chain_stores.csv`); OpenStreetMap'te olmayan açık mağaza "zincirin kendi sitesi" kaynağıyla eklenir. Okuma anında: son konaklama çekimindeki her ilandan her kategorinin ve ilçenin halka açık plaj erişimlerinin en yakınına **kuş uçuşu** uzaklık; mahalle başına ortanca ve 1 mil içindeki ilan payı; mahalle başına restoran sayısı dizinden. Atıf: "© OpenStreetMap katkıcıları, ODbL". Mahalleler sekmesinde tablo ve nokta listesi. Video dili: "OpenStreetMap'e göre, kuş uçuşu"; "yürüme mesafesi" denmez. Ayrıntı: `docs/M13-GUNLUK-IHTIYAC.md`.
+
 ### 9.4 Mahalleler (v0.7.0)
 
 Kaynak: `https://www.visitsouthwalton.com/neighborhoods/`  
@@ -367,9 +379,14 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve tag `v0.11.0` → `9f2d65ae85a2adccd1e7f4605406271dbc4d952f` (uygulama 0.11.0, şema 11; 8 Ekim 2026'da GÖREV-09 Adım 1 ile fast-forward ve açıklamalı etiket "v0.11.0 — kiralama şirketlerinden konaklama fiyatları"; main CI 37796679492 ve etiket CI 37796684505 başarılı). Önceki: `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
+Stable: main ve tag `v0.12.0` → `fdd59f6d417d7ba345de61e8931207b3791bce25` (uygulama 0.12.0, şema 12; 9 Ekim 2026'da GÖREV-10 Adım 1 ile fast-forward ve açıklamalı etiket "v0.12.0 — konaklama fiyat kapsaması, gerçek tarayıcı kurulumu ve restoran bilgileri"; main CI 37919592454 ve etiket CI 37919601312 başarılı). Önceki: `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`.
 
-Aktif dal `gorev-09-kapsama-restoran`:
+Aktif dal `gorev-10-aylik-gunluk`:
+- 692 Python testi ve 57 frontend testi geçti (tam takım art arda en az 3 kez)
+- aylık pencere kuralı, güncelleme zamanı göstergesi ve toplu çalıştırma, `openstreetmap-daily-needs/1`, restoran seviyesi gözden geçirmesi, tarayıcı yalnız engelde; şema 13, uygulama 0.13.0; gerçek veride çalıştı
+- main'e alınmadı
+
+Önceki aktif dal `gorev-09-kapsama-restoran` (v0.12.0 olarak main'e alındı):
 - 650 Python testi ve 54 frontend testi geçti (tam takım art arda en az 3 kez)
 - gerçek Chrome ile tarayıcı kurulumu (§4 madde 14), `agency-lodging-rates/2`, `restaurant-sites/1`, `south-walton-restaurants/2`, şema 12, uygulama 0.12.0; gerçek veride çalıştı
 - main'e alınmadı
@@ -421,6 +438,8 @@ v0.10 (şema 9 → 10) migration denemesi 7 Ekim 2026'da gerçek DB'nin `work/` 
 
 v0.12 (şema 11 → 12) migration denemesi 8 Ekim 2026'da gerçek DB'nin `work/` kopyasında iki kez yapıldı (ikincisi `browser_hosts` tablosu eklendikten sonra): eski 41 tablonun satırları aynı; 9 yeni tablo, `destination_agency_sites` 9 → 24, pencere 4 → 5, kaynak 14 → 15; NWS yöntemi "API"; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-09) `data/` tam yedeği (`work/yedek/20261008-2310/`, 8.016 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v11-b5d35eae98694c6c8a7bae7e9c2d2e1d.sqlite3`) ve sırayla restoran dizini, işletme siteleri, konaklama ve kiralama şirketi fiyat toplayıcıları çalıştırıldı; 9 Ekim 2026'da besin değeri tablosu düzeltmesinden sonra ikinci tam yedek (`work/yedek/20261009-0419/`) alınıp işletme siteleri toplayıcısı yeniden çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-09/RAPOR.md`.
 
+v0.13 (şema 12 → 13) migration denemesi 9 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski bütün tabloların satırları aynı; 7 yeni tablo (yenileme aralıkları ve toplu çalıştırma, günlük ihtiyaç), aralık 4, bölge kutusu 1, kategori 5, kaynak 15 → 16; üç restoran tablosu yeni değerlerle yeniden kuruldu; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-10) `data/` tam yedeği (`work/yedek/20261009-1851/`, 21.453 dosya, 695 MB) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v12-ab66a150d6054b4b9b783df2a2c3c146.sqlite3`), restoran dizini, işletme siteleri ve OpenStreetMap çalıştırıldı; uygulama kapatılıp yeniden açıldı ve ana ekrandaki "Zamanı gelenleri başlat" düğmesiyle konaklama ve kiralama şirketi fiyatları alındı (ilk basışta Book>Direct araması tutarsız toplam yüzünden durdu, yeniden deneme 3'e çıkarılıp düğmeye yeniden basıldı; uygulamanın yedekleri `toplu-20261009-173951-…` ve `toplu-20261009-174826-…`). Sonunda `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-10/RAPOR.md`.
+
 v0.11 (şema 10 → 11) migration denemesi 8 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: eski 37 tablonun satırları aynı (kaynaklara yalnız yeni satır eklendi), 7 yeni tablo (job_waits, destination_agency_sites, beş fiyat tablosu), `lodging_listings`'e üç boş sütun, 30A için 9 şirket yapılandırması ve 1 kaynak; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-08) `data/` tam yedeği (`work/yedek/20261008-1517/`, 3.040 dosya) alındı, uygulama gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v10-…`), önce konaklama toplayıcısı (çekim `99735d8a…`, 1.119 istek, 34,2 dk), sonra uygulama yeni kodla yeniden açılıp kiralama şirketi fiyat toplayıcısı (çekim `1968245c…`, 3.855 istek, 92,5 dk) çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-08/RAPOR.md`.
 
 ## 13. Geliştirme çalışma biçimi
@@ -443,15 +462,15 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 ## 14. Şu anda uygulanmamış başlıca alanlar
 
 - Tam lodging inventory connector (tarihli arama anlık görüntüleri görev dalında var; tam envanter değildir)
-- Lodging rates / availability geçmişi (her çekim ayrı sürüm; düzenli tekrar yok)
+- Lodging rates / availability geçmişi: GÖREV-10'dan beri aylık pencere kuralı ve aynı hafta karşılaştırması var; düzenli tekrar kullanıcının "Zamanı gelenleri başlat" düğmesine bağlı
 - Deniz koşulları (dalga, akıntı, bayrak geçmişi); iklim normalleri, deniz suyu sıcaklığı ve kasırga geçmişi v0.8.0'da var
 - Nem normali (hazır bir kaynak bulunamadı)
 - Yakıt fiyatı
 - Overture/POI enrichment
 - Etkinlik connector
 - Ulaşım connector
-- Grocery / günlük ihtiyaç fiyatları
-- Scheduler
+- Grocery / günlük ihtiyaç fiyatları (noktalar ve uzaklıklar GÖREV-10'da var, fiyat yok)
+- Scheduler (bilinçli olarak yok: kullanıcı kararı, 9 Ekim 2026; yerine ana ekrandaki güncelleme zamanı göstergesi ve düğmesi)
 - Otomatik entity matching
 - Mahalle sınırı poligonları (plaj–mahalle eşlemesi ilçe alt bölüm poligonları, komşuluk ve boylam yöntemleriyle ayrı katmandadır; mahalle sınırı yoktur)
 - AI evidence-pack / konu seçimi
@@ -501,9 +520,10 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M10-KONAKLAMA-PROFILI.md`
 - `docs/M11-KONAKLAMA-FIYATLARI.md`
 - `docs/M12-RESTORAN-BILGILERI.md`
+- `docs/M13-GUNLUK-IHTIYAC.md`
 
 ---
 
-**Son güncelleme:** 8 Ekim 2026  
-**Stable:** v0.11.0 — kiralama şirketlerinden konaklama fiyatları (`9f2d65a`)  
-**Aktif geliştirme:** `gorev-09-kapsama-restoran` — konaklama fiyat kapsaması ve restoranların kendi sitelerinden bilgiler, uygulama 0.12.0, şema 12 (yönetici incelemesinde)
+**Son güncelleme:** 10 Ekim 2026  
+**Stable:** v0.12.0 — konaklama fiyat kapsaması, gerçek tarayıcı kurulumu ve restoran bilgileri (`fdd59f6`)  
+**Aktif geliştirme:** `gorev-10-aylik-gunluk` — aylık konaklama fiyatları, güncelleme zamanı göstergesi, günlük ihtiyaç ölçüleri ve restoran seviyesi gözden geçirmesi, uygulama 0.13.0, şema 13 (yönetici incelemesinde)

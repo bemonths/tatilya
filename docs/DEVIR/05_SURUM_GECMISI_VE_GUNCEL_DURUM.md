@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.11.0 -> 9f2d65ae85a2adccd1e7f4605406271dbc4d952f
-main -> 9f2d65ae85a2adccd1e7f4605406271dbc4d952f
-app 0.11.0
-schema 11
+tag v0.12.0 -> fdd59f6d417d7ba345de61e8931207b3791bce25
+main -> fdd59f6d417d7ba345de61e8931207b3791bce25
+app 0.12.0
+schema 12
 ```
+
+9 Ekim 2026'da GÖREV-10 Adım 1 ile main `fdd59f6`'ya (GÖREV-09) fast-forward edildi ve bu commit'e açıklamalı `v0.12.0` etiketi konuldu ("v0.12.0 — konaklama fiyat kapsaması, gerçek tarayıcı kurulumu ve restoran bilgileri"). main CI (37919592454) ve etiket CI (37919601312): success.
 
 8 Ekim 2026'da GÖREV-09 Adım 1 ile main `9f2d65a`'ya (GÖREV-08) fast-forward edildi ve bu commit'e açıklamalı `v0.11.0` etiketi konuldu ("v0.11.0 — kiralama şirketlerinden konaklama fiyatları"). main CI (37796679492) ve etiket CI (37796684505): success.
 
@@ -22,22 +24,22 @@ schema 11
 ## Aktif branch
 
 ```text
-gorev-09-kapsama-restoran
-app 0.12.0
-schema 12
+gorev-10-aylik-gunluk
+app 0.13.0
+schema 13
 ```
 
 Bu dal:
-- tarayıcıyı gerçek Chrome'a çevirir: normal uygulama gibi başlatılır, tek kalıcı profil, CDP bağlantısı, "tarayıcıyla okunur" alan adları (`browser_hosts`), doğrulamada siteyi sona bırakma ve tek 15 dk bekleme, ısınma listesi (Adım 1b; CLAUDE.md, CALISMA_MANTIGI §4),
-- konaklama fiyat kapsamasını genişletir (`agency-lodging-rates/2`: 24 şirket, 6 yeni uyarlayıcı, adres/konum eşlemesi, Alys Beach kendi envanteri, yayımlanmış kira, misafir sayısı, korumalı siteler, Sonbahar 2027),
-- restoranların kendi sitelerinden bilgi toplar (`restaurant-sites/1`, Restoranlar sekmesinde seviye/rezervasyon/çocuk menüsü sütunları ve mahalle özeti),
-- restoran adres ayrıştırmasını düzeltir (`south-walton-restaurants/2`) ve NWS kaynak yöntemini v12'de "API" yapar,
-- gerçek veride dört toplayıcı çalıştı (8 Ekim 2026); işletme siteleri 9 Ekim'de menü ayrıştırma düzeltmesinden sonra yeniden çekildi,
-- main'e alınmadı; karar yöneticinin.
+- restoran fiyat seviyesini gözden geçirir: yeni yapısal menü okuyucuları (schema.org, Toast, ohbz, SinglePlatform, sekmeler, gömülü menüler), ek/içecek/çocuk kuralları, $8 altı kalem incelemesi, elle ve görüntüden okumalar, küçük tabak ve sabit menü, seviyesi olmayan her restorana tek satırlık neden (M12),
+- tarayıcıyı yalnız engel gösteren alan adı için açar (kullanıcı kararı, 9 Ekim 2026; CLAUDE.md, CALISMA_MANTIGI §4),
+- konaklama ve kiralama fiyatlarını aylık pencere kuralıyla sorar; mevsim grupları ve aynı hafta karşılaştırması okuma anında (M11),
+- ana ekranda "Güncelleme zamanı gelenler" bölümü ve "Zamanı gelenleri başlat" düğmesi (zamanlanmış görev yok),
+- OpenStreetMap günlük ihtiyaç noktaları ve ilanlardan kuş uçuşu uzaklıklar (M13),
+- gerçek veride çalıştı (9 Ekim 2026); main'e alınmadı, karar yöneticinin.
 
 Test:
-- 650 Python
-- 54 frontend
+- 692 Python
+- 57 frontend
 
 ---
 
@@ -336,6 +338,22 @@ Dal: `gorev-09-kapsama-restoran`, uygulama 0.12.0, şema 12.
 - Keşif ve toplayıcı: 15 yeni şirket (`AJANS-KESFI-2.md`, `ajanslar.csv`); adres/konum eşlemesi doğrulandı (`eslesme-dogrulama.csv`); misafir sayısı kontrolünde hiçbir şirkette toplam değişmedi (bütün şirketler 2 yetişkin).
 - Restoranlar: işletme sitelerinden menü, fiyat seviyesi, saat, rezervasyon, çocuk menüsü; görüntü menüleri elle okundu.
 - v11 → v12 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261008-2310/`), v11 → v12, sırayla dört toplayıcı; 9 Ekim 2026'da besin değeri tablosu düzeltmesinden sonra ikinci tam yedek (`work/yedek/20261009-0419/`) alınıp işletme siteleri toplayıcısı yeniden çalıştırıldı; `integrity_check` ok, `foreign_key_check` boş. Sayılar `docs/gorevler/GOREV-09/RAPOR.md`.
+
+---
+
+## v0.12.0 — konaklama fiyat kapsaması, gerçek tarayıcı kurulumu ve restoran bilgileri
+
+9 Ekim 2026'da main'e alındı ve etiketlendi (`v0.12.0` → `fdd59f6`). İçerik yukarıdaki GÖREV-09 bölümünde.
+
+## GÖREV-10 — aylık fiyatlar, güncelleme göstergesi, günlük ihtiyaç ve restoran seviyesi (dal)
+
+Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
+
+- Restoranlar: fiyat seviyesi olan restoran 33 → 66 (138 restoranın); seviyesi olmayan her restoranın nedeni gösteriliyor; $8 altı 87 "ana yemek" tek tek incelendi.
+- Tarayıcı (kullanıcı kararı, 9 Ekim 2026): yalnız engelde; JavaScript menüsü için açılmıyor; açılır pencereyi kapatıyor; ısınma yalnız doğrulama bekleyen sekmeleri açık bırakıyor. order.online ve realjoy.com bu tarayıcıda doğrulamayı geçirmiyor (kullanıcının kendi Chrome'unda açılıyor) — yönetici kararı bekliyor.
+- Konaklama: aylık pencere kuralı (12 ay, ayın 15'ini içeren hafta); Book>Direct araması tutarsız toplamda 3 kez yeniden okunuyor (ilk aylık çekim bu yüzden bir kez durdu). Konaklama ve kiralama fiyatları ilk kez 12 aylık pencereyle alındı (düğmeyle toplu çalıştırma, 10 Ekim 2026): Book>Direct 2.389 ilan (63 dk, 1.655 istek); kiralama şirketleri 21.129 istek, 7 sa 42 dk, 1.131 ilan şirket sitesinde bulundu, 1.080 ilana fiyat, Alys Beach kendi envanteri 73 ev (hepsi fiyatlı); Oversee tamamlandı (4 yeni adres eşlemesi); 360blue hâlâ engelli.
+- Günlük ihtiyaç: OpenStreetMap'ten 43 nokta + zincirin sitesinden 1 (Target Pier Park); Publix, Winn-Dixie ve The Fresh Market'in siteleri bu bilgisayardan liste vermedi.
+- v12 → v13 migration denemesi gerçek DB kopyasında temiz. Gerçek DB: `data/` tam yedeği (`work/yedek/20261009-1851/`), v12 → v13, restoran dizini, işletme siteleri, OpenStreetMap; uygulama yeniden açılıp "Zamanı gelenleri başlat" düğmesiyle konaklama ve kiralama şirketi fiyatları (uygulamanın yedekleri `data/backups/toplu-*`). Sayılar `docs/gorevler/GOREV-10/RAPOR.md`.
 
 ---
 

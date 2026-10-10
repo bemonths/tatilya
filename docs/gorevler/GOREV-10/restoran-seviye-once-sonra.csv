@@ -1,0 +1,141 @@
+﻿# Önce: GÖREV-09 gerçek çekimi (docs/gorevler/GOREV-09/restoranlar.csv). Sonra: çekim 1f1155b10aec44bdab98736e56892cc4.
+# Fiyat seviyesi bizim sınıflamamızdır: işletmenin kendi sitesindeki en kapsamlı ana öğün menüsünde (akşam, yoksa öğle, yoksa genel, yoksa brunch, yoksa kahvaltı) ana yemek fiyatlarının ortancası $15 altı '$', $15–25 '$$', $25–40 '$$$', $40 ve üstü '$$$$'; 5'ten az ana yemek fiyatı varsa hesaplanmaz. Ek malzeme, ekstra ve yan ürünler ana yemek sayılmaz; tapas / küçük tabaklar ve kişi başı sabit fiyatlı menüler ayrı verilir.
+external_id,ad,mahalleler,onceki_seviye,onceki_neden,onceki_ana_yemek_ortanca_usd,yeni_seviye,yeni_neden,yeni_ana_yemek_ortanca_usd,yeni_ana_yemek_sayisi,yontem,seviye
+/listing/3-sons-bbq/,3 Sons BBQ,Dune Allen,,menü okunamadı (no_items),,$$,,17.0,17,elle okundu,yeni
+/listing/87-central-square-wine-bar/,87 Central Square Wine Bar,Seaside,,menü okunamadı (no_items),,$$,,20.0,5,platform verisi,yeni
+/listing/98-bar-b-que/,98 Bar-B-Que,Santa Rosa Beach,$$,,17.95,$$,,17.95,24,görüntüden okundu,aynı
+/listing/ajs-grayton-beach/,AJ's Grayton Beach,Grayton Beach,$$,,18.0,$$,,18.0,57,sayfa metni,aynı
+/listing/amavida-coffee-rosemary-beach/,Amavida Coffee in Rosemary Beach,Rosemary Beach,,menü bulunamadı,,,ana yemek sunmuyor (kahve dükkânı),,0,,seviyesiz
+/listing/amavida-coffee-seaside/,Amavida Coffee in Seaside,Seaside,,menü bulunamadı,,,ana yemek sunmuyor (kahve dükkânı),,0,,seviyesiz
+/listing/amici-30a-italian-kitchen/,Amici 30A Italian Kitchen,Inlet Beach,$$$,,25.0,$$$,,25.0,27,görüntüden okundu,aynı
+/listing/angelinas-pizzeria-pasta/,Angelina's Pizzeria and Pasta,Seagrove,$$,,15.0,$$,,17.0,81,sayfa metni,aynı
+/listing/bad-ass-coffee/,Bad Ass Coffee,Grayton Beach,,ana yemek fiyatı yok,,,ana yemek sunmuyor (kahve dükkânı),,0,,seviyesiz
+/listing/barefoot-bbq/,Barefoot BBQ,Seaside,,site durumu: not_found,,,alan adı artık bir siteye bağlı değil,,0,,seviyesiz
+/listing/basmatis-asian-cuisine-sushi/,Basmati's Asian Cuisine & Sushi,Blue Mountain Beach,,menü okunamadı (no_items),,,sitedeki menüde ana yemek fiyatları yazmıyor,,0,,seviyesiz
+/listing/beachy-bean-coffee-co/,Beachy Bean Coffee Co.,Seagrove,$,,7.0,$,,13.0,16,sayfa metni,aynı
+/listing/beignets-brew/,Beignets & Brew,Santa Rosa Beach,,5'ten az ana yemek fiyatı (3),8.95,,5'ten az fiyatlı ana yemek (3),8.95,3,platform verisi,seviyesiz
+/listing/big-bad-breakfast/,Big Bad Breakfast,Inlet Beach,,"menü okunamadı (error, no_items)",,,fiyatlı menü yalnız sipariş sayfasında (order.online; doğrulama geçmedi); sitedeki PDF besin değeri tablosu,,0,,seviyesiz
+/listing/black-bear-bar-room/,Black Bear Bar Room,Grayton Beach,,5'ten az ana yemek fiyatı (2),14.0,,sitede Bar Room menüsü yok,16.0,19,platform verisi,seviyesiz
+/listing/black-bear-bread-co/,Black Bear Bread Co.,Grayton Beach,,5'ten az ana yemek fiyatı (2),14.0,$$,,16.0,19,platform verisi,yeni
+/listing/blue-mountain-bakery/,Blue Mountain Bakery,Blue Mountain Beach,,5'ten az ana yemek fiyatı (1),3.0,$,,11.75,16,görüntüden okundu,yeni
+/listing/blue-mountain-beach-creamery/,Blue Mountain Beach Creamery,Blue Mountain Beach,,menü bulunamadı,,,ana yemek sunmuyor (dondurma),,0,,seviyesiz
+/listing/borago/,Borago,Grayton Beach,$$$,,29.0,$$$,,29.0,7,sayfa metni,aynı
+/listing/brunos-pizza/,Bruno's Pizza,WaterSound,$$,,17.0,$$,,17.0,5,sayfa metni,aynı
+/listing/bud-alleys-pizza-bar-trattoria/,Bud & Alley's Pizza Bar + Trattoria,Seaside,$$,,19.0,$$,,19.0,22,platform verisi,aynı
+/listing/bud-alleys-restaurant-480/,Bud & Alley's Restaurant,Seaside,,5'ten az ana yemek fiyatı (3),33.0,$$$$,,43.5,8,elle okundu,yeni
+/listing/bud-alleys-taco-bar/,Bud & Alley's Taco Bar,Seaside,$,,9.0,$,,9.0,9,PDF metni,aynı
+/listing/buddys-seafood-market-30a/,Buddy's Seafood Market 30A,Seagrove,,ana yemek fiyatı yok,,,ana yemek sunmuyor (deniz ürünleri marketi ve paket steam bar),,0,,seviyesiz
+/listing/cafe-tango/,Cafe Tango,Santa Rosa Beach,,menü okunamadı (no_items),,,sitedeki menüde ana yemek fiyatları yazmıyor,,0,,seviyesiz
+/listing/cafe-thirty-a/,Cafe Thirty-A,Seagrove,$$$$,,43.5,$$$$,,43.5,8,sayfa metni,aynı
+/listing/cajun-corner-sports-bar-grill/,Cajun Corner Sports Bar and Grill,Santa Rosa Beach,,"menü okunamadı (error, no_items)",,$$,,15.95,15,görüntüden okundu,yeni
+/listing/caliza/,Caliza,Alys Beach,,menü bulunamadı,,,menü yayımlanmıyor (Alys Beach sahip ve misafir havuz restoranı),,0,,seviyesiz
+/listing/canopy-road-cafe/,Canopy Road Café,Inlet Beach,,ana yemek fiyatı yok,,,sitedeki menüde yemek fiyatları yazmıyor (fiyatlar şubelere göre sipariş sayfasında),,0,,seviyesiz
+/listing/chanticleer-eatery/,Chanticleer Eatery,Grayton Beach,,ana yemek fiyatı yok,,$$,,22.0,19,yapısal veri,yeni
+/listing/charlies-delights/,Charlie's Delights,Alys Beach,,menü bulunamadı,,,ana yemek sunmuyor (donut ve tatlı),,0,,seviyesiz
+/listing/chiringo-grayton/,Chiringo Grayton,Grayton Beach,$$,,16.99,$$,,16.99,16,platform verisi,aynı
+/listing/chopstix/,Chopstix,Santa Rosa Beach,,site durumu: other_business,,,alan adı başka bir işletmede ya da satılık,,0,,seviyesiz
+/listing/ck-feed-supply-provisions-gifts/,CK Feed & Supply Provisions & Gifts,Rosemary Beach,,ana yemek fiyatı yok,,,ana yemek sunmuyor (şarap ve provizyon dükkânı),,0,,seviyesiz
+/listing/coastal-coffee-cafe/,Coastal Coffee & Cafe,Santa Rosa Beach,,ana yemek fiyatı yok,,$,,12.49,16,sayfa metni,yeni
+/listing/cowgirl-kitchen/,Cowgirl Kitchen,Blue Mountain Beach,,ana yemek fiyatı yok,,,sitedeki menüde ana yemek fiyatları yazmıyor; sipariş sayfası saate göre yalnız açık menüyü gösteriyor,,0,,seviyesiz
+/listing/cowgirl-kitchen-restaurant-bar/,Cowgirl Kitchen Restaurant & Bar,Rosemary Beach,,ana yemek fiyatı yok,,,işletmenin sitesinde Rosemary Beach'te bu adla restoran ya da menü yok,,0,,seviyesiz
+/listing/crabby-steves/,Crabby Steve's,Seacrest,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/crackings/,Crackings,Grayton Beach,,menü okunamadı (no_items),,$$,,18.0,21,yapısal veri,yeni
+/listing/creative-crepes/,Creative Crepes,Rosemary Beach,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/crepes-du-soleil/,Crepes Du Soleil,Seaside,,menü okunamadı (no_items),,,sitedeki menüde ana yemek fiyatları yazmıyor (yemek kamyonu),,0,,seviyesiz
+/listing/crust-artisan-bakery/,Crust Artisan Bakery,Santa Rosa Beach,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/cuvee-30a/,Cuvee 30A,Inlet Beach,,ana yemek fiyatı yok,,$$$,,37.5,12,yapısal veri,yeni
+/listing/dawsons-yogurt-fudge-works/,Dawson's Yogurt & Fudge Works,Seaside,,menü okunamadı (no_items),,,ana yemek sunmuyor (frozen yogurt ve fudge),,0,,seviyesiz
+/listing/decadent-dessert-bar-bistro/,Decadent Dessert Bar & Bistro,Inlet Beach,,menü okunamadı (no_items),,,ana yemek sunmuyor (tatlı ve kahve barı),,0,,seviyesiz
+/listing/destin-ice-market-30a/,Destin Ice Market 30A,Inlet Beach,,menü bulunamadı,,,ana yemek sunmuyor (market),,0,,seviyesiz
+/listing/don-pedros-mexican-restaurant/,Don Pedro's Mexican Restaurant,Santa Rosa Beach,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/dough-sea-dough-donuts/,Dough Sea Dough Donuts,Seagrove,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/down-island-gulf-seafood-restaurant/,Down Island Gulf Seafood Restaurant,Santa Rosa Beach,,ana yemek fiyatı yok,,,sitedeki menüde ana yemek fiyatları yazmıyor,,0,,seviyesiz
+/listing/edwards-fine-food-wine/,Edward's Fine Food & Wine,Rosemary Beach,,5'ten az ana yemek fiyatı (2),30.0,$$$,,35.0,8,sayfa metni,yeni
+/listing/farm-fire/,Farm & Fire,Santa Rosa Beach,,menü okunamadı (no_items),,$$,,21.0,30,elle okundu,yeni
+/listing/fat-daddys-pizza/,Fat Daddy's Pizza,Santa Rosa Beach,,menü bulunamadı,,,5'ten az fiyatlı ana yemek (3),10.95,3,PDF metni,seviyesiz
+/listing/fish-out-water/,Fish Out of Water,WaterColor,$$,,19.0,$$$,,30.0,12,platform verisi,değişti
+/listing/fonville-press/,Fonville Press,Alys Beach,$$,,17.0,$$,,17.0,8,PDF metni,aynı
+/listing/frost-bites/,Frost Bites,Seaside,,menü bulunamadı,,,sitede menü bulunamadı,,0,,seviyesiz
+/listing/gallions/,Gallion's,Rosemary Beach,,ana yemek fiyatı yok,,,sitedeki menüde yemek fiyatları yazmıyor (yalnız ek malzeme fiyatları var),,0,,seviyesiz
+/listing/georges-alys-beach/,George's at Alys Beach,Alys Beach,,5'ten az ana yemek fiyatı (4),40.0,$$$$,,40.0,9,sayfa metni,yeni
+/listing/goatfeathers-seafood-restaurant-west-market/,Goatfeathers Seafood Restaurant & West Market,Santa Rosa Beach,,menü bulunamadı,,,sitesine göre geçici olarak kapalı (yangın sonrası),,0,,seviyesiz
+/listing/goatfeathers-seagrove-market/,Goatfeathers Seagrove Market,Seagrove,,menü bulunamadı,,,ana yemek sunmuyor (deniz ürünleri marketi),,0,,seviyesiz
+/listing/grayton-corner-cafe/,Grayton Corner Cafe,Grayton Beach,,site durumu: other_business,,,alan adı başka bir işletmede ya da satılık,,0,,seviyesiz
+/listing/grayton-seafood-company/,Grayton Seafood Company,Grayton Beach,,ana yemek fiyatı yok,,$$$,,29.95,8,sayfa metni,yeni
+/listing/great-southern-cafe/,Great Southern Cafe,Seaside,,menü okunamadı (no_items),,$$$,,28.0,18,platform verisi,yeni
+/listing/havana-beach-bar-grill/,Havana Beach Bar & Grill,Rosemary Beach,,menü bulunamadı,,,menü fiyatları sayfanın düz HTML'inde yok (JavaScript ile çiziliyor olabilir); tarayıcı yalnız engelde kullanıldığı için okunmadı,,0,,seviyesiz
+/listing/hibiscus-coffee-guesthouse/,Hibiscus Coffee & Guesthouse,Grayton Beach,,menü bulunamadı,,,"pansiyon sitesi; kafeyi Raw & Juicy işletiyor, sitede menü yok",,0,,seviyesiz
+/listing/hokulia-30a/,Hokulia on 30A,Seagrove,,site durumu: closed_season,,,sitesine göre sezon için kapalı,,0,,seviyesiz
+/listing/hurricane-oyster-bar-grill/,Hurricane Oyster Bar & Grill,Grayton Beach,$$,,18.0,$$,,20.0,20,sayfa metni,aynı
+/listing/its-heavenly/,It's Heavenly,Seaside,,ana yemek fiyatı yok,,,ana yemek sunmuyor (dondurma ve tatlı),,0,,seviyesiz
+/listing/johnny-mctighes-irish-pub/,Johnny McTighe's Irish Pub,Blue Mountain Beach,,menü bulunamadı,,,alan adı başka bir işletmede ya da satılık,,0,,seviyesiz
+/listing/kahve-cream/,Kahve & Cream,Seagrove,,site durumu: not_found,,,alan adı artık bir siteye bağlı değil,,0,,seviyesiz
+/listing/kith-kin/,Kith & Kin,Gulf Place; Santa Rosa Beach,,site durumu: unreachable,,,alan adı ilgisiz bir siteye yönleniyor (işletmenin sitesi değil),,0,,seviyesiz
+/listing/la-chalupita-mexican-market/,La Chalupita Mexican Market,Santa Rosa Beach,,site durumu: unreachable,,,işletmenin kendi sitesi yok,,0,,seviyesiz
+/listing/la-crema-tapas-chocolate/,La Crema-Tapas and Chocolate,Rosemary Beach,,ana yemek fiyatı yok,,$$$,,25.0,5,sayfa metni,yeni
+/listing/laco/,LaCO,Seacrest,$$,,19.0,$$,,16.0,17,sayfa metni,aynı
+/listing/littles-lunches-kitchen-30a/,Little's Lunches & Kitchen 30A,Inlet Beach,,site durumu: unreachable,,,30A sitesi çözülmüyor; ana sitede 30A menüsü yok,,0,,seviyesiz
+/listing/local-catch-bar-grill/,Local Catch Bar & Grill,Santa Rosa Beach,$$,,20.0,$$,,21.0,18,platform verisi,aynı
+/listing/local-smoke/,Local Smoke,WaterSound,,menü bulunamadı,,,The Big Chill yemek alanındaki tezgâh; sitede fiyatlı menü yayımlanmıyor,,0,,seviyesiz
+/listing/los-rancheros/,Los Rancheros,Santa Rosa Beach,,ana yemek fiyatı yok,,,sitedeki menüde ana yemek fiyatları yazmıyor,,0,,seviyesiz
+/listing/louis-louis/,Louis Louis,Santa Rosa Beach,,5'ten az ana yemek fiyatı (3),27.0,$$$,,39.5,6,yapısal veri,yeni
+/listing/macho-taco-cantina/,Macho Taco Cantina,Santa Rosa Beach,,site durumu: unreachable,,,alan adı çözülmüyor (site yok),,0,,seviyesiz
+/listing/marble-slab-creamery/,Marble Slab Creamery,Inlet Beach,,menü bulunamadı,,,ana yemek sunmuyor (dondurma),,0,,seviyesiz
+/listing/mi-casita-mexican-grill/,Mi Casita Mexican Grill,Seagrove,,site durumu: other_business,,,alan adı başka bir işletmede ya da satılık,,0,,seviyesiz
+/listing/mimmos-30a/,Mimmo's 30A,Blue Mountain Beach,,ana yemek fiyatı yok,,,sitedeki menüde ana yemek fiyatları yazmıyor,,0,,seviyesiz
+/listing/modica-market/,Modica Market,Seaside,,ana yemek fiyatı yok,,,ana yemek sunmuyor (gurme market),,0,,seviyesiz
+/listing/mr-gyro-hero/,Mr. Gyro Hero,Seaside,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/neat-bottle-shop-tasting-room/,NEAT Bottle Shop and Tasting Room,Alys Beach,,menü bulunamadı,,,ana yemek sunmuyor (şişe dükkânı ve şarap barı),,0,,seviyesiz
+/listing/north-beach-social/,North Beach Social,Santa Rosa Beach,,menü okunamadı (no_items),,$$,,21.0,17,platform verisi,yeni
+/listing/old-florida-fish-house/,Old Florida Fish House,Seagrove,$$$,,38.0,$$$,,35.0,8,sayfa metni,aynı
+/listing/outcast-bar-grill/,Outcast Bar & Grill,Santa Rosa Beach,,ana yemek fiyatı yok,,$$,,18.0,17,yapısal veri,yeni
+/listing/pecan-jacks-ice-creamery-candy-kitchen/,Pecan Jack's Ice Creamery & Candy Kitchen,Gulf Place; Santa Rosa Beach,,menü bulunamadı,,,ana yemek sunmuyor (dondurma ve şekerleme),,0,,seviyesiz
+/listing/peddlers-pavilion/,Peddler's Pavilion,Seacrest,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/peddlers-pub/,Peddlers Pub,Seacrest,,site durumu: unreachable,,,site engel sayfası gösteriyor (Cloudflare Edge IP Restricted); okunmadı,,0,,seviyesiz
+/listing/pescado/,Pescado,Rosemary Beach,,5'ten az ana yemek fiyatı (4),24.5,,5'ten az fiyatlı ana yemek (3),49.0,3,elle okundu,seviyesiz
+/listing/pickle-factory/,Pickle Factory,Grayton Beach,,site durumu: no_site,,,web sitesi yok,,0,,seviyesiz
+/listing/pickles-beachside-grill/,Pickles Beachside Grill,Seaside,,menü bulunamadı,,$$,,17.0,20,yapısal veri,yeni
+/listing/pizza-by-sea-gulf-place/,Pizza by the Sea at Gulf Place,Gulf Place,$$$,,25.0,$$$,,25.0,49,sayfa metni,aynı
+/listing/pizza-by-sea-seacrest/,Pizza by the Sea in Seacrest,Seacrest,$$$,,25.0,$$$,,25.0,49,sayfa metni,aynı
+/listing/pizza-by-sea-watercolor/,Pizza by the Sea in WaterColor,WaterColor,$$$,,25.0,$$$,,25.0,49,sayfa metni,aynı
+/listing/prema-organic-cafe/,Prema Organic Cafe,Seagrove,$,,12.75,$,,10.75,15,yapısal veri,aynı
+/listing/raw-juicy/,Raw & Juicy,Alys Beach,$$$,,25.0,$$$,,25.0,5,görüntüden okundu,aynı
+/listing/red-fish-taco/,Red Fish Taco,Blue Mountain Beach,,5'ten az ana yemek fiyatı (2),179.0,$$,,18.0,17,yapısal veri,yeni
+/listing/redds-pub/,Redd's Pub,Blue Mountain Beach,$,,13.49,$,,13.99,5,sayfa metni,aynı
+/listing/restaurant-paradis/,Restaurant Paradis,Rosemary Beach,,5'ten az ana yemek fiyatı (1),25.0,$$$$,,47.0,9,yapısal veri,yeni
+/listing/roux-30a-4953/,Roux 30A,Grayton Beach,,ana yemek fiyatı yok,,,yalnız tadım menüsü; sitede yemek listesi ve fiyat yok,,0,,seviyesiz
+/listing/scratch-biscuit-kitchen/,Scratch Biscuit Kitchen,WaterColor,$,,8.0,$,,12.0,7,platform verisi,aynı
+/listing/seacrest-sundries-market/,Seacrest Sundries Market,Seacrest,,menü bulunamadı,,,ana yemek sunmuyor (market),,0,,seviyesiz
+/listing/seagrove-village-market-cafe/,Seagrove Village Market Cafe,Seagrove,$$,,16.0,$$,,17.0,27,PDF metni,aynı
+/listing/shades-bar-grill/,Shades Bar & Grill,Inlet Beach,$$,,17.5,$$,,18.0,23,sayfa metni,aynı
+/listing/shaka-sushi-noodle-bar/,Shaka Sushi and Noodle Bar,Inlet Beach,,ana yemek fiyatı yok,,$$,,19.0,21,sayfa metni,yeni
+/listing/shelbys-beach-bar-grill/,Shelby's Beach Bar and Grill,Gulf Place,,menü okunamadı (no_items),,$$,,19.5,8,yapısal veri,yeni
+/listing/shunk-gulley-oyster-bar/,Shunk Gulley Oyster Bar,Gulf Place,$$$,,25.5,$$$,,25.5,8,yapısal veri,aynı
+/listing/siam-thai/,Siam Thai,Santa Rosa Beach,,site durumu: unreachable,,,sitesine ulaşılamadı,,0,,seviyesiz
+/listing/smallcakes-cupcakery-creamery/,Smallcakes Cupcakery and Creamery,Seacrest,,menü okunamadı (error),,,ana yemek sunmuyor (cupcake ve dondurma),,0,,seviyesiz
+/listing/south-philly-30a/,South of Philly 30A,Santa Rosa Beach,,site durumu: unreachable,,,işletmenin kendi sitesi yok (yalnız Facebook),,0,,seviyesiz
+/listing/steamboat-bar-grill-30a/,Steamboat Bar & Grill 30A,Seagrove,,site durumu: unreachable,,,alan adı çözülmüyor (site yok),,0,,seviyesiz
+/listing/stinkys-fish-camp/,Stinky's Fish Camp,Dune Allen,$$$,,25.0,$$$,,25.5,18,yapısal veri,aynı
+/listing/subway/,Subway,Seagrove,,site durumu: unreachable,,,sitede menü bulunamadı,,0,,seviyesiz
+/listing/summer-kitchen-cafe/,Summer Kitchen Café,Rosemary Beach,,menü bulunamadı,,,menü fiyatları sayfanın düz HTML'inde yok (JavaScript ile çiziliyor olabilir); tarayıcı yalnız engelde kullanıldığı için okunmadı,,0,,seviyesiz
+/listing/surfing-deer/,Surfing Deer,Seagrove,,5'ten az ana yemek fiyatı (4),46.0,$$$$,,45.0,9,PDF metni,yeni
+/listing/sweet-henriettas-treats-coffee/,Sweet Henrietta's Treats and Coffee,Santa Rosa Beach; Seagrove,,menü bulunamadı,,,ana yemek sunmuyor (pastane ve kahve),,0,,seviyesiz
+/listing/thai-elephant/,Thai Elephant,Santa Rosa Beach,,menü okunamadı (no_items),,,menü okunamadı: menüde fiyat bulunamadı,,0,,seviyesiz
+/listing/the-bay/,The Bay,Santa Rosa Beach,,menü okunamadı (no_items),,$$,,20.0,23,platform verisi,yeni
+/listing/the-big-chill-30a/,The Big Chill 30A,WaterSound,,menü bulunamadı,,,birden çok tezgâhlı yemek alanı; sitede fiyatlı menü yayımlanmıyor,,0,,seviyesiz
+/listing/the-citizen/,The Citizen,Alys Beach,,ana yemek fiyatı yok,,$$$$,,45.0,9,elle okundu,yeni
+/listing/the-courtyard-pescado/,The Courtyard at Pescado,Rosemary Beach,,5'ten az ana yemek fiyatı (4),24.5,,5'ten az fiyatlı ana yemek (3),49.0,3,elle okundu,seviyesiz
+/listing/the-daytrader-tiki-bar-restaurant/,The Daytrader Tiki Bar and Restaurant,Seaside,$$,,24.5,$$$,,25.5,16,sayfa metni,değişti
+/listing/the-donut-hole/,The Donut Hole,Santa Rosa Beach,,menü bulunamadı,,,sitede menü bulunamadı,,0,,seviyesiz
+/listing/the-donut-hole-inlet-beach/,The Donut Hole - Inlet Beach,Inlet Beach,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz
+/listing/the-meltdown-30a/,The MeltDown on 30A,Seaside,$,,12.0,$,,12.0,9,görüntüden okundu,aynı
+/listing/the-perfect-pig/,The Perfect Pig,Seagrove,,menü bulunamadı,,$$$,,32.0,10,sayfa metni,yeni
+/listing/the-perfect-pig-gulf-place/,The Perfect Pig - Gulf Place,Gulf Place,,menü bulunamadı,,$$$,,28.0,17,sayfa metni,yeni
+/listing/the-perfect-pig-watercolor/,The Perfect Pig - WaterColor,WaterColor,,menü bulunamadı,,$$$,,36.0,12,sayfa metni,yeni
+/listing/the-red-bar/,The Red Bar,Grayton Beach,,5'ten az ana yemek fiyatı (3),27.0,$$$,,29.5,6,yapısal veri,yeni
+/listing/the-shrimp-shack/,The Shrimp Shack,Seaside,,5'ten az ana yemek fiyatı (2),82.5,$$$,,25.0,17,yapısal veri,yeni
+/listing/the-wine-bar-watercolor/,The Wine Bar at WaterColor,WaterColor,,ana yemek fiyatı yok,,$$,,21.0,11,görüntüden okundu,yeni
+/listing/tichelis-pizza/,Ticheli's Pizza,Seacrest,$,,13.0,$$,,21.0,15,sayfa metni,değişti
+/listing/vki-japanese-steakhouse-sushi-bar/,VKI Japanese Steakhouse & Sushi Bar,Santa Rosa Beach,$$,,15.0,$$,,16.0,148,yapısal veri,aynı
+/listing/wild-bills-beach-dogs/,Wild Bill's Beach Dogs,Seaside,$,,13.0,$,,13.5,10,yapısal veri,aynı
+/listing/wild-nectar-30a/,Wild Nectar 30A,Seaside,,site durumu: social_login,,,yalnız sosyal medya sayfası var (giriş gerekiyor),,0,,seviyesiz

@@ -7,6 +7,8 @@ Güncelleme: 9 Ekim 2026 · GÖREV-10 (fiyat seviyesi gözden geçirmesi) · Dal
 
 Toplayıcı, şema, arayüz ve testler hazır. Önce work/ altında restoran listesinin kopyasıyla canlı pilotlar, sonra geçici klasörde uygulama üzerinden deneme, en son tam yedekten sonra gerçek veritabanında çekim yapıldı; sayılar ve kapsama `docs/gorevler/GOREV-09/RAPOR.md`, restoran tablosu `docs/gorevler/GOREV-09/restoranlar.csv`, mahalle özeti `restoran-mahalle-ozet.csv`.
 
+GÖREV-10 gerçek çekimi `1f1155b10aec44bdab98736e56892cc4` (9 Ekim 2026): 889 istek, 47 dk; 113 çalışan site, **66 restoranda fiyat seviyesi** (GÖREV-09'da 33; 33 yeni, 3 değişti, hiçbiri kaybolmadı), 94 restoranda menü, 91'inde saat. Önce/sonra tablosu `docs/gorevler/GOREV-10/restoran-seviye-once-sonra.csv`, restoranlar `restoranlar.csv`, mahalle özeti `restoran-mahalle-ozet.csv`.
+
 ## Amaç
 
 Restoran dizini (Visit South Walton, M4) ad, adres, telefon, mutfak ve web sitesi veriyor; ziyaretçinin karar vermesi için gereken fiyat düzeyi, saatler, rezervasyon ve çocuk menüsü gibi bilgiler dizinde yok. Bu toplayıcı o bilgileri **işletmenin kendi sitesinden** (ve işletmenin kendi yayımladığı menü/sipariş platformu sayfalarından) okur; her değeri kaynağıyla saklar.

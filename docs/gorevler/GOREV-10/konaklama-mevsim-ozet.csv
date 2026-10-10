@@ -1,0 +1,107 @@
+﻿# Mevsim grupları bizim gruplamamızdır: Aralık–Şubat kış, Mart–Mayıs ilkbahar, Haziran–Ağustos yaz, Eylül–Kasım sonbahar.
+# Mevsimdeki her fiyatlı ilan-pencere çifti bir kez sayılır; bizim hesabımız.
+kaynak,mahalle,mevsim,pencere,fiyat_sayisi,ortanca_usd
+Book>Direct gecelik,Dune Allen,kış,3,0,
+Book>Direct gecelik,Dune Allen,ilkbahar,3,0,
+Book>Direct gecelik,Dune Allen,yaz,3,0,
+Book>Direct gecelik,Dune Allen,sonbahar,3,0,
+Book>Direct gecelik,Gulf Place,kış,3,0,
+Book>Direct gecelik,Gulf Place,ilkbahar,3,0,
+Book>Direct gecelik,Gulf Place,yaz,3,0,
+Book>Direct gecelik,Gulf Place,sonbahar,3,0,
+Book>Direct gecelik,Santa Rosa Beach,kış,3,0,
+Book>Direct gecelik,Santa Rosa Beach,ilkbahar,3,0,
+Book>Direct gecelik,Santa Rosa Beach,yaz,3,0,
+Book>Direct gecelik,Santa Rosa Beach,sonbahar,3,0,
+Book>Direct gecelik,Blue Mountain Beach,kış,3,0,
+Book>Direct gecelik,Blue Mountain Beach,ilkbahar,3,0,
+Book>Direct gecelik,Blue Mountain Beach,yaz,3,0,
+Book>Direct gecelik,Blue Mountain Beach,sonbahar,3,0,
+Book>Direct gecelik,Grayton Beach,kış,3,0,
+Book>Direct gecelik,Grayton Beach,ilkbahar,3,0,
+Book>Direct gecelik,Grayton Beach,yaz,3,0,
+Book>Direct gecelik,Grayton Beach,sonbahar,3,0,
+Book>Direct gecelik,WaterColor,kış,3,1,384.75
+Book>Direct gecelik,WaterColor,ilkbahar,3,0,
+Book>Direct gecelik,WaterColor,yaz,3,0,
+Book>Direct gecelik,WaterColor,sonbahar,3,0,
+Book>Direct gecelik,Seaside,kış,3,12,600.7
+Book>Direct gecelik,Seaside,ilkbahar,3,0,
+Book>Direct gecelik,Seaside,yaz,3,0,
+Book>Direct gecelik,Seaside,sonbahar,3,1,588.76
+Book>Direct gecelik,Seagrove,kış,3,1,112.28
+Book>Direct gecelik,Seagrove,ilkbahar,3,0,
+Book>Direct gecelik,Seagrove,yaz,3,0,
+Book>Direct gecelik,Seagrove,sonbahar,3,1,118.07
+Book>Direct gecelik,WaterSound,kış,3,1,390.96
+Book>Direct gecelik,WaterSound,ilkbahar,3,0,
+Book>Direct gecelik,WaterSound,yaz,3,0,
+Book>Direct gecelik,WaterSound,sonbahar,3,2,399.11
+Book>Direct gecelik,Seacrest,kış,3,0,
+Book>Direct gecelik,Seacrest,ilkbahar,3,0,
+Book>Direct gecelik,Seacrest,yaz,3,0,
+Book>Direct gecelik,Seacrest,sonbahar,3,0,
+Book>Direct gecelik,Alys Beach,kış,3,0,
+Book>Direct gecelik,Alys Beach,ilkbahar,3,0,
+Book>Direct gecelik,Alys Beach,yaz,3,0,
+Book>Direct gecelik,Alys Beach,sonbahar,3,0,
+Book>Direct gecelik,Rosemary Beach,kış,3,1,504.1
+Book>Direct gecelik,Rosemary Beach,ilkbahar,3,0,
+Book>Direct gecelik,Rosemary Beach,yaz,3,0,
+Book>Direct gecelik,Rosemary Beach,sonbahar,3,3,256.42
+Book>Direct gecelik,Inlet Beach,kış,3,0,
+Book>Direct gecelik,Inlet Beach,ilkbahar,3,0,
+Book>Direct gecelik,Inlet Beach,yaz,3,0,
+Book>Direct gecelik,Inlet Beach,sonbahar,3,1,337.38
+kiralama şirketi 7 gecelik toplam,Dune Allen,kış,3,117,3091.2
+kiralama şirketi 7 gecelik toplam,Dune Allen,ilkbahar,3,133,4047.68
+kiralama şirketi 7 gecelik toplam,Dune Allen,yaz,3,142,5051.2
+kiralama şirketi 7 gecelik toplam,Dune Allen,sonbahar,3,123,3811.36
+kiralama şirketi 7 gecelik toplam,Gulf Place,kış,3,38,2044.63
+kiralama şirketi 7 gecelik toplam,Gulf Place,ilkbahar,3,38,3407.82
+kiralama şirketi 7 gecelik toplam,Gulf Place,yaz,3,44,4459.35
+kiralama şirketi 7 gecelik toplam,Gulf Place,sonbahar,3,35,2482.55
+kiralama şirketi 7 gecelik toplam,Santa Rosa Beach,kış,3,131,2561.33
+kiralama şirketi 7 gecelik toplam,Santa Rosa Beach,ilkbahar,3,138,3787.07
+kiralama şirketi 7 gecelik toplam,Santa Rosa Beach,yaz,3,152,5648.56
+kiralama şirketi 7 gecelik toplam,Santa Rosa Beach,sonbahar,3,126,3422.49
+kiralama şirketi 7 gecelik toplam,Blue Mountain Beach,kış,3,147,2266.62
+kiralama şirketi 7 gecelik toplam,Blue Mountain Beach,ilkbahar,3,181,3581.68
+kiralama şirketi 7 gecelik toplam,Blue Mountain Beach,yaz,3,203,5070.91
+kiralama şirketi 7 gecelik toplam,Blue Mountain Beach,sonbahar,3,179,3111.36
+kiralama şirketi 7 gecelik toplam,Grayton Beach,kış,3,83,2873.99
+kiralama şirketi 7 gecelik toplam,Grayton Beach,ilkbahar,3,95,4076.17
+kiralama şirketi 7 gecelik toplam,Grayton Beach,yaz,3,105,5246.78
+kiralama şirketi 7 gecelik toplam,Grayton Beach,sonbahar,3,94,3702.43
+kiralama şirketi 7 gecelik toplam,WaterColor,kış,3,139,6145.93
+kiralama şirketi 7 gecelik toplam,WaterColor,ilkbahar,3,141,8633.59
+kiralama şirketi 7 gecelik toplam,WaterColor,yaz,3,159,9790.51
+kiralama şirketi 7 gecelik toplam,WaterColor,sonbahar,3,128,7313.65
+kiralama şirketi 7 gecelik toplam,Seaside,kış,3,237,4639.77
+kiralama şirketi 7 gecelik toplam,Seaside,ilkbahar,3,245,6568.03
+kiralama şirketi 7 gecelik toplam,Seaside,yaz,3,303,6747.38
+kiralama şirketi 7 gecelik toplam,Seaside,sonbahar,3,264,5830.14
+kiralama şirketi 7 gecelik toplam,Seagrove,kış,3,578,1953.76
+kiralama şirketi 7 gecelik toplam,Seagrove,ilkbahar,3,701,3180.83
+kiralama şirketi 7 gecelik toplam,Seagrove,yaz,3,796,4538.59
+kiralama şirketi 7 gecelik toplam,Seagrove,sonbahar,3,664,2905.62
+kiralama şirketi 7 gecelik toplam,WaterSound,kış,3,117,2757.88
+kiralama şirketi 7 gecelik toplam,WaterSound,ilkbahar,3,132,3949.0
+kiralama şirketi 7 gecelik toplam,WaterSound,yaz,3,144,5612.2
+kiralama şirketi 7 gecelik toplam,WaterSound,sonbahar,3,121,3463.27
+kiralama şirketi 7 gecelik toplam,Seacrest,kış,3,340,3030.81
+kiralama şirketi 7 gecelik toplam,Seacrest,ilkbahar,3,359,5118.69
+kiralama şirketi 7 gecelik toplam,Seacrest,yaz,3,412,6361.18
+kiralama şirketi 7 gecelik toplam,Seacrest,sonbahar,3,319,3805.76
+kiralama şirketi 7 gecelik toplam,Alys Beach,kış,3,0,
+kiralama şirketi 7 gecelik toplam,Alys Beach,ilkbahar,3,0,
+kiralama şirketi 7 gecelik toplam,Alys Beach,yaz,3,0,
+kiralama şirketi 7 gecelik toplam,Alys Beach,sonbahar,3,0,
+kiralama şirketi 7 gecelik toplam,Rosemary Beach,kış,3,207,3979.03
+kiralama şirketi 7 gecelik toplam,Rosemary Beach,ilkbahar,3,219,5214.03
+kiralama şirketi 7 gecelik toplam,Rosemary Beach,yaz,3,272,6187.29
+kiralama şirketi 7 gecelik toplam,Rosemary Beach,sonbahar,3,193,4953.44
+kiralama şirketi 7 gecelik toplam,Inlet Beach,kış,3,124,3082.42
+kiralama şirketi 7 gecelik toplam,Inlet Beach,ilkbahar,3,122,5065.52
+kiralama şirketi 7 gecelik toplam,Inlet Beach,yaz,3,133,5866.18
+kiralama şirketi 7 gecelik toplam,Inlet Beach,sonbahar,3,124,3984.95

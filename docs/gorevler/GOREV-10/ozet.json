@@ -1,0 +1,357 @@
+{
+ "restoran": {
+  "run_id": "1f1155b10aec44bdab98736e56892cc4",
+  "coverage": {
+   "restaurants": 138,
+   "working": 113,
+   "with_menu": 94,
+   "with_prices": 71,
+   "with_level": 66,
+   "with_hours": 91,
+   "with_reservation": 46
+  },
+  "statuses": {
+   "working": 113,
+   "not_found": 2,
+   "closed_permanently": 0,
+   "closed_season": 1,
+   "other_business": 4,
+   "unreachable": 8,
+   "social_login": 9,
+   "no_site": 1
+  },
+  "before_levels": 33,
+  "levels": {
+   "$": 9,
+   "$$": 29,
+   "$$$": 22,
+   "$$$$": 6
+  },
+  "reasons": {
+   "ana yemek sunmuyor": 19,
+   "yalnız sosyal medya sayfası var (giriş gerekiyor)": 9,
+   "sitedeki menüde ana yemek fiyatları yazmıyor": 5,
+   "5'ten az fiyatlı ana yemek": 4,
+   "alan adı başka bir işletmede ya da satılık": 4,
+   "sitede menü bulunamadı": 3,
+   "alan adı artık bir siteye bağlı değil": 2,
+   "menü fiyatları sayfanın düz HTML'inde yok (JavaScript ile çiziliyor olabilir); tarayıcı yalnız engelde kullanıldığı için okunmadı": 2,
+   "alan adı çözülmüyor (site yok)": 2,
+   "fiyatlı menü yalnız sipariş sayfasında (order.online; doğrulama geçmedi); sitedeki PDF besin değeri tablosu": 1,
+   "sitede Bar Room menüsü yok": 1,
+   "menü yayımlanmıyor (Alys Beach sahip ve misafir havuz restoranı)": 1,
+   "sitedeki menüde yemek fiyatları yazmıyor (fiyatlar şubelere göre sipariş sayfasında)": 1,
+   "sitedeki menüde ana yemek fiyatları yazmıyor; sipariş sayfası saate göre yalnız açık menüyü gösteriyor": 1,
+   "işletmenin sitesinde Rosemary Beach'te bu adla restoran ya da menü yok": 1,
+   "sitedeki menüde ana yemek fiyatları yazmıyor (yemek kamyonu)": 1,
+   "sitedeki menüde yemek fiyatları yazmıyor (yalnız ek malzeme fiyatları var)": 1,
+   "sitesine göre geçici olarak kapalı (yangın sonrası)": 1,
+   "pansiyon sitesi; kafeyi Raw & Juicy işletiyor, sitede menü yok": 1,
+   "sitesine göre sezon için kapalı": 1,
+   "alan adı ilgisiz bir siteye yönleniyor (işletmenin sitesi değil)": 1,
+   "işletmenin kendi sitesi yok": 1,
+   "30A sitesi çözülmüyor; ana sitede 30A menüsü yok": 1,
+   "The Big Chill yemek alanındaki tezgâh; sitede fiyatlı menü yayımlanmıyor": 1,
+   "site engel sayfası gösteriyor (Cloudflare Edge IP Restricted); okunmadı": 1,
+   "web sitesi yok": 1,
+   "yalnız tadım menüsü; sitede yemek listesi ve fiyat yok": 1,
+   "sitesine ulaşılamadı": 1,
+   "işletmenin kendi sitesi yok (yalnız Facebook)": 1,
+   "menü okunamadı: menüde fiyat bulunamadı": 1,
+   "birden çok tezgâhlı yemek alanı; sitede fiyatlı menü yayımlanmıyor": 1
+  },
+  "changes": {
+   "yeni": 33,
+   "değişti": 3,
+   "aynı": 30,
+   "kayboldu": 0,
+   "seviyesiz": 72
+  }
+ },
+ "konaklama": {
+  "bookdirect_run": "5b5d0115f73f4edda3ef7003dfb99325",
+  "agency_run": "b85a4b4e414a48508224575a378f0697",
+  "bd_listings": 2389,
+  "windows": [
+   "ay-2026-11",
+   "ay-2026-12",
+   "ay-2027-01",
+   "ay-2027-02",
+   "ay-2027-03",
+   "ay-2027-04",
+   "ay-2027-05",
+   "ay-2027-06",
+   "ay-2027-07",
+   "ay-2027-08",
+   "ay-2027-09",
+   "ay-2027-10"
+  ],
+  "agency_coverage": {
+   "matched": 1131,
+   "not_found": 251,
+   "no_listing": 171,
+   "off_site": 0,
+   "blocked": 51,
+   "error": 12,
+   "not_queried": 0,
+   "no_adapter": 766,
+   "no_url": 7,
+   "listings": 2389,
+   "priced_listings": 1080,
+   "regions": 13,
+   "regions_with_price": 12,
+   "methods": {
+    "link": 1119,
+    "address": 5,
+    "location": 7
+   },
+   "own_listings": 73,
+   "own_priced": 73,
+   "published": 21
+  },
+  "agency_companies": [
+   {
+    "domain": "benchmark30a.com",
+    "status": "done",
+    "listing_count": 241,
+    "matched_count": 188,
+    "priced_count": 1825,
+    "request_count": 4593,
+    "message": null
+   },
+   {
+    "domain": "oversee.us",
+    "status": "done",
+    "listing_count": 185,
+    "matched_count": 178,
+    "priced_count": 1716,
+    "request_count": 2326,
+    "message": null
+   },
+   {
+    "domain": "30aescapes.com",
+    "status": "done",
+    "listing_count": 162,
+    "matched_count": 143,
+    "priced_count": 1149,
+    "request_count": 1478,
+    "message": null
+   },
+   {
+    "domain": "homeownerscollection.com",
+    "status": "done",
+    "listing_count": 143,
+    "matched_count": 118,
+    "priced_count": 935,
+    "request_count": 2751,
+    "message": null
+   },
+   {
+    "domain": "southernresorts.com",
+    "status": "done",
+    "listing_count": 104,
+    "matched_count": 69,
+    "priced_count": 654,
+    "request_count": 1001,
+    "message": null
+   },
+   {
+    "domain": "oceanreefresorts.com",
+    "status": "done",
+    "listing_count": 96,
+    "matched_count": 71,
+    "priced_count": 585,
+    "request_count": 808,
+    "message": null
+   },
+   {
+    "domain": "rosemarybeach.com",
+    "status": "done",
+    "listing_count": 89,
+    "matched_count": 61,
+    "priced_count": 556,
+    "request_count": 1424,
+    "message": null
+   },
+   {
+    "domain": "beautifulbeach.com",
+    "status": "done",
+    "listing_count": 88,
+    "matched_count": 37,
+    "priced_count": 333,
+    "request_count": 584,
+    "message": null
+   },
+   {
+    "domain": "panhandlegetaways.com",
+    "status": "done",
+    "listing_count": 81,
+    "matched_count": 33,
+    "priced_count": 357,
+    "request_count": 467,
+    "message": null
+   },
+   {
+    "domain": "paradise30a.com",
+    "status": "done",
+    "listing_count": 59,
+    "matched_count": 35,
+    "priced_count": 347,
+    "request_count": 538,
+    "message": null
+   },
+   {
+    "domain": "30a-vacay.com",
+    "status": "done",
+    "listing_count": 54,
+    "matched_count": 7,
+    "priced_count": 61,
+    "request_count": 259,
+    "message": null
+   },
+   {
+    "domain": "dunevacationrentals.com",
+    "status": "done",
+    "listing_count": 49,
+    "matched_count": 35,
+    "priced_count": 297,
+    "request_count": 803,
+    "message": null
+   },
+   {
+    "domain": "grayt30avacations.com",
+    "status": "done",
+    "listing_count": 41,
+    "matched_count": 2,
+    "priced_count": 12,
+    "request_count": 139,
+    "message": null
+   },
+   {
+    "domain": "sandersbeachrentals.com",
+    "status": "done",
+    "listing_count": 38,
+    "matched_count": 27,
+    "priced_count": 229,
+    "request_count": 637,
+    "message": null
+   },
+   {
+    "domain": "funvacay.com",
+    "status": "done",
+    "listing_count": 31,
+    "matched_count": 23,
+    "priced_count": 217,
+    "request_count": 531,
+    "message": null
+   },
+   {
+    "domain": "exclusive30a.com",
+    "status": "done",
+    "listing_count": 29,
+    "matched_count": 10,
+    "priced_count": 86,
+    "request_count": 149,
+    "message": null
+   },
+   {
+    "domain": "yourfriendatthebeach.com",
+    "status": "done",
+    "listing_count": 22,
+    "matched_count": 21,
+    "priced_count": 0,
+    "request_count": 297,
+    "message": null
+   },
+   {
+    "domain": "30abeachstays.com",
+    "status": "done",
+    "listing_count": 21,
+    "matched_count": 18,
+    "priced_count": 177,
+    "request_count": 298,
+    "message": null
+   },
+   {
+    "domain": "30acottagesandconcierge.com",
+    "status": "done",
+    "listing_count": 17,
+    "matched_count": 14,
+    "priced_count": 107,
+    "request_count": 296,
+    "message": null
+   },
+   {
+    "domain": "graytoncoastrentals.com",
+    "status": "done",
+    "listing_count": 17,
+    "matched_count": 11,
+    "priced_count": 86,
+    "request_count": 222,
+    "message": null
+   },
+   {
+    "domain": "destinvacation.com",
+    "status": "done",
+    "listing_count": 16,
+    "matched_count": 15,
+    "priced_count": 138,
+    "request_count": 203,
+    "message": null
+   },
+   {
+    "domain": "myvacationhaven.com",
+    "status": "done",
+    "listing_count": 15,
+    "matched_count": 7,
+    "priced_count": 68,
+    "request_count": 179,
+    "message": null
+   },
+   {
+    "domain": "coastalbluevacations.com",
+    "status": "done",
+    "listing_count": 12,
+    "matched_count": 8,
+    "priced_count": 62,
+    "request_count": 191,
+    "message": null
+   },
+   {
+    "domain": "alysbeach.com",
+    "status": "done",
+    "listing_count": 6,
+    "matched_count": 0,
+    "priced_count": 0,
+    "request_count": 955,
+    "message": null
+   }
+  ]
+ },
+ "gunluk_ihtiyac": {
+  "run_id": "b5919b8b8aa549a8898bc8318db4c5e1",
+  "osm_timestamp": "2026-10-09T17:36:21Z",
+  "points": {
+   "supermarket": 17,
+   "convenience": 16,
+   "pharmacy": 5,
+   "urgent_care": 2,
+   "bike_rental": 4
+  },
+  "from_chains": 1,
+  "checks": {
+   "Aldi · ALDI 23200 Front Beach Road": "osm_ile_ayni",
+   "Publix · -": "okunamadi",
+   "Target · Target Pier Park": "eklendi",
+   "The Fresh Market · -": "okunamadi",
+   "Trader Joe's · -": "bolgede_yok",
+   "Walmart · Dune Lakes E Us 98 Neighborhood Market": "osm_ile_ayni",
+   "Walmart · Panama City Beach Pier Park Supercenter": "osm_ile_ayni",
+   "Walmart · Santa Rosa Beach Us 98 W Supercenter": "osm_ile_ayni",
+   "Whole Foods Market · -": "bolgede_yok",
+   "Winn-Dixie · -": "okunamadi"
+  },
+  "missing_coordinates": 0,
+  "beach_count": 53
+ }
+}
