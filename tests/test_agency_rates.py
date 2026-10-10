@@ -18,7 +18,7 @@ from studio.destinations import thirty_a
 from studio.sources import agency_adapters as aa
 from studio.sources import agency_rates as ar
 from studio.sources.base import CollectionCanceled, SourceError
-from tests.legacy import AGENCY_URL, V11_TABLES, V12_TABLES, V13_TABLES, V14_TABLES
+from tests.legacy import AGENCY_URL, V11_TABLES, V12_TABLES, V13_TABLES, V14_TABLES, V15_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_climate import table_counts
 from tests import test_lodging as tl
@@ -728,10 +728,10 @@ def test_v10_to_v11_migration_adds_agency_tables_source_and_keeps_rows(tmp_path)
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
-        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, "destination_lodging_windows": 5,
+        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, **V15_TABLES, "destination_lodging_windows": 5,
                           "sources": len(before["sources"]) + 3}
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         changed = ("sources", "lodging_listings", "destination_lodging_windows", "destination_lodging_sources")
@@ -767,4 +767,4 @@ def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 15

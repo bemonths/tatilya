@@ -18,8 +18,9 @@ from .migration_v11 import upgrade_v11
 from .migration_v12 import upgrade_v12
 from .migration_v13 import upgrade_v13
 from .migration_v14 import upgrade_v14
+from .migration_v15 import upgrade_v15
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -60,14 +61,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -88,7 +89,9 @@ class Database:
                     upgrade_v12(con)
                 if version < 13:
                     upgrade_v13(con)
-                upgrade_v14(con)
+                if version < 14:
+                    upgrade_v14(con)
+                upgrade_v15(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -145,6 +148,7 @@ class Database:
             upgrade_v12(con)
             upgrade_v13(con)
             upgrade_v14(con)
+            upgrade_v15(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):

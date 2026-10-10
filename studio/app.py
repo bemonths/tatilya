@@ -16,8 +16,10 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from . import refresh
-from .models import EvidencePackInput, JobInput, SourceInput, SourceUpdate
+from .models import EvidencePackInput, JobInput, RunDecisionInput, SourceInput, SourceUpdate, TitleRunInput
 from . import evidence
+from .ai import settings as claude_settings
+from .ai.service import ClaudeService
 from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
@@ -34,6 +36,8 @@ def create_app(data_dir: Path | None = None, registry=None):
     async def lifespan(app):
         db.initialize()
         db.recover_jobs()
+        app.state.claude = ClaudeService(db, db.path.parent)
+        app.state.claude.recover()
         app.state.jobs = JobQueue(db)
         app.state.batches = refresh.BatchRunner(db, app.state.jobs)
         app.state.batches.recover()
@@ -41,6 +45,7 @@ def create_app(data_dir: Path | None = None, registry=None):
             yield
         finally:
             app.state.batches.shutdown()
+            app.state.claude.shutdown()
             app.state.jobs.shutdown()
 
     app = FastAPI(title="30A Studio", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None)
@@ -592,6 +597,95 @@ def create_app(data_dir: Path | None = None, registry=None):
         except evidence.PackError as exc:
             raise HTTPException(404, str(exc)) from exc
         return FileResponse(path, media_type=kinds[kind][1], filename=path.name)
+
+    # --- Claude (GÖREV-13): settings, runs of the steps, approval, video records -----------------------------------------------------
+
+    def claude():
+        return app.state.claude
+
+    @app.get("/api/settings/claude")
+    def claude_settings_view():
+        values = claude_settings.load(db.path.parent)
+        from .ai import claude_info
+        return {"settings": {k: v for k, v in values.items() if k != "notes"}, "notes": values["notes"], "options": claude_settings.options(),
+                "info": claude_info.info(values["claude_path"])}
+
+    @app.put("/api/settings/claude")
+    async def claude_settings_save(request: Request):
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "Ayarlar okunamadı.") from None
+        if not isinstance(body, dict):
+            raise HTTPException(422, "Ayarlar okunamadı.")
+        try:
+            claude_settings.save(db.path.parent, body)
+        except claude_settings.SettingsError as exc:
+            raise HTTPException(422, f"{exc.field}: {exc.message}") from exc
+        return claude_settings_view()
+
+    @app.get("/api/claude/options")
+    def claude_options(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return claude().options(destination_id)
+
+    @app.get("/api/claude/runs")
+    def claude_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return claude().runs(destination_id)
+
+    @app.post("/api/claude/title-runs", status_code=201)
+    def start_title_run(body: TitleRunInput):
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return claude().start_title(destination_id, body.bolge, body.aile, body.not_)
+
+    def claude_run_or_404(identifier, action):
+        try:
+            return action()
+        except KeyError:
+            raise HTTPException(404, "Claude çalışması ya da video kaydı bulunamadı.") from None
+
+    @app.get("/api/claude/runs/{identifier}")
+    def claude_run(identifier: str):
+        return claude_run_or_404(identifier, lambda: claude().view(identifier))
+
+    @app.post("/api/claude/runs/{identifier}/select", status_code=201)
+    def claude_select(identifier: str, body: RunDecisionInput):
+        if body.aday is None:
+            raise HTTPException(422, "Seçilecek aday belirtilmedi.")
+        return claude_run_or_404(identifier, lambda: claude().select(identifier, body.aday, body.not_))
+
+    @app.post("/api/claude/runs/{identifier}/reject")
+    def claude_reject(identifier: str, body: RunDecisionInput):
+        return claude_run_or_404(identifier, lambda: claude().reject(identifier, body.not_))
+
+    @app.post("/api/claude/runs/{identifier}/correct", status_code=201)
+    def claude_correct(identifier: str, body: RunDecisionInput):
+        return claude_run_or_404(identifier, lambda: claude().correct(identifier, body.not_))
+
+    @app.get("/api/claude/runs/{identifier}/files/{name}")
+    def claude_run_file(identifier: str, name: str):
+        """A file of a run's folder (inputs, task text, output, Markdown, run record); the stream only by name."""
+        record = claude_run_or_404(identifier, lambda: claude().view(identifier))
+        folder = (db.path.parent / record["folder"]).resolve()
+        path = (folder / name).resolve()
+        if path.parent != folder or not path.is_file():
+            raise HTTPException(404, "Dosya bulunamadı.")
+        media = "application/json" if path.suffix == ".json" else "text/markdown; charset=utf-8" if path.suffix == ".md" else "text/plain; charset=utf-8"
+        return FileResponse(path, media_type=media, filename=path.name)
+
+    @app.get("/api/videos")
+    def videos(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return claude().videos(destination_id)
+
+    @app.post("/api/videos/{identifier}/evidence-pack", status_code=201)
+    async def video_evidence_pack(identifier: str):
+        try:
+            return await asyncio.to_thread(claude().video_pack, identifier)
+        except KeyError:
+            raise HTTPException(404, "Video kaydı bulunamadı.") from None
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

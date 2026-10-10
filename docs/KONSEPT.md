@@ -483,3 +483,26 @@ Karşılaştırmalar:
 
 SONRAKİ İÇERİK KATMANLARINDAN BİRİDİR.
 ```
+
+## Ek — Kanal ve içerik planı (kullanıcının tanımı, 8 Ekim 2026; bağlayıcı)
+
+**Kanal yapısı**
+- 30A / South Walton tek bir YouTube kanalıdır. Mahalleler (Dune Allen, Gulf Place / Santa Rosa Beach, Blue Mountain, Grayton, WaterColor, Seaside, Seagrove, WaterSound, Seacrest, Alys, Rosemary, Inlet Beach) ayrı kanal değildir; aynı kanalın alt bölgeleri ve video konularıdır.
+- İlk etapta kanalın odağı yalnız 30A'dır. Destin, Panama City Beach gibi yakın yerler gerektiğinde karşılaştırma ya da bağlam için kullanılabilir, ana konu olmaz.
+- Uzun vadede her mikro-destinasyon kendi uzman kanalıdır (ör. 30A, Napa Valley, Lake Tahoe). Program, veri motoru ve mimari tektir; dışarıdaki yapı: bir mikro-destinasyon = bir uzman kanal.
+
+**30A kanalının içerik aileleri**
+1. Bölgesel derin rehberler (omurga): her mahalle için neden seçilir, kim için uygun, ne yapılır, plaj, yemek, ulaşım, masraf, artı ve eksi.
+2. Genel planlama: ilk kez gidenler, tatil ne kadara mal olur, arabaya ihtiyaç var mı, plaj erişim sistemi nasıl çalışır, nerede kalınır, kaç gün yeter.
+3. Sezon ve zamanlama: en iyi aylar, yaz ve ara sezon, hava, deniz sıcaklığı, kalabalık, kasırga ve yağmur riski, etkinlik dönemleri, fiyatların dönemsel değişimi.
+4. Masraf ve bütçe: konaklama, yemek, park, ulaşım, market, günlük bütçe, farklı bütçe seviyelerinde tatil.
+5. Deneyim: plaj, bisiklet ve golf arabası, yürünebilirlik, restoranlar, kahvaltı, aileyle yapılacaklar, çiftler, sakin tatil, gece hayatı, açık hava aktiviteleri.
+6. Sorun çözen videolar: en sık yapılan hatalar, plaja yakın kalmak gerçekten gerekli mi, kiralık araba şart mı, hangi bölgelerde park sorun olur.
+7. Karşılaştırmalar (sonraki tur): Seaside ile Rosemary, Doğu 30A ile Batı 30A, "en iyisi" listeleri, veri destekli sıralamalar.
+8. Kendi tarihsel verimizden videolar (ileride): ör. "30A fiyatları sonbaharda gerçekten ne kadar düşüyor?"
+
+**Konu motoru:** Bölge × seyahat kararı × dönem × gezgin tipi. Tek bir mahalle bile tek video değildir; örnek Rosemary Beach: tam rehber, masraflar, arabasız, aileler için, yazın, ekimde, ne yapılır, nerede yenir, plaj erişimi, fiyatına değer mi. Aynı yapı her mahallede tekrar eder; her bölgenin kendi küçük konu evreni vardır.
+
+**İlkeler**
+- Konu seçimi yalnız arama hacmine göre yapılmaz; ana sayfa ve önerilen videolardan izlenebilecek, güçlü bir tatil sorusu ya da merak noktası olan başlıklar esastır. Paketleme merak ile gerçek tatil kararını birleştirebilir (ör. "Why People Pay So Much to Stay in Rosemary Beach"), ama içerik ciddi, kaynaklı ve pratik kalır; başlık uğruna videonun özü değişmez.
+- Bir konu sırf sayı artsın diye bölünmez; 15–17 dakikalık videoyu doğal biçimde taşıyabilmelidir. Taşımıyorsa ilgili bölge rehberinin içinde kalır.

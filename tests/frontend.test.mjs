@@ -697,3 +697,49 @@ test('a pack lists its neighborhood by name whichever template is selected (GÖR
   assert.match(packRow({id:'x',title:'Mahalle rehberi',template_key:'mahalle-rehberi',template_version:'1',params:{mahalle:'rosemary-beach'},created_at:'',
     section_count:8,evidence_count:1,number_count:1,missing_count:0,markdown_sha256:'a'.repeat(64),json_sha256:'b'.repeat(64)},choiceNames(templates)),/mahalle: Rosemary Beach/);
 });
+
+import {regionOptions, familyOptions, warnings, runRow, candidateList, candidateDetail, videoCard} from '../studio/web/videos.js';
+import {claudeSection} from '../studio/web/claude.js';
+
+const titleOptions={available:true,whole_region:'30A geneli',regions:[{id:'rosemary-beach',name:'Rosemary Beach'}],families:['Genel planlama','Deneyim'],all_families:'hepsi',
+  claude:{found:true,api_key_warning:null}};
+const titleCandidate={sira:0,baslik_en:'Why <People> Pay So Much',baslik_tr:'Neden bu kadar ödeniyor',bolge:'Rosemary Beach',aile:'Deneyim',neden_onerildi:'Çünkü',
+  izleyici_sorusu:'Değer mi?',kanca:{metin:'Kanca',kanitlar:[{dosya:'veri_ozeti_mahalle.md',kimlik:'K0034',paket_id:'abcdef1234',ifade:'Ortanca fiyat',deger_metni:'3,727 USD (7 gece)',etiket:'bizim hesabımız'}]},
+  icerik_plani:[{bolum:'Fiyat',ne_anlatir:'Ay ay',kanitlar:[]}],eksik_veri:['Yorum yok'],sablon:'mahalle-rehberi',parametreler:{mahalle:'rosemary-beach'},
+  yeni_sablon_gerekir:false,kapak_fikri:'Kapak',sorunlar:[],secilebilir:true,video_id:null};
+
+test('the Videolar form offers the region (required), the families and warns about the API key (GÖREV-13)', () => {
+  assert.match(regionOptions(titleOptions,''),/<option value="">Bölge seçin…<\/option><option value="30A geneli" >30A geneli<\/option><option value="Rosemary Beach" >/);
+  assert.match(familyOptions(titleOptions,'Deneyim'),/<option value="hepsi" >hepsi<\/option>.*<option value="Deneyim" selected>/s);
+  assert.equal(warnings(titleOptions),'');
+  assert.match(warnings({...titleOptions,claude:{found:false,api_key_warning:'ANTHROPIC_API_KEY ortam değişkeni tanımlı'}}),/Claude Code bulunamadı.*ANTHROPIC_API_KEY/s);
+  assert.match(runRow({id:'r1',params:{bolge:'Rosemary Beach',aile:'hepsi',not:''},status:'awaiting_approval',created_at:'2026-10-10T12:00:00Z',model_label:'Opus 5.5',effort_label:'Yüksek',metrics:{turns:9,elapsed_s:120}}),
+    /href="#videos\/run\/r1".*Onay bekliyor.*Opus 5.5 · Yüksek.*9 tur/s);
+});
+
+test('titles are listed first; a chosen title opens its details with the evidence values and the select button', () => {
+  const view={params:{bolge:'Rosemary Beach'},actions:{select:true},candidates:[titleCandidate,{...titleCandidate,sira:1,baslik_en:'Second',sorunlar:[{seviye:'hata',metin:'Var olmayan kanıt'}],secilebilir:false}]};
+  const closed=candidateList(view,null);
+  assert.match(closed,/Why &lt;People&gt; Pay So Much<\/span><span class="title-tr">Neden bu kadar ödeniyor<\/span>.*Deneyim/s);
+  assert.doesNotMatch(closed,/Neden önerildi/);
+  assert.match(closed,/doğrulama hatası/);
+  const open=candidateList(view,0);
+  assert.match(open,/Neden önerildi.*İzleyicinin sorusu.*Kanca.*K0034.*3,727 USD \(7 gece\).*İçerik planı.*Fiyat.*Eksik veri.*Yorum yok.*mahalle-rehberi.*mahalle = rosemary-beach.*Kapak fikri.*Bu başlığı seç/s);
+  assert.match(candidateDetail(view.candidates[1],view),/Hata: Var olmayan kanıt.*data-select-candidate="1" disabled/s);
+  assert.match(candidateDetail({...titleCandidate,video_id:'v1'},view),/Bu başlık seçildi/);
+});
+
+test('a video record without a template cannot produce a pack; the Claude settings section shows path, version and inherit choices', () => {
+  const video={id:'v1',title_en:'T',title_tr:'B',family:'Deneyim',region_name:'Rosemary Beach',status:'baslik_secildi',status_label:'başlık seçildi',created_at:'',template_key:null,params:{},analysis:{},packs:[]};
+  assert.match(videoCard(video),/data-video-pack="v1" disabled.*yeni şablon gerekir/s);
+  assert.match(videoCard({...video,template_key:'mahalle-rehberi',packs:[{id:'p1'}]}),/data-video-pack="v1" >.*yazar-ozeti/s);
+  const section=claudeSection({settings:{claude_path:'',claude_model:'',claude_effort:'',claude_model_baslik:'claude-opus-5-5',claude_effort_baslik:'high',claude_max_turns_baslik:30},
+    notes:[],info:{found:true,path:'D:/programs/claude.exe',version:'2.1.284',api_key_warning:'ANTHROPIC_API_KEY uyarısı'},
+    options:{models:[{value:'',label:'Claude Code varsayılanı'},{value:'claude-opus-5-5',label:'Opus 5.5'}],efforts:[{value:'',label:'Otomatik'},{value:'high',label:'Yüksek'}],
+      inherit:{value:'inherit',label:'Genel varsayılan'},steps:[{key:'baslik',label:'Konu ve başlık',model_field:'claude_model_baslik',effort_field:'claude_effort_baslik',max_turns_field:'claude_max_turns_baslik'}],
+      max_turns:{min:1,max:200,help:'Tur'}}});
+  assert.ok(section.includes('Bulunan program: D:/programs/claude.exe<br>Sürüm: 2.1.284'));
+  assert.match(section,/ANTHROPIC_API_KEY uyarısı/);
+  assert.match(section,/data-field="claude_model_baslik".*<option value="inherit" >Genel varsayılan<\/option>.*<option value="claude-opus-5-5" selected>Opus 5.5/s);
+  assert.match(section,/data-field="claude_max_turns_baslik" min="1" max="200" value="30"/);
+});

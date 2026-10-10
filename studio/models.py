@@ -59,3 +59,19 @@ class EvidencePackInput(BaseModel):
     destination_id: str | None = None
     template_key: str = Field(min_length=1, max_length=64)
     params: dict[str, str] = Field(default_factory=dict)
+
+
+class TitleRunInput(BaseModel):
+    """A topic and title proposal request (GÖREV-13): region (required; the whole destination or a neighborhood), content family or all, note."""
+    model_config = ConfigDict(extra="forbid")
+    destination_id: str | None = None
+    bolge: str = Field(min_length=1, max_length=100)
+    aile: str | None = Field(default=None, max_length=100)
+    not_: str | None = Field(default=None, alias="not", max_length=4000)
+
+
+class RunDecisionInput(BaseModel):
+    """A decision on a Claude run: the candidate to choose (for "Seç") and the user's note."""
+    model_config = ConfigDict(extra="forbid")
+    aday: int | None = Field(default=None, ge=0, le=100)
+    not_: str | None = Field(default=None, alias="not", max_length=4000)

@@ -375,7 +375,11 @@ def render(pack):
     if pack["parameters"]:
         lines += ["**Parametreler:** " + ", ".join(f"{k} = {v['name']}" for k, v in pack["parameters"].items()), ""]
     lines += [f"- Üretim: {header['uretim_tarihi']} · üretim kimliği `{pack.get('id') or '—'}` · şablon {t['key']} (sürüm {t['version']})",
-              f"- {SENTENCE}", f"- {header['not']}", f"- {header['birimler']}", "", "## Kaynakların son çekimi", ""]
+              f"- {SENTENCE}", f"- {header['not']}", f"- {header['birimler']}", ""]
+    if pack.get("video"):
+        from .video import markdown_lines
+        lines += markdown_lines(pack["video"])
+    lines += ["## Kaynakların son çekimi", ""]
     lines += [f"- {item['kaynak']}: {item['son_cekim']} · zamanı geldi: {'evet' if item['zamani_geldi'] else 'hayır'}" for item in header["kaynaklar"]] or ["- —"]
     lines += ["", "## Bilinen boşluklar", ""] + [f"- {gap}" for gap in header["bilinen_bosluklar"] or ["—"]]
     lines += ["", "## Yayından önce kontrol edilecek satırlar", ""]

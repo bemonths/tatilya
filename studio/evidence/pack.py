@@ -17,10 +17,12 @@ import json
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from .. import refresh
 from . import blocks as B
 from . import summary as S
+from . import video as V
 from .templates import TemplateError, fill, read_all, resolve
 
 FORMAT = "30a-studio-kanit-paketi/2"
@@ -31,6 +33,21 @@ EXTRA_FILES = {"sayilar": "-sayilar.csv", "yazar_ozeti": "-yazar-ozeti.md"}
 
 class PackError(ValueError):
     """User-facing reason why a pack cannot be generated or read."""
+
+
+STUDIO_DIR = Path(__file__).resolve().parents[1]
+FINGERPRINT_SUFFIXES = (".py", ".csv", ".json")
+
+
+def fingerprint(root=STUDIO_DIR):
+    """SHA-256 over the program code and the destination data files a pack is made from (line endings ignored). A stored pack whose
+    fingerprint differs was made by other code or other profile files (a reference row changed, a block was fixed); it is not reused as
+    an up-to-date data summary (GÖREV-13)."""
+    digest = hashlib.sha256()
+    for path in sorted(p for p in Path(root).rglob("*") if p.suffix in FINGERPRINT_SUFFIXES and p.is_file() and "__pycache__" not in p.parts):
+        digest.update(path.relative_to(root).as_posix().encode("utf-8") + b"\0")
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")
+    return digest.hexdigest()
 
 
 def destination_templates(profile):
@@ -153,7 +170,7 @@ def recheck_before_publishing(sections, volatile):
     return found
 
 
-def generate(db, destination_id, profile, template_key, values=None, *, today=None, now=None):
+def generate(db, destination_id, profile, template_key, values=None, *, today=None, now=None, video=None):
     available = destination_templates(profile)
     template = available.get(template_key)
     if template is None:
@@ -177,7 +194,8 @@ def generate(db, destination_id, profile, template_key, values=None, *, today=No
     checklist = [entry for s in sections for e in s["rows"] for entry in numbers_of(e)]
     evidence_count = sum(len(s["rows"]) for s in sections)
     destination = db.destination(destination_id)
-    return {
+    extra = {"video": V.block(video, sections)} if video else {}
+    return {**extra,
         "format": FORMAT,
         "template": {k: template[k] for k in ("key", "version", "title", "question", "dimensions", "volatile_topics", "file")},
         "parameters": resolved,
@@ -188,6 +206,7 @@ def generate(db, destination_id, profile, template_key, values=None, *, today=No
                                                    {(e.get("kaynak") or {}).get("referans") for s in sections for e in s["rows"]}),
                    "not": NO_ADVICE,
                    "yayindan_once_kontrol": recheck_before_publishing(sections, set(template["volatile_topics"])),
+                   "profil_karmasi": fingerprint(),
                    "birimler": "Değerler ABD birimleriyle (°F, inç, mil, USD) ve ABD sayı biçimiyle (binlik virgül, ondalık nokta) yazılır; "
                                "°C, mm ve km karşılıkları yanında."},
         "sections": sections,
@@ -261,7 +280,8 @@ def markdown(pack):
     lines += [f"- Üretim tarihi: {header['uretim_tarihi']}", f"- Destinasyon: {pack['destination']['name']}",
               f"- Şablon: {t['key']} (sürüm {t['version']})", f"- {header['not']}", f"- {header['birimler']}",
               f"- Boyut: {pack['counts']['sections']} bölüm, {pack['counts']['evidence']} kanıt satırı, {pack['counts']['numbers']} sayı, "
-              f"{pack['counts']['missing']} 'veri yok' satırı", "", "## Kaynakların son çekimi", "",
+              f"{pack['counts']['missing']} 'veri yok' satırı", "", *(V.markdown_lines(pack["video"]) if pack.get("video") else []),
+              "## Kaynakların son çekimi", "",
               "| Kaynak | Son çekim | Çekim kimliği | Sonraki | Zamanı geldi mi |", "|---|---|---|---|---|"]
     for item in header["kaynaklar"]:
         lines.append(f"| {cell(item['kaynak'])} | {item['son_cekim']} | {item['cekim_kimligi']} | {item['sonraki'] or '—'} | "
@@ -355,7 +375,7 @@ def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def store(db, pack):
+def store(db, pack, video_id=None):
     """Write one generation under <data>/evidence/: the full pack (Markdown + JSON, recorded with their SHA-256 in evidence_packs) and,
     attached to it, the number checklist (CSV) and the writer's summary; their names and SHA-256 are in the pack's JSON."""
     folder = db.path.parent / "evidence"
@@ -379,10 +399,60 @@ def store(db, pack):
               "markdown_file": f"evidence/{name}.md", "markdown_sha256": hashlib.sha256(md_bytes).hexdigest(),
               "json_file": f"evidence/{name}.json", "json_sha256": hashlib.sha256(json_bytes).hexdigest(),
               "section_count": pack["counts"]["sections"], "evidence_count": pack["counts"]["evidence"],
-              "number_count": pack["counts"]["numbers"], "missing_count": pack["counts"]["missing"]}
+              "number_count": pack["counts"]["numbers"], "missing_count": pack["counts"]["missing"], "video_id": video_id}
     with db.connect() as con:
         con.execute(f"INSERT INTO evidence_packs ({','.join(record)}) VALUES ({','.join('?' * len(record))})", tuple(record.values()))
     return {**decode(record), "ekler": {key: True for key in EXTRA_FILES}}
+
+
+def latest_done_run(db, destination_id):
+    with db.connect() as con:
+        row = con.execute("SELECT MAX(finished_at) FROM source_runs WHERE destination_id=? AND status='done'", (destination_id,)).fetchone()
+    return row[0]
+
+
+def moment(text):
+    try:
+        value = datetime.fromisoformat(str(text))
+    except ValueError:
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def stale_reason(db, record, destination_id):
+    """Why a stored pack cannot serve as an up-to-date data summary (None when it can): an older format, no writer's summary, other code
+    or profile files, or a source run that finished after it."""
+    try:
+        path, _ = stored_file(db, record["id"], "json")
+        pack = json.loads(path.read_text(encoding="utf-8"))
+    except (PackError, OSError, ValueError):
+        return "paketin dosyası okunamadı"
+    if pack.get("format") != FORMAT or not (pack.get("dosyalar") or {}).get("yazar_ozeti"):
+        return "paket eski biçimde"
+    if pack["header"].get("profil_karmasi") != fingerprint():
+        return "program ya da profil dosyaları paketten sonra değişti"
+    latest = moment(latest_done_run(db, destination_id)) if latest_done_run(db, destination_id) else None
+    made = moment(record["created_at"])
+    if latest and (made is None or made < latest):
+        return "veri paketten sonra yeniden çekildi"
+    return None
+
+
+def fresh_pack(db, destination_id, profile, template_key, values=None, *, log=None, now=None):
+    """The newest stored pack of a template and its parameters (not one made for a video) when it is up to date; otherwise a new pack is
+    generated and stored (the normal use of the evidence pack). Returns (record, reason it was produced or None when reused)."""
+    params = json.dumps({k: v for k, v in sorted((values or {}).items())}, ensure_ascii=False)
+    with db.connect() as con:
+        rows = [dict(r) for r in con.execute("""SELECT * FROM evidence_packs WHERE destination_id=? AND template_key=? AND video_id IS NULL
+            ORDER BY created_at DESC, rowid DESC""", (destination_id, template_key))]
+    record = next((r for r in rows if json.dumps(dict(sorted(json.loads(r["params"]).items())), ensure_ascii=False) == params), None)
+    reason = stale_reason(db, record, destination_id) if record else "bu şablonla saklanmış paket yok"
+    if reason is None:
+        return decode(record), None
+    if log:
+        log(f"Veri özeti yeniden üretiliyor ({template_key}): {reason}.")
+    pack = generate(db, destination_id, profile, template_key, values, now=now)
+    return store(db, pack), reason
 
 
 def decode(row):

@@ -9,3 +9,17 @@
 
 .destination-control { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
 .destination-control select { max-width:260px; }
+
+/* GÖREV-13: Videolar and Settings → Claude */
+.claude-grid{margin-top:20px}.claude-grid .claude-settings{grid-column:1/-1}.claude-settings table input,.claude-settings table select{min-height:34px;font-size:11px}
+.claude-warning{border-color:#e2bf7266;color:var(--yellow)}.video-form{align-items:flex-end;flex-wrap:wrap}.video-form label{font-size:11px;color:#baccd8;display:flex;flex-direction:column;gap:6px;min-width:180px}.video-form label.grow{flex:1;min-width:240px}
+.library+.library,.evidence-form+.library{margin-top:20px}.run-empty{padding:0 19px 19px}.run-meta{padding:0 19px 12px;font-size:11px;color:var(--muted)}.run-problems{padding:0 19px}.run-problems h3{font-size:12px}
+.problem-list{margin:0 0 12px;padding-left:18px;font-size:11px}.problem-error{color:#ffb3a8}.problem-warning{color:var(--yellow)}
+.candidate-list{list-style:none;margin:0;padding:0 19px 10px;counter-reset:aday}.candidate-list>li{border:1px solid var(--line);border-radius:9px;margin-bottom:10px;background:var(--surface);counter-increment:aday}.candidate-list>li.open{border-color:#f5965e66}
+.candidate-title{width:100%;display:grid;grid-template-columns:28px 1fr;justify-items:start;text-align:left;gap:3px 10px;background:transparent;border:0;padding:13px 15px}.candidate-title::before{content:counter(aday);grid-row:1/4;color:var(--accent);font-size:13px}
+.candidate-title .title-en{font-size:13px;color:var(--text)}.candidate-title .title-tr{font-size:11px;color:var(--muted);font-weight:400}.candidate-tags{display:flex;gap:6px;flex-wrap:wrap}
+.candidate-detail{padding:4px 18px 18px 53px;font-size:12px}.candidate-detail h3{font-size:12px;margin:14px 0 5px;color:#c7d6df}.candidate-detail p{color:#c0cfda;margin-bottom:6px}
+.evidence-list{list-style:none;padding:0;margin:0 0 8px}.evidence-list li{padding:5px 0;border-bottom:1px solid #24374680;color:#c0cfda;font-size:11px}.evidence-list .source-host{display:block}.evidence-missing{color:#ffb3a8!important}
+.plan-list{padding-left:18px}.plan-list>li{margin-bottom:8px}.decision{border-top:1px solid var(--line);padding:16px 19px}.decision-actions{display:flex;gap:10px;align-items:center}.decision label{font-size:11px;color:#baccd8}
+.video-list{padding:0 19px 12px}.video-card{border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin-bottom:10px;background:var(--surface)}.video-head{display:flex;justify-content:space-between;gap:12px}.video-head small{display:block;color:var(--muted)}
+.video-card p{font-size:11px;margin:6px 0}.video-card details{font-size:11px;color:#c0cfda}.video-actions{display:flex;gap:12px;align-items:center;margin-top:10px}.video-actions button{font-size:11px;min-height:32px}

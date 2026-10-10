@@ -72,6 +72,20 @@ EVIDENCE_TEMPLATES = Path(__file__).with_name("thirty_a_evidence")
 TRAFFIC_TABLE = Path(__file__).with_name("thirty_a_traffic.csv")
 # South Walton monthly tourist development tax collections from the Walton County Clerk history workbook.
 TDT_COLLECTIONS = Path(__file__).with_name("thirty_a_tdt_collections.csv")
+# The channel Claude's steps work for (GÖREV-13; docs/M15-CLAUDE-ADIMLARI.md): instruction files (common first), the channel plan (the
+# concept document with its content families), the channel research, the content families of the plan (the schema's fixed list), the name of
+# "the whole destination" as a region, and the templates the title step builds its data summaries with.
+CLAUDE_INSTRUCTIONS = Path(__file__).with_name("thirty_a_claude")
+CHANNEL = {
+    "plan": Path(__file__).resolve().parents[2] / "docs" / "KONSEPT.md",
+    "research": CLAUDE_INSTRUCTIONS / "kanal_arastirmasi.md",
+    "families": ("Bölgesel derin rehberler", "Genel planlama", "Sezon ve zamanlama", "Masraf ve bütçe", "Deneyim", "Sorun çözen videolar",
+                 "Karşılaştırmalar", "Kendi tarihsel verimizden videolar"),
+    "whole_region": "30A geneli",
+    "general_template": "ilk-video",
+    "region_template": "mahalle-rehberi",
+    "region_parameter": "mahalle",
+}
 
 ANCHOR_PROVENANCE = {
     "source_url": "https://www.visitsouthwalton.com/beach-bay-access-locations/",

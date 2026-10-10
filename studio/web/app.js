@@ -12,6 +12,8 @@ import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 import {refreshSection} from "./refresh.js";
 import {EvidenceScreen} from "./evidence.js";
+import {VideosScreen} from "./videos.js";
+import {renderClaudeSettings} from "./claude.js";
 
 const $ = selector => document.querySelector(selector);
 const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null};
@@ -37,6 +39,8 @@ const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status=
 const climateScreen=new ClimateScreen();
 const referencesScreen=new ReferencesScreen();
 const evidenceScreen=new EvidenceScreen();
+const videosScreen=new VideosScreen();
+let lastClaudeKey="";
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
 const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
@@ -79,12 +83,14 @@ function render() {
   climateScreen.invalidate();
   referencesScreen.invalidate();
   evidenceScreen.invalidate();
-  const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
+  videosScreen.invalidate();
+  const title = state.data.steps.find(step=>step.id===state.page)?.title || "Ayarlar";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
   else if (state.page === "collect") (collectionScreens[location.hash] || beachScreen).render($("#main"),state.data,pageHeading);
   else if (state.page === "quality") renderQuality();
   else if (state.page === "evidence") evidenceScreen.render($("#main"),state.data,pageHeading);
+  else if (state.page === "videos") videosScreen.render($("#main"),state.data,pageHeading);
   else if (state.page === "settings") renderSettings();
   else renderPlanned();
   updateAuditButtons();
@@ -165,9 +171,10 @@ function renderQuality() {
 }
 
 function renderSettings() {
-  $("#main").innerHTML = pageHeading("Çalışma alanı bilgisi", "30A Studio’nun sürümü ve kayıt konumu.") +
+  $("#main").innerHTML = pageHeading("Ayarlar", "30A Studio’nun sürümü, kayıt konumu ve Claude ayarları.") +
     `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">Destinasyonların kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
-    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Plaj, hava, restoran ve mahalle verisi hazır</h2><p>Kaynak kütüphanesi, gerçek plaj, restoran, mahalle ve NWS hava verisi toplama, filtreleme, CSV dışa aktarma, önceki sürümler ve iş geçmişi kullanılabilir. Plaj erişimleri, gözden geçirilebilir bir eşleme dosyasıyla mahallelere bağlanır.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Diğer kaynaklar ve genişletilmiş veri kontrolü. Bölge ve işletme kimliği tabloları hazır; otomatik eşleştirme, mahalle sınırları ve zamanlayıcı henüz yok. İçerik, görsel ve video üretimi aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div>`;
+    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Veri, kanıt paketi ve konu önerisi hazır</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Videolar ekranında Claude ile konu ve başlık önerisi ve video kaydı kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Claude ile video metni ve metnin kontrolü. Görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div><div class="info-grid claude-grid" id="claude-settings-slot"><p class="muted">Claude ayarları yükleniyor…</p></div>`;
+  renderClaudeSettings($("#claude-settings-slot"));
 }
 
 function renderJobResultLink(job) {
@@ -359,7 +366,7 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen,evidenceScreen]);
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen,evidenceScreen,videosScreen]);
   lodgingScreen.agency=agencyPrices;   // the reset rebuilds each screen from its constructor; the price section is attached again
   lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=lastAgencyId=lastSiteId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
@@ -404,6 +411,14 @@ async function start(destinationId=storedDestination(localStorage)) {
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
       const jobKey=state.data.jobs.map(j=>`${j.id}:${j.status}`).join(",");     // the section changes only when a job starts or ends
       if(state.page==="sources" && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
+      const claudeJobs=state.data.jobs.filter(j=>j.kind==="claude_run");
+      const claudeKey=claudeJobs.map(j=>`${j.id}:${j.status}`).join(",");          // a Claude run started or ended: the Videolar screen reloads
+      if(claudeKey!==lastClaudeKey) {
+        const finished=lastClaudeKey && claudeJobs.find(j=>!active(j) && !lastClaudeKey.includes(`${j.id}:${j.status}`));
+        lastClaudeKey=claudeKey;
+        if(state.page==="videos") videosScreen.refresh($("#main"));
+        if(finished) toast(finished.status==="done"?"Claude bitti: başlık önerileri Videolar ekranında onay bekliyor.":`Claude çalışması bitmedi: ${finished.message}`);
+      }
       const restaurantLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-restaurants");
       if(restaurantLatest && restaurantLatest.id!==lastRestaurantId) {
         try {
