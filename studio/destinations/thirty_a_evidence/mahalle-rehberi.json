@@ -4,6 +4,7 @@
   "title": "Mahalle rehberi",
   "question": "Bu mahallede kalmak nasıl bir deneyim: plaja, yemeğe ve günlük ihtiyaçlara erişim, konaklama fiyatı ve sezon? (Paket yalnız kanıtı verir.)",
   "dimensions": {"bolge": "mahalle", "karar": "mahalle seçimi", "donem": "tüm yıl", "gezgin_tipi": "genel"},
+  "oynak_konular": ["plaj-hukuku"],
   "parameters": [{"key": "mahalle", "label": "Mahalle", "kind": "region"}],
   "sections": [
     {"key": "tanim", "title": "Mahallenin resmî tanımı",
@@ -16,7 +17,8 @@
      "blocks": [
        {"block": "beach_accesses", "region": "{mahalle}"},
        {"block": "beach_features", "region": "{mahalle}"},
-       {"block": "references", "topics": ["plaj-erisimi", "plaj-hukuku"], "match": "{mahalle_adi}"}
+       {"block": "references", "topics": ["plaj-erisimi", "plaj-hukuku"], "match": "{mahalle_adi}"},
+       {"block": "references", "ids": ["hukuk-video-ozet"]}
      ]},
     {"key": "konaklama", "title": "Konaklama",
      "question": "Kaç ilan görünüyor, türü ve oda dağılımı ne, ay ay haftalık fiyat ne?",

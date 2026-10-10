@@ -582,14 +582,16 @@ def create_app(data_dir: Path | None = None, registry=None):
 
     @app.get("/api/evidence-packs/{identifier}/{kind}")
     def evidence_pack_file(identifier: str, kind: str):
-        if kind not in ("markdown", "json"):
+        """The full pack (markdown, json) or a file attached to it (sayilar: number checklist CSV, yazar-ozeti: writer's summary)."""
+        kinds = {"markdown": ("md", "text/markdown; charset=utf-8"), "json": ("json", "application/json"),
+                 "sayilar": ("sayilar", "text/csv; charset=utf-8"), "yazar-ozeti": ("yazar_ozeti", "text/markdown; charset=utf-8")}
+        if kind not in kinds:
             raise HTTPException(404, "Bilinmeyen dosya türü.")
         try:
-            path, record = evidence.stored_file(db, identifier, "md" if kind == "markdown" else "json")
+            path, record = evidence.stored_file(db, identifier, kinds[kind][0])
         except evidence.PackError as exc:
             raise HTTPException(404, str(exc)) from exc
-        media = "text/markdown; charset=utf-8" if kind == "markdown" else "application/json"
-        return FileResponse(path, media_type=media, filename=path.name)
+        return FileResponse(path, media_type=kinds[kind][1], filename=path.name)
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

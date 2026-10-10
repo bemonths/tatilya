@@ -4,14 +4,14 @@
   "title": "30A'ya ilk kez gidecekler için tam karar rehberi",
   "question": "30A'ya ilk kez gidecek biri hangi mahallede, hangi ayda, ne kadar bütçeyle ve nelere dikkat ederek kalmalı? (Paket yalnız bu sorunun kanıtını verir; karar editoryal katmandadır.)",
   "dimensions": {"bolge": "30A", "karar": "ilk ziyaret planı", "donem": "tüm yıl", "gezgin_tipi": "ilk kez gelen"},
+  "oynak_konular": ["plaj-hukuku"],
   "parameters": [],
   "sections": [
     {"key": "nedir", "title": "30A nedir ve nerededir",
      "question": "30A bir yer mi, bir yol mu; Walton County, Destin ve Fort Walton Beach ile ilişkisi ne?",
      "blocks": [
        {"block": "references", "ids": ["genel-30a-ilce-yolu", "genel-destin-okaloosa", "genel-south-walton-tanim", "genel-mahalle-sayisi"]},
-       {"block": "neighborhoods"},
-       {"block": "references", "ids": ["havalimani-ecp", "havalimani-vps", "havalimani-pns"]}
+       {"block": "neighborhoods"}
      ]},
     {"key": "mahalleler", "title": "13 mahallenin karakteri",
      "question": "Resmî dizindeki 13 mahalle hangileri ve her birinde konaklama, restoran ve halka açık plaj erişimi ne kadar?",
@@ -57,7 +57,7 @@
     {"key": "yemek", "title": "Yemek",
      "question": "Mahalle başına kaç restoran var, fiyat seviyeleri ve rezervasyon durumu ne?",
      "blocks": [
-       {"block": "restaurants"}
+       {"block": "restaurants", "list": "seviyeli"}
      ]},
     {"key": "ulasim", "title": "Araba ve ulaşım",
      "question": "Büyük süpermarket, eczane ve acil sağlık ne kadar uzak; golf arabası, park, havalimanı ve trafik kuralları neler?",
@@ -76,7 +76,7 @@
     {"key": "pratik", "title": "Pratik bilgiler ve merak açıları",
      "question": "Vergi, genel bilgiler ve kasabaların kuruluş hikâyeleri hakkında neler kaynakla söylenebilir?",
      "blocks": [
-       {"block": "references", "topics": ["genel"]},
+       {"block": "references", "ids": ["genel-gulf-of-america"]},
        {"block": "references", "topics": ["tarihce"]}
      ]}
   ]

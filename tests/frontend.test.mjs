@@ -641,7 +641,7 @@ test('daily needs show great-circle miles, the share within a mile and the sourc
   assert.equal(fixedMenuLine({}),'');
 });
 
-import {paramsText, packLink, packRow, EvidenceScreen} from '../studio/web/evidence.js';
+import {paramsText, packLink, packRow, attachedLinks, EvidenceScreen} from '../studio/web/evidence.js';
 
 test('evidence pack rows show parameters, size, missing rows and both downloads with their SHA-256', () => {
   setDestination('30a');
@@ -658,6 +658,23 @@ test('evidence pack rows show parameters, size, missing rows and both downloads 
   assert.match(html,/evidence-packs\/abc\/json\?destination_id=30a/);
   assert.match(html,/SHA-256 aaaaaaaaaaaaaaaa…/);
   assert.doesNotMatch(packRow({...pack,missing_count:0}),/veri yok/);
+  setDestination(null);
+});
+
+test('writer summary and number list links appear only for packs that have them (GÖREV-12)', () => {
+  setDestination('30a');
+  const both=attachedLinks({id:'abc',ekler:{yazar_ozeti:true,sayilar:true}});
+  assert.match(both,/href="\/api\/evidence-packs\/abc\/yazar-ozeti\?destination_id=30a" download>Yazar özeti ↓/);
+  assert.match(both,/href="\/api\/evidence-packs\/abc\/sayilar\?destination_id=30a" download>Sayı listesi \(CSV\) ↓/);
+  const onlySummary=attachedLinks({id:'abc',ekler:{yazar_ozeti:true,sayilar:false}});
+  assert.match(onlySummary,/Yazar özeti ↓/);
+  assert.doesNotMatch(onlySummary,/Sayı listesi/);
+  for(const old of [{id:'abc'},{id:'abc',ekler:{yazar_ozeti:false,sayilar:false}}]) {
+    assert.equal(attachedLinks(old),'<small class="muted">Yazar özeti ve sayı listesi yok (eski üretim)</small>');
+  }
+  const row=packRow({id:'abc',title:'T',template_key:'ilk-video',template_version:'1',params:{},created_at:'2026-10-10T12:00:00+00:00',section_count:11,
+    evidence_count:843,number_count:1723,missing_count:0,markdown_sha256:'a'.repeat(64),json_sha256:'b'.repeat(64),ekler:{yazar_ozeti:true,sayilar:true}});
+  assert.ok(row.indexOf('Yazar özeti ↓')<row.indexOf('Markdown ↓'));                  // the writing column comes before the full pack
   setDestination(null);
 });
 

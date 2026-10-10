@@ -843,6 +843,13 @@ def total_label(quotes, queried_on):
             "kalemlerin toplamıyla doğrulanamadı.")
 
 
+def total_counts(quotes):
+    """Priced totals and how many of them include the site's taxes and fees (the evidence pack writes the share, GÖREV-12)."""
+    priced = [q for q in quotes if q["status"] == "priced" and q["total"] is not None]
+    return {"priced": len(priced), "taxed": sum(q["total_includes_taxes"] == 1 for q in priced),
+            "fees": sum(q["total_includes_fees"] == 1 for q in priced)}
+
+
 def guest_label(companies):
     """How many guests the prices were asked for, from the company rows of the run."""
     doubled = sorted(c["company"] for c in companies if c.get("guest_rule") == "bedrooms_x2")
@@ -933,7 +940,8 @@ def summarize(con, run_id, region_order=(), region_names=None):
             "coverage": {**coverage, "listings": len(listings), "priced_listings": len(priced_ids), "regions": len(regions),
                          "regions_with_price": len(regions_priced), "methods": methods, "own_listings": len(own), "own_priced": len(own_priced),
                          "published": len({r["lodging_id"] for r in published})},
-            "label": total_label(quotes + own_quotes, snapshot["queried_on"]), "guest_label": guest_label(companies),
+            "label": total_label(quotes + own_quotes, snapshot["queried_on"]), "total_counts": total_counts(quotes + own_quotes),
+            "guest_label": guest_label(companies),
             "source_note": ("Fiyatlı ilanlar Book>Direct ilanlarıdır (eşleme yöntemi: bağlantı, adres veya konum); 'kendi envanteri' "
                             "sütunu tek bir topluluğun resmî kiralama programında Book>Direct'te olmayan evleri ayrı sayar."),
             "published_note": "Yayımlanmış kira: sitenin sezon için yayımladığı kira aralığı × gece sayısı; vergi ve ücretler hariç, toplam fiyat ortancalarına karışmaz.",

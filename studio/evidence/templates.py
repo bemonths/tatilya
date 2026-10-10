@@ -1,9 +1,10 @@
 """Evidence-pack templates: JSON files on the destination side (one template per file), read and validated here.
 
 A template has a key, version, title, the video's main question, optional dimensions for later combinations (region × decision ×
-period × traveller type), parameters (only "region" for now: one of the destination's canonical regions) and sections. Each section
-has a question and the data blocks it uses; a block spec may refer to a parameter as "{key}" (the region id) or "{key_adi}" (its
-name), which is filled in when the pack is generated.
+period × traveller type), its volatile topics (`oynak_konular`: reference topics re-checked before every video, GÖREV-12),
+parameters (only "region" for now: one of the destination's canonical regions) and sections. Each section has a question and the
+data blocks it uses; a block spec may refer to a parameter as "{key}" (the region id) or "{key_adi}" (its name), which is filled in
+when the pack is generated.
 """
 import json
 import re
@@ -41,6 +42,9 @@ def read(path, blocks):
         if not isinstance(parameter, dict) or not KEY.fullmatch(str(parameter.get("key", ""))) or parameter.get("kind") not in PARAMETER_KINDS:
             raise TemplateError(f"Şablon parametresi geçersiz (anahtar ve tür 'region' olmalı): {name}.")
         keys.add(parameter["key"])
+    volatile = data.get("oynak_konular") or []
+    if not isinstance(volatile, list) or not all(isinstance(t, str) and t for t in volatile):
+        raise TemplateError(f"Şablonun oynak konuları bir konu listesi olmalı: {name}.")
     sections, seen = data["sections"], set()
     if not isinstance(sections, list):
         raise TemplateError(f"Şablon bölümleri liste olmalı: {name}.")
@@ -60,7 +64,7 @@ def read(path, blocks):
                     raise TemplateError(f"Bölümde tanımlanmamış parametre: {{{reference}}} ({section['key']}, {name}).")
     return {"key": data["key"], "version": str(data["version"]), "title": data["title"], "question": data["question"],
             "dimensions": {k: dimensions[k] for k in DIMENSIONS if k in dimensions}, "parameters": parameters, "sections": sections,
-            "file": name}
+            "volatile_topics": list(volatile), "file": name}
 
 
 def read_all(folder, blocks):

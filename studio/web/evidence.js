@@ -5,15 +5,23 @@ export function paramsText(params, names={}) {
   const entries=Object.entries(params || {});
   return entries.length ? entries.map(([key,value])=>`${key}: ${names[value] || value}`).join(" · ") : "";
 }
-/** The download address of a stored pack file (markdown or json) for the selected destination. */
+/** The download address of a stored pack file (markdown, json, yazar-ozeti, sayilar) for the selected destination. */
 export function packLink(id, kind) {
   return `/api/${destinationPath(`evidence-packs/${encodeURIComponent(id)}/${kind}`)}`;
+}
+/** Writer's summary and number checklist links; packs made before GÖREV-12 have neither and say so. */
+export function attachedLinks(pack) {
+  const extras=pack.ekler || {};
+  if(!extras.yazar_ozeti && !extras.sayilar) return '<small class="muted">Yazar özeti ve sayı listesi yok (eski üretim)</small>';
+  return `${extras.yazar_ozeti?`<a class="source-link" href="${esc(packLink(pack.id,"yazar-ozeti"))}" download>Yazar özeti ↓</a>`:""}
+    ${extras.sayilar?`<a class="source-link" href="${esc(packLink(pack.id,"sayilar"))}" download>Sayı listesi (CSV) ↓</a>`:""}`;
 }
 export function packRow(pack, names={}) {
   const params=paramsText(pack.params,names);
   return `<tr><td><strong>${esc(pack.title)}</strong>${params?`<small>${esc(params)}</small>`:""}<small class="source-host">${esc(pack.template_key)} · sürüm ${esc(pack.template_version)}</small></td>
     <td>${esc((pack.created_at || "").replace("T"," ").slice(0,19))}</td>
     <td>${pack.section_count} bölüm<small>${pack.evidence_count} kanıt satırı · ${pack.number_count} sayı</small>${pack.missing_count?`<small class="reference-late">${pack.missing_count} 'veri yok' satırı</small>`:""}</td>
+    <td>${attachedLinks(pack)}</td>
     <td><a class="source-link" href="${esc(packLink(pack.id,"markdown"))}" download>Markdown ↓</a><small class="source-host">SHA-256 ${esc(pack.markdown_sha256.slice(0,16))}…</small>
     <a class="source-link" href="${esc(packLink(pack.id,"json"))}" download>JSON ↓</a><small class="source-host">SHA-256 ${esc(pack.json_sha256.slice(0,16))}…</small></td></tr>`;
 }
@@ -23,7 +31,7 @@ export class EvidenceScreen {
   invalidate() {this.sequence++;}
   render(main, data, heading) {
     const sequence=++this.sequence;
-    main.innerHTML=heading("Kanıt paketi",`${data.selected_destination?.name || "Seçili destinasyon"} için şablondan kanıt paketi: her satır kaynağı, etiketi ve kullanım notuyla; sonunda sayı kontrol listesi. Paket yorum ve tavsiye içermez.`)+
+    main.innerHTML=heading("Kanıt paketi",`${data.selected_destination?.name || "Seçili destinasyon"} için şablondan kanıt paketi: her satır kaynağı, etiketi ve kullanım notuyla. Aynı üretimden yazım için kısa yazar özeti ve ayrı sayı listesi (CSV) çıkar. Paket yorum ve tavsiye içermez.`)+
       `<div id="evidence-body" aria-live="polite"><p>Şablonlar yükleniyor…</p></div>`;
     Promise.all([api("evidence-templates"),api("evidence-packs")]).then(([templates,packs])=>{
       if(sequence!==this.sequence) return;
@@ -46,7 +54,7 @@ export class EvidenceScreen {
       ${this.message?`<p class="stage-note" role="status">${esc(this.message)}</p>`:""}
       ${template?`<p><strong>Ana soru:</strong> ${esc(template.question)}</p><ol class="evidence-sections">${template.sections.map(s=>`<li><strong>${esc(s.title)}</strong> — ${esc(s.question)}</li>`).join("")}</ol>`:""}</section>
       <section class="library"><div class="library-title"><h2>Üretilmiş paketler</h2><small>${this.packs.length} paket</small></div>
-      ${this.packs.length?`<div class="table-scroll"><table class="reference-table"><thead><tr><th>PAKET</th><th>ÜRETİM</th><th>BOYUT</th><th>İNDİR</th></tr></thead><tbody>${this.packs.map(p=>packRow(p,names)).join("")}</tbody></table></div>`:'<p class="muted">Henüz paket üretilmedi.</p>'}</section>`;
+      ${this.packs.length?`<div class="table-scroll"><table class="reference-table"><thead><tr><th>PAKET</th><th>ÜRETİM</th><th>BOYUT</th><th>YAZIM İÇİN</th><th>TAM PAKET</th></tr></thead><tbody>${this.packs.map(p=>packRow(p,names)).join("")}</tbody></table></div>`:'<p class="muted">Henüz paket üretilmedi.</p>'}</section>`;
     body.querySelector("#evidence-template")?.addEventListener("change",event=>{this.selected=event.target.value;this.values={};this.message="";this.draw(main);});
     body.querySelectorAll("[data-param]").forEach(select=>select.addEventListener("change",event=>{this.values[event.target.dataset.param]=event.target.value;}));
     body.querySelector("#evidence-generate")?.addEventListener("click",()=>this.generate(main));

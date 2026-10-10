@@ -5,6 +5,10 @@ its reason instead of being left out.
 A row: Turkish statement; value and unit in US units (temperatures in °F with °C beside them); scope; source (name, url, document or
 access date, run id, SHA-256 when known); label (kaynak gerçeği, bizim hesabımız, türetilmiş, yaklaşık); sample size; the usage note
 of its data type taken from the M documents; the source's short English quote when there is one.
+
+GÖREV-12: a row also carries its structured extra values (`ek_degerler`: quartiles, sample, shares, range ends, unit conversions), so the
+number checklist never reads digits out of a statement, and a placement hint (`tablo`: table, row and column) that the writer's summary
+uses to lay numeric series out as tables. Statements are unchanged.
 """
 import csv
 import statistics
@@ -17,7 +21,10 @@ from ..sources import agency_rates, bookdirect_lodging, daily_needs, restaurant_
 LABELS = ("kaynak gerçeği", "bizim hesabımız", "türetilmiş", "yaklaşık")
 MISSING = "veri yok"
 MONTHS = ("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
+MONTHS_SHORT = ("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
+EXTRA_TYPES = ("alt_ceyrek", "ust_ceyrek", "orneklem", "pay", "aralik_alt", "aralik_ust", "donusum")
 MILE_KM = 1.609344
+SMALL_SAMPLE = 20         # fewer priced listings per window than this is a small sample (our threshold, M11)
 
 # Usage notes: the video-language rules of each data type's M document (quoted or closely restated; never invented here).
 USAGE = {
@@ -55,6 +62,18 @@ USAGE = {
     "traffic": "FDOT AADT bir sayım noktasındaki yıllık ortalama günlük araç sayısıdır (iki yön); \"<yer> sayım noktasında 2025 yıllık ortalaması\" "
                "denir, yolun tamamı için tek sayı söylenmez. Aylık oranlar FDOT'un haftalık mevsim faktörlerinden bizim hesabımızdır ve "
                "kategori söylenir; sıkışıklık ya da yolculuk süresi iddiası yapılmaz. (M9)",
+}
+
+# What "(n)" means in each block's tables (the writer's summary prints it once in the table header).
+SAMPLE_RULES = {
+    "lodging_prices": f"(n) = fiyatı okunan ilan sayısı; * = pencerede {SMALL_SAMPLE}'den az fiyatlı ilan (küçük örnek; mahalle karşılaştırmasında kullanılmaz).",
+    "lodging_bedrooms": "(n) = o oda grubunda fiyatı okunan ilan sayısı.",
+    "lodging_inventory": "Hücre: o tarihli aramada görünen ilan sayısı; (n) = oda sayısı bilinen ilan.",
+    "climate_months": "(n) = normalin dayandığı yıl sayısı.",
+    "sea_water": "(n) = ortalamaya giren yıl sayısı.",
+    "tdt_season": "(n) = ortalamaya giren mali yıl sayısı.",
+    "daily_needs": "Hücre: ilanların en yakın noktaya kuş uçuşu mesafe ortancası · 1 mil içindeki ilan payı; (n) = ölçülen ilan sayısı.",
+    "restaurants": "Ana yemek ortancası: (n) = fiyatı okunan ana yemek sayısı.",
 }
 
 
@@ -95,6 +114,11 @@ def number(value, digits=0):
     return f"{value:,.{digits}f}"
 
 
+def month_short(month_key):
+    """'2027-01' -> 'Oca 2027'."""
+    return f"{MONTHS_SHORT[int(month_key[5:7]) - 1]} {month_key[:4]}"
+
+
 def source_of(run, name=None, url=None, document_date=None, sha=None):
     return {"ad": name or (run["metadata"] or {}).get("source_name") or run["connector_name"], "url": url or run["source_url"],
             "belge_tarihi": document_date, "erisim_tarihi": (run["fetched_at"] or run["finished_at"] or "")[:10] or None,
@@ -105,20 +129,54 @@ def file_source(name, url, accessed, sha, document_date=None):
     return {"ad": name, "url": url, "belge_tarihi": document_date, "erisim_tarihi": accessed, "cekim_kimligi": None, "sha256": sha}
 
 
+def extra(kind, value, unit):
+    assert kind in EXTRA_TYPES, kind
+    return {"tur": kind, "deger": value, "birim": unit}
+
+
+def place(table, row_label, column=None, cells=None, head="Mahalle"):
+    """Where the writer's summary puts a row: table name, row label (under the first column's `head`), the column of its value and/or
+    text cells {column: text}."""
+    return {"ad": table, "satir": row_label, "sutun": column, "hucreler": cells or {}, "baslik": head}
+
+
 def row(statement, value=None, unit=None, *, scope, source, label="kaynak gerçeği", sample=None, usage, metric=None, quote=None, note=None,
-        english=None):
+        english=None, extras=None, table=None, small=False, conflict=None):
     assert label in LABELS, label
-    return {"ifade": statement, "ifade_en": english, "deger": value, "birim": unit, "deger_ek": metric, "kapsam": scope, "kaynak": source,
-            "etiket": label, "orneklem": sample, "kullanim_notu": usage, "alinti": quote, "not": note, "durum": "var"}
+    extras = list(extras or [])
+    if metric:
+        extras.append(metric[1])
+    return {"ifade": statement, "ifade_en": english, "deger": value, "birim": unit, "deger_ek": metric[0] if metric else None,
+            "ek_degerler": extras, "kapsam": scope, "kaynak": source, "etiket": label, "orneklem": sample, "kullanim_notu": usage,
+            "alinti": quote, "not": note, "celiski_notu": conflict, "kucuk_ornek": bool(small), "tablo": table, "durum": "var"}
 
 
-def missing(statement, reason, *, scope, usage=None, source=None):
-    return {"ifade": statement, "ifade_en": None, "deger": None, "birim": None, "deger_ek": None, "kapsam": scope, "kaynak": source,
-            "etiket": None, "orneklem": None, "kullanim_notu": usage, "alinti": None, "not": reason, "durum": MISSING}
+def missing(statement, reason, *, scope, usage=None, source=None, table=None):
+    return {"ifade": statement, "ifade_en": None, "deger": None, "birim": None, "deger_ek": None, "ek_degerler": [], "kapsam": scope,
+            "kaynak": source, "etiket": None, "orneklem": None, "kullanim_notu": usage, "alinti": None, "not": reason, "celiski_notu": None,
+            "kucuk_ornek": False, "tablo": table, "durum": MISSING}
+
+
+def converted(value, digits, unit):
+    """(display text, structured conversion) of a unit conversion (°C, mm, km)."""
+    rounded = round(value, digits)
+    return f"{number(rounded, digits)} {unit}", extra("donusum", rounded, unit)
 
 
 def f_to_c(value):
     return (value - 32) * 5 / 9
+
+
+def percent_locative(value):
+    """Turkish case ending after a percentage read aloud: 94 -> "'ünde" (doksan dört-ü-nde), 90 -> "'ında"."""
+    units = {1: "'inde", 2: "'sinde", 3: "'ünde", 4: "'ünde", 5: "'inde", 6: "'sında", 7: "'sinde", 8: "'inde", 9: "'unda"}
+    tens = {1: "'unda", 2: "'sinde", 3: "'unda", 4: "'ında", 5: "'sinde", 6: "'ında", 7: "'inde", 8: "'inde", 9: "'ında"}
+    value = int(value)
+    if value == 0:
+        return "'ında"
+    if value % 100 == 0:
+        return "'ünde"
+    return units[value % 10] if value % 10 else tens[(value // 10) % 10]
 
 
 # --- Neighborhoods and beach accesses -------------------------------------------------------------------------------------------
@@ -142,12 +200,14 @@ def neighborhoods(data, spec):
         record = records.get(region)
         name = data.names.get(region, region)
         if not record:
-            rows.append(missing(f"{name}: mahalle dizini kaydı", "Bu çekimde mahallenin dizin kaydı yok.", scope=name))
+            rows.append(missing(f"{name}: mahalle dizini kaydı", "Bu çekimde mahallenin dizin kaydı yok.", scope=name,
+                                table=place("Mahalleler", name, cells={"Kaynağın etiketleri": "—"})))
             continue
         tags = ", ".join(record.get("tags") or []) or "etiket yok"
         quote = " ".join((record.get("summary") or "").split()[:25]) or None
         rows.append(row(f"{name}: Visit South Walton mahalle dizininde 30A mahallesi olarak listeleniyor; kaynağın etiketleri: {tags}",
-                        scope=name, source=source_of(run, url=record.get("page_url")), usage=USAGE["neighborhoods"], quote=quote))
+                        scope=name, source=source_of(run, url=record.get("page_url")), usage=USAGE["neighborhoods"], quote=quote,
+                        table=place("Mahalleler", name, cells={"Kaynağın etiketleri": tags})))
     return rows
 
 
@@ -169,8 +229,9 @@ def beach_accesses(data, spec):
     if run is None or mapping is None:
         return [missing("Halka açık plaj erişimleri", "Plaj erişimi çekimi ya da plaj–mahalle eşleme dosyası yok.", scope="30A")]
     source = source_of(run)
-    mapping_source = file_source(f"Plaj–mahalle eşleme dosyası ({data.profile.BEACH_NEIGHBORHOOD_MAPPING.name})", None, None, None)
+    mapping_name = f"Plaj–mahalle eşleme dosyası ({data.profile.BEACH_NEIGHBORHOOD_MAPPING.name})"
     rows = []
+    counts = "Mahalleye düşen halka açık erişim"
     if not spec.get("region"):
         rows.append(row("İlçenin halka açık plaj erişimi listesinde (30A kapsamı) erişim sayısı", len(records), "erişim", scope="30A",
                         source=source, usage=USAGE["beach_sourced"]))
@@ -181,19 +242,22 @@ def beach_accesses(data, spec):
         if not mine:
             rows.append(row(f"{name}: ilçenin halka açık erişim listesinde bu mahalleye eşlenen erişim yok", 0, "erişim", scope=name,
                             source=source, label="türetilmiş", usage=USAGE["beach_sourced"],
-                            note="Topluluğun kendi misafirlerine açık özel erişimleri bu listede değildir."))
+                            note="Topluluğun kendi misafirlerine açık özel erişimleri bu listede değildir.",
+                            table=place(counts, name, "Kaynaklı eşleme")))
             continue
         rows.append(row(f"{name}: kaynaklı eşlemeyle (resmî rehber ya da ilçe alt bölüm verisi) bu mahalleye düşen halka açık erişim sayısı",
                         len(sourced), "erişim", scope=name, source=source, label="türetilmiş", usage=USAGE["beach_sourced"],
-                        note=f"Eşleme: {mapping_source['ad']}."))
+                        note=f"Eşleme: {mapping_name}.", table=place(counts, name, "Kaynaklı eşleme")))
         if len(mine) != len(sourced):
             rows.append(row(f"{name}: yaklaşık eşlemelerle (komşu erişimlerle tutarlı, program türetimi) birlikte erişim sayısı", len(mine), "erişim",
-                            scope=name, source=source, label="yaklaşık", usage=USAGE["beach_approx"]))
+                            scope=name, source=source, label="yaklaşık", usage=USAGE["beach_approx"],
+                            table=place(counts, name, "Yaklaşık eşleme dahil")))
         if spec.get("region") or spec.get("list"):
             for m in mine:
                 usage = USAGE["beach_sourced"] if m["method"] in SOURCED else USAGE["beach_approx"]
                 rows.append(row(f"{name}: {m['beach_name']} (eşleme yöntemi: {m['method_label']})", scope=name, source=source,
-                                label="türetilmiş" if m["method"] in SOURCED else "yaklaşık", usage=usage, note=m.get("note")))
+                                label="türetilmiş" if m["method"] in SOURCED else "yaklaşık", usage=usage, note=m.get("note"),
+                                table=place("Erişimler", m["beach_name"], cells={"Mahalle": name, "Eşleme yöntemi": m["method_label"]}, head="Erişim")))
     return rows
 
 
@@ -214,8 +278,9 @@ def beach_features(data, spec):
                 usage=USAGE["beach_features"])]
     for record in sorted(ada, key=lambda r: r["name"]):
         features = ", ".join(f for f in record.get("features") or [] if "ADA" in f or "Wheelchair" in f)
-        rows.append(row(f"{record['name']}: {features}", scope=data.names.get(region_of.get(record["external_id"]), scope), source=source,
-                        usage=USAGE["beach_features"]))
+        region = data.names.get(region_of.get(record["external_id"]), scope)
+        rows.append(row(f"{record['name']}: {features}", scope=region, source=source, usage=USAGE["beach_features"],
+                        table=place("Olanaklar", record["name"], cells={"Mahalle": region, "Listede yazan olanaklar": features}, head="Erişim")))
     return rows
 
 
@@ -245,6 +310,17 @@ def reference_label(row_):
     return "kaynak gerçeği"
 
 
+VIDEO_RULE = "Video dili:"
+
+
+def split_video_rule(note):
+    """A reference row's note may carry its own video-language rule ("Video dili: …", from the M document); it goes to the usage note."""
+    if not note or VIDEO_RULE not in note:
+        return note or None, None
+    before, rule = note.split(VIDEO_RULE, 1)
+    return before.strip() or None, rule.strip()
+
+
 def references(data, spec):
     table, translations = reference_rows(data)
     if not table:
@@ -262,18 +338,20 @@ def references(data, spec):
         return [missing(f"Referans satırları ({what})", "Seçime uyan doğrulanmış satır yok.", scope=spec.get("match") or "—")]
     for ref in chosen:
         usage = USAGE["references"].get(ref["durum"], USAGE["references"]["dogrulandi"])
-        notes = [ref["not"]] if ref.get("not") else []
-        if ref.get("celiski_notu"):
-            notes.insert(0, f"Çelişki: {ref['celiski_notu']}")
+        note, rule = split_video_rule(ref.get("not"))
+        if rule:
+            usage = f"{usage[:-len(' (M9)')]} {rule} (M9)" if usage.endswith(" (M9)") else f"{usage} {rule}"
         recheck = reference_table.valid_day(ref["yeniden_kontrol_tarihi"])
         if recheck and recheck < data.today:
-            notes.append(f"Yeniden kontrol tarihi ({ref['yeniden_kontrol_tarihi']}) geçti.")
+            note = " ".join(v for v in (note, f"Yeniden kontrol tarihi ({ref['yeniden_kontrol_tarihi']}) geçti.") if v)
         statement = translations.get(ref["id"]) or f"(Türkçe ifade yok) {ref['ifade']}"
         rows.append(row(statement, ref["deger"] or None, ref["birim"] or None, scope=ref["kapsam"], english=ref["ifade"],
                         source={"ad": ref["kaynak_adi"], "sahibi": ref["kaynak_sahibi"], "url": ref["kaynak_url"],
                                 "belge_tarihi": ref["belge_tarihi"] or None, "erisim_tarihi": ref["erisim_tarihi"], "cekim_kimligi": None,
-                                "sha256": ref["belge_sha256"] or None, "referans": ref["id"], "durum": ref["durum"]},
-                        label=reference_label(ref), usage=usage, quote=ref["kisa_alinti"] or None, note=" ".join(notes) or None))
+                                "sha256": ref["belge_sha256"] or None, "referans": ref["id"], "durum": ref["durum"], "konu": ref["konu"],
+                                "guven": ref["guven"], "yeniden_kontrol_tarihi": ref["yeniden_kontrol_tarihi"]},
+                        label=reference_label(ref), usage=usage, quote=ref["kisa_alinti"] or None, note=note,
+                        conflict=ref.get("celiski_notu") or None))
     return rows
 
 
@@ -289,9 +367,10 @@ def climate_snapshot(data, connector):
     return run, data.cached(connector, compute)
 
 
-CLIMATE_ELEMENTS = (("MLY-TMAX-NORMAL", "ortalama en yüksek sıcaklık", "°F"), ("MLY-TMIN-NORMAL", "ortalama en düşük sıcaklık", "°F"),
-                    ("MLY-PRCP-NORMAL", "ortalama yağış", "inç"), ("MLY-PRCP-AVGNDS-GE010HI", "0,10 inç ve üstü yağışlı gün ortalaması", "gün"),
-                    ("MLY-TMAX-AVGNDS-GRTH090", "en yüksek sıcaklığın 90 °F'yi geçtiği gün ortalaması", "gün"))
+CLIMATE_ELEMENTS = (("MLY-TMAX-NORMAL", "ortalama en yüksek sıcaklık", "°F", "En yüksek"), ("MLY-TMIN-NORMAL", "ortalama en düşük sıcaklık", "°F", "En düşük"),
+                    ("MLY-PRCP-NORMAL", "ortalama yağış", "inç", "Yağış"),
+                    ("MLY-PRCP-AVGNDS-GE010HI", "0,10 inç ve üstü yağışlı gün ortalaması", "gün", "Yağışlı gün (≥0.10 inç)"),
+                    ("MLY-TMAX-AVGNDS-GRTH090", "en yüksek sıcaklığın 90 °F'yi geçtiği gün ortalaması", "gün", "90 °F üstü gün"))
 
 
 def climate_months(data, spec):
@@ -304,16 +383,17 @@ def climate_months(data, spec):
     values = {(v["element"], v["month"]): v for v in snapshot["values"] if v["station_id"] == station["station_id"]}
     scope = f"{station['label']} ({station['station_id']}), 30A kıyı koridoruna {number(station['distance_km'] / MILE_KM, 1)} mil; 1991–2020"
     rows = []
-    for element, label, unit in CLIMATE_ELEMENTS:
+    for element, label, unit, column in CLIMATE_ELEMENTS:
         for month in range(1, 13):
             value = values.get((element, month))
             name = f"{MONTHS[month - 1]}: {label}"
+            table = place("Aylık normaller", MONTHS[month - 1], column, head="Ay")
             if value is None or value["value"] is None:
-                rows.append(missing(name, "Bu ay ve değişken için normal değeri yok.", scope=scope))
+                rows.append(missing(name, "Bu ay ve değişken için normal değeri yok.", scope=scope, table=table))
                 continue
-            metric = (f"{number(f_to_c(value['value']), 1)} °C" if unit == "°F" else f"{number(value['value'] * 25.4, 0)} mm" if unit == "inç" else None)
+            metric = (converted(f_to_c(value["value"]), 1, "°C") if unit == "°F" else converted(value["value"] * 25.4, 0, "mm") if unit == "inç" else None)
             rows.append(row(name, round(value["value"], 2), unit, scope=scope, source=source_of(run), usage=USAGE["climate"], metric=metric,
-                            sample=value.get("years"), note=f"NCEI tamlık işareti: {value.get('completeness_flag') or '—'}."))
+                            sample=value.get("years"), note=f"NCEI tamlık işareti: {value.get('completeness_flag') or '—'}.", table=table))
     return rows
 
 
@@ -328,13 +408,16 @@ def sea_water(data, spec):
     for month in range(1, 13):
         value = months.get(month)
         name = f"{MONTHS[month - 1]}: aylık ortalama deniz suyu sıcaklığı"
+        table = place("Deniz suyu", MONTHS[month - 1], "Aylık ortalama", head="Ay")
         if not value or value.get("mean_c") is None:
-            rows.append(missing(name, "Bu ay için yeterli gün sayısı olan yıl yok.", scope=scope))
+            rows.append(missing(name, "Bu ay için yeterli gün sayısı olan yıl yok.", scope=scope, table=table))
             continue
         fahrenheit = value["mean_c"] * 9 / 5 + 32
-        rows.append(row(name, round(fahrenheit, 1), "°F", scope=f"{scope}; {value['first_year']}–{value['last_year']}", source=source_of(run),
-                        label="bizim hesabımız", sample=value["years_used"], usage=USAGE["water"], metric=f"{number(value['mean_c'], 1)} °C",
-                        note=f"{value['years_used']} yılın ortalaması; {value.get('excluded_year_months', 0)} yıl-ay yetersiz gün sayısı nedeniyle dışarıda."))
+        rows.append(row(name, round(fahrenheit, 1), "°F", scope=scope, source=source_of(run),
+                        label="bizim hesabımız", sample=value["years_used"], usage=USAGE["water"], metric=converted(value["mean_c"], 1, "°C"),
+                        note=f"{value['first_year']}–{value['last_year']} arasındaki {value['years_used']} yılın ortalaması; "
+                             f"{value.get('excluded_year_months', 0)} yıl-ay yetersiz gün sayısı nedeniyle dışarıda.",
+                        table=table))
     return rows
 
 
@@ -355,11 +438,14 @@ def storms(data, spec):
     by_month = Counter(p["first_entry_month"] for p in hurricanes.values())
     for month in sorted(by_month):
         rows.append(row(f"{MONTHS[month - 1]}: daireye ilk girişi bu ayda olan kasırga gücündeki fırtına sayısı", by_month[month], "fırtına",
-                        scope=scope, source=source, label="bizim hesabımız", usage=USAGE["storms"]))
+                        scope=scope, source=source, label="bizim hesabımız", usage=USAGE["storms"],
+                        table=place("Kasırga gücündeki fırtınalar, daireye ilk giriş ayına göre", MONTHS[month - 1], "Fırtına", head="Ay")))
     for storm in sorted(hurricanes.values(), key=lambda p: p["season"]):
-        rows.append(row(f"{storm['name'].title()} ({storm['season']}): koridora en yakın geçiş", round(storm["closest_nmi"], 1), "deniz mili",
-                        scope=scope, source=source, label="bizim hesabımız", usage=USAGE["storms"], metric=f"{number(storm['closest_km'], 1)} km",
-                        note=f"Daire içindeki en yüksek rüzgâr {storm['max_wind_kt']} knot; sınıf {snapshot['class_labels'].get(storm['storm_class'], storm['storm_class'])}."))
+        name = f"{storm['name'].title()} ({storm['season']})"
+        rows.append(row(f"{name}: koridora en yakın geçiş", round(storm["closest_nmi"], 1), "deniz mili",
+                        scope=scope, source=source, label="bizim hesabımız", usage=USAGE["storms"], metric=converted(storm["closest_km"], 1, "km"),
+                        note=f"Daire içindeki en yüksek rüzgâr {storm['max_wind_kt']} knot; sınıf {snapshot['class_labels'].get(storm['storm_class'], storm['storm_class'])}.",
+                        table=place("Kasırga gücündeki fırtınalar", name, "Koridora en yakın geçiş", head="Fırtına")))
     return rows
 
 
@@ -391,7 +477,8 @@ def tdt_season(data, spec):
         values = shares.get(month, [])
         rows.append(row(f"{MONTHS[month - 1]}: ayın mali yıl tahsilatı içindeki payı (yıllar ortalaması)", round(statistics.mean(values), 1), "%",
                         scope=scope, source=source, label="bizim hesabımız", sample=len(values), usage=USAGE["tdt"],
-                        note="Ay, Clerk tablosundaki dönem ayıdır (tahsilat bir sonraki ay alınır); %2 payından hesaplandı."))
+                        note="Ay, Clerk tablosundaki dönem ayıdır (tahsilat bir sonraki ay alınır); %2 payından hesaplandı.",
+                        table=place("Ayın mali yıl tahsilatındaki payı", MONTHS[month - 1], "Pay", head="Ay")))
     return rows
 
 
@@ -436,19 +523,36 @@ def lodging_inventory(data, spec):
         for window in windows_of(summary, spec):
             cell = cells.get((region, window["window_key"]))
             label = f"{name} · {window['label']}"
+            short = month_short(window["month"])
+            table = place(f"Görünen ilan sayısı ({searched} araması)", name, short)
             if not cell or cell["status"] != "searched":
-                rows.append(missing(f"{label}: görünen ilan sayısı", "Bu pencere için arama yapılamadı.", scope=name))
+                rows.append(missing(f"{label}: görünen ilan sayısı", "Bu pencere için arama yapılamadı.", scope=name, table=table))
                 continue
             rows.append(row(f"{label}: {searched} tarihli Book>Direct aramasında görünen ilan sayısı", cell["listing_count"], "ilan", scope=name,
-                            source=source, usage=USAGE["lodging_inventory"], note=summary["label"]))
+                            source=source, usage=USAGE["lodging_inventory"], note=summary["label"], table=table))
             if spec.get("detail"):
+                detail = f"Tür ve oda dağılımı ({window['label']})"
                 for category, count in sorted(cell["categories"].items()):
                     rows.append(row(f"{label}: '{category}' türündeki ilan sayısı", count, "ilan", scope=name, source=source,
-                                    usage=USAGE["lodging_inventory"]))
+                                    usage=USAGE["lodging_inventory"], note=summary["label"], table=place(detail, name, category)))
                 for bucket, count in cell["bedroom_buckets"].items():
+                    column = bucket if bucket == "stüdyo" else f"{bucket} oda"
                     rows.append(row(f"{label}: {bucket}{'' if bucket == 'stüdyo' else ' yatak odalı'} ilan sayısı", count, "ilan", scope=name,
-                                    source=source, usage=USAGE["lodging_inventory"], sample=cell["bedrooms_known"]))
+                                    source=source, usage=USAGE["lodging_inventory"], sample=cell["bedrooms_known"], note=summary["label"],
+                                    table=place(detail, name, column)))
     return rows
+
+
+def tax_sentence(summary):
+    """The share of priced totals that include the site's taxes and fees, computed from the run (GÖREV-12, M11)."""
+    counts = summary.get("total_counts") or {}
+    priced, taxed = counts.get("priced") or 0, counts.get("taxed") or 0
+    if not priced:
+        return "Fiyat alınamadı."
+    if taxed == priced:
+        return "Fiyatların tamamında sitenin gösterdiği toplam vergileri ve ücretleri içeriyor."
+    share = round(taxed / priced * 100)
+    return f"Fiyatların %{share}{percent_locative(share)} sitenin gösterdiği toplam vergileri ve ücretleri içeriyor; kalanında sitenin toplamı kalemlerle doğrulanamadı."
 
 
 def lodging_prices(data, spec):
@@ -458,30 +562,32 @@ def lodging_prices(data, spec):
     queried = summary["snapshot"]["queried_on"]
     source = source_of(run)
     cells = {(c["region_id"], c["window_key"]): c for c in summary["cells"]}
-    small = int(spec.get("small_sample", 20))      # our small-sample threshold per window (M11)
+    small = int(spec.get("small_sample", SMALL_SAMPLE))
+    note = (f"Kiralama şirketlerinin kendi sitelerinde {queried} tarihinde sorgulanan 7 gecelik toplam fiyatlar. {tax_sentence(summary)} "
+            "\"Kendi envanteri\" satırlarında fiyatlar tek bir şirketin Book>Direct'te olmayan evlerinden; Book>Direct ilanlarıyla karşılaştırılmaz.")
+    title = "7 gecelik toplam fiyat ortancası"
+    unit = "USD (7 gece)"
     rows = []
     for region in data.region_ids(spec):
         name = data.names.get(region, region)
+        own_only = any(cells.get((region, w["window_key"]), {}).get("own", {}).get("priced_count") for w in summary["windows"]) and not any(
+            cells.get((region, w["window_key"]), {}).get("priced_count") for w in summary["windows"])
+        row_label = f"{name} (kendi envanteri)" if own_only else name
         for window in windows_of(summary, spec):
             cell = cells.get((region, window["window_key"]))
             label = f"{name} · {window['label']}"
-            if cell and cell["priced_count"]:
-                note = summary["label"]
-                if cell["priced_count"] < small:
-                    note = f"Küçük örnek ({cell['priced_count']} ilan); mahalle karşılaştırmasında kullanılmaz. {note}"
-                rows.append(row(f"{label}: kiralama şirketlerinin sitelerinde {queried} tarihinde sorulan 7 gecelik toplam fiyatın ortancası "
-                                f"(çeyrekler ${number(cell['total_q1'])}–${number(cell['total_q3'])})", round(cell["total_median"]), "USD (7 gece)",
-                                scope=name, source=source, label="bizim hesabımız", sample=cell["priced_count"], usage=USAGE["lodging_prices"],
-                                note=note))
-            elif cell and cell["own"]["priced_count"]:
-                own = cell["own"]
-                rows.append(row(f"{label}: şirketin kendi envanterinden (Book>Direct'te olmayan evler) 7 gecelik toplam fiyatın ortancası "
-                                f"(çeyrekler ${number(own['total_q1'])}–${number(own['total_q3'])})", round(own["total_median"]), "USD (7 gece)",
-                                scope=name, source=source, label="bizim hesabımız", sample=own["priced_count"], usage=USAGE["lodging_prices"],
-                                note="Bu mahallenin fiyatları tek bir şirketin kendi envanterinden; Book>Direct ilanlarıyla karşılaştırılmaz. " + summary["source_note"]))
-            else:
+            table = place(title, row_label, month_short(window["month"]))
+            stats = cell if cell and cell["priced_count"] else (cell or {}).get("own") if cell and cell["own"]["priced_count"] else None
+            if not stats:
                 rows.append(missing(f"{label}: 7 gecelik toplam fiyat ortancası", "Bu hücrede fiyatı okunan ilan yok.", scope=name,
-                                    usage=USAGE["lodging_prices"]))
+                                    usage=USAGE["lodging_prices"], table=table))
+                continue
+            own = stats is not cell
+            what = "şirketin kendi envanterinden (Book>Direct'te olmayan evler)" if own else f"kiralama şirketlerinin sitelerinde {queried} tarihinde sorulan"
+            rows.append(row(f"{label}: {what} 7 gecelik toplam fiyatın ortancası (çeyrekler ${number(stats['total_q1'])}–${number(stats['total_q3'])})",
+                            round(stats["total_median"]), unit, scope=name, source=source, label="bizim hesabımız", sample=stats["priced_count"],
+                            usage=USAGE["lodging_prices"], note=note, small=stats["priced_count"] < small, table=table,
+                            extras=[extra("alt_ceyrek", round(stats["total_q1"]), unit), extra("ust_ceyrek", round(stats["total_q3"]), unit)]))
     return rows
 
 
@@ -491,22 +597,26 @@ def lodging_bedrooms(data, spec):
         return [missing("Oda gruplarına göre fiyat", "Kiralama şirketleri fiyat çekimi yok.", scope="30A")]
     source = source_of(run)
     cells = {(c["region_id"], c["window_key"]): c for c in summary["cells"]}
+    title = "Oda grubuna göre 7 gecelik toplam fiyat ortancası"
     rows = []
     for region in data.region_ids(spec):
         name = data.names.get(region, region)
         for window in windows_of(summary, spec):
             cell = cells.get((region, window["window_key"]))
+            short = month_short(window["month"])
             for group, stats in (cell or {}).get("bedrooms", {}).items():
                 label = f"{name} · {window['label']} · {group} yatak odası"
+                table = place(title, name, f"{short} · {group} oda")
                 if not stats["count"]:
                     reason = ("Bu mahallenin fiyatları şirketin kendi envanterinden; oda grubu kırılımı yalnız Book>Direct ilanları için var."
                               if not cell["priced_count"] and cell["own"]["priced_count"] else "Bu oda grubunda fiyatı okunan ilan yok.")
-                    rows.append(missing(f"{label}: 7 gecelik toplam fiyat ortancası", reason, scope=name))
+                    rows.append(missing(f"{label}: 7 gecelik toplam fiyat ortancası", reason, scope=name, table=table))
                     continue
                 rows.append(row(f"{label}: 7 gecelik toplam fiyatın ortancası", round(stats["median"]), "USD (7 gece)", scope=name, source=source,
-                                label="bizim hesabımız", sample=stats["count"], usage=USAGE["lodging_prices"], note=summary["bedroom_note"]))
+                                label="bizim hesabımız", sample=stats["count"], usage=USAGE["lodging_prices"], note=summary["bedroom_note"], table=table))
             if not cell:
-                rows.append(missing(f"{name} · {window['label']}: oda gruplarına göre fiyat", "Bu hücre yok.", scope=name))
+                rows.append(missing(f"{name} · {window['label']}: oda gruplarına göre fiyat", "Bu hücre yok.", scope=name,
+                                    table=place(title, name, f"{short} · tüm gruplar")))
     return rows
 
 
@@ -524,6 +634,7 @@ def restaurant_summary(data):
 
 RESERVATION = {"online": "çevrimiçi rezervasyon bağlantısı var", "phone": "telefonla rezervasyon", "not_taken": "rezervasyon almıyor",
                "unknown": "sitede bilgi yok"}
+LEVELS = ("$", "$$", "$$$", "$$$$")
 
 
 def restaurants(data, spec):
@@ -532,37 +643,58 @@ def restaurants(data, spec):
         return [missing("Restoranlar", "İşletme siteleri çekimi yok.", scope="30A")]
     source = source_of(run)
     regions = {r["region_id"]: r for r in summary["regions"]}
+    overview = "Mahalle özeti"
     rows = []
     for region in data.region_ids(spec):
         name = data.names.get(region, region)
         info = regions.get(region)
         if not info or not info["restaurant_count"]:
-            rows.append(missing(f"{name}: restoranlar", "Visit South Walton restoran dizininde bu mahalleye bağlı restoran yok.", scope=name))
+            rows.append(missing(f"{name}: restoranlar", "Visit South Walton restoran dizininde bu mahalleye bağlı restoran yok.", scope=name,
+                                table=place(overview, name, "Restoran")))
             continue
         rows.append(row(f"{name}: Visit South Walton restoran dizininde bu mahalleye bağlı restoran sayısı", info["restaurant_count"], "restoran",
-                        scope=name, source=source, usage=USAGE["restaurants"]))
+                        scope=name, source=source, usage=USAGE["restaurants"], table=place(overview, name, "Restoran")))
         levels = info["levels"]
-        rows.append(row(f"{name}: fiyat seviyesi hesaplanabilen restoran sayısı ($ {levels['$']}, $$ {levels['$$']}, $$$ {levels['$$$']}, "
-                        f"$$$$ {levels['$$$$']})", sum(levels.values()), "restoran", scope=name, source=source, label="bizim hesabımız",
-                        usage=USAGE["restaurants"], note=summary["level_note"]))
+        rows.append(row(f"{name}: fiyat seviyesi hesaplanabilen restoran sayısı", sum(levels.values()), "restoran", scope=name, source=source,
+                        label="bizim hesabımız", usage=USAGE["restaurants"], note=summary["level_note"], table=place(overview, name, "Seviyeli")))
+        for level in LEVELS:
+            rows.append(row(f"{name}: bizim sınıflamamıza göre '{level}' seviyesindeki restoran sayısı", levels.get(level, 0), "restoran", scope=name,
+                            source=source, label="bizim hesabımız", usage=USAGE["restaurants"], note=summary["level_note"],
+                            table=place(overview, name, level)))
         rows.append(row(f"{name}: sitesinde çevrimiçi rezervasyon bağlantısı bulunan restoran sayısı", info["online_reservation"], "restoran",
-                        scope=name, source=source, usage=USAGE["restaurants"]))
+                        scope=name, source=source, usage=USAGE["restaurants"], table=place(overview, name, "Çevrimiçi rezervasyon")))
         rows.append(row(f"{name}: sitesinde çocuk menüsü yayımlayan restoran sayısı", info["kids_menu"], "restoran", scope=name, source=source,
-                        usage=USAGE["restaurants"]))
-        if spec.get("list"):
-            for item in sorted((r for r in summary["restaurants"] if region in r["regions"]), key=lambda r: r["name"]):
-                with data.db.connect() as con:
-                    detail = restaurant_sites.restaurant_detail(con, run["id"], item["external_id"])
-                hours = ((detail or {}).get("facts") or {}).get("hours") or {}
-                parts = [f"seviye {item['price_level']} (bizim sınıflamamız)" if item.get("price_level") else "seviye hesaplanmadı",
-                         RESERVATION.get(item.get("reservation"), item.get("reservation") or "rezervasyon bilgisi yok"),
-                         "çocuk menüsü sitede var" if item.get("kids_menu") == "yes" else "çocuk menüsü sitede bulunamadı",
-                         f"saatler: {hours['detail']}" if hours.get("detail") else "saatler sitede bulunamadı"]
+                        usage=USAGE["restaurants"], table=place(overview, name, "Çocuk menüsü")))
+    listing = spec.get("list")
+    if listing:
+        leveled = listing == "seviyeli"
+        title = "Fiyat seviyesi olan restoranlar" if leveled else "Restoranlar"
+        for region in data.region_ids(spec):
+            name = data.names.get(region, region)
+            items = sorted((r for r in summary["restaurants"] if region in r["regions"] and (not leveled or r.get("price_level"))),
+                           key=lambda r: r["name"])
+            for item in items:
+                hours = {}
+                if not leveled:
+                    with data.db.connect() as con:
+                        detail = restaurant_sites.restaurant_detail(con, run["id"], item["external_id"])
+                    hours = ((detail or {}).get("facts") or {}).get("hours") or {}
+                level_text = item["price_level"] if item.get("price_level") else "hesaplanmadı"
+                reservation = RESERVATION.get(item.get("reservation"), item.get("reservation") or "rezervasyon bilgisi yok")
+                kids = "sitede var" if item.get("kids_menu") == "yes" else "sitede bulunamadı"
+                parts = [f"seviye {item['price_level']} (bizim sınıflamamız)" if item.get("price_level") else "seviye hesaplanmadı"]
+                cells = {"Mahalle": name} if not spec.get("region") else {}
+                cells["Seviye"] = level_text
+                if not leveled:
+                    parts += [reservation, "çocuk menüsü sitede var" if item.get("kids_menu") == "yes" else "çocuk menüsü sitede bulunamadı",
+                              f"saatler: {hours['detail']}" if hours.get("detail") else "saatler sitede bulunamadı"]
+                    cells.update({"Rezervasyon": reservation, "Çocuk menüsü": kids, "Saatler": hours.get("detail") or "sitede bulunamadı"})
                 median = (item.get("main") or {}).get("median")
                 rows.append(row(f"{item['name']}: " + "; ".join(parts), median, "USD (ana yemek ortancası)" if median else None, scope=name,
                                 source=source_of(run, url=item.get("site_url")), label="bizim hesabımız" if median else "kaynak gerçeği",
                                 sample=(item.get("main") or {}).get("count") or None, usage=USAGE["restaurants"],
-                                note=item.get("level_reason") or (f"Site durumu: {item['site_status']}" if item.get("site_status") != "working" else None)))
+                                note=item.get("level_reason") or (f"Site durumu: {item['site_status']}" if item.get("site_status") != "working" else None),
+                                table=place(title, item["name"], "Ana yemek ortancası", cells, head="Restoran")))
     return rows
 
 
@@ -582,33 +714,39 @@ def daily_needs_block(data, spec):
     wanted = spec.get("categories") or list(labels)
     source = source_of(run)
     regions = {r["region_id"]: r for r in summary["regions"]}
+    note = f"{summary['note']} {summary['beach_note']}"
+    title = "Kuş uçuşu mesafe ortancası (mil)"
     rows = []
     for region in data.region_ids(spec):
         name = data.names.get(region, region)
         info = regions.get(region)
         for key in wanted:
             label = labels.get(key)
+            table = place(title, name, label or key)
             if label is None:
-                rows.append(missing(f"{name}: en yakın '{key}' mesafesi", "Bu çekimde bu kategori yok (kategori ayrımından önceki çekim).", scope=name))
+                rows.append(missing(f"{name}: en yakın '{key}' mesafesi", "Bu çekimde bu kategori yok (kategori ayrımından önceki çekim).", scope=name,
+                                    table=table))
                 continue
             measure = (info or {}).get("measures", {}).get(key)
             if not measure or measure["median_mi"] is None:
                 rows.append(missing(f"{name}: en yakın {label.lower()} için kuş uçuşu mesafe ortancası", "Bu mahallede ölçülen ilan ya da nokta yok.",
-                                    scope=name, usage=USAGE["daily_needs"]))
+                                    scope=name, usage=USAGE["daily_needs"], table=table))
                 continue
-            share = measure["within_1mi_share"]
-            rows.append(row(f"{name}: ilanların en yakın {label.lower()} noktasına kuş uçuşu mesafe ortancası (ilanların %{number(share * 100, 0)}'i "
+            share = round(measure["within_1mi_share"] * 100)
+            rows.append(row(f"{name}: ilanların en yakın {label.lower()} noktasına kuş uçuşu mesafe ortancası (ilanların %{number(share, 0)}'i "
                             f"1 mil içinde)", measure["median_mi"], "mil", scope=name, source=source, label="bizim hesabımız",
-                            sample=measure["count"], usage=USAGE["daily_needs"], metric=f"{number(measure['median_km'], 2)} km",
-                            note=summary["note"] + (f" {summary['beach_note']}" if key == "beach" else "")))
+                            sample=measure["count"], usage=USAGE["daily_needs"], metric=converted(measure["median_km"], 2, "km"),
+                            note=note, table=table, extras=[extra("pay", share, "% (1 mil içinde)")]))
     for key in spec.get("list_points") or []:
         points = [p for p in summary["points"] if p["category_key"] == key]
         if not points:
             rows.append(missing(f"{labels.get(key, key)}: nokta listesi", "Bu çekimde bu kategoride nokta yok.", scope="bölge kutusu"))
         for point in sorted(points, key=lambda p: p["name"] or ""):
             rows.append(row(f"{labels.get(key, key)}: {point['name'] or 'adı yok'}" + (f", {point['address']}" if point.get("address") else ""),
-                            scope="bölge kutusu", source=source_of(run, name=point["source"], url=point.get("source_url")),
-                            usage=USAGE["daily_needs"], note=point.get("note")))
+                            scope="bölge kutusu", source=source_of(run, name=f"Acil sağlık noktaları · {point['source']}", url=point.get("source_url")),
+                            usage=USAGE["daily_needs"], note=point.get("note"),
+                            table=place("Acil sağlık noktaları", point["name"] or "adı yok",
+                                        cells={"Kategori": labels.get(key, key), "Adres": point.get("address") or "—", "Kaynak": point["source"]}, head="Yer")))
     return rows
 
 
@@ -620,27 +758,31 @@ def traffic(data, spec):
         return [missing("Trafik sayıları", "Bu destinasyonun trafik tablosu yok.", scope="—")]
     with open(path, encoding="utf-8-sig", newline="") as handle:
         table = list(csv.DictReader(handle))
-    categories, kinds = spec.get("categories"), spec.get("kinds") or ["aadt", "season"]
+    categories, kinds = spec.get("categories"), set(spec.get("kinds") or ["aadt", "season"])
     rows = []
     for item in table:
-        if (item["tur"] == "AADT") != ("aadt" in kinds) and not ("aadt" in kinds and "season" in kinds):
-            continue
-        if item["tur"] != "AADT" and categories and item["kategori"].split()[0] not in categories:
+        kind = "aadt" if item["tur"] == "AADT" else "season"
+        if kind not in kinds or kind == "season" and categories and item["kategori"].split()[0] not in categories:
             continue
         source = {"ad": item["kaynak_adi"], "sahibi": item["kaynak_sahibi"], "url": item["kaynak_url"], "belge_tarihi": item["belge_tarihi"] or None,
                   "erisim_tarihi": item["erisim_tarihi"], "cekim_kimligi": None, "sha256": item["belge_sha256"], "referans": item["id"]}
-        if item["tur"] == "AADT":
+        if kind == "aadt":
             statement = f"{item['yol']}, sayım noktası {item['sayim_noktasi']} ({item['aciklama']}): {item['yil']} yıllık ortalama günlük trafik"
             rows.append(row(statement, int(item["deger"]), "araç/gün (iki yön)", scope=item["yol"], source=source, label=item["etiket"],
-                            usage=USAGE["traffic"], note=item["not"]))
+                            usage=USAGE["traffic"], note=item["not"],
+                            table=place(f"{item['yil']} yıllık ortalama günlük trafik (AADT, iki yön)", f"{item['yol']} · {item['sayim_noktasi']}", "AADT",
+                                        {"Yer": item["aciklama"]}, head="Yol · sayım noktası")))
         elif item["ay"]:
             month = int(item["ay"])
             statement = f"{item['aciklama']} · {MONTHS[month - 1]}: trafiğin yıllık ortalamaya oranı ({item['yil']} haftalık faktörlerden)"
             rows.append(row(statement, float(item["deger"]), "oran", scope="Walton County", source=source, label=item["etiket"],
-                            usage=USAGE["traffic"], note=item["not"]))
+                            usage=USAGE["traffic"], note=item["not"],
+                            table=place(f"Trafiğin yıllık ortalamaya oranı ({item['yil']})", item["aciklama"], MONTHS_SHORT[month - 1], head="Kategori")))
         else:
+            start, _, end = item["deger"].partition(" – ")
             rows.append(row(f"{item['aciklama']}: FDOT'un yoğun sezon (peak season) haftaları {item['deger']}", scope="Walton County",
-                            source=source, label=item["etiket"], usage=USAGE["traffic"], note=item["not"]))
+                            source=source, label=item["etiket"], usage=USAGE["traffic"], note=item["not"],
+                            extras=[extra("aralik_alt", start.strip(), "tarih"), extra("aralik_ust", end.strip(), "tarih")] if end else None))
     return rows
 
 
