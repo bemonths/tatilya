@@ -158,6 +158,9 @@ Kanıt paketi Türkçe ifade istediği için tablonun her satırının Türkçe 
    - **Önce/sonra:** sürüm 13 → 14; `integrity_check` ok → ok; `foreign_key_check` boş → boş. Değişen tablolar: `destination_poi_categories` 5 → 7, `evidence_packs` 0 → 2, `jobs` 31 → 33, `source_runs` 28 → 30, `poi_snapshots` 1 → 2, `poi_points` 44 → 91, `poi_chain_checks` 10 → 31. Diğer bütün tablolar aynı. (`gercek-veritabani-once-sonra.json`)
 4. **Belgeler:** CALISMA_MANTIGI.md, README.md, DEVIR/05 ve 02 güncel durum satırları, M7, M9, M11, M13 güncellendi; M14 yeni.
 5. **Testler:** 716 Python testi ve 59 arayüz testi; tam takım art arda 3 kez geçti (önce 692 + 57).
+6. **Görev dalı CI:** `d57c43f` için çalıştırma 38054445589 başarılı.
+
+Not: Görev klasöründeki iki paket dosyası `data/evidence/` altındakilerin bayt bayt kopyasıdır (SHA-256'ları `gercek-veritabani-once-sonra.json` içinde); Windows'ta git satır sonlarını değiştirerek çekerse kopyanın SHA-256'sı farklı görünebilir, `data/evidence/` altındaki asıl dosyalar kayıtla eşleşir.
 
 ## Beklenmedik durumlar
 
