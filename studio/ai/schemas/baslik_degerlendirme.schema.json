@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kullanıcının başlığını değerlendirme (baslik_degerlendirme.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surum",
+    "adim",
+    "notlar",
+    "kullanici_fikri",
+    "doluluk",
+    "sorunlar",
+    "adaylar"
+  ],
+  "properties": {
+    "surum": {
+      "const": 1
+    },
+    "adim": {
+      "const": "baslik_degerlendirme"
+    },
+    "notlar": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "kullanici_fikri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "doluluk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dolar_mi",
+        "aciklama",
+        "eksik_veri"
+      ],
+      "properties": {
+        "dolar_mi": {
+          "type": "boolean"
+        },
+        "aciklama": {
+          "type": "string",
+          "minLength": 1
+        },
+        "eksik_veri": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "sorunlar": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "adaylar": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/aday"
+      }
+    }
+  },
+  "$defs": {
+    "bolge": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kanit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dosya",
+        "kimlik"
+      ],
+      "properties": {
+        "dosya": {
+          "type": "string",
+          "enum": [
+            "veri_ozeti_30a.md",
+            "veri_ozeti_mahalle.md"
+          ]
+        },
+        "kimlik": {
+          "type": "string",
+          "pattern": "^K[0-9]{4}$"
+        }
+      }
+    },
+    "aday": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baslik_en",
+        "baslik_tr",
+        "bolge",
+        "aile",
+        "neden_onerildi",
+        "izleyici_sorusu",
+        "kanca",
+        "icerik_plani",
+        "eksik_veri",
+        "sablon",
+        "parametreler",
+        "yeni_sablon_gerekir",
+        "kapak_fikri"
+      ],
+      "properties": {
+        "baslik_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baslik_tr": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bolge": {
+          "$ref": "#/$defs/bolge"
+        },
+        "aile": {
+          "$ref": "#/$defs/aile"
+        },
+        "neden_onerildi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "izleyici_sorusu": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kanca": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "metin",
+            "kanitlar"
+          ],
+          "properties": {
+            "metin": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kanitlar": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/kanit"
+              }
+            }
+          }
+        },
+        "icerik_plani": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bolum",
+              "ne_anlatir",
+              "kanitlar"
+            ],
+            "properties": {
+              "bolum": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ne_anlatir": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kanitlar": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/kanit"
+                }
+              }
+            }
+          }
+        },
+        "eksik_veri": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sablon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parametreler": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "yeni_sablon_gerekir": {
+          "type": "boolean"
+        },
+        "kapak_fikri": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

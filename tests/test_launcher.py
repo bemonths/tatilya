@@ -594,3 +594,38 @@ def test_serve_reports_port_in_use(data_dir: Path, root_handlers) -> None:
             launcher.serve(data_dir, port, window=True, watchdog=False,
                            opener=lambda url: pytest.fail("pencere açıldı"))
     assert not (data_dir / "calisiyor.json").exists()
+
+
+def test_a_caught_ctrl_c_is_not_raised_again_after_shutdown() -> None:
+    """uvicorn raises a caught signal again after its graceful shutdown; that ended the process before the lock was removed."""
+    import signal
+
+    server = launcher.studio_server(launcher.server_config(object(), 8830))
+    with server.capture_signals():
+        server._captured_signals.append(signal.SIGINT)
+    assert server._captured_signals == []
+
+
+@windows_only
+def test_the_command_line_stops_cleanly_on_ctrl_break(tmp_path: Path) -> None:
+    """The trial command (`--no-browser`) ends on Ctrl+Break with its lock removed and "Program kapandı" in the log."""
+    import signal
+
+    data = tmp_path / "veri"
+    port = free_port()
+    process = subprocess.Popen([sys.executable, "-X", "utf8", "-m", "studio", "--data-dir", str(data), "--no-browser", "--port", str(port)],
+                               cwd=install_stamp.repo_root(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    try:
+        deadline = time.monotonic() + 60
+        while launcher.instance_health(port, timeout=0.5) is None:
+            assert process.poll() is None and time.monotonic() < deadline, "Program başlamadı."
+            time.sleep(0.2)
+        assert launcher.read_lock(data / "calisiyor.json")["port"] == port
+        process.send_signal(signal.CTRL_BREAK_EVENT)
+        assert process.wait(timeout=30) == 0
+    finally:
+        if process.poll() is None:
+            process.kill()
+    assert not (data / "calisiyor.json").exists()
+    assert "Program kapandı." in (data / "gunluk" / "uygulama.log").read_text(encoding="utf-8")

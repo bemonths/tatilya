@@ -701,6 +701,11 @@ test('a pack lists its neighborhood by name whichever template is selected (GÖR
 import {regionOptions, familyOptions, warnings, runRow, candidateList, candidateDetail, videoCard} from '../studio/web/videos.js';
 import {claudeSection} from '../studio/web/claude.js';
 import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask} from '../studio/web/workflow.js';
+import {usageHtml, claudeProgress, progressText as claudeProgressText, durationText, claudeBar} from '../studio/web/usage.js';
+import {editorHtml, versionRows, fileButtons} from '../studio/web/instructions.js';
+import {suffixSection} from '../studio/web/claude.js';
+import {instructionLine} from '../studio/web/videos.js';
+import {editProblems, editForm, reviewSummary, runRow as videoRunRow, videoCard as videoCardOf} from '../studio/web/videos.js';
 
 const titleOptions={available:true,whole_region:'30A geneli',regions:[{id:'rosemary-beach',name:'Rosemary Beach'}],families:['Genel planlama','Deneyim'],all_families:'hepsi',
   claude:{found:true,api_key_warning:null}};
@@ -781,4 +786,90 @@ test('workflow: ADIMLAR shows each step with its live status, VERİ the tool scr
   const line=nextTask(flow.steps[1]);
   assert.match(line,/Sıradaki iş.*Başlık seçilmedi: onay bekleyen öneriden bir başlık seç ya da yeni öneri al\..*onay bekliyor.*1 çalışma onay bekliyor/s);
   assert.equal(nextTask(null),'');
+});
+
+// GÖREV-14 Adım 4: usage panel, Claude progress bar, instruction editor, title suffix, the run's instruction versions.
+
+test('usage panel: no measurement, a fresh one, an old one and this week', () => {
+  assert.match(usageHtml({measured:false,week:{count:0,total_s:0}}),/CLAUDE KULLANIMI.*Yenile.*henüz ölçüm yok.*Bu hafta 0 çalışma · 0 sn/s);
+  const view={measured:true,stale:false,measured_at:'2026-10-10T18:17:00+00:00',week:{count:3,total_s:842},
+    windows:{five_hour:{label:'5 saatlik',percent:44,resets_at:'2026-10-10T21:00:00+00:00',reset_passed:false},
+             seven_day:{label:'Haftalık',percent:82,resets_at:'2026-10-14T14:00:00+00:00',reset_passed:false}}};
+  const html=usageHtml(view);
+  assert.match(html,/5 saatlik<\/span><strong>%44<\/strong>.*width:44%.*sıfırlanma \d\d:\d\d.*Haftalık<\/span><strong>%82.*usage-bar high.*sıfırlanma \S+ \d\d:\d\d.*son ölçüm \d\d:\d\d.*Bu hafta 3 çalışma · 14 dk 2 sn/s);
+  assert.ok(!html.includes('eski ölçüm'));
+  assert.match(usageHtml({...view,stale:true}),/usage-body stale.*eski ölçüm/s);
+  assert.match(usageHtml({...view,windows:{...view.windows,five_hour:{...view.windows.five_hour,reset_passed:true,percent:null}}}),/5 saatlik<\/span><strong>sıfırlandı/);
+  assert.match(usageHtml(view,true,'Kullanım yenilendi.'),/disabled>Yenileniyor….*Kullanım yenilendi\./s);
+  assert.equal(durationText(45),'45 sn');assert.equal(durationText(372),'6 dk 12 sn');assert.equal(durationText(3900),'1 sa 5 dk');assert.equal(durationText(null),'—');
+});
+
+test('Claude bar: inputs, Claude by time over the expected duration, validation, finished; collector jobs keep their own bar', () => {
+  const start=Date.parse('2026-10-10T18:00:00Z');
+  const job={id:'j1',status:'running',progress:10,created_at:'2026-10-10T18:00:00Z',
+    progress_info:{tur:'claude',asama:'claude',baslangic:'2026-10-10T18:00:00Z',claude_baslangic:'2026-10-10T18:00:20Z',beklenen_s:400,dayanak:'önceki 3 başarılı çalışmanın ortancası (7 dk)'}};
+  const half=claudeProgress(job,start+220000);
+  assert.deepEqual([half.percent,Math.round(half.elapsed),Math.round(half.remaining),half.over],[50,220,200,false]);
+  assert.equal(claudeProgressText(half),'%50 · Claude çalışıyor · geçen 3 dk 40 sn · tahmini kalan ~3 dk 20 sn');
+  const late=claudeProgress(job,start+900000);
+  assert.equal(late.percent,90);assert.match(claudeProgressText(late),/%90 · Claude çalışıyor · geçen 15 dk · tahminden uzun sürüyor/);
+  assert.equal(claudeProgress({...job,progress:2,progress_info:{tur:'claude',asama:'girdiler',baslangic:'2026-10-10T18:00:00Z'}},start+3000).percent,2);
+  assert.equal(claudeProgress({...job,progress:92,progress_info:{...job.progress_info,asama:'dogrulama'}},start+500000).percent,92);
+  assert.equal(claudeProgress({...job,status:'done',progress:100},start).percent,100);
+  assert.equal(claudeProgress({id:'c',status:'running',progress:40,progress_info:null}),null);
+  assert.equal(claudeBar({id:'c',status:'running',progress:40}),'');
+  assert.match(claudeBar(job,start+220000),/data-progress-job="j1".*Tahmin: önceki 3 başarılı.*aria-valuenow="50".*width:50%.*%50 · Claude çalışıyor/s);
+});
+
+test('instruction editor: files, metadata, versions with going back; the run shows the versions it used; the suffix card', () => {
+  const files=[{key:'ortak',name:'ortak.md',kind:'talimat'},{key:'kanal_arastirmasi',name:'kanal_arastirmasi.md',kind:'bilgi'}];
+  assert.match(fileButtons(files,'ortak'),/data-instruction="ortak" aria-pressed="true".*kanal_arastirmasi\.md <span class="tag">bilgi<\/span>/s);
+  assert.match(versionRows([]),/önceki sürüm yok/);
+  const rows=versionRows([{id:'20261010-181700-000001',saved_at:'2026-10-10T18:17:00+00:00',sha256:'abcdef0123456789',size:2048}]);
+  assert.match(rows,/<code>abcdef01<\/code>.*2,0 KB.*data-version-view="20261010-181700-000001".*Bu sürüme dön/s);
+  const html=editorHtml({files,file:{key:'ortak',name:'ortak.md',title:'Ortak kurallar',sha256:'1234567890ab',modified_at:'2026-10-10T18:00:00+00:00',size:1024,text:'Kural <b>',versions:[]},message:'Kaydedildi.',viewing:null});
+  assert.match(html,/Tek kaynak depodaki dosyadır.*karma <code>12345678<\/code>.*Kural &lt;b&gt;<\/textarea>.*Kaydedildi\..*instruction-save.*instruction-reload/s);
+  const line=instructionLine({instruction_versions:[{name:'ortak.md',short:'1a2b3c4d',modified_at:'2026-10-10T18:00:00+00:00',current:true},{name:'baslik.md',short:'9f8e7d6c',modified_at:null,current:false}]});
+  assert.match(line,/Talimat sürümü: ortak\.md <code>1a2b3c4d<\/code> \(.+\) · baslik\.md <code>9f8e7d6c<\/code> <span class="tag warm">dosya o zamandan beri değişti/);
+  assert.equal(instructionLine({}),'');
+  assert.match(suffixSection({en:' | 30A Florida Vacation',tr:' | 30A Florida Tatili',defaults:{en:' | 30A Florida Vacation',tr:' | 30A Florida Tatili'}}),/data-suffix="en" value=" \| 30A Florida Vacation".*data-suffix="tr".*Başlangıç değerleri: İngilizce " \| 30A Florida Vacation"/s);
+});
+
+// GÖREV-14 Adım 5: own title evaluation and editing a title before choosing it.
+
+test('title edit: the same rules as the server, and "İngilizcesini Claude yazsın" only when the Turkish title alone changed', () => {
+  const suffix={en:' | 30A Florida Vacation',tr:' | 30A Florida Tatili'};
+  assert.deepEqual(editProblems('Rosemary with a dog | 30A Florida Vacation','Köpekle Rosemary | 30A Florida Tatili',suffix),[]);
+  assert.deepEqual(editProblems('Rosemary with a dog','Köpekle',suffix),['İngilizce başlık " | 30A Florida Vacation" ekiyle bitmiyor.','Türkçe karşılık " | 30A Florida Tatili" ekiyle bitmiyor.']);
+  assert.deepEqual(editProblems('x'.repeat(101),'y',{}),['İngilizce başlık 100 karakteri aşıyor (101 karakter).']);
+  const c={sira:2,baslik_en:'Rosemary Beach | 30A Florida Vacation',baslik_tr:'Rosemary Beach | 30A Florida Tatili'};
+  const same=editForm(c,{index:2,en:c.baslik_en,tr:c.baslik_tr},suffix);
+  assert.match(same,/id="edit-select" >.*id="edit-translate" hidden/s);
+  const turkish=editForm(c,{index:2,en:c.baslik_en,tr:'Köpekle Rosemary Beach | 30A Florida Tatili'},suffix);
+  assert.match(turkish,/id="edit-translate" >İngilizcesini Claude yazsın/);
+  const both=editForm(c,{index:2,en:'Dogs at Rosemary | 30A Florida Vacation',tr:'Köpekle Rosemary Beach | 30A Florida Tatili'},suffix);
+  assert.match(both,/id="edit-translate" hidden/);
+  assert.match(editForm(c,{index:2,en:'Dogs',tr:c.baslik_tr},suffix),/ekiyle bitmiyor.*id="edit-select" disabled/s);
+});
+
+test('evaluation: the summary comes first; runs and video records show what kind they are', () => {
+  const view={params:{bolge:'Rosemary Beach',kaynak:{baslik_en:'Old | 30A Florida Vacation'}},review:{kullanici_fikri:"Rosemary Beach'e köpeğimizle gitsek nasıl olur?",
+    doluluk:{dolar_mi:false,aciklama:'Mahalleye özgü kural yok.',eksik_veri:['Köpek kuralı']},sorunlar:['Ek yok.']}};
+  assert.match(reviewSummary(view),/Kullanıcının fikri:<\/strong> “Rosemary Beach&#39;e köpeğimizle gitsek nasıl olur\?”.*tag warm">Hayır.*Mahalleye özgü kural yok\..*Eksik veri:<\/strong> Köpek kuralı.*İfadedeki sorunlar:<\/strong> Ek yok\..*düzenlenen bir adaydan/s);
+  assert.equal(reviewSummary({}),'');
+  const row=videoRunRow({id:'r9',step:'baslik_degerlendirme',status:'awaiting_approval',created_at:'',params:{bolge:'Seaside',kullanici_basligi:'Seaside fikri',not:'Bu aday düzenlendi\nikinci satır',kaynak:{}},metrics:{}});
+  assert.match(row,/tag">değerlendirme<\/span>.*“Seaside fikri”.*düzenlenen adaydan · Bu aday düzenlendi</s);
+  assert.ok(!row.includes('ikinci satır'));
+  const video={id:'v1',title_en:'Edited | 30A Florida Vacation',title_tr:'Düzenli | 30A Florida Tatili',family:'Deneyim',region_name:'Seaside',status:'baslik_secildi',status_label:'başlık seçildi',created_at:'',template_key:'mahalle-rehberi',params:{},analysis:{},packs:[],
+    user_edited:true,proposed_title_en:'Proposed | 30A Florida Vacation',proposed_title_tr:'Önerilen | 30A Florida Tatili'};
+  assert.match(videoCardOf(video),/kullanıcı düzenledi.*Önerilen başlık: Proposed \| 30A Florida Vacation · Önerilen \| 30A Florida Tatili/s);
+  assert.ok(!videoCardOf({...video,user_edited:false}).includes('kullanıcı düzenledi'));
+});
+
+test('app.js imports every name once (a repeated import name stops the whole page)', () => {
+  const source=readFileSync(new URL('../studio/web/app.js', import.meta.url),'utf8');
+  const names=[...source.matchAll(/^import\s*\{([^}]*)\}\s*from/gm)].flatMap(m=>m[1].split(',').map(part=>part.trim().split(/\s+as\s+/).pop()).filter(Boolean));
+  const repeated=names.filter((name,index)=>names.indexOf(name)!==index);
+  assert.deepEqual(repeated,[]);
+  assert.ok(names.includes('claudeProgressText') && names.includes('progressText'));
 });

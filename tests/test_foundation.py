@@ -50,7 +50,7 @@ def test_v02_migration_preserves_all_user_data_and_raw_files(tmp_path):
     assert db.source_run("old-failed")["metadata"]["source_identity_unknown"]
     assert db.source_run("old-canceled")["status"] == "canceled"
     with db.connect() as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert [tuple(row) for row in con.execute("SELECT * FROM source_history")] == history_before
         assert tuple(con.execute("SELECT * FROM beach_records").fetchone()) == (*record_before, "Santa Rosa Beach", None)

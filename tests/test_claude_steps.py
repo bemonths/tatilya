@@ -80,7 +80,8 @@ def test_a_valid_proposal_waits_for_approval_with_its_inputs_record_and_markdown
     for path in ("studio/destinations/thirty_a_claude/ortak.md", "studio/destinations/thirty_a_claude/baslik.md", "studio/ai/schemas/baslik.schema.json"):
         assert hashes[path] == hashlib.sha256((Path(__file__).resolve().parents[1] / path).read_bytes()).hexdigest()
     assert record["talimat_surumu"]["birlesik_talimat"] == hashlib.sha256((folder(app, view) / "talimat.md").read_bytes()).hexdigest()
-    assert record["secim"] == {"bolge": "30A geneli", "bolge_id": None, "aile": "hepsi", "not": ""} and record["paketler"]["veri_ozeti_30a.md"]
+    assert record["secim"] == {"bolge": "30A geneli", "bolge_id": None, "aile": "hepsi", "not": "",
+                               "baslik_eki": {"en": " | 30A Florida Vacation", "tr": " | 30A Florida Tatili"}} and record["paketler"]["veri_ozeti_30a.md"]
     assert record["calisma_sonucu"]["session_id"] and record["calisma_sonucu"]["metrics"]["tokens"]["output"] == 800
     run = app.get("/api/claude/runs").json()[0]
     assert run["session_id"] and run["metrics"]["turns"] == 3 and run["model"] == "claude-opus-5-5" and run["effort"] == "high"
@@ -182,8 +183,9 @@ def test_previous_proposals_are_given_and_a_repeated_title_is_refused(app, monke
     second = start(app, bolge="Rosemary Beach")
     earlier = (folder(app, second) / "onceki_oneriler.md").read_text(encoding="utf-8")
     for candidate in first["candidates"]:
-        assert candidate["baslik_en"] in earlier
-    assert f"| {first['candidates'][2]['baslik_en']} | {first['candidates'][2]['baslik_tr']} | seçildi |" in earlier
+        assert candidate["baslik_en"].replace("|", "\\|") in earlier                   # table cells escape the suffix's bar
+    cell = lambda text: text.replace("|", "\\|")
+    assert f"| {cell(first['candidates'][2]['baslik_en'])} | {cell(first['candidates'][2]['baslik_tr'])} | seçildi |" in earlier
     assert second["general_problems"] == [] and all(not candidate_errors(second, c["sira"]) for c in second["candidates"])
     # an empty database's neighborhood summary has 'veri yok' rows: citing one is a warning, not an error
     assert {p["seviye"] for c in second["candidates"] for p in c["sorunlar"]} <= {"uyari"}
@@ -302,7 +304,11 @@ def test_one_claude_run_at_a_time_and_an_interrupted_run_becomes_an_error(app, m
 def test_v14_to_v15_adds_runs_videos_and_the_pack_link_and_keeps_rows(tmp_path):
     path = tmp_path / "studio.sqlite3"
     Database(path).initialize()
-    with sqlite3.connect(path) as con:       # a v14 file: without the v15 tables and column
+    with sqlite3.connect(path) as con:       # a v14 file: without the v15 tables and column (and the v16 additions)
+        con.execute("DROP TABLE claude_usage")
+        con.execute("DROP TABLE job_progress")
+        con.execute("ALTER TABLE browser_hosts DROP COLUMN method")
+        con.execute("ALTER TABLE browser_hosts DROP COLUMN method_at")
         con.execute("DROP INDEX videos_destination")
         con.execute("DROP TABLE videos")
         con.execute("DROP INDEX one_running_claude")
@@ -314,11 +320,11 @@ def test_v14_to_v15_adds_runs_videos_and_the_pack_link_and_keeps_rows(tmp_path):
                   con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-        assert after == {**before, "claude_runs": 0, "videos": 0}
+        assert after == {**before, "claude_runs": 0, "videos": 0, "claude_usage": 0, "job_progress": 0}
         assert "video_id" in [r[1] for r in con.execute("PRAGMA table_info(evidence_packs)")]
     assert list((tmp_path / "backups").glob("*-v14-*.sqlite3"))
 

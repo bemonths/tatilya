@@ -19,8 +19,9 @@ from .migration_v12 import upgrade_v12
 from .migration_v13 import upgrade_v13
 from .migration_v14 import upgrade_v14
 from .migration_v15 import upgrade_v15
+from .migration_v16 import upgrade_v16
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -61,14 +62,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -91,7 +92,9 @@ class Database:
                     upgrade_v13(con)
                 if version < 14:
                     upgrade_v14(con)
-                upgrade_v15(con)
+                if version < 15:
+                    upgrade_v15(con)
+                upgrade_v16(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -149,6 +152,7 @@ class Database:
             upgrade_v13(con)
             upgrade_v14(con)
             upgrade_v15(con)
+            upgrade_v16(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -301,21 +305,24 @@ class Database:
         result = dict(row)
         result["log"] = json.loads(result["log"])
         result["result"] = json.loads(result["result"]) if result["result"] else None
+        result["progress_info"] = json.loads(result["progress_info"]) if result.get("progress_info") else None   # from job_progress
         result.pop("diagnostic", None)
         return result
 
     def jobs(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
-            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name, job_waits.site AS waiting_for FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
+            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name, job_waits.site AS waiting_for, job_progress.info AS progress_info FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') LEFT JOIN job_progress ON job_progress.job_id=jobs.id WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
 
     def job(self, identifier):
         with self.connect() as con:
-            row = con.execute("SELECT jobs.*, job_waits.site AS waiting_for FROM jobs LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') WHERE id=?", (identifier,)).fetchone()
+            row = con.execute("SELECT jobs.*, job_waits.site AS waiting_for, job_progress.info AS progress_info FROM jobs LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') LEFT JOIN job_progress ON job_progress.job_id=jobs.id WHERE id=?", (identifier,)).fetchone()
             return self.decode_job(row) if row else None
 
-    def update_job(self, identifier, *, status=None, progress=None, message=None, result=None, diagnostic=None, waiting_for=None):
+    def update_job(self, identifier, *, status=None, progress=None, message=None, result=None, diagnostic=None, waiting_for=None,
+                   progress_info=None):
         """waiting_for names the site that waits for the user's verification; "" clears it (also after the job ended).
-        A wait is shown only while its job is queued or running."""
+        A wait is shown only while its job is queued or running. progress_info: what the job panel needs to draw a Claude run's bar
+        (GÖREV-14)."""
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
             if waiting_for == "":
@@ -341,6 +348,8 @@ class Database:
                         (job["status"], job["progress"], job["message"], job["result"], job["log"], job["finished_at"], identifier))
             if diagnostic is not None:
                 con.execute("UPDATE jobs SET diagnostic=? WHERE id=?", (json.dumps(diagnostic), identifier))
+            if progress_info is not None:
+                con.execute("INSERT OR REPLACE INTO job_progress (job_id,info) VALUES (?,?)", (identifier, json.dumps(progress_info, ensure_ascii=False)))
             if waiting_for:
                 con.execute("INSERT OR REPLACE INTO job_waits (job_id,site,since) VALUES (?,?,?)", (identifier, waiting_for, now()))
             if status is not None:

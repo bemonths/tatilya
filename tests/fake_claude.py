@@ -15,6 +15,14 @@ cites K9999) · no_evidence_section (candidate 1's 2nd section has no evidence) 
 wrong_family (candidate 2 of another family) · repeat_title (candidate 1 repeats the first earlier title) · denied (ok plus a refused Bash call)
 · max_turns · usage_limit · not_logged_in · version_too_old · slow (sleeps FAKE_CLAUDE_SLEEP seconds, default 30, then ok).
 FAKE_CLAUDE_COUNT: number of candidates (default 8).
+
+GÖREV-14: after `system/init` a `rate_limit_event` like Claude Code's (`unifiedWindows.five_hour/seven_day`; FAKE_CLAUDE_USAGE "0.43,0.38"
+sets the utilizations, "none" leaves the event out). A task without "Adım:" (the usage panel's "Yenile" call) is answered with one word.
+FAKE_CLAUDE_NO_EFFORT: a model name that refuses `--effort` (the call ends with Claude Code's unsupported-effort error).
+The evaluation step (`Adım: baslik_degerlendirme`) writes `baslik_degerlendirme.json`: the user's text verbatim from `kullanici_basligi.md`,
+FAKE_CLAUDE_REVIEW_COUNT candidates (default 2; an "edited candidate" run gets the user's Turkish title as its Turkish title).
+Scenarios: dolmuyor (the idea does not fill a video: no candidates, missing data written) · too_many (4 candidates) · changed_idea
+(`kullanici_fikri` differs from what the user wrote) · no_missing (does not fill but no missing data).
 """
 import json
 import os
@@ -74,7 +82,7 @@ def summary_ids(path):
 def earlier_titles(path):
     if not path.is_file():
         return []
-    return [line.split(" | ")[3] for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("| 20")]
+    return [line.split(" | ")[3].replace("\\|", "|") for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("| 20")]
 
 
 def selection(cwd):
@@ -85,9 +93,19 @@ def selection(cwd):
     return region, region_id.group(1) if region_id else None, family
 
 
+def suffixes(cwd):
+    """The title suffixes the program wrote into secim.md (GÖREV-14); FAKE_CLAUDE_NO_SUFFIX leaves them off."""
+    text = (cwd / "secim.md").read_text(encoding="utf-8")
+    found = {lang: re.search(rf'- {label} başlık eki: "([^"]*)"', text) for lang, label in (("en", "İngilizce"), ("tr", "Türkçe"))}
+    if os.environ.get("FAKE_CLAUDE_NO_SUFFIX"):
+        return {"en": "", "tr": ""}
+    return {lang: match.group(1) if match else "" for lang, match in found.items()}
+
+
 def build(cwd, system_text, scenario, prompt):
     families, regions, files = schema_lists(system_text)
     region, region_id, family = selection(cwd)
+    suffix = suffixes(cwd)
     general = summary_ids(cwd / "veri_ozeti_30a.md")
     local = summary_ids(cwd / "veri_ozeti_mahalle.md")
     earlier = earlier_titles(cwd / "onceki_oneriler.md")
@@ -96,7 +114,7 @@ def build(cwd, system_text, scenario, prompt):
     taken = {t.casefold() for t in earlier}
     titles, number = [], 1
     while len(titles) < count:
-        title = f"{region} question number {number} for a first visit"
+        title = f"{region} question number {number} for a first visit{suffix['en']}"
         if title.casefold() not in taken:
             titles.append(title)
             taken.add(title.casefold())
@@ -111,7 +129,7 @@ def build(cwd, system_text, scenario, prompt):
     for index in range(count):
         template, params = ("mahalle-rehberi", {"mahalle": region_id}) if region_id else ("ilk-video", {})
         candidates.append({
-            "baslik_en": titles[index], "baslik_tr": f"{region} için {index + 1}. soru", "bolge": region, "aile": chosen_families[index],
+            "baslik_en": titles[index], "baslik_tr": f"{region} için {index + 1}. soru{suffix['tr']}", "bolge": region, "aile": chosen_families[index],
             "neden_onerildi": "Sahte Claude'un önerisi.", "izleyici_sorusu": "Burada tatil yapmak doğru mu?",
             "kanca": {"metin": "Kanca metni.", "kanitlar": [evidence(index)]},
             "icerik_plani": [{"bolum": f"Bölüm {n}", "ne_anlatir": "Anlatılan.", "kanitlar": [evidence(index + n)]} for n in range(1, 6)],
@@ -137,7 +155,35 @@ def build(cwd, system_text, scenario, prompt):
     elif scenario == "wrong_family":
         data["adaylar"][1]["aile"] = next(f for f in families if f != data["adaylar"][1]["aile"])
     elif scenario == "repeat_title" and earlier:
-        data["adaylar"][0]["baslik_en"] = earlier[0].upper() + "!"
+        base = earlier[0][:-len(suffix["en"])] if suffix["en"] and earlier[0].endswith(suffix["en"]) else earlier[0]
+        data["adaylar"][0]["baslik_en"] = base.upper() + "!" + suffix["en"]
+    return data
+
+
+def user_title(cwd):
+    text = (cwd / "kullanici_basligi.md").read_text(encoding="utf-8")
+    return re.search(r"--- başlık başı ---\n(.*?)\n--- başlık sonu ---", text, re.S).group(1)
+
+
+def build_review(cwd, system_text, scenario, prompt):
+    idea = user_title(cwd)
+    count = 4 if scenario == "too_many" else int(os.environ.get("FAKE_CLAUDE_REVIEW_COUNT", "2"))
+    os.environ["FAKE_CLAUDE_COUNT"] = str(max(count, 1))
+    candidates = build(cwd, system_text, "ok", prompt)["adaylar"][:count]
+    for item in candidates:
+        if item.get("sablon") is None:
+            item.update({"sablon": "ilk-video", "parametreler": {}, "yeni_sablon_gerekir": False, "eksik_veri": []})
+    selection_text = (cwd / "secim.md").read_text(encoding="utf-8")
+    if "Bu aday düzenlendi" in selection_text and candidates:
+        candidates[0]["baslik_tr"] = idea
+        candidates[0]["baslik_en"] = candidates[0]["baslik_en"].replace("question number", "edited question")
+    fills = scenario not in ("dolmuyor", "no_missing")
+    data = {"surum": 1, "adim": "baslik_degerlendirme", "notlar": ["Sahte değerlendirme."],
+            "kullanici_fikri": idea + (" (değişti)" if scenario == "changed_idea" else ""),
+            "doluluk": {"dolar_mi": fills, "aciklama": "Veri bu fikri taşıyor." if fills else "Bu fikre özgü kural verisi yok.",
+                        "eksik_veri": [] if fills or scenario == "no_missing" else ["Mahalleye özgü köpek kuralı kaydı yok."]},
+            "sorunlar": ["Başlık eki yok."] if " | " not in idea else [],
+            "adaylar": candidates if fills else []}
     return data
 
 
@@ -163,6 +209,24 @@ def main():
     session = str(uuid.uuid4())
     emit({"type": "system", "subtype": "init", "session_id": session, "cwd": str(cwd), "model": options.get("--model") or "claude-fake",
           "claude_code_version": "0.0.0", "permissionMode": options.get("--permission-mode"), "tools": (options.get("--tools") or "").split(",")})
+    refuses = os.environ.get("FAKE_CLAUDE_NO_EFFORT")
+    if refuses and options.get("--model") == refuses and options.get("--effort"):
+        emit({"type": "result", "subtype": "success", "is_error": True, "result": "API Error: 400 effort_requires_thinking: effort is not "
+              "supported for this model", "session_id": session, "num_turns": 1, "duration_ms": 5, "api_error_code": "effort_requires_thinking"})
+        return 1
+    measured = os.environ.get("FAKE_CLAUDE_USAGE", "0.43,0.38")
+    if measured != "none":
+        five, week = (float(v) for v in measured.split(","))
+        now = int(time.time())
+        emit({"type": "rate_limit_event", "rate_limit_info": {"status": "allowed", "resetsAt": now + 3600, "rateLimitType": "five_hour",
+              "unifiedWindows": {"five_hour": {"utilization": five, "resetsAt": now + 3600},
+                                 "seven_day": {"utilization": week, "resetsAt": now + 4 * 86400}}}, "session_id": session})
+    if "Adım:" not in prompt:
+        emit({"type": "assistant", "message": {"id": "msg_1", "content": [{"type": "text", "text": "tamam"}],
+              "usage": {"input_tokens": 20, "output_tokens": 2}}})
+        emit({"type": "result", "subtype": "success", "is_error": False, "result": "tamam", "session_id": session, "num_turns": 1,
+              "duration_ms": 300, "total_cost_usd": 0.0004, "usage": {"input_tokens": 20, "output_tokens": 2}})
+        return 0
     if scenario == "slow":
         time.sleep(float(os.environ.get("FAKE_CLAUDE_SLEEP", "30")))
     if scenario in ("usage_limit", "not_logged_in", "version_too_old"):
@@ -190,11 +254,13 @@ def main():
         emit({"type": "result", "subtype": "error_max_turns", "is_error": True, "session_id": session, "num_turns": int(options["--max-turns"]) + 1,
               "errors": ["Reached maximum number of turns"]})
         return 1
-    output = cwd / "baslik.json"
+    review = "Adım: baslik_degerlendirme" in prompt
+    output = cwd / ("baslik_degerlendirme.json" if review else "baslik.json")
     if scenario == "invalid_json":
         output.write_text("{", encoding="utf-8")
     elif scenario != "missing_file":
-        output.write_text(json.dumps(build(cwd, system_text, scenario, prompt), ensure_ascii=False, indent=1), encoding="utf-8")
+        data = build_review(cwd, system_text, scenario, prompt) if review else build(cwd, system_text, scenario, prompt)
+        output.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     emit({"type": "assistant", "message": {"id": "msg_3", "content": [{"type": "tool_use", "id": "toolu_3", "name": "Write",
           "input": {"file_path": str(output), "content": "..."}}], "usage": usage}})
     emit({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_3", "content": "ok"}]}})

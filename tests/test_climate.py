@@ -29,7 +29,7 @@ from studio.sources import water_temperature as wt
 from studio.sources.base import CollectionCanceled, SourceError
 from studio.sources.geo import EARTH_RADIUS_KM, KM_PER_NMI, Segment, distance_km
 from studio.sources.registry import DEFAULT_REGISTRY
-from tests.legacy import V8_TABLES, V10_TABLES, V11_TABLES, V12_TABLES, V13_TABLES, V14_TABLES, V15_TABLES
+from tests.legacy import V8_TABLES, V10_TABLES, V11_TABLES, V12_TABLES, V13_TABLES, V14_TABLES, V15_TABLES, V16_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_destinations import add_destination
 from tests.test_neighborhoods import make_v6
@@ -734,11 +734,11 @@ def test_v7_to_v8_migration_adds_tables_configuration_and_sources_with_backup(tm
         rows_before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in tables_before}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
         assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         # The chain continues to v10 and v11, which add the lodging and agency configuration and their sources.
-        assert table_counts(con) == {**tables_before, **V8_TABLES, **V10_TABLES, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, **V15_TABLES, "sources": tables_before["sources"] + 7}
+        assert table_counts(con) == {**tables_before, **V8_TABLES, **V10_TABLES, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, **V15_TABLES, **V16_TABLES, "sources": tables_before["sources"] + 7}
         for table, rows in rows_before.items():
             after = con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()
             assert after[:len(rows)] == rows, table
@@ -783,7 +783,7 @@ def test_v7_to_v8_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
@@ -816,7 +816,7 @@ def test_v8_to_v9_migration_adds_stage_flag_and_keeps_old_runs(tmp_path):
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         unchanged = lambda tables: {t: rows for t, rows in tables.items() if t not in ("storm_passages", "sources")}
@@ -854,7 +854,7 @@ def test_v8_to_v9_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
 
 
 @pytest.mark.parametrize("url,enabled", [(cn.SOURCE_URL, 0), ("https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals/", 1)])

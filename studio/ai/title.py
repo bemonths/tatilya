@@ -30,6 +30,8 @@ MIN_FAMILIES = 4
 MIN_SECTIONS = 5
 MAX_TITLE = 100
 ERROR, WARNING = "hata", "uyari"
+# The steps whose output holds title candidates (GÖREV-14: the user's own title is evaluated into candidates too) and their output files.
+TITLE_STEPS = {"baslik": "baslik.json", "baslik_degerlendirme": "baslik_degerlendirme.json"}
 
 
 def channel(profile):
@@ -52,7 +54,37 @@ def selection_text(ctx):
     region = (f"{params['bolge']} (mahalle kimliği: `{params['bolge_id']}`; bu mahallenin özeti `{REGION_SUMMARY}` dosyasında)"
               if params.get("bolge_id") else f"{params['bolge']} (bütün destinasyon; mahalle özeti verilmedi)")
     family = params.get("aile") or ALL_FAMILIES
-    return "\n".join(["# Bu çalışmanın seçimi", "", f"- Bölge: {region}", f"- İçerik ailesi: {family}", f"- Not: {params.get('not') or 'yok'}", ""])
+    note = params.get("not") or "yok"
+    note_lines = [f"- Not: {note}"] if "\n" not in note else ["- Not (aşağıda):", *steps.note_block(note)]
+    return "\n".join(["# Bu çalışmanın seçimi", "", f"- Bölge: {region}", f"- İçerik ailesi: {family}", *note_lines, *suffix_lines(params), ""])
+
+
+def suffix_lines(params):
+    """The title suffixes of the destination as Settings has them when the run starts (GÖREV-14). Quotes show the leading space."""
+    suffix = params.get("baslik_eki") or {}
+    lines = []
+    if suffix.get("en"):
+        lines.append(f'- İngilizce başlık eki: "{suffix["en"]}" (her İngilizce başlık bu ekle biter)')
+    if suffix.get("tr"):
+        lines.append(f'- Türkçe başlık eki: "{suffix["tr"]}" (her Türkçe karşılık bu ekle biter)')
+    return lines
+
+
+def title_problems(title_en, title_tr, suffix):
+    """Length and suffix of a title pair (the proposal checks and the user's edit use the same rules)."""
+    found = []
+    suffix = suffix or {}
+    if len(title_en or "") > MAX_TITLE:
+        found.append(f"İngilizce başlık {MAX_TITLE} karakteri aşıyor ({len(title_en)} karakter).")
+    if not (title_en or "").strip():
+        found.append("İngilizce başlık boş.")
+    if not (title_tr or "").strip():
+        found.append("Türkçe karşılık boş.")
+    if suffix.get("en") and title_en and not title_en.endswith(suffix["en"]):
+        found.append(f'İngilizce başlık "{suffix["en"]}" ekiyle bitmiyor.')
+    if suffix.get("tr") and title_tr and not title_tr.endswith(suffix["tr"]):
+        found.append(f'Türkçe karşılık "{suffix["tr"]}" ekiyle bitmiyor.')
+    return found
 
 
 def templates_text(ctx):
@@ -82,10 +114,12 @@ def previous_titles(ctx):
     chosen = store.chosen_titles(ctx.db, ctx.destination["id"])
     scope = ctx.correction["run"]["scope_id"] if ctx.correction else None
     found = []
-    for run in store.runs(ctx.db, ctx.destination["id"], "baslik"):
+    for run in store.runs(ctx.db, ctx.destination["id"]):
+        if run["step"] not in TITLE_STEPS:
+            continue
         if run["id"] == ctx.run_id or run["scope_id"] == scope or run["status"] not in ("awaiting_approval", "approved", "rejected"):
             continue
-        path = ctx.db.path.parent / run["folder"] / OUTPUT
+        path = ctx.db.path.parent / run["folder"] / TITLE_STEPS[run["step"]]
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -94,7 +128,7 @@ def previous_titles(ctx):
             if isinstance(item, dict) and item.get("baslik_en"):
                 found.append({"baslik_en": item["baslik_en"], "baslik_tr": item.get("baslik_tr") or "", "bolge": item.get("bolge") or "",
                               "aile": item.get("aile") or "", "tarih": run["created_at"][:10], "secildi": (run["id"], index) in chosen,
-                              "calisma": run["id"]})
+                              "calisma": run["id"], "aday": index})
     return found
 
 
@@ -185,7 +219,8 @@ def task(ctx):
               f"- Kancanın en az bir kanıtı olsun. İçerik planında en az {MIN_SECTIONS} bölüm olsun ve her bölüm en az bir kanıta dayansın.",
               "- `sablon` alanına `sablonlar.md`'deki bir şablonun anahtarını, `parametreler` alanına parametrelerini yaz (parametre değeri "
               "mahallenin kimliğidir); öneri mevcut bir şablonla kurulamıyorsa `sablon` null, `yeni_sablon_gerekir` true olur.",
-              f"- İngilizce başlık en çok {MAX_TITLE} karakterdir.",
+              f"- İngilizce başlık en çok {MAX_TITLE} karakterdir"
+              + (" (ek dahil); İngilizce başlık `secim.md`'deki İngilizce ekle, Türkçe karşılığı oradaki Türkçe ekle biter." if suffix_lines(params) else "."),
               "- Başlıklar birbirini ve `onceki_oneriler.md`'dekileri tekrar etmez; büyük-küçük harf ve noktalama farkı tekrar sayılır.",
               "- Bitirince kısa bir Türkçe özet yaz: kaç aday, hangi aileler, önemli eksik veri."]
     if ctx.correction:
@@ -236,9 +271,20 @@ def check(ctx, data):
         if len(families) < MIN_FAMILIES:
             problems.append(problem(ERROR, f"Bölge \"{found['whole_region']}\" iken en az {MIN_FAMILIES} farklı içerik ailesi olmalı; "
                                            f"{len(families)} aile var."))
+    return problems + candidate_problems(ctx, candidates)
+
+
+def candidate_problems(ctx, candidates):
+    """Every candidate's checks: region, family, hook and plan evidence, template and parameters, title length and suffix, repetition
+    (among the candidates and of earlier proposals; a candidate the run was asked to rewrite is not an earlier proposal of itself)."""
+    params = ctx.params
+    family = params.get("aile") or ALL_FAMILIES
+    problems = []
     templates = evidence.destination_templates(ctx.profile)
     region_ids = {r["name"]: r["id"] for r in ctx.regions}
-    earlier = {normalized(p["baslik_en"]): p for p in ctx.previous}
+    source = params.get("kaynak") or {}
+    earlier = {normalized(p["baslik_en"]): p for p in ctx.previous
+               if not (p.get("calisma") == source.get("calisma") and p.get("aday") == source.get("aday"))}
     seen = {}
     for index, item in enumerate(candidates):
         if params.get("bolge_id") and item.get("bolge") != params["bolge"]:
@@ -278,8 +324,8 @@ def check(ctx, data):
             if item.get("yeni_sablon_gerekir"):
                 problems.append(problem(WARNING, f"Şablon {key} verilmiş ama yeni şablon gerektiği de yazılmış.", index))
         title = item.get("baslik_en") or ""
-        if len(title) > MAX_TITLE:
-            problems.append(problem(ERROR, f"İngilizce başlık {MAX_TITLE} karakteri aşıyor ({len(title)} karakter).", index))
+        problems += [problem(ERROR, text, index) for text in title_problems(title, item.get("baslik_tr") or "", params.get("baslik_eki"))
+                     if not text.endswith(" boş.")]       # empty titles are the schema's business
         key_title = normalized(title)
         if key_title in seen:
             problems.append(problem(ERROR, f"Başlık {seen[key_title] + 1}. adayın başlığını tekrar ediyor.", index))
@@ -336,25 +382,32 @@ def render(ctx, data, problems, chosen=None):
     if data.get("notlar"):
         lines += ["", "## Claude'un notları", ""] + [f"- {n}" for n in data["notlar"]]
     for number, item in enumerate(candidates, 1):
-        hook = item.get("kanca") or {}
-        lines += ["", f"## {number}. {item.get('baslik_en')}", "", f"Türkçe: {item.get('baslik_tr')}", "",
-                  f"- Bölge: {item.get('bolge')} · İçerik ailesi: {item.get('aile')}", "",
-                  f"**Neden önerildi:** {item.get('neden_onerildi')}", "", f"**İzleyicinin sorusu:** {item.get('izleyici_sorusu')}", "",
-                  f"**Kanca:** {hook.get('metin')}", ""]
-        lines += [f"- {evidence_text(k)}" for k in hook.get("kanitlar") or []] or ["- —"]
-        lines += ["", "**İçerik planı**", ""]
-        for part_number, part in enumerate(item.get("icerik_plani") or [], 1):
-            lines.append(f"{part_number}. **{part.get('bolum')}** — {part.get('ne_anlatir')}")
-            lines += [f"   - {evidence_text(k)}" for k in part.get("kanitlar") or []] or ["   - (kanıt yok)"]
-        missing = item.get("eksik_veri") or []
-        lines += ["", "**Eksik veri:** " + ("; ".join(missing) if missing else "yok"), ""]
-        if item.get("sablon"):
-            values = ", ".join(f"{k} = {v}" for k, v in (item.get("parametreler") or {}).items()) or "yok"
-            lines.append(f"**Şablon:** `{item['sablon']}` · parametreler: {values}" + (" (yeni şablon da gerektiği yazılmış)" if item.get("yeni_sablon_gerekir") else ""))
-        else:
-            lines.append("**Şablon:** yok; yeni şablon gerekir")
-        lines += ["", f"**Kapak fikri:** {item.get('kapak_fikri')}"]
+        lines += candidate_lines(number, item)
     return "\n".join(lines).rstrip() + "\n"
+
+
+def candidate_lines(number, item):
+    """The Markdown section of one candidate (with its evidence resolved)."""
+    lines = []
+    hook = item.get("kanca") or {}
+    lines += ["", f"## {number}. {item.get('baslik_en')}", "", f"Türkçe: {item.get('baslik_tr')}", "",
+              f"- Bölge: {item.get('bolge')} · İçerik ailesi: {item.get('aile')}", "",
+              f"**Neden önerildi:** {item.get('neden_onerildi')}", "", f"**İzleyicinin sorusu:** {item.get('izleyici_sorusu')}", "",
+              f"**Kanca:** {hook.get('metin')}", ""]
+    lines += [f"- {evidence_text(k)}" for k in hook.get("kanitlar") or []] or ["- —"]
+    lines += ["", "**İçerik planı**", ""]
+    for part_number, part in enumerate(item.get("icerik_plani") or [], 1):
+        lines.append(f"{part_number}. **{part.get('bolum')}** — {part.get('ne_anlatir')}")
+        lines += [f"   - {evidence_text(k)}" for k in part.get("kanitlar") or []] or ["   - (kanıt yok)"]
+    missing = item.get("eksik_veri") or []
+    lines += ["", "**Eksik veri:** " + ("; ".join(missing) if missing else "yok"), ""]
+    if item.get("sablon"):
+        values = ", ".join(f"{k} = {v}" for k, v in (item.get("parametreler") or {}).items()) or "yok"
+        lines.append(f"**Şablon:** `{item['sablon']}` · parametreler: {values}" + (" (yeni şablon da gerektiği yazılmış)" if item.get("yeni_sablon_gerekir") else ""))
+    else:
+        lines.append("**Şablon:** yok; yeni şablon gerekir")
+    lines += ["", f"**Kapak fikri:** {item.get('kapak_fikri')}"]
+    return lines
 
 
 STEP = steps.register(steps.Step(key="baslik", title="Konu ve başlık", instructions=("ortak.md", "baslik.md"), schema="baslik.schema.json",

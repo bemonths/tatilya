@@ -8,7 +8,7 @@ export function destinationPath(path) {
 export class StaleDestinationResponse extends Error { constructor(){super('');this.stale=true;} }
 export async function api(path, options = {}) {
   const requestRevision=revision;
-  if(options.body && ["sources","jobs","evidence-packs","claude/title-runs"].includes(path) && selectedDestination) {
+  if(options.body && ["sources","jobs","evidence-packs","claude/title-runs","claude/review-runs"].includes(path) && selectedDestination) {
     options={...options,body:JSON.stringify({...JSON.parse(options.body),destination_id:selectedDestination})};
   }
   const response = await fetch(`/api/${destinationPath(path)}`, {

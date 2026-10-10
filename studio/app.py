@@ -17,7 +17,7 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from . import refresh, workflow
-from .models import EvidencePackInput, JobInput, RunDecisionInput, SourceInput, SourceUpdate, TitleRunInput
+from .models import EvidencePackInput, JobInput, ReviewRunInput, RunDecisionInput, SourceInput, SourceUpdate, TitleRunInput, TranslateInput
 from . import evidence
 from .ai import settings as claude_settings
 from .ai.service import ClaudeService
@@ -638,6 +638,82 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             raise HTTPException(422, f"{exc.field}: {exc.message}") from exc
         return claude_settings_view()
 
+    @app.get("/api/settings/title-suffix")
+    def title_suffix_view(destination_id: str = DEFAULT_DESTINATION_ID):
+        """The destination's title suffixes (GÖREV-14): written into every title and evaluation run's secim.md and checked on every title."""
+        selected(destination_id)
+        return claude_settings.title_suffixes(db.path.parent, destination_id, PROFILES.get(destination_id))
+
+    @app.put("/api/settings/title-suffix")
+    async def title_suffix_save(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "Ayarlar okunamadı.") from None
+        if not isinstance(body, dict):
+            raise HTTPException(422, "Ayarlar okunamadı.")
+        try:
+            return claude_settings.save_title_suffixes(db.path.parent, destination_id, PROFILES.get(destination_id), body)
+        except claude_settings.SettingsError as exc:
+            raise HTTPException(422, exc.message) from exc
+
+    @app.get("/api/claude/usage")
+    def claude_usage():
+        """The usage panel (GÖREV-14): the newest measurement, its age and this week's runs."""
+        return claude().usage()
+
+    @app.post("/api/claude/usage/refresh")
+    def claude_usage_refresh():
+        return claude().refresh_usage()
+
+    def instruction_or_404(action):
+        from .ai import instructions
+        try:
+            return action(instructions)
+        except KeyError:
+            raise HTTPException(404, "Talimat dosyası ya da sürümü bulunamadı.") from None
+        except instructions.InstructionError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/claude/instructions")
+    def claude_instructions(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Settings → Talimatlar (GÖREV-14): the destination's instruction files; the repository file is the single source."""
+        selected(destination_id)
+        return instruction_or_404(lambda m: [m.summary(item) for item in m.files(PROFILES.get(destination_id))])
+
+    @app.get("/api/claude/instructions/{key}")
+    def claude_instruction(key: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return instruction_or_404(lambda m: m.read(db.path.parent, PROFILES.get(destination_id), key))
+
+    @app.put("/api/claude/instructions/{key}")
+    async def claude_instruction_save(key: str, request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "Talimat okunamadı.") from None
+        if not isinstance(body, dict) or not isinstance(body.get("text"), str) or not isinstance(body.get("base_sha256"), str):
+            raise HTTPException(422, "Talimat metni ve açıldığı hâlin karması gerekir.")
+        return instruction_or_404(lambda m: m.write(db.path.parent, PROFILES.get(destination_id), key, body["text"], body["base_sha256"]))
+
+    @app.get("/api/claude/instructions/{key}/versions/{version}")
+    def claude_instruction_version(key: str, version: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return {"id": version, "text": instruction_or_404(lambda m: m.version_text(db.path.parent, PROFILES.get(destination_id), key, version))}
+
+    @app.post("/api/claude/instructions/{key}/versions/{version}/restore")
+    async def claude_instruction_restore(key: str, version: str, request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "İstek okunamadı.") from None
+        if not isinstance(body, dict) or not isinstance(body.get("base_sha256"), str):
+            raise HTTPException(422, "Dosyanın açıldığı hâlin karması gerekir.")
+        return instruction_or_404(lambda m: m.restore(db.path.parent, PROFILES.get(destination_id), key, version, body["base_sha256"]))
+
     @app.get("/api/claude/options")
     def claude_options(destination_id: str = DEFAULT_DESTINATION_ID):
         selected(destination_id)
@@ -654,6 +730,13 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         selected(destination_id)
         return claude().start_title(destination_id, body.bolge, body.aile, body.not_)
 
+    @app.post("/api/claude/review-runs", status_code=201)
+    def start_review_run(body: ReviewRunInput):
+        """GÖREV-14: Claude evaluates the user's own title or idea."""
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return claude().start_review(destination_id, body.bolge, body.baslik, body.not_)
+
     def claude_run_or_404(identifier, action):
         try:
             return action()
@@ -668,7 +751,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def claude_select(identifier: str, body: RunDecisionInput):
         if body.aday is None:
             raise HTTPException(422, "Seçilecek aday belirtilmedi.")
-        return claude_run_or_404(identifier, lambda: claude().select(identifier, body.aday, body.not_))
+        return claude_run_or_404(identifier, lambda: claude().select(identifier, body.aday, body.not_, body.baslik_en, body.baslik_tr))
+
+    @app.post("/api/claude/runs/{identifier}/translate", status_code=201)
+    def claude_translate(identifier: str, body: TranslateInput):
+        """GÖREV-14: "İngilizcesini Claude yazsın" — an evaluation run with the edited Turkish title."""
+        return claude_run_or_404(identifier, lambda: claude().translate(identifier, body.aday, body.baslik_tr))
 
     @app.post("/api/claude/runs/{identifier}/reject")
     def claude_reject(identifier: str, body: RunDecisionInput):
@@ -705,11 +793,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
         selected(destination_id)
         guard = request.app.state.watchdog
+        stopping = getattr(request.app.state, "should_stop", lambda: False)   # set by the launcher (GÖREV-14)
         async def stream():
             previous = None
             guard.stream_opened()
             try:
-                while not await request.is_disconnected():
+                while not stopping() and not await request.is_disconnected():
                     data = json.dumps(await asyncio.to_thread(db.jobs,destination_id), ensure_ascii=False)
                     if data != previous:
                         yield f"event: jobs\ndata: {data}\n\n"

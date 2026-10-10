@@ -85,6 +85,8 @@ CHANNEL = {
     "general_template": "ilk-video",
     "region_template": "mahalle-rehberi",
     "region_parameter": "mahalle",
+    # GÖREV-14 (Adım 4e): the starting values of Settings → title suffix; the program writes the current ones into every run's secim.md.
+    "title_suffix": {"en": " | 30A Florida Vacation", "tr": " | 30A Florida Tatili"},
 }
 
 ANCHOR_PROVENANCE = {

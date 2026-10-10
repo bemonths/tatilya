@@ -10,7 +10,7 @@ Kanal 30A'nın kanalıdır. Mahalleler bu kanalın alt bölgeleridir; bir mahall
 
 Başlık, tatile gitmeyi düşünen birinin kafasındaki soruyu onun kelimeleriyle sorar ya da ona bir şey vaat eder. Videonun içindekileri sıralamaz: "hava, deniz, kasırga, kalabalık ve fiyat" gibi konu listeleri başlık değil, içerik planıdır. Hukuk, veri, kaynak, analiz gibi bizim işimizi anlatan kelimeler başlığa çıkmaz; gerekiyorsa videonun içinde anlatılır. İnsanların gerçekten aradığı ifadeler ve YouTube'da izlenen başlıkların nasıl kurulduğu kanal_arastirmasi.md dosyasında; yer adlarını izleyicinin aradığı biçimde kullan (Rosemary Beach, Seaside, 30A Florida gibi).
 
-Her İngilizce başlık " | 30A Florida Vacation" ekiyle biter; Türkçe karşılığı " | 30A Florida Tatili" ile. Ekin önündeki kısım kısa ve tek fikirli olsun; bir mahalle videosunda mahallenin adı başta gelir. Başlığın tamamı 100 karakteri geçmez. Çoğu ekranda başlığın yalnız ilk 60 karakteri kadarı görünür; merak o kısımda olsun.
+Her İngilizce başlık secim.md dosyasında yazan İngilizce başlık ekiyle, Türkçe karşılığı da oradaki Türkçe ekle biter. Ekin önündeki kısım kısa ve tek fikirli olsun; bir mahalle videosunda mahallenin adı başta gelir. Başlığın tamamı 100 karakteri geçmez. Çoğu ekranda başlığın yalnız ilk 60 karakteri kadarı görünür; merak o kısımda olsun.
 
 Bir başlık ancak içi doldurulabiliyorsa önerilir. 15–17 dakikalık bir videonun bölümlerini elimizdeki veriyle kurabiliyor olmalısın; içerik planında her bölümün hangi bilgiyle dolacağını kimlikleriyle göster. Eksik kalan bir şey varsa gizleme, eksik veri olarak yaz. Küçük bir soru sırf video sayısı artsın diye ayrı video yapılmaz.
 

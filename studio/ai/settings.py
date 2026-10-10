@@ -14,10 +14,16 @@ from pathlib import Path
 SETTINGS_FILE = "ayarlar.json"
 INHERIT = "inherit"
 INHERIT_LABEL = "Genel varsayılan"
+# GÖREV-14: the family aliases (Claude Code runs that family's newest model, as in Housing Atlas) and claude-sonnet-5-5. Only verified
+# full model ids are listed.
 MODEL_CHOICES = (
     ("", "Claude Code varsayılanı"),
+    ("opus", "Opus (en yeni sürüm)"),
+    ("sonnet", "Sonnet (en yeni sürüm)"),
+    ("haiku", "Haiku (en yeni sürüm)"),
     ("claude-opus-5-5", "Opus 5.5"),
     ("claude-fable-5-1", "Fable 5.1"),
+    ("claude-sonnet-5-5", "Sonnet 5.5"),
     ("claude-sonnet-5", "Sonnet 5"),
     ("claude-haiku-4-5", "Haiku 4.5"),
 )
@@ -34,8 +40,9 @@ EFFORTS = tuple(value for value, _ in EFFORT_CHOICES)
 MODEL_LABELS = dict(MODEL_CHOICES)
 EFFORT_LABELS = dict(EFFORT_CHOICES)
 # Claude steps whose model, effort and turn limit are set apart (order of the Settings screen); later steps join this list.
-CLAUDE_STEPS = (("baslik", "Konu ve başlık"),)
-STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30}}
+CLAUDE_STEPS = (("baslik", "Konu ve başlık"), ("baslik_degerlendirme", "Başlık değerlendirme"))
+STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30},
+                 "baslik_degerlendirme": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30}}
 MAX_TURNS_MIN, MAX_TURNS_MAX, MAX_TURNS_DEFAULT = 1, 200, 30
 MAX_TURNS_HELP = ("Tur, Claude'un bir cevabıdır: Claude her turda düşünür ve bir ya da birkaç iş ister (dosya okur ya da dosya yazar). Bu "
                   "sınır bir Claude çalışmasının en çok kaç cevap verebileceğidir; araç çağrılarını değil cevapları sayar. İş panelindeki "
@@ -102,23 +109,20 @@ def load(data_dir):
     return {**values, "notes": notes}
 
 
-def save(data_dir, changes):
-    """Checks every changed field (all or nothing) and writes the whole Claude section atomically; returns the new settings."""
-    current = {k: v for k, v in load(data_dir).items() if k != "notes"}
-    for field, value in (changes or {}).items():
-        if field not in current:
-            raise SettingsError(field, "Bilinmeyen ayar.")
-        current[field] = check(field, value)
+def stored_settings(data_dir):
+    path = path_of(data_dir)
+    if not path.is_file():
+        return {}
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return stored if isinstance(stored, dict) else {}
+
+
+def write_settings(data_dir, stored):
     path = path_of(data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    stored = {}
-    if path.is_file():
-        try:
-            stored = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            stored = {}
-    stored = stored if isinstance(stored, dict) else {}
-    stored["claude"] = current
     handle, temporary = tempfile.mkstemp(dir=path.parent, prefix=".ayarlar-", suffix=".json")
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as out:
@@ -127,7 +131,65 @@ def save(data_dir, changes):
     except BaseException:
         Path(temporary).unlink(missing_ok=True)
         raise
+
+
+def save(data_dir, changes):
+    """Checks every changed field (all or nothing) and writes the whole Claude section atomically; returns the new settings."""
+    current = {k: v for k, v in load(data_dir).items() if k != "notes"}
+    for field, value in (changes or {}).items():
+        if field not in current:
+            raise SettingsError(field, "Bilinmeyen ayar.")
+        current[field] = check(field, value)
+    stored = stored_settings(data_dir)
+    stored["claude"] = current
+    write_settings(data_dir, stored)
     return load(data_dir)
+
+
+# ---- title suffixes (GÖREV-14, Adım 4e): per destination, defaults from the destination profile (`CHANNEL["title_suffix"]`) ----------
+
+SUFFIX_SECTION, SUFFIX_MAX = "baslik_ekleri", 40
+SUFFIX_LANGUAGES = (("en", "İngilizce başlık eki"), ("tr", "Türkçe başlık eki"))
+
+
+def suffix_defaults(profile):
+    found = (getattr(profile, "CHANNEL", None) or {}).get("title_suffix") or {}
+    return {lang: found.get(lang, "") for lang, _ in SUFFIX_LANGUAGES}
+
+
+def check_suffix(lang, value):
+    label = dict(SUFFIX_LANGUAGES)[lang]
+    if not isinstance(value, str) or len(value) > SUFFIX_MAX or "\n" in value or "\r" in value:
+        raise SettingsError(f"baslik_eki_{lang}", f"{label} en çok {SUFFIX_MAX} karakterlik tek satır bir metin olmalı.")
+    return value
+
+
+def title_suffixes(data_dir, destination_id, profile):
+    """{"en", "tr", "defaults"}: the stored suffixes of the destination, or the profile's defaults. Spaces are kept as written (the suffix
+    usually starts with a space: " | 30A Florida Vacation")."""
+    defaults = suffix_defaults(profile)
+    stored = (stored_settings(data_dir).get(SUFFIX_SECTION) or {}).get(destination_id) or {}
+    values = {}
+    for lang, _ in SUFFIX_LANGUAGES:
+        try:
+            values[lang] = check_suffix(lang, stored[lang]) if lang in stored else defaults[lang]
+        except SettingsError:
+            values[lang] = defaults[lang]
+    return {**values, "defaults": defaults}
+
+
+def save_title_suffixes(data_dir, destination_id, profile, changes):
+    current = {k: v for k, v in title_suffixes(data_dir, destination_id, profile).items() if k != "defaults"}
+    for lang, value in (changes or {}).items():
+        if lang not in current:
+            raise SettingsError(lang, "Bilinmeyen ayar.")
+        current[lang] = check_suffix(lang, value)
+    stored = stored_settings(data_dir)
+    section = stored.get(SUFFIX_SECTION) if isinstance(stored.get(SUFFIX_SECTION), dict) else {}
+    section[destination_id] = current
+    stored[SUFFIX_SECTION] = section
+    write_settings(data_dir, stored)
+    return title_suffixes(data_dir, destination_id, profile)
 
 
 def resolve_model_effort(settings, step):

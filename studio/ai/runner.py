@@ -958,9 +958,10 @@ def write_stream(handle, line):
 
 
 def run(inv, command, *, env=None, timeout=None, on_start=None, is_canceled=None, on_tick=None, popen=subprocess.Popen, clock=time.monotonic,
-        poll=POLL_INTERVAL, tick=TICK_INTERVAL, stream_path=None, on_log=None, on_progress=None):
+        poll=POLL_INTERVAL, tick=TICK_INTERVAL, stream_path=None, on_log=None, on_progress=None, on_rate_limit=None):
     """Runs Claude, waits for it (checking cancel and timeout) and classifies the result. `on_log(text, level)`: live Turkish lines;
-    `on_progress(LiveProgress)`: when the current turn or last activity changes; both in the calling thread."""
+    `on_progress(LiveProgress)`: when the current turn or last activity changes; `on_rate_limit(info)`: every `rate_limit_event`'s
+    `rate_limit_info` (with `seen_at`) as it comes (GÖREV-14: the usage panel); all in the calling thread."""
     argv = build_args(command, inv)
     timeout = timeout_for(inv.max_turns) if timeout is None else timeout
 
@@ -1017,7 +1018,7 @@ def run(inv, command, *, env=None, timeout=None, on_start=None, is_canceled=None
     try:
         return watch(process, inv, timeout=timeout, on_start=on_start, is_canceled=is_canceled, on_tick=on_tick, clock=clock, poll=poll,
                      tick=tick, say=say, handle=handle, parser=parser, start=start, version=version, api_key=api_key, finish=finish,
-                     on_progress=on_progress)
+                     on_progress=on_progress, on_rate_limit=on_rate_limit)
     except BaseException:  # an unexpected error: Claude must not keep running in the background
         kill_tree(process)
         if handle is not None:
@@ -1029,13 +1030,24 @@ def run(inv, command, *, env=None, timeout=None, on_start=None, is_canceled=None
 
 
 def watch(process, inv, *, timeout, on_start, is_canceled, on_tick, clock, poll, tick, say, handle, parser, start, version, api_key, finish,
-          on_progress=None):
+          on_progress=None, on_rate_limit=None):
     """Writes the task text, reads the stream line by line (stream file, live lines, progress), checks cancel and timeout; then classifies."""
     if on_start is not None:
         on_start(process)
     out, err = [], []
     lines = queue.SimpleQueue()
     reported = []
+    passed_limits = [0]
+
+    def pass_limits():
+        while passed_limits[0] < len(parser.rate_limits):
+            entry = parser.rate_limits[passed_limits[0]]
+            passed_limits[0] += 1
+            if on_rate_limit is not None:
+                try:
+                    on_rate_limit(entry)
+                except Exception:
+                    log.exception("Claude kullanım bilgisi kaydedilemedi.")
 
     def report():
         if on_progress is None or not parser.events:
@@ -1090,6 +1102,7 @@ def watch(process, inv, *, timeout, on_start, is_canceled, on_tick, clock, poll,
                 continue
             for text, level in produced:
                 say(text, level)
+            pass_limits()
 
     threads = [threading.Thread(target=read_out, args=(process.stdout,), daemon=True),
                threading.Thread(target=read_err, args=(process.stderr,), daemon=True), threading.Thread(target=write, daemon=True)]
@@ -1146,7 +1159,8 @@ def instruction_hashes(files, *, repo=REPO_DIR):
             rel = path.resolve().relative_to(Path(repo).resolve()).as_posix()
         except ValueError:
             rel = path.name
-        items.append({"path": rel, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+        modified = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")
+        items.append({"path": rel, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "modified_at": modified})
     commit = None
     git = shutil.which("git")
     if git:

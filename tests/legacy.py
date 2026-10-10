@@ -39,6 +39,7 @@ V13_TABLES = {"destination_refresh_intervals": 4, "refresh_batches": 0, "destina
 # Tables created by v14 (GÖREV-11; v14 also replaces the 5 daily-need categories with the profile's 7, counted above).
 V14_TABLES = {"evidence_packs": 0}
 V15_TABLES = {"claude_runs": 0, "videos": 0}
+V16_TABLES = {"claude_usage": 0, "job_progress": 0}
 
 
 def without_added_sources(sources):

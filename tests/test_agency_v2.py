@@ -571,7 +571,7 @@ def test_v11_to_v12_migration_backfills_old_runs_and_adds_configuration(tmp_path
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         for table in ("agency_rate_own_listings", "agency_rate_own_quotes", "agency_rate_published"):
@@ -613,7 +613,7 @@ def test_v11_to_v12_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
 
 
 def test_summary_counts_methods_own_inventory_and_published_rents_apart(tmp_path):

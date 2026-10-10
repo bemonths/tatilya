@@ -249,7 +249,7 @@ def test_v13_to_v14_splits_categories_keeps_old_runs_and_adds_evidence_packs(tmp
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 16
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert [tuple(r) for r in con.execute("SELECT * FROM poi_points ORDER BY rowid")] == [tuple(r) for r in old_points]
         check = dict(con.execute("SELECT * FROM poi_chain_checks").fetchone())

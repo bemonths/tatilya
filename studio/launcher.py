@@ -18,6 +18,7 @@ kayıt defteri, pencere öne getirme ve ileti kutusu yoktur.
 """
 
 import argparse
+import contextlib
 import json
 import logging
 import os
@@ -437,6 +438,23 @@ def _when_started(server: Any, action: Callable[[], None], timeout: float = STAR
     action()
 
 
+def studio_server(config: Any) -> Any:
+    """uvicorn's server, except that a Ctrl+C / Ctrl+Break is not raised again after the graceful shutdown: uvicorn re-raises the caught
+    signal, which ends the process (exit code 3 on Windows) before the launcher removes its lock and writes "Program kapandı"."""
+    import uvicorn
+
+    class StudioServer(uvicorn.Server):
+        @contextlib.contextmanager
+        def capture_signals(self):
+            with super().capture_signals():
+                try:
+                    yield
+                finally:
+                    self._captured_signals.clear()
+
+    return StudioServer(config)
+
+
 def server_config(app: Any, port: int) -> Any:
     import uvicorn
 
@@ -448,12 +466,11 @@ def serve(data_dir: Path, port: int, *, window: bool, watchdog: bool,
           opener: Callable[[str], None] = open_window, startup_lock: StartupLock | None = None,
           announce: Callable[[str], None] | None = None) -> int:
     """Sunucuyu çalıştırır ve kapanınca 0 döndürür. Sunucu hiç başlayamazsa (ör. port dolu) `LauncherError`."""
-    import uvicorn
-
     from .app import create_app
 
     app = create_app(data_dir)
-    server = uvicorn.Server(server_config(app, port))
+    server = studio_server(server_config(app, port))
+    app.state.should_stop = lambda: server.should_exit   # open event streams end at once instead of holding the shutdown
     lock_path = data_dir / LOCK_FILE
 
     def on_started() -> None:

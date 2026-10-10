@@ -126,7 +126,8 @@ def test_instruction_hashes_are_sha256_of_the_files(tmp_path):
     path = tmp_path / "ortak.md"
     path.write_text("talimat", encoding="utf-8")
     found = runner.instruction_hashes([path])
-    assert found["files"] == [{"path": "ortak.md", "sha256": hashlib.sha256(b"talimat").hexdigest()}]
+    assert [{k: f[k] for k in ("path", "sha256")} for f in found["files"]] == [{"path": "ortak.md", "sha256": hashlib.sha256(b"talimat").hexdigest()}]
+    assert found["files"][0]["modified_at"].endswith("+00:00")                        # GÖREV-14: the version's date for the run screen
 
 
 # --- Settings ------------------------------------------------------------------------------------------------------------------
@@ -135,7 +136,8 @@ def test_settings_defaults_inheritance_validation_and_storage(tmp_path):
     values = settings.load(tmp_path)
     assert (values["claude_model_baslik"], values["claude_effort_baslik"], values["claude_max_turns_baslik"]) == ("claude-opus-5-5", "high", 30)
     assert settings.resolve_model_effort(values, "baslik") == ("claude-opus-5-5", "high")
-    assert [v for v, _ in settings.MODEL_CHOICES] == ["", "claude-opus-5-5", "claude-fable-5-1", "claude-sonnet-5", "claude-haiku-4-5"]
+    assert [v for v, _ in settings.MODEL_CHOICES] == ["", "opus", "sonnet", "haiku", "claude-opus-5-5", "claude-fable-5-1", "claude-sonnet-5-5",
+                                                     "claude-sonnet-5", "claude-haiku-4-5"]                  # GÖREV-14: aliases and Sonnet 5.5
     assert [v for v, _ in settings.EFFORT_CHOICES] == ["", "low", "medium", "high", "xhigh", "max"]
     saved = settings.save(tmp_path, {"claude_model": "claude-sonnet-5", "claude_effort": "", "claude_model_baslik": "inherit",
                                      "claude_effort_baslik": "inherit", "claude_max_turns_baslik": 12})

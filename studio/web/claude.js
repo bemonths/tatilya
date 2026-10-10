@@ -29,6 +29,33 @@ export function claudeSection(view, message="") {
     </form></section>`;
 }
 
+// GÖREV-14 (Adım 4e): the destination's title suffixes. The program writes them into every title and evaluation run and checks every title.
+export function suffixSection(view, message="") {
+  const shown=value=>`"${esc(value)}"`;
+  return `<section class="info-card suffix-settings" id="suffix-settings"><span class="eyebrow">BAŞLIK EKİ</span><h2 style="margin-top:12px">Başlık eki</h2>
+    <p>Her önerilen ve düzenlenen başlık bu eklerle biter. Program ekleri her başlık ve değerlendirme çalışmasında Claude'a verir ve bitişte denetler. Ekin başındaki boşluk da ekin parçasıdır.</p>
+    <form id="suffix-form"><label>İngilizce başlık eki<input data-suffix="en" value="${esc(view.en)}" maxlength="40"></label>
+      <label>Türkçe başlık eki<input data-suffix="tr" value="${esc(view.tr)}" maxlength="40"></label>
+      <p class="muted form-note">Başlangıç değerleri: İngilizce ${shown(view.defaults?.en || "")}, Türkçe ${shown(view.defaults?.tr || "")}.</p>
+      ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
+      <button class="primary" type="submit">Başlık ekini kaydet</button></form></section>`;
+}
+
+export async function renderSuffixSettings(container, message="") {
+  try {
+    const view=await api("settings/title-suffix");
+    container.innerHTML=suffixSection(view, message);
+    container.querySelector("#suffix-form").addEventListener("submit",async event=>{
+      event.preventDefault();
+      const values={};event.target.querySelectorAll("[data-suffix]").forEach(el=>{values[el.dataset.suffix]=el.value;});
+      try {
+        await api("settings/title-suffix",{method:"PUT",body:JSON.stringify(values)});
+        await renderSuffixSettings(container,"Başlık eki kaydedildi; bundan sonraki çalışmalarda kullanılır.");
+      } catch(error) {if(!error.stale) await renderSuffixSettings(container,error.message);}
+    });
+  } catch(error) {if(!error.stale) container.textContent=error.message;}
+}
+
 export function formValues(form) {
   const values={};
   form.querySelectorAll("[data-field]").forEach(el=>{values[el.dataset.field]=el.type==="number"?Number(el.value):el.value;});

@@ -9,19 +9,42 @@ The run record keeps the SHA-256 of every instruction file and of the core schem
 the inputs with their packs, the model, effort, Claude Code version, session id, turns, tool calls, tokens and cost equivalent.
 """
 import json
+import statistics
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ..database import Conflict
 from ..destinations import PROFILES
 from ..evidence import PackError, generate, store as store_pack
-from . import claude_info, runner, settings as claude_settings, steps, store
+from . import claude_info, instructions, runner, settings as claude_settings, steps, store, usage
 from . import title  # noqa: F401  (registers the title step)
+from . import title_review  # noqa: F401  (registers the evaluation step, GÖREV-14)
 
 RUN_RECORD, STREAM, INSTRUCTIONS, TASK, RUN_SCHEMA = "calisma.json", "akis.jsonl", "talimat.md", "gorev.md", "sema.json"
 JOB_KIND = "claude_run"
 MAX_NOTE = 4000
+# GÖREV-14 (Adım 4b): a Claude run's bar moves through stages: inputs 0–10 %, Claude 10–90 % (elapsed time over the median duration of
+# the step's earlier successful runs, or the step's default when there is none; never past 90 %), validation and Markdown 90–100 %.
+DEFAULT_SECONDS = {"baslik": 420, "baslik_degerlendirme": 300}
+FALLBACK_SECONDS = 420
+MEDIAN_OF = 9
+DONE_STATUSES = ("awaiting_approval", "approved", "rejected")
+
+
+def claude_percent(elapsed, expected):
+    return 10 + min(80, int(80 * max(0.0, elapsed) / max(1.0, expected)))
+
+
+def iso_now():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def minutes_text(seconds):
+    minutes = max(1, round(seconds / 60))
+    return f"{minutes} dk"
 
 
 def write_json(path, data):
@@ -38,6 +61,7 @@ class ClaudeService:
         self.db, self.data_dir = db, Path(data_dir)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="30a-claude")
         self.closing = False
+        self.refreshing = False
         self.lock = threading.Lock()
 
     # ------------------------------------------------------------------------------------------------------------- options
@@ -79,9 +103,14 @@ class ClaudeService:
 
     # ------------------------------------------------------------------------------------------------------------- starting a run
 
+    def suffixes(self, destination_id):
+        values = claude_settings.title_suffixes(self.data_dir, destination_id, PROFILES.get(destination_id))
+        return {k: values[k] for k in ("en", "tr")}
+
     def start(self, destination_id, step_key, params, *, correction_of=None, note=None):
         step = steps.get(step_key)
         destination = self.db.destination(destination_id)
+        params = {**params, "baslik_eki": self.suffixes(destination_id)}   # the suffixes as Settings has them now (GÖREV-14)
         previous = store.run(self.db, correction_of) if correction_of else None
         run_id = store.new_id()
         scope_id = previous["scope_id"] if previous else run_id[:12]
@@ -110,6 +139,35 @@ class ClaudeService:
     def start_title(self, destination_id, region, family, note):
         return self.start(destination_id, "baslik", self.selection(destination_id, region, family, note))
 
+    def start_review(self, destination_id, region, user_title, note, *, source=None):
+        """GÖREV-14 Adım 5a: the user's own title or idea, evaluated by Claude into 0–3 candidates."""
+        text = (user_title or "").strip()
+        if not text:
+            raise Conflict("Değerlendirilecek başlığı ya da fikri yazın.")
+        if len(text) > title_review.MAX_IDEA:
+            raise Conflict(f"Başlık ya da fikir en çok {title_review.MAX_IDEA} karakter olabilir.")
+        params = {**self.selection(destination_id, region, title.ALL_FAMILIES, note), "kullanici_basligi": text}
+        if source:
+            params["kaynak"] = source
+        return self.start(destination_id, "baslik_degerlendirme", params)
+
+    def translate(self, run_id, index, edited_tr):
+        """GÖREV-14 Adım 5b: the user changed only the Turkish title of a candidate; Claude writes the English one in an evaluation run."""
+        record = store.run(self.db, run_id)
+        if record is None:
+            raise KeyError(run_id)
+        view = self.view(run_id)
+        candidate = next((c for c in view["candidates"] if c["sira"] == index), None)
+        if candidate is None:
+            raise Conflict("Böyle bir aday yok.")
+        edited = (edited_tr or "").strip()
+        if not edited or edited == candidate["baslik_tr"].strip():
+            raise Conflict("Türkçe başlık değişmedi; İngilizcesini yazdırmak için önce Türkçe karşılığı düzenleyin.")
+        note = title_review.source_note(view, candidate, edited)[:MAX_NOTE]
+        return self.start_review(record["destination_id"], candidate["bolge"], edited, note,
+                                 source={"calisma": run_id, "aday": index, "baslik_en": candidate["baslik_en"],
+                                         "baslik_tr": candidate["baslik_tr"]})
+
     # ------------------------------------------------------------------------------------------------------------- the run
 
     def work(self, run_id, destination, step, params, previous, note):
@@ -130,7 +188,8 @@ class ClaudeService:
             self.db.update_job(job_id, status="failed" if not canceled() or self.closing else "canceled", message=message)
 
         try:
-            self.db.update_job(job_id, status="running", progress=2, message="Girdiler hazırlanıyor.")
+            self.db.update_job(job_id, status="running", progress=2, message="Girdiler hazırlanıyor.",
+                               progress_info={"tur": "claude", "asama": "girdiler", "baslangic": iso_now()})
             profile = PROFILES.get(destination["id"])
             correction = None
             if previous:
@@ -171,18 +230,91 @@ class ClaudeService:
                 log(claude_info.API_KEY_WARNING, "warning")
             invocation = runner.Invocation(cwd=folder, prompt=prompt, system_prompt_file=folder / INSTRUCTIONS, tools=step.tools,
                                            allowed=step.allowed, max_turns=turns, model=model, effort=effort)
+            expected, basis = self.expected_duration(step.key)
+            progress = {"tur": "claude", "asama": "claude", "baslangic": ((self.db.job(job_id) or {}).get("progress_info") or {}).get("baslangic"),
+                        "claude_baslangic": iso_now(), "beklenen_s": expected, "dayanak": basis}
+            base["ilerleme_tahmini"] = {"beklenen_s": expected, "dayanak": basis}
+            self.db.update_job(job_id, progress=10, progress_info=progress)
             result = runner.run(invocation, command, stream_path=folder / STREAM, on_log=log, is_canceled=canceled,
-                                on_progress=lambda p: self.db.update_job(job_id, progress=int(5 + 85 * p.fraction)))
+                                on_tick=lambda elapsed: self.db.update_job(job_id, progress=claude_percent(elapsed, expected)),
+                                on_rate_limit=lambda info: usage.record(self.db, info, source="calisma", run_id=run_id))
             base.update({"calisma_sonucu": runner.result_dict(result)})
             store.update_run(self.db, run_id, claude_version=result.claude_version, session_id=result.session_id, metrics=result.metrics())
             if result.failure:
                 closed = result.failure.kind == runner.CANCELED and self.closing
                 return fail(store.INTERRUPTED if closed else result.failure.message, extra=base)
             log(runner.summary_line(result))
+            self.db.update_job(job_id, progress=92, message="Çıktı doğrulanıyor ve okunur Markdown yazılıyor.",
+                               progress_info={**progress, "asama": "dogrulama"})
             self.finish(run_id, step, ctx, base, folder, job_id)
         except Exception as exc:  # anything unexpected: the run is an error, the job ends, nothing is left 'running'
             import traceback
             fail(f"Claude çalışması tamamlanamadı: {exc}", extra={"istisna": traceback.format_exc()})
+
+    def expected_duration(self, step_key):
+        """(seconds, basis): the median duration of the step's last successful runs, or the step's default."""
+        with self.db.connect() as con:
+            values = [r[0] for r in con.execute(f"""SELECT json_extract(metrics,'$.elapsed_s') FROM claude_runs WHERE step=? AND metrics IS NOT NULL
+                AND status IN ({",".join("?" * len(DONE_STATUSES))}) ORDER BY created_at DESC LIMIT ?""", (step_key, *DONE_STATUSES, MEDIAN_OF))
+                      if isinstance(r[0], (int, float)) and r[0] > 0]
+        if values:
+            middle = float(statistics.median(values))
+            return middle, f"önceki {len(values)} başarılı çalışmanın ortancası ({minutes_text(middle)})"
+        default = DEFAULT_SECONDS.get(step_key, FALLBACK_SECONDS)
+        return float(default), f"önceki başarılı çalışma yok; varsayılan {minutes_text(default)}"
+
+    # ------------------------------------------------------------------------------------------------------------- usage panel
+
+    def usage(self):
+        return usage.view(self.db)
+
+    def refresh_usage(self):
+        """The panel's "Yenile": the smallest Claude call (no tools, one turn, haiku, low effort). Its usage reports are stored."""
+        if claude_info.api_key_in_env():
+            raise Conflict("ANTHROPIC_API_KEY tanımlı: bu çağrı aboneliğinizden değil API'den ücretlendirilir. Kullanım yenilenmedi.")
+        with self.lock:
+            if self.closing:
+                raise Conflict("Uygulama kapanıyor.")
+            if any(r["status"] == "running" for r in self.running_runs()):
+                raise Conflict("Bir Claude çalışması sürüyor; kullanım bilgisi o çalışmanın her cevabıyla zaten güncelleniyor.")
+            if self.refreshing:
+                raise Conflict("Kullanım zaten yenileniyor.")
+            self.refreshing = True
+        try:
+            try:
+                _, command = runner.find_command(self.settings()["claude_path"])
+            except runner.ClaudeRunnerError as exc:
+                raise Conflict(exc.failure.message) from exc
+            folder = self.data_dir.joinpath(*usage.REFRESH_DIR)
+            folder.mkdir(parents=True, exist_ok=True)
+            instruction = folder / INSTRUCTIONS
+            instruction.write_text(usage.REFRESH_INSTRUCTION, encoding="utf-8")
+            stored = []
+            effort = usage.REFRESH_EFFORT
+            for _ in range(2):
+                inv = runner.Invocation(cwd=folder, prompt=usage.REFRESH_PROMPT, system_prompt_file=instruction, tools=(), allowed=(),
+                                        max_turns=1, model=usage.REFRESH_MODEL, effort=effort)
+                result = runner.run(inv, command, timeout=usage.REFRESH_TIMEOUT_S, stream_path=folder / STREAM,
+                                    on_rate_limit=lambda info: stored.append(usage.record(self.db, info, source="yenile")))
+                if result.failure and result.failure.kind == runner.UNSUPPORTED and effort:
+                    effort = ""                      # the family does not take an effort: once more with Claude Code's own choice
+                    continue
+                break
+            if result.failure and not any(stored):
+                raise Conflict(f"Kullanım yenilenemedi: {result.failure.message}")
+            if not any(stored):
+                raise Conflict("Claude bu çağrıda kullanım bilgisi vermedi; kullanım yenilenemedi.")
+            cost = (result.envelope or {}).get("total_cost_usd")
+            return {**usage.view(self.db), "last_refresh": {"model": usage.REFRESH_MODEL, "effort": effort or None,
+                                                            "model_used": result.model_used, "elapsed_s": result.elapsed_s,
+                                                            "cost_usd": cost if isinstance(cost, (int, float)) else None}}
+        finally:
+            with self.lock:
+                self.refreshing = False
+
+    def running_runs(self):
+        with self.db.connect() as con:
+            return [dict(r) for r in con.execute("SELECT id, status FROM claude_runs WHERE status='running'")]
 
     def finish(self, run_id, step, ctx, base, folder, job_id):
         output = folder / step.output
@@ -215,9 +347,14 @@ class ClaudeService:
         write_json(folder / RUN_RECORD, {**base, "durum": "awaiting_approval", "sorunlar": problems,
                                          "paketler": {name: record["id"] for name, record in ctx.packs.items()}})
         errors_count = sum(p["seviye"] == title.ERROR for p in problems)
+        count = len(data.get("adaylar") or [])
+        if step.key == title_review.STEP.key:
+            filled = (data.get("doluluk") or {}).get("dolar_mi")
+            message = f"Değerlendirme hazır: fikir veriyle {'doluyor' if filled else 'dolmuyor'}; {count} aday onay bekliyor"
+        else:
+            message = f"{count} başlık önerisi onay bekliyor"
         self.db.update_job(job_id, status="done", progress=100, result={"claude_run": run_id},
-                           message=f"{len(data.get('adaylar') or [])} başlık önerisi onay bekliyor" +
-                                   (f"; {errors_count} doğrulama sorunu var." if errors_count else "."))
+                           message=message + (f"; {errors_count} doğrulama sorunu var." if errors_count else "."))
 
     # ------------------------------------------------------------------------------------------------------------- reading a run
 
@@ -262,9 +399,13 @@ class ClaudeService:
                                    "secilebilir": not any(p["seviye"] == title.ERROR for p in own) and index not in chosen})
         markdown = (folder / step.markdown).read_text(encoding="utf-8") if (folder / step.markdown).is_file() else None
         result = saved.get("calisma_sonucu") or {}
+        review = title_review.summary(data) if data and step.key == title_review.STEP.key else None
         return {**record, "step_title": step.title, "candidates": candidates, "general_problems": [p for p in problems if p["aday"] is None],
+                "review": review, "output_file": step.output, "markdown_file": step.markdown,
                 "notes": (data or {}).get("notlar") or [], "markdown": markdown, "inputs": saved.get("girdiler") or [],
-                "instructions": saved.get("talimat_surumu"), "summary": {k: result.get(k) for k in ("num_turns", "tool_calls", "total_cost_usd",
+                "instructions": saved.get("talimat_surumu"),
+                "instruction_versions": instructions.used_versions(saved.get("talimat_surumu"), PROFILES.get(record["destination_id"])),
+                "summary": {k: result.get(k) for k in ("num_turns", "tool_calls", "total_cost_usd",
                                                                                                     "elapsed_s", "denied", "result")},
                 "actions": self.actions(record)}
 
@@ -279,7 +420,7 @@ class ClaudeService:
 
     # ------------------------------------------------------------------------------------------------------------- decisions
 
-    def select(self, run_id, index, note=""):
+    def select(self, run_id, index, note="", title_en=None, title_tr=None):
         record = store.run(self.db, run_id)
         if record is None:
             raise KeyError(run_id)
@@ -296,13 +437,25 @@ class ClaudeService:
         note = (note or "").strip()
         if len(note) > MAX_NOTE:
             raise Conflict(f"Not en çok {MAX_NOTE} karakter olabilir.")
+        # GÖREV-14 Adım 5b: the user may edit the title before choosing it; the edit passes the same length and suffix rules
+        chosen_en = (title_en if title_en is not None else candidate["baslik_en"]).strip()
+        chosen_tr = (title_tr if title_tr is not None else candidate["baslik_tr"]).strip()
+        edited = (chosen_en, chosen_tr) != (candidate["baslik_en"].strip(), candidate["baslik_tr"].strip())
+        if edited:
+            suffix = record["params"].get("baslik_eki") or self.suffixes(record["destination_id"])
+            found = title.title_problems(chosen_en, chosen_tr, suffix)
+            if found:
+                raise Conflict("Düzenlenen başlık kurallara uymuyor: " + " ".join(found))
         regions = {r["name"]: r["id"] for r in self.regions(record["destination_id"])}
         analysis = {k: candidate[k] for k in ("baslik_en", "baslik_tr", "bolge", "aile", "neden_onerildi", "izleyici_sorusu", "kanca",
                                              "icerik_plani", "eksik_veri", "sablon", "parametreler", "yeni_sablon_gerekir", "kapak_fikri")}
         analysis.update({"calisma": run_id, "aday": index, "secim_notu": note or None,
                          "paketler": {name: pack["id"] for name, pack in self.context_of(record)[1].packs.items()}})
+        if edited:
+            analysis["duzenleme"] = {"onerilen_en": candidate["baslik_en"], "onerilen_tr": candidate["baslik_tr"], "zaman": store.now()}
         video = {"id": store.new_id(), "destination_id": record["destination_id"], "region_id": regions.get(candidate["bolge"]),
-                 "region_name": candidate["bolge"], "title_en": candidate["baslik_en"], "title_tr": candidate["baslik_tr"],
+                 "region_name": candidate["bolge"], "title_en": chosen_en, "title_tr": chosen_tr,
+                 "proposed_title_en": candidate["baslik_en"], "proposed_title_tr": candidate["baslik_tr"], "user_edited": edited,
                  "family": candidate["aile"], "analysis": analysis, "template_key": candidate.get("sablon"),
                  "params": candidate.get("parametreler") or {}, "run_id": run_id, "candidate": index}
         with self.db.connect() as con:

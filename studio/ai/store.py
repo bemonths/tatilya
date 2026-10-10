@@ -76,6 +76,7 @@ def decode_video(row):
     item = dict(row)
     item["analysis"] = json.loads(item["analysis"])
     item["params"] = json.loads(item["params"])
+    item["user_edited"] = bool(item.get("user_edited"))
     item["status_label"] = VIDEO_STATUS_LABELS.get(item["status"], item["status"])
     return item
 
@@ -83,10 +84,11 @@ def decode_video(row):
 def insert_video(con, video):
     try:
         con.execute("""INSERT INTO videos (id,destination_id,region_id,region_name,title_en,title_tr,family,analysis,template_key,params,status,
-            created_at,run_id,candidate) VALUES (?,?,?,?,?,?,?,?,?,?,'baslik_secildi',?,?,?)""", (
+            created_at,run_id,candidate,proposed_title_en,proposed_title_tr,user_edited) VALUES (?,?,?,?,?,?,?,?,?,?,'baslik_secildi',?,?,?,?,?,?)""", (
             video["id"], video["destination_id"], video["region_id"], video["region_name"], video["title_en"], video["title_tr"], video["family"],
             json.dumps(video["analysis"], ensure_ascii=False), video["template_key"], json.dumps(video["params"], ensure_ascii=False), now(),
-            video["run_id"], video["candidate"]))
+            video["run_id"], video["candidate"], video.get("proposed_title_en", video["title_en"]),
+            video.get("proposed_title_tr", video["title_tr"]), 1 if video.get("user_edited") else 0))
     except Exception as exc:
         if "UNIQUE" in str(exc):
             raise Conflict("Bu başlık zaten seçildi; video kaydı var.") from exc
