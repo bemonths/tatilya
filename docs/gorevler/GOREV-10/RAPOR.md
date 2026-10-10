@@ -339,7 +339,7 @@ Book>Direct'in kendi fiyatı Mart ve Temmuz'da hiç olmadığından Book>Direct 
 ## Testler ve CI
 
 - Yerelde tam takım art arda 3 kez: **692 Python + 57 frontend** testi, hepsi geçti (`.venv\Scripts\python.exe -m pytest -q`, `node --test tests/frontend.test.mjs`). Önce (main/v0.12.0): 650 + 54.
-- Dal CI'ı: push sonrası eklenecek.
+- Dal CI'ı: `b623e08` (bu rapordan önceki son kod ve teslim commit'i) için çalıştırma 38018333626 — başarılı. Görev boyunca dalın bütün push'larında CI başarılı (ilk push `e8e80a5`: 37929405911).
 
 ## Beklenmedik durumlar
 
@@ -380,3 +380,4 @@ Commit'ler (main'den sonra):
 - `543bd48` fix: a reviewer's level note decides; the menu of another business on a shared site gives no level
 - `820fbf5` fix: a Book>Direct search whose total changes between pages is read again up to three times
 - `de9efcd` fix: the restaurant table shows the level reason on its own line
+- `b623e08` docs: GÖREV-10 report, deliverables, screenshots and updated handover documents
