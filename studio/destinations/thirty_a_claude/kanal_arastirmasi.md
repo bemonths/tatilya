@@ -90,3 +90,26 @@ Kaynak: en çok izlenen üç videonun yorumları (genel rehber, hatalar videosu,
 - **Truman Show ve Seaside** gibi merak açılarının temel bilgileri, referans tablosuna kaynaklı satır olarak.
 
 Bunlar GÖREV-10'un (günlük ihtiyaçlar, yürünebilirlik, etkinlik) yanına eklenip eklenmeyeceği yöneticinin bir sonraki kararıdır.
+
+## 7. Başlık eki için arama ve başlık verisi (10 Ekim 2026, vidIQ)
+
+**Arama tahminleri.** vidIQ'nun bu küçük terimlerdeki aylık arama tahminleri yine 3.500–5.500 bandında toplanıyor; bu bant içindeki sıralama güvenilir değil (yazım hatalı "gulf plce 30a florida" bile 4.560 görünüyor). Okunabilen şey hangi ifadelerin bu bantta, hangilerinin ölçülemeyecek kadar küçük (<750) olduğu:
+
+| İfade | vidIQ tahmini |
+|---|---|
+| florida 30a | 5.144 |
+| 30a florida | 4.803 |
+| 30a florida travel | 4.776 |
+| 30a florida vacation | 3.997 |
+| 30a florida things to do | 3.668 |
+| how to spend 3 days in 30a florida | 3.538 |
+| rosemary beach | 4.490 |
+| alys beach | 3.703 |
+| santa rosa beach | 4.817 |
+| 30a vacation, 30a florida guide, 30a florida beaches, 30a florida tour, things to do in 30a florida | <750 |
+
+Sonuç: insanlar yalnız "30A" değil "30A Florida" yazıyor ("30a" tek başına elektronik ürün aramalarına da karışıyor). Tatile yönelik ölçülebilen ifade "30a florida vacation"; "30a vacation" ölçülemeyecek kadar küçük. Mahalle adları ("rosemary beach", "alys beach", "santa rosa beach", "seaside florida") tek başına aranıyor.
+
+**YouTube'da "30a florida" için en çok izlenen başlıklar** (ABD, izlenmeye göre): "What Is 30A In Florida?! | Bucket List Destination | Ultimate 30A Guide" (436 bin), "30A FLORIDA BEACH VACATION! What to Do, Eat and Where to Stay" (176 bin), "Ultimate 30A Florida Gulf Coast Overview" (145 bin), "BIGGEST Mistakes To Avoid in 30A Florida (Rosemary Beach, Seaside, Alys Beach!)" (125 bin), "Rosemary Beach Tour - 7 Secrets about Rosemary Beach, Florida | 30A" (124 bin), "30A Florida Complete Guide - Florida's Best Beach Towns" (41 bin). Başarılı başlıklarda yer adı "30A Florida" biçiminde geçiyor; mahalle başlıklarında mahallenin adı başta.
+
+**Kanalın başlık eki:** " | 30A Florida Vacation". Gerekçe: arama ve başlık verisinde yerleşik ifade "30A Florida"; kullanıcının istediği "30A tatili" kalıbının karşılığı olan ve ölçülebilen tek tatil ifadesi "30a florida vacation". Ek, bütün videolarda kanalın tek konusunu (30A'da tatil) aynı kelimelerle tekrar eder.
