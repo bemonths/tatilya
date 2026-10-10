@@ -109,9 +109,9 @@ def text_step(db, destination_id, video):
         latest = latest_done_run(db, destination_id)
         newest_pack = (video.get("packs") or [{}])[0].get("id")
         made = moment(version["created_at"])
-        if (latest and made is not None and moment(latest) > made) or (newest_pack and newest_pack != version.get("pack_id")):
-            return ("stale", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Seçilen sürümden sonra veri yeniden çekildi ya "
-                    "da paket değişti (bilgi).", "veri ya da paket seçilen sürümden sonra değişti")
+        if latest and made is not None and moment(latest) > made and newest_pack and newest_pack != version.get("pack_id"):
+            return ("stale", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Seçilen sürümden sonra veri yeniden çekildi ve "
+                    "paket değişti (bilgi).", "veri yeniden çekildi ve paket seçilen sürümden sonra değişti")
         return ("done", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Sonraki adım: Kontrol (henüz kurulmadı).", None)
     if runs and runs[0]["status"] in ("paused", "interrupted", "error"):
         run = runs[0]
