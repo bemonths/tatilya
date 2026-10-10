@@ -14,9 +14,11 @@ repetition); their count is 1–3. A run started from "İngilizcesini Claude yaz
 """
 import json
 import shutil
+from pathlib import Path
 
 from . import steps, title
 
+STEP_KEY = "baslik_degerlendirme"
 OUTPUT, MARKDOWN = "baslik_degerlendirme.json", "baslik_degerlendirme.md"
 USER_TITLE, MEASURES = "kullanici_basligi.md", "baslik_olculeri.md"
 TITLE_INSTRUCTIONS = "baslik.md"
@@ -145,6 +147,21 @@ def summary(data):
     return {"kullanici_fikri": data.get("kullanici_fikri"), "doluluk": fill, "sorunlar": data.get("sorunlar") or []}
 
 
+NO_CANDIDATES_TEXT = "Değerlendirildi: veriyle dolmuyor"
+
+
+def without_candidates(data_dir, record):
+    """GÖREV-15 Adım 1d: an evaluation waiting for approval that wrote no candidate ("veriyle dolmuyor") has nothing to approve. It is not
+    counted as waiting in the workflow and is shown as information; "Reddet" still closes it. Read from the run's output file."""
+    if record.get("step") != STEP_KEY or record.get("status") != "awaiting_approval":
+        return False
+    try:
+        data = json.loads((Path(data_dir) / record["folder"] / OUTPUT).read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+    return isinstance(data, dict) and not (data.get("adaylar") or [])
+
+
 def source_note(view, candidate, edited_tr):
     """The note of an "İngilizcesini Claude yazsın" run (Adım 5b): the candidate was edited, with its analysis."""
     plan = "; ".join(f"{n}) {p.get('bolum')} — {p.get('ne_anlatir')}" for n, p in enumerate(candidate.get("icerik_plani") or [], 1))
@@ -165,7 +182,7 @@ def source_note(view, candidate, edited_tr):
     return text
 
 
-STEP = steps.register(steps.Step(key="baslik_degerlendirme", title="Başlık değerlendirme",
+STEP = steps.register(steps.Step(key=STEP_KEY, title="Başlık değerlendirme",
                                  instructions=("ortak.md", "baslik_degerlendirme.md"), schema="baslik_degerlendirme.schema.json",
                                  output=OUTPUT, markdown=MARKDOWN, prepare=prepare, task=task, fill_schema=title.fill_schema, check=check,
                                  render=render))

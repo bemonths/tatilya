@@ -402,7 +402,8 @@ class ClaudeService:
         markdown = (folder / step.markdown).read_text(encoding="utf-8") if (folder / step.markdown).is_file() else None
         result = saved.get("calisma_sonucu") or {}
         review = title_review.summary(data) if data and step.key == title_review.STEP.key else None
-        return {**record, "step_title": step.title, "candidates": candidates, "general_problems": [p for p in problems if p["aday"] is None],
+        return {**self.with_outcome(record), "step_title": step.title, "candidates": candidates,
+                "general_problems": [p for p in problems if p["aday"] is None],
                 "review": review, "output_file": step.output, "markdown_file": step.markdown,
                 "notes": (data or {}).get("notlar") or [], "markdown": markdown, "inputs": saved.get("girdiler") or [],
                 "instructions": saved.get("talimat_surumu"),
@@ -417,8 +418,13 @@ class ClaudeService:
         return {"select": status in ("awaiting_approval", "approved"), "reject": status == "awaiting_approval",
                 "correct": status in ("awaiting_approval", "approved", "error", "rejected")}
 
+    def with_outcome(self, record):
+        """GÖREV-15 Adım 1d: an evaluation that wrote no candidate is shown as information ("Değerlendirildi: veriyle dolmuyor")."""
+        empty = title_review.without_candidates(self.db.path.parent, record)
+        return {**record, "adaysiz": empty, "bilgi": title_review.NO_CANDIDATES_TEXT if empty else None}
+
     def runs(self, destination_id):
-        return store.runs(self.db, destination_id)
+        return [self.with_outcome(r) for r in store.runs(self.db, destination_id)]
 
     # ------------------------------------------------------------------------------------------------------------- decisions
 

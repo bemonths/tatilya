@@ -29,13 +29,19 @@ export function metricsText(run) {
   return parts.filter(Boolean).join(" · ");
 }
 
+/** GÖREV-15 Adım 1d: an evaluation that wrote no candidate ("veriyle dolmuyor") is information, not waiting for approval. */
+export function runStatusTag(run) {
+  if(run.adaysiz) return `<span class="tag">${esc(run.bilgi || "Değerlendirildi: veriyle dolmuyor")}</span>`;
+  return `<span class="tag ${run.status==="error"?"warm":run.status==="approved"?"green":""}">${esc(RUN_STATUS[run.status] || run.status)}</span>`;
+}
+
 export function runRow(run) {
   const params=run.params || {};
   const review=run.step==="baslik_degerlendirme";
   return `<tr><td>${review?'<span class="tag">değerlendirme</span> ':""}<a class="source-name" href="#videos/run/${esc(run.id)}">${esc(params.bolge || "—")}${params.aile && params.aile!=="hepsi"?` · ${esc(params.aile)}`:""}</a>
     ${review?`<small class="source-host">“${esc(params.kullanici_basligi || "")}”</small>`:""}
     <small class="source-host">${run.correction_of?"düzeltme · ":""}${params.kaynak?"düzenlenen adaydan · ":""}${esc(String(params.not || params.duzeltme_notu || "not yok").split("\n")[0])}</small></td>
-    <td>${esc(date(run.created_at))}</td><td><span class="tag ${run.status==="error"?"warm":run.status==="approved"?"green":""}">${esc(RUN_STATUS[run.status] || run.status)}</span>
+    <td>${esc(date(run.created_at))}</td><td>${runStatusTag(run)}
     ${run.error?`<small class="source-host">${esc(run.error)}</small>`:""}</td>
     <td>${esc(run.model_label || run.model || "—")} · ${esc(run.effort_label || run.effort || "—")}<small class="source-host">${esc(metricsText(run))}</small></td></tr>`;
 }
@@ -128,7 +134,7 @@ export function runView(view, open, message="", busy=false, edit=null) {
   const summary=view.summary || {};
   const heading=view.step==="baslik_degerlendirme"?`Başlık değerlendirmesi · ${esc(params.bolge)}`:`Konu ve başlık önerileri · ${esc(params.bolge)}${params.aile && params.aile!=="hepsi"?` · ${esc(params.aile)}`:""}`;
   return `<section class="library claude-run"><div class="library-title"><h2>${heading}</h2>
-      <small><span class="tag ${view.status==="error"?"warm":view.status==="approved"?"green":""}">${esc(RUN_STATUS[view.status] || view.status)}</span> ${esc(date(view.created_at))}</small></div>
+      <small>${runStatusTag(view)} ${esc(date(view.created_at))}</small></div>
     <div class="run-meta">${esc(view.model_label || "—")} · efor: ${esc(view.effort_label || "—")}${view.claude_version?` · Claude Code ${esc(view.claude_version)}`:""} · ${esc(metricsText(view))}${summary.total_cost_usd?` · maliyet karşılığı ${summary.total_cost_usd.toFixed(2).replace(".",",")} $`:""}
       ${params.not?`<br>Not: ${esc(params.not)}`:""}${params.duzeltme_notu?`<br>Düzeltme notu: ${esc(params.duzeltme_notu)}`:""}</div>
     ${instructionLine(view)}
@@ -136,7 +142,7 @@ export function runView(view, open, message="", busy=false, edit=null) {
     ${view.general_problems?.length?`<div class="run-problems"><h3>Doğrulama sorunları</h3>${problemList(view.general_problems)}</div>`:""}
     ${view.status==="error" && (view.problems||[]).length?`<div class="run-problems"><h3>Doğrulama sorunları</h3>${problemList(view.problems)}</div>`:""}
     ${reviewSummary(view)}
-    ${view.candidates.length?candidateList(view, open, edit):'<p class="muted run-empty">Bu çalışmada gösterilecek öneri yok.</p>'}
+    ${view.candidates.length?candidateList(view, open, edit):view.adaysiz?'<p class="stage-note run-empty">Değerlendirildi: fikir veriyle dolmuyor; seçilecek başlık yok. Bu bir bilgidir, onay beklemiyor. İsterseniz “Reddet” ile kapatabilirsiniz.</p>':'<p class="muted run-empty">Bu çalışmada gösterilecek öneri yok.</p>'}
     <div class="decision"><label>Not<textarea id="decision-note" rows="3" maxlength="4000" placeholder="Seçim ya da düzeltme için notunuz"></textarea></label>
       ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
       <div class="decision-actions"><button id="run-correct" ${view.actions.correct && !busy?"":"disabled"}>Düzeltme iste</button>

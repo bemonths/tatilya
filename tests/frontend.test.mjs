@@ -975,3 +975,13 @@ test('Settings → Tarayıcı eklentisi: connection, code, domains, speed, steps
   assert.match(trialRows([{alan_adi: 'cvs.com', durum: 'dogrulama', bayt: 4096, not: 'süre doldu'}]), /cvs\.com.*doğrulama geçilmedi.*4 KB.*süre doldu/s);
   assert.equal(trialRows([]), '');
 });
+import {runStatusTag, runView as runViewOf} from '../studio/web/videos.js';
+test('GÖREV-15 1d: an evaluation without candidates is information, not "Onay bekliyor"',()=>{
+  const run={id:'r1',step:'baslik_degerlendirme',status:'awaiting_approval',adaysiz:true,bilgi:'Değerlendirildi: veriyle dolmuyor',params:{bolge:'Rosemary Beach',kullanici_basligi:'köpek'},created_at:'2026-10-11T10:00:00Z'};
+  assert.match(runStatusTag(run),/Değerlendirildi: veriyle dolmuyor/);
+  assert.doesNotMatch(runStatusTag(run),/Onay bekliyor/);
+  assert.match(runStatusTag({...run,adaysiz:false}),/Onay bekliyor/);
+  const view={...run,candidates:[],actions:{select:true,reject:true,correct:true},review:{kullanici_fikri:'köpek',doluluk:{dolar_mi:false,eksik_veri:['x']},sorunlar:[]},summary:{}};
+  const html=runViewOf(view,null);
+  assert.match(html,/onay beklemiyor/);assert.match(html,/id="run-reject" class="quiet" >/);
+});

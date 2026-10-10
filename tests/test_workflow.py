@@ -8,7 +8,7 @@ import pytest
 
 from studio import workflow
 from studio.ai import store
-from tests.test_claude_steps import app, start  # noqa: F401  (app: fixture with the fake Claude)
+from tests.test_claude_steps import app, finished, start  # noqa: F401  (app: fixture with the fake Claude)
 
 
 def steps(view):
@@ -127,3 +127,25 @@ def test_statuses_are_not_stored_anywhere(app):
     with app.app.state.db.connect() as con:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert not {t for t in tables if "workflow" in t or "durum" in t}
+
+
+def test_an_evaluation_without_candidates_is_information_not_waiting(app, nothing_due, monkeypatch):
+    """GÖREV-15 Adım 1d: "veriyle dolmuyor" with no candidate is not counted as waiting; it is shown as information and can be rejected."""
+    db = app.app.state.db
+    done_run(db)
+    monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "dolmuyor")
+    response = app.post("/api/claude/review-runs", json={"bolge": "Rosemary Beach", "baslik": "Rosemary Beach'e köpeğimizle gitsek nasıl olur?"})
+    run = finished(app, response.json()["id"])
+    assert run["status"] == "awaiting_approval" and run["candidates"] == []
+    assert run["adaysiz"] is True and run["bilgi"] == "Değerlendirildi: veriyle dolmuyor"
+    listed = next(r for r in app.get("/api/claude/runs").json() if r["id"] == run["id"])
+    assert listed["adaysiz"] is True and listed["bilgi"] == "Değerlendirildi: veriyle dolmuyor"
+    s = steps(app.get("/api/workflow").json())
+    assert s["baslik"]["status"] == "ready" and s["baslik"]["detail"] == "Değerlendirildi: veriyle dolmuyor"
+    assert "veriyle dolmuyor" in s["baslik"]["next"]
+    monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "ok")
+    start(app, bolge="Rosemary Beach")                                    # a proposal with candidates waits as before
+    assert steps(app.get("/api/workflow").json())["baslik"]["detail"] == "1 çalışma onay bekliyor"
+    rejected = app.post(f"/api/claude/runs/{run['id']}/reject", json={}).json()
+    assert rejected["status"] == "rejected"
+    assert not next(r for r in app.get("/api/claude/runs").json() if r["id"] == run["id"])["adaysiz"]

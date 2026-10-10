@@ -8,7 +8,7 @@ our own: `due` (Veri: a collector's suggested interval passed) and `planned` (th
 iş" line its screen starts with: what has to be done and which button does it.
 """
 from . import refresh
-from .ai import store
+from .ai import store, title_review
 from .evidence.pack import latest_done_run, moment
 
 STATUS_LABELS = {"waiting": "bekliyor", "ready": "hazır", "running": "çalışıyor", "awaiting_approval": "onay bekliyor",
@@ -57,7 +57,8 @@ def title_step(db, destination_id, video, has_data):
     runs = [r for r in store.runs(db, destination_id) if r["step"] in TITLE_STEPS]
     if any(r["status"] == "running" for r in runs):
         return "running", "Claude çalışıyor. Bitince öneriler bu ekranda onay için görünür; ilerlemesi İşler panelinde.", None
-    waiting = [r for r in runs if r["status"] == "awaiting_approval"]
+    # GÖREV-15 Adım 1d: an evaluation without candidates ("veriyle dolmuyor") has nothing to approve; it is information, not waiting
+    waiting = [r for r in runs if r["status"] == "awaiting_approval" and not title_review.without_candidates(db.path.parent, r)]
     if waiting:
         return ("awaiting_approval", "Başlık seçilmedi: onay bekleyen öneriden bir başlık seç (“Bu başlığı seç”) ya da yeni öneri al.",
                 f"{len(waiting)} çalışma onay bekliyor")
@@ -66,6 +67,9 @@ def title_step(db, destination_id, video, has_data):
                 runs[0].get("error"))
     if not has_data:
         return "waiting", "Önce veri gerekiyor: 1. adımdan (Veri) kaynakları çek.", None
+    if runs and title_review.without_candidates(db.path.parent, runs[0]):
+        return ("ready", "Son değerlendirme: fikir veriyle dolmuyor (bilgi). Yeni öneri al ya da başka bir başlık yaz; değerlendirmeyi "
+                "“Reddet” ile kapatabilirsin.", title_review.NO_CANDIDATES_TEXT)
     chosen = [r for r in runs if r["status"] == "approved"]
     if chosen:
         return ("ready", "Üst çubuktan bir video seç ya da yeni öneri al (“Öneri al”) veya kendi başlığını yaz.", None)
