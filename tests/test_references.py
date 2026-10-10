@@ -1,7 +1,7 @@
 """Manually verified reference table: validator rules, the committed 30A table, API and the TDT collections file."""
 import csv
 import re
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -168,7 +168,8 @@ def test_api_serves_the_table_for_30a_only(tmp_path, monkeypatch):
         other = client.get("/api/references?destination_id=test-coast").json()
         assert other == {"available": False, "reason": "Bu destinasyon için referans tablosu yok.", "rows": []}
         assert client.get("/api/references?destination_id=missing").status_code == 404
-        monkeypatch.setattr(ref, "today", lambda: date(2027, 10, 9))     # a day after the latest re-check date (GÖREV-08 rows)
+        latest = max(date.fromisoformat(row["yeniden_kontrol_tarihi"]) for row in data["rows"])
+        monkeypatch.setattr(ref, "today", lambda: latest + timedelta(days=1))     # a day after the latest re-check date
         assert all(row["overdue"] for row in client.get("/api/references").json()["rows"])
 
 
@@ -179,3 +180,18 @@ def test_api_reports_a_broken_table_instead_of_failing(tmp_path, monkeypatch):
     with TestClient(create_app(tmp_path / "data"), headers=HEADERS) as client:
         data = client.get("/api/references").json()
         assert data == {"available": False, "reason": "Referans tablosunun sütunları beklenen biçimde değil.", "rows": []}
+
+
+def test_traffic_table_has_one_sourced_fact_per_row():
+    """GÖREV-11: FDOT 2025 AADT and seasonal-factor rows beside the reference table, with the same source columns; monthly ratios
+    are labelled as our calculation."""
+    import csv
+    with open(thirty_a.TRAFFIC_TABLE, encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows and len({r["id"] for r in rows}) == len(rows)
+    assert {r["etiket"] for r in rows} <= {"kaynak gerçeği", "bizim hesabımız"}
+    for row in rows:
+        assert row["kaynak_url"].startswith("https://") and len(row["belge_sha256"]) == 64 and row["erisim_tarihi"]
+        assert (row["etiket"] == "bizim hesabımız") == row["tur"].startswith("mevsim faktörü")
+    roads = {r["yol"] for r in rows if r["tur"] == "AADT"}
+    assert roads == {"CR 30A", "US 98"}

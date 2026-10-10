@@ -63,6 +63,9 @@ BEACH_SUBDIVISIONS = Path(__file__).with_name("thirty_a_beach_subdivisions.csv")
 SUBDIVISION_NEIGHBORHOODS = Path(__file__).with_name("thirty_a_subdivision_neighborhoods.csv")
 # Manually verified reference facts (one per row, with source, quote and document SHA-256); read-only in the app.
 REFERENCE_TABLE = Path(__file__).with_name("thirty_a_references.csv")
+# FDOT 2025 AADT of the CR 30A and US 98 count sites and Walton weekly seasonal factors (monthly ratios are our calculation); the same
+# source columns as the reference table, one fact per row.
+TRAFFIC_TABLE = Path(__file__).with_name("thirty_a_traffic.csv")
 # South Walton monthly tourist development tax collections from the Walton County Clerk history workbook.
 TDT_COLLECTIONS = Path(__file__).with_name("thirty_a_tdt_collections.csv")
 

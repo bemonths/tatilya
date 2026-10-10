@@ -13,12 +13,14 @@ COLUMNS = ("id", "konu", "ifade", "deger", "birim", "kapsam", "kaynak_adi", "kay
 REQUIRED = ("id", "konu", "ifade", "kapsam", "kaynak_adi", "kaynak_sahibi", "kaynak_url", "erisim_tarihi", "guven", "durum",
             "yeniden_kontrol_tarihi")
 TOPICS = {"plaj-kurallari": "Plaj kuralları", "guvenlik": "Güvenlik", "plaj-erisimi": "Plaj erişimi", "ulasim": "Ulaşım",
-          "parklar": "Parklar", "kasirga-sezonu": "Kasırga sezonu", "sezon-maliyet": "Sezon ve maliyet", "genel": "Genel"}
+          "parklar": "Parklar", "kasirga-sezonu": "Kasırga sezonu", "sezon-maliyet": "Sezon ve maliyet", "genel": "Genel",
+          "plaj-hukuku": "Plaj erişimi hukuku", "erisilebilirlik": "Erişilebilirlik", "kalabalik": "Ziyaretçiler ve okul tatilleri",
+          "etkinlikler": "Etkinlikler", "tarihce": "Tarihçe"}
 STATUSES = {"dogrulandi": "doğrulandı", "celiskili": "çelişkili", "dogrulanamadi": "doğrulanamadı", "yerine_gecildi": "yerine geçildi"}
 # A superseded row stays in the table for the record; its note names the verified row that replaces it.
 REPLACED_BY = re.compile(r"yerine geçen: ([a-z0-9]+(?:-[a-z0-9]+)*)")
 CONFIDENCE = {"birincil": "birincil", "ikincil": "ikincil"}
-SCOPES = ("30A", "South Walton", "Walton County", "Florida", "Atlantik havzası")
+SCOPES = ("30A", "South Walton", "Walton County", "Florida", "Atlantik havzası", "ABD", "Okul bölgesi")
 MAX_QUOTE_WORDS = 25
 ID_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 SHA_PATTERN = re.compile(r"[0-9a-f]{64}")
