@@ -1,0 +1,30 @@
+{
+  "surum": 1,
+  "adim": "baslik_degerlendirme",
+  "notlar": [
+    "Bu soru izleyicinin gerçekten sorduğu bir soru: kanal araştırmasında yorumlarda 'köpek dostu otel ve restoran var mı' sorusu geçiyor. Yani konu kötü değil; sorun, bugünkü verimizin bu soruyu Rosemary Beach için cevaplayamaması.",
+    "Elimizdeki köpek bilgisi şimdilik bir dakikalık bir bölümü taşır. Bu bölüm iki yerde kullanılabilir: Rosemary Beach tam rehberinin içinde 'köpekle gelecekler için' notu olarak ya da daha önce önerilen '30A Beach Rules That Can Cost You $500: Flags, Tents, Dogs, Bonfires and More' videosunda.",
+    "Eksik veriler toplanırsa bu konu tek bir mahalleye değil, bütün 30A'ya yayılan bir video olarak daha güçlü olur (ör. 'köpekle 30A tatili'). Kiralık evlerin evcil hayvan kuralı ve köpek kabul eden restoranlar mahalleden mahalleye karşılaştırılabilir; Rosemary Beach de o videonun bir bölümü olur.",
+    "Bu fikir daha önce önerilen başlıkların hiçbirinin tekrarı değil. En yakın olanı 30A geneli için önerilen plaj kuralları videosu; o videoda köpek kuralı zaten bir madde olarak geçiyor."
+  ],
+  "kullanici_fikri": "Rosemary Beach'e köpeğimizle gitsek nasıl olur?",
+  "doluluk": {
+    "dolar_mi": false,
+    "aciklama": "Köpekle Rosemary Beach'e gitmek isteyen biri asıl şu üç şeyi sorar: köpeğimi kabul eden bir ev bulabilir miyim, köpeğim plaja çıkabilir mi, köpekle nereye gidip nerede yemek yiyebilirim? Bu üç sorudan yalnız ikincisinin bir kısmına verimiz cevap veriyor. Walton County'nin plaj yönetmeliğine göre ilçenin halka açık plajlarına hayvan giremez; istisna hizmet hayvanları ve ilçe izni olan köpeklerdir (veri_ozeti_30a.md K0097). Bu izin ise yalnız Walton County'de mülk sahiplerine ve daimi sakinlere veriliyor ve köpeğin plajda yalnız 15:30–08:30 arasında, tasmalı olarak bulunmasına izin veriyor (K0098). Bir kural ihlalinin cezası 500 dolara kadar çıkabiliyor (K0119). Ancak Rosemary Beach'te ilçenin halka açık plaj erişimi yok (veri_ozeti_mahalle.md K0002, K0005); kiracılar topluluğun 9 özel plaj geçidini kullanıyor (K0007, K0008). Bu özel plajda ve geçitlerde köpekle ilgili bir kural olup olmadığını hiçbir kaynağımız söylemiyor. Kiralık evlerin evcil hayvan kabul edip etmediği, restoranların köpek kabulü, yakındaki veteriner ve köpekle gidilebilecek yerler hakkında ise hiç verimiz yok. Elimizdeki bilgiyle yaklaşık bir dakikalık bir bölüm kurulabiliyor; 15–17 dakikalık bir videoda geri kalan bölümler ya boş kalır ya da köpekle ilgisi olmayan genel bilgiyle (fiyat, hava, restoran listesi) doldurulmak zorunda kalır. Bu yüzden fikir bugünkü veriyle dolmuyor.",
+    "eksik_veri": [
+      "Rosemary Beach topluluğunun (RBPOA) özel plajında, plaj geçitlerinde ve kasabanın yeşil alanlarında köpeklerle ilgili kurallar (izin var mı, tasma ve saat kuralı ne). Kaynak: topluluk derneğinin ya da Rosemary Beach Cottage Rental Company'nin resmî sayfaları.",
+      "Rosemary Beach'teki kiralık evlerin evcil hayvan kuralı: kaç ilan köpek kabul ediyor, evcil hayvan ücreti ya da depozitosu ne, köpek sayısı ve boyut sınırı var mı. Kaynak: Book>Direct'teki evcil hayvan filtresi ve kiralama şirketlerinin evcil hayvan politikası sayfaları.",
+      "Rosemary Beach'teki iki otelin evcil hayvan politikası.",
+      "Rosemary Beach restoranlarının köpek kabulü (köpekle oturulabilen açık alan, patio). Restoran tablomuzda bu sütun yok.",
+      "En yakın veteriner ve acil veteriner kliniğine kuş uçuşu mesafe (günlük ihtiyaç noktalarına eklenmesi gerekir).",
+      "Köpekle gidilebilecek yerler ve kuralları: Timpoochee Trail, Point Washington State Forest ve yakındaki eyalet parklarında evcil hayvan kuralı; bölgede köpek parkı olup olmadığı.",
+      "Ziyaretçi köpeklerinin girebildiği en yakın plaj (Walton County dışında, örneğin komşu ilçelerde) ve oranın kuralları."
+    ]
+  },
+  "sorunlar": [
+    "Yazılan metin bir başlık değil, Türkçe bir soru; İngilizce bir başlığa çevrilmesi ve ' | 30A Florida Vacation' ekiyle bitmesi gerekir.",
+    "'Nasıl olur?' çok geniş bir soru. İzleyicinin aradığı ifade daha somut olur: 'Rosemary Beach dog friendly' ya da 'Can you bring your dog to Rosemary Beach'. Ama bu somut sorulara ('köpek dostu mu', 'köpeğinizi götürebilir misiniz') bugün verimiz cevap veremiyor.",
+    "Elimizdeki tek güçlü bilgi (ziyaretçi köpeklerinin ilçenin halka açık plajlarına girememesi) Rosemary Beach'e özgü değil, bütün 30A için geçerli. Rosemary Beach'in kendi özel plajındaki köpek kuralı ise bilinmiyor; bu yüzden 'Rosemary Beach'te köpeğiniz plaja çıkamaz' gibi bir başlık kanıtın ötesine geçer."
+  ],
+  "adaylar": []
+}

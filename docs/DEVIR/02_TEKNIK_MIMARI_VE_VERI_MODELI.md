@@ -23,17 +23,18 @@ Proje yolu:
 C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio
 ```
 
-Başlatma:
+Başlatma (GÖREV-14):
 
 ```text
-baslat.bat
+masaüstündeki "30A Studio" kısayolu  ->  .venv\Scripts\pythonw.exe -X utf8 -m studio
+baslat.bat                           ->  ilk seferde kurar, sonra aynı komutu başlatır
+python -m studio --data-dir … --no-browser --port …   (geliştirme ve deneme; pencere ve bekçi yok)
 ```
 
-Varsayılan server:
-
-```text
-127.0.0.1:8830
-```
+Server: 127.0.0.1, 8830–8849 aralığındaki ilk boş port (geliştirme komutunda varsayılan 8830). Başlatıcı `studio/launcher.py`
+(başlatma kilidi `<veri>/baslatiliyor.kilit`, çalışma kilidi `<veri>/calisiyor.json`, `/api/health` ile tek kopya, uygulama kipi
+pencere), kapanma bekçisi `studio/watchdog.py` (`POST /api/heartbeat`, olay akışı; çalışan iş varken bekler), günlük
+`<veri>/gunluk/uygulama.log`, kurulum damgası `.venv/studio-kurulum.txt`.
 
 Varsayılan DB:
 
@@ -373,6 +374,16 @@ Yapılandırma: `destination_poi_areas` (bölge kutusu), `destination_poi_catego
 
 `claude_runs` (kimlik, destinasyon, adım, hazırlık ya da video kimliği, iş, düzeltilen çalışma, durum: running / awaiting_approval / approved / rejected / error, seçim JSON, klasör, model, efor, Claude Code sürümü, oturum, ölçüm JSON, sorunlar JSON, hata, karar notu; aynı anda tek `running` satırı). `videos` (kimlik, destinasyon, bölge, İngilizce ve Türkçe başlık, aile, seçilen adayın analizi JSON, şablon ve parametreler, durum: baslik_secildi / paket_hazir, çalışma ve aday sırası). `evidence_packs.video_id`. Çekirdek `studio/ai/` (çalıştırıcı, ayarlar, adım çerçevesi, konu ve başlık adımı, servis); talimatlar destinasyonda (`studio/destinations/thirty_a_claude/`); çalışma klasörleri `<veri>/claude/`; ayarlar `<veri>/ayarlar.json`. Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md`.
 
+### Claude kullanımı, iş ilerlemesi ve eklenti yöntemi (şema 16; `gorev-14-masaustu-eklenti` dalı)
+
+`claude_usage` (ölçüm zamanı, kaynak: `calisma` / `yenile`, çalışma kimliği, 5 saatlik ve haftalık oran ve sıfırlanma zamanı, durum,
+ham bilgi JSON). `job_progress` (iş başına `progress_info` JSON: Claude çalışmasının aşaması ve başlangıçları, beklenen süre ve dayanağı;
+eklenti bekleyen işte `{"tur": "eklenti", "bekliyor": true}`); `jobs` satırları değişmez, `/api/jobs` ikisini birleştirir.
+`browser_hosts.method` (alan adı için en son işe yarayan yöntem: `eklenti`, `tarayici`, `dogrudan`). Talimat sürümleri veritabanında değil,
+`<veri>/claude/talimat_gecmisi/<dosya>/<zaman>.md`; başlık ekleri `<veri>/ayarlar.json` → `baslik_ekleri`; eklenti eşleşmesi
+`<veri>/eklenti.json`. Video kaydında (`videos`) önerilen başlık ve "kullanıcı düzenledi" işareti. Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md`,
+`docs/M16-TARAYICI-EKLENTISI.md`.
+
 ### Günlük ihtiyaç ve kanıt paketi (şema 14; `gorev-11-kanit-paketi` dalı)
 
 `destination_poi_categories` + `brands` (JSON marka listesi; büyük süpermarket), `verified_only` (acil servis, acil bakım: yalnız resmî kaynakla doğrulanan nokta sayılır). `poi_points.source` + `kurumun kendi sitesi`. `poi_chain_checks` + `category_key` (birincil anahtar `run_id, category_key, chain, store`), sonuç + `osm_dogrulanamadi`. `evidence_packs` (kimlik, destinasyon, şablon anahtarı ve sürümü, başlık, parametreler JSON, üretim zamanı, Markdown ve JSON dosya yolu ve SHA-256'sı, bölüm/satır/sayı/"veri yok" sayısı). Kanıt paketi çekirdeği `studio/evidence/` (generic); şablonlar `studio/destinations/thirty_a_evidence/*.json`. GÖREV-12 (`gorev-12-yazar-ozeti`, şema değişmedi): `summary.py` yazar özetini aynı paket nesnesinden yazar; her üretim dört dosya (Markdown, JSON, `-yazar-ozeti.md`, `-sayilar.csv`); eklerin adı ve SHA-256'sı JSON'un `dosyalar` alanında (JSON'un SHA-256'sı `evidence_packs`'te); satırlarda `ek_degerler` (`tur`: alt_ceyrek, ust_ceyrek, orneklem, pay, aralik_alt, aralik_ust, donusum), `tablo`, `kucuk_ornek`, `celiski_notu`; sayı listesi yalnız bu alanlardan; şablonda `oynak_konular`. Ayrıntı: `docs/M13-GUNLUK-IHTIYAC.md`, `docs/M14-KANIT-PAKETI.md`.
@@ -397,6 +408,8 @@ Stable şema: `10` (v0.10.0 ve main): v7 → v8 iklim tablolarını, 30A iklim y
 GÖREV-10 (`gorev-10-aylik-gunluk`, şema `13`, `studio/migration_v13.py`): v12 → v13 `destination_lodging_sources.window_rule` sütununu, yenileme aralığı ve toplu çalıştırma tablolarını, günlük ihtiyaç tablolarını ekler; `restaurant_facts`, `restaurant_menus` ve `restaurant_menu_items`'ı yeni değerlerle yeniden kurar; 30A için pencere kuralını, aralıkları, bölge kutusunu, kategorileri ve OpenStreetMap kaynağını tohumlar. Gerçek DB kopyasında satır sayıları korunarak denendi.
 
 GÖREV-11 (`gorev-11-kanit-paketi`, şema `14`, `studio/migration_v14.py`): v13 → v14 kategori yapılandırmasına `brands` ve `verified_only` sütunlarını ekler, `poi_points` ve `poi_chain_checks`'i genişleyen CHECK listeleri ve kategori anahtarıyla yeniden kurar (eski satırlar korunur, eski kontrol satırlarına `supermarket` yazılır), `evidence_packs` tablosunu ekler ve destinasyonun günlük ihtiyaç kategorilerini profildeki yeni listeyle değiştirir. Gerçek DB kopyasında denendi: yalnız `destination_poi_categories` 5 → 7 ve yeni boş `evidence_packs`; `integrity_check` ok, `foreign_key_check` boş.
+
+GÖREV-13 (`gorev-13-claude-baslik`, şema `15`): v14 → v15 `claude_runs`, `videos` ve `evidence_packs.video_id`'yi ekler. GÖREV-14 (`gorev-14-masaustu-eklenti`, şema `16`, `studio/migration_v16.py`): v15 → v16 `claude_usage` ve `job_progress` tablolarını, `browser_hosts.method` sütununu ve video kaydına önerilen başlık ve "kullanıcı düzenledi" alanlarını ekler; eski satırlar değişmez. Gerçek DB kopyasında denendi: 165.250 satır önce ve sonra aynı; `integrity_check` ok, `foreign_key_check` boş.
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
@@ -426,6 +439,8 @@ Domain:
 - `/api/daily-needs-runs`, `/api/daily-needs-runs/{id}` (noktalar, zincir kontrolü, mahalle başına kuş uçuşu uzaklık ortancaları; okuma anında), `/api/daily-needs-runs/{id}/raw` (v0.13.0)
 - `/api/evidence-templates` (şablonlar, bölüm soruları, parametre seçenekleri), `POST /api/evidence-packs` (`template_key`, `params`; üretir, `data/evidence/` altına Markdown + JSON yazar ve SHA-256'larıyla kaydeder), `/api/evidence-packs` (her pakette `ekler`), `/api/evidence-packs/{id}/markdown|json|yazar-ozeti|sayilar` (dosyanın SHA-256'sı kayıtla, eklerinki kayıtla doğrulanmış JSON'la karşılaştırılarak) (v0.14.0; yazar özeti ve sayı listesi GÖREV-12)
 - `/api/settings/claude` (GET, PUT: Claude Code'un yolu ve sürümü, API anahtarı uyarısı, model, efor, tur sınırı), `/api/claude/options`, `/api/claude/runs`, `POST /api/claude/title-runs` (bölge, aile, not), `/api/claude/runs/{id}` (onay görünümü), `POST /api/claude/runs/{id}/select|reject|correct`, `/api/claude/runs/{id}/files/{ad}`, `/api/videos`, `POST /api/videos/{id}/evidence-pack` (v0.15.0, GÖREV-13)
+- `/api/workflow?video_id=` (iş akışının 8 adımı ve durumları), `POST /api/heartbeat` (kapanma bekçisi), `/api/claude/usage`, `POST /api/claude/usage/refresh`, `/api/claude/instructions`, `/api/claude/instructions/{key}` (GET, PUT `base_sha256` ile; değiştiyse 409), `/api/claude/instructions/{key}/versions/{sürüm}` ve `…/restore`, `/api/settings/title-suffix` (GET, PUT), `POST /api/claude/review-runs` (bölge, başlık, not), `POST /api/claude/runs/{id}/translate` (aday, düzenlenmiş Türkçe başlık), `select` gövdesinde düzenlenmiş `baslik_en` / `baslik_tr`; `POST /api/videos/{id}/evidence-pack` artık içerik planından paket kurar (v0.16.0, GÖREV-14)
+- Eklenti (yalnız eşleşmiş eklentinin kökeni ve `X-Studio-Eklenti` kodu): `POST /api/eklenti/eslestir`, `/api/eklenti/sor`, `/api/eklenti/is/{oturum}/sonraki|sonuc|durum|bitti`; programın ekranı için `/api/tarayici-eklentisi` (GET), `…/kod-yenile`, `…/ayarlar` (PUT), `…/deneme`, `…/sorunlu-siteler`, `…/devret/{iş}`, `/eklenti-deneme` (yerel deneme sayfası), `/eklenti-kurulum/{resim}` (v0.16.0, GÖREV-14)
 
 Liste endpoint'leri destination-filtered'dır.
 
@@ -451,7 +466,8 @@ Uygulama localhost için tasarlanmıştır.
 
 - TrustedHost sınırı
 - write isteklerinde `X-Studio-Request`
-- Origin kontrolü
+- Origin kontrolü; GÖREV-14'ten beri durum değiştiren istekte `Sec-Fetch-Site` `cross-site` / `same-site` ise ya da `Origin` farklıysa ret (kullanıcının tarayıcısı programla konuştuğu için)
+- eklenti API'si yalnız eşleşmiş eklentinin kökenine ve eşleşme koduna açık; CORS yalnız o köken için
 - dış URL fetch allowlist'leri
 - path traversal kontrolleri
 - raw endpoint root sınırları
@@ -464,5 +480,5 @@ Bu bir kullanıcı yetkilendirme sistemi değildir.
 - UI domain target mapping explicit'tir.
 - Product/package adı hâlâ `thirtya-studio`; multi-destination branding henüz yapılmadı.
 - Entity eşleme tamamlanmadı.
-- Scheduler yok.
+- Scheduler yok (kullanıcı kararı; bilgisayarda zamanlanmış görev de oluşturulmaz).
 - Eski uyumluluk export'ları kalsa bile runtime source of truth DB olmalıdır.

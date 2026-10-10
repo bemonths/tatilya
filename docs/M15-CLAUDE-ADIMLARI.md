@@ -1,6 +1,6 @@
 # M15 — Programın içinde Claude: çalıştırıcı, ayarlar, adım çerçevesi, onay ekranı, video kaydı, konu ve başlık adımı
 
-Tarih: 10 Ekim 2026 · Görev: GÖREV-13 · Dal: `gorev-13-claude-baslik` · Şema `15` · Uygulama `0.15.0`
+Tarih: 10 Ekim 2026 · Görev: GÖREV-13; GÖREV-14 (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, model takma adları, başlık eki, başlık değerlendirme, seçmeden önce düzenleme) · Dal: `gorev-14-masaustu-eklenti` · Şema `16` · Uygulama `0.16.0`
 
 ## Amaç
 
@@ -86,9 +86,12 @@ kapanırsa Claude durdurulur ve çalışma "hata: Uygulama kapanırken yarıda k
 
 - Bulunan `claude` programının yolu ve sürümü; API anahtarı uyarısı.
 - Genel varsayılan model ve efor; adım başına model ve efor ("Genel varsayılan" seçeneğiyle) ve adım başına en fazla tur sayısı.
-- Model ve efor listeleri Housing Atlas'takiler (`MODEL_CHOICES`: Claude Code varsayılanı, Opus 5.5, Fable 5.1, Sonnet 5, Haiku 4.5;
-  `EFFORT_CHOICES`: Otomatik, Düşük, Orta, Yüksek, Çok yüksek, En yüksek).
-- Adım listesi şimdilik tek: "Konu ve başlık"; başlangıç ayarı Opus 5.5 (`claude-opus-5-5`), yüksek efor, 30 tur.
+- Model ve efor listeleri Housing Atlas'takiler (`MODEL_CHOICES`: Claude Code varsayılanı; aile takma adları `opus`, `sonnet`, `haiku`
+  — Claude Code'un o ailedeki en yeni modeli, GÖREV-14 —; Opus 5.5, Fable 5.1, Sonnet 5.5 (GÖREV-14), Sonnet 5, Haiku 4.5;
+  `EFFORT_CHOICES`: Otomatik, Düşük, Orta, Yüksek, Çok yüksek, En yüksek). Doğrulanmamış tam model kimliği eklenmez.
+- Adımlar: "Konu ve başlık" ve "Başlık değerlendirme" (GÖREV-14); başlangıç ayarı ikisinde de Opus 5.5 (`claude-opus-5-5`), yüksek efor,
+  30 tur.
+- Kullanım panelindeki "Yenile" çağrısı ve modeli (`haiku`, düşük efor) burada yazar.
 - Ayarlar kullanıcı verisidir: `<veri klasörü>/ayarlar.json`; gizli bilgi yoktur (Claude Code kendi girişini tutar).
 
 ## Adım çerçevesi
@@ -131,13 +134,13 @@ Doğrulama sorunları ayrı listelenir (genel sorunlar başta, adayın sorunlar�
 bütün analizi (neden önerildiği, izleyicinin sorusu, kanca, içerik planı, eksik veri, kapak fikri, şablon ve parametreler; kancanın ve
 planın her kanıtı değeriyle ve geldiği paketin kimliğiyle), şablon ve parametreler, durum (`baslik_secildi`, `paket_hazir`), oluşturulma
 zamanı, başlığın geldiği çalışma ve aday sırası. `claude_runs`: çalışmanın satırı (adım, hazırlık, iş, düzeltilen çalışma, durum, seçim,
-klasör, model, efor, sürüm, oturum, ölçüm, sorunlar, karar notu). `evidence_packs.video_id`: paketin üretildiği video.
+klasör, model, efor, sürüm, oturum, ölçüm, sorunlar, karar notu). `evidence_packs.video_id`: paketin üretildiği video. Şema 16 (GÖREV-14): `videos.proposed_title_en`, `proposed_title_tr` (önerilen başlık) ve `user_edited` (kullanıcı başlığı seçmeden önce düzenledi); `title_en` / `title_tr` seçilen (düzenlenmişse düzenlenmiş) başlıktır.
 
 ### Videonun kanıt paketi
 
 Video kaydında "Kanıt paketi üret": mevcut kanıt paketi üretimi, kaydın şablonu ve parametreleriyle. Paketin ve yazar özetinin başına "Video"
 bölümü yazılır: başlık, Türkçe karşılığı, bölge ve aile, izleyicinin sorusu, neden önerildiği, kapak fikri, kanca ve içerik planı, eksik veri.
-Kaydın şablonu yoksa (yeni şablon gerekir) düğme bunu söyler ve paket üretilmez.
+Kaydın şablonu yoksa (yeni şablon gerekir) düğme bunu söyler ve paket üretilmez. GÖREV-14'ten beri video kaydının paketi seçilen adayın içerik planından kurulur ve "yeni şablon gerekir" paketi engellemez (`docs/M14-KANIT-PAKETI.md`, "Video paketi: seçilen adayın içerik planından").
 
 K kimlikleri paket başınadır. Başlık önerisindeki kimlikler öneriye girdi olan özetlerin paketlerine aittir; video bölümü her kanıtı değeri ve
 kaynak paketiyle gösterir. Aynı satır yeni pakette de varsa (aynı kaynak satırı — blok ve referans satırı ya da ifade — ve aynı değer) yeni
@@ -173,6 +176,72 @@ paketteki kimliği yanına yazılır; değeri farklıysa "değeri farklı", yoks
 - Markdown (`baslik.md`): önce başlık listesi (İngilizce, Türkçe, aile, şablon), doğrulama sorunları, sonra her aday için ayrıntı kartı
   (kanıtlar değerleriyle).
 
+## Başlık eki (GÖREV-14)
+
+Ayarlar → Başlık eki: destinasyon başına İngilizce ek (başlangıç " | 30A Florida Vacation") ve Türkçe ek (" | 30A Florida Tatili");
+başlangıç değerleri profilden (`CHANNEL["title_suffix"]`), değişiklik `<veri>/ayarlar.json` → `baslik_ekleri`. Program ekleri her başlık
+ve değerlendirme çalışmasının seçimine ve `secim.md` dosyasına yazar (çalışma o anki eki taşır); doğrulayıcı her adayın İngilizce
+başlığının İngilizce ekle, Türkçe karşılığının Türkçe ekle bittiğini denetler (`title.title_problems`). `baslik.md`'deki ek cümlesi
+GÖREV-14 Ek B'deki cümleyle değiştirildi.
+
+## Başlık değerlendirme adımı (`baslik_degerlendirme`, GÖREV-14)
+
+Videolar ekranında "Kendi başlığını yaz": kullanıcı aklındaki başlığı ya da fikri (Türkçe ya da İngilizce, en çok 500 karakter), bölgeyi ve
+isteğe bağlı bir notu yazar (`POST /api/claude/review-runs`).
+
+- Talimatlar `ortak.md` ve `baslik_degerlendirme.md` (GÖREV-14 Ek A, aynen); şema `studio/ai/schemas/baslik_degerlendirme.schema.json`;
+  modül `studio/ai/title_review.py`.
+- Girdiler başlık adımınınkiler (kanal planı ve araştırması, `secim.md`, veri özetleri, şablonlar, önceki öneriler) ve iki dosya daha:
+  `kullanici_basligi.md` (kullanıcının yazdığı, iki işaret satırı arasında aynen) ve `baslik_olculeri.md` (`baslik.md`'nin kopyası; iyi
+  başlığın ölçüleri orada, aday sayısı ve çıktı biçimi bu adım için geçerli değil).
+- Çıktı `baslik_degerlendirme.json`: `kullanici_fikri` (aynen), `doluluk` {`dolar_mi`, `aciklama`, `eksik_veri`[]}, `sorunlar`[]
+  (kullanıcının ifadesindeki sorunlar), `adaylar`[] (başlık adımının aday yapısı). `eksik_veri` görev metninin "aciklama ve eksik veri
+  doldurulmalı" kuralı için şemaya eklendi.
+- Denetimler: `kullanici_fikri` aynen olmalı; en çok 3 aday; "doluyor" ise en az 1 aday; "dolmuyor" ise eksik veri yazılmalı (aday listesi
+  boş kalabilir); adaylar başlık adımının bütün anlam denetimlerinden geçer (bölge, kanıt kimlikleri, plan, şablon, uzunluk, ek, tekrar).
+- Onay ekranı başlık adımınınkiyle aynı biçimde: önce değerlendirme özeti (veriyle doluyor mu, açıklama, eksik veri, sorunlar), sonra
+  adaylar ve "Bu başlığı seç". Aday yoksa "Bu çalışmada gösterilecek öneri yok." yazar; iş mesajı "fikir veriyle dolmuyor; başlık adayı yok".
+- Gerçek çalışma (10 Ekim 2026, Rosemary Beach, "Rosemary Beach'e köpeğimizle gitsek nasıl olur?"): fikir dolmuyor; elimizdeki tek güçlü
+  bilgi ilçenin halka açık plajlarındaki köpek yasağı (Rosemary'ye özgü değil), Rosemary'nin özel plajı için köpek kuralı yok; 7 eksik veri
+  (topluluğun köpek kuralı, kiralık evlerin evcil hayvan kuralı, restoranların köpek kabulü, veteriner, köpekle gidilebilecek yerler…);
+  78 sn, 6 tur (`docs/gorevler/GOREV-14/gercek-degerlendirme/`).
+
+## Seçmeden önce düzenleme (GÖREV-14)
+
+Aday ayrıntısında "Başlığı düzenle": İngilizce başlık ve Türkçe karşılığı değiştirilir; program uzunluk ve ek kurallarını denetler
+(önerideki kuralların aynısı). Seçilince video kaydı önerilen başlığı da tutar ve "kullanıcı düzenledi" işareti taşır. Kullanıcı İngilizce
+bilmediği için yalnız Türkçe karşılığı değiştirdiyse "İngilizcesini Claude yazsın" görünür (`POST /api/claude/runs/{id}/translate`): değişen
+Türkçe başlıkla bir başlık değerlendirme çalışması açılır; `kullanici_basligi.md` Türkçe başlıktır, notta "bu aday düzenlendi" ve adayın
+analizi yazar; adayın kendi başlığı yeni çalışmanın "önceki önerisi" sayılmaz.
+
+## Kullanım paneli (GÖREV-14)
+
+Sol menünün altında (`studio/ai/usage.py`, `studio/web/usage.js`). Kaynak: Claude Code'un her cevaptan sonra akışa yazdığı
+`rate_limit_event` (`rate_limit_info.unifiedWindows.five_hour|seven_day.{utilization, resetsAt}`; eski biçimde tek pencere). Her ölçüm
+zamanıyla `claude_usage` tablosuna yazılır: çalışma sırasında çalıştırıcının `on_rate_limit`'iyle, ve "Yenile" çağrısıyla. Panel: en son
+ölçümün 5 saatlik ve haftalık yüzdesi ve sıfırlanma zamanı (haftalıkta gün ve saat), "son ölçüm SS:DD", bu haftaki Claude çalışmalarının
+sayısı ve toplam süresi (hafta: ölçümün haftalık penceresi, yoksa son 7 gün). Ölçüm yoksa "henüz ölçüm yok"; 5 saatten eskiyse soluk ve
+"eski ölçüm". "Yenile": araçsız, tek tur, `haiku` (Claude Code'un en yeni Haiku'su), düşük efor, tek kelimelik cevap; `<veri>/claude/kullanim/`
+klasöründe çalışır; bir adımın çalışması sürerken ve `ANTHROPIC_API_KEY` tanımlıyken yapılmaz. Gerçek ölçüm (10 Ekim 2026): 4,4 sn, Claude
+Haiku 4.5, maliyet karşılığı 0,005 $.
+
+## İlerleme çubuğu (GÖREV-14)
+
+Tur oranı yanıltır (bir başlık çalışması 30 turun 5–6'sını kullanıyor); Claude çalışmasının çubuğu aşamalardan ilerler (`job_progress`,
+`studio/web/usage.js` → `claudeProgress`): girdiler hazırlanıyor %0–10; Claude çalışıyor %10–90: geçen süre / beklenen süre (aynı adımın
+son 9 başarılı çalışmasının ortanca süresi; yoksa varsayılan: başlık 7 dk, değerlendirme 5 dk), %90'ı geçmez; doğrulama ve Markdown
+%90–100. Yanında yüzde, geçen süre ve tahmini kalan süre (aşılırsa "tahminden uzun sürüyor"); "Tur 3/30 · Okuyor: …" satırı altında kalır.
+Toplayıcı işlerinin ilerlemesi değişmedi.
+
+## Ayarlar → Talimatlar (GÖREV-14)
+
+Destinasyonun talimat dosyaları (`studio/ai/instructions.py`, `studio/web/instructions.js`): ortak, başlık, başlık değerlendirme ve bilgi
+dosyası olarak kanal araştırması. Bir dosya açılır, düzenlenir, kaydedilir. Tek kaynak depodaki dosyadır (yönetici de aynı dosyayı dışarıdan
+düzenliyor). Kaydederken dosya açıldığından beri diskte değiştiyse (SHA-256 farklı) hiçbir şey yazılmaz ve uyarı verilir; kullanıcı yeniden
+yükleyip öyle kaydeder. Her kayıttan önce önceki hâl `<veri>/claude/talimat_gecmisi/<dosya>/<YYYYMMDD-HHMMSS-ffffff>.md`'ye yazılır; sürümler
+listelenir, "Bu sürüme dön" eski hâli yeni bir kayıt olarak geri yazar (şimdiki hâl de sürümlere eklenir). Dosyanın satır sonları korunur.
+Claude çalışmasının ekranında çalışmanın kullandığı talimat sürümleri (dosya, karma, tarih) görünür.
+
 ## Yeni adım nasıl eklenir
 
 1. Talimat dosyasını destinasyonun Claude klasörüne koyun (ör. `thirty_a_claude/metin.md`); ortak dosya aynı kalır. Talimat metni kullanıcının
@@ -193,10 +262,13 @@ kimliği; kanıtsız bölüm; mahalle özetinin girdiye konması ve başka mahal
 konması ve tekrar eden başlık; tur sınırı, kullanım sınırı, eski sürüm; düzeltmenin yeni oturum açması; seçimin video kaydını analiziyle
 oluşturması; ayarlardaki model ve eforun komuta geçmesi; talimat karmaları; tek çalışma ve yarıda kalan çalışma; videonun kanıt paketi ve
 kimlik eşlemesi; özet paketinin yeniden kullanılması; API anahtarı uyarısı; v14 → v15 geçişi), `tests/frontend.test.mjs` (Videolar formu,
-başlık listesi ve ayrıntı, video kaydı, Ayarlar → Claude).
+başlık listesi ve ayrıntı, video kaydı, Ayarlar → Claude). GÖREV-14: `tests/test_claude_panel.py` (kullanım ölçümünün okunması ve saklanması, panel görünümü, "Yenile", aşamalı ilerleme ve beklenen süre, talimat düzenleyici: kaydetme, diskteki değişiklikte ret, sürümler, geri dönme, satır sonları; model takma adları, başlık eki ayarı), `tests/test_title_review.py` (değerlendirme çalışmasının girdileri ve şeması, dolmayan fikir, 1–3 aday sınırı, ek denetimi, düzenlemenin kayda geçmesi, Türkçe düzenlemeden değerlendirme çalışması), `tests/test_workflow.py` (iş akışı durumları), `tests/frontend.test.mjs` (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, değerlendirme formu ve sonucu, başlık düzenleme).
 
 ## Sınırlar
 
 - Testler gerçek Claude'u çağırmaz; sahte claude (`tests/fake_claude.py`) kullanılır.
 - Claude soru soramaz; çıktısı şemaya ve anlam denetimlerine uymazsa kullanıcı "Düzeltme iste" ile yeni bir çalışma açar.
 - Video metni, metnin kontrolü ve yeni şablonlar sonraki görevlerdedir.
+- İş akışı paneli adaysız bir değerlendirme çalışmasını da "onay bekliyor" sayar (kullanıcı "Reddet" ile kapatabilir); bu yöneticinin
+  kararına bırakıldı (GÖREV-14 raporu).
+- Kullanım yüzdesi Claude Code'un bildirdiğidir; ölçüm yalnız bir Claude çağrısından sonra güncellenir.

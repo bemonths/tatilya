@@ -29,7 +29,8 @@ def test_a_runs_usage_reports_are_stored_with_their_time_and_shown(app, monkeypa
     assert panel["measured"] and not panel["stale"] and panel["source"] == "calisma"
     assert (panel["windows"]["five_hour"]["percent"], panel["windows"]["seven_day"]["percent"]) == (44, 38)     # halves go up
     assert panel["windows"]["five_hour"]["resets_at"] and panel["windows"]["seven_day"]["label"] == "Haftalık"
-    assert panel["week"]["count"] == 1 and panel["week"]["total_s"] > 0 and panel["week"]["basis"] == "haftalık pencere"
+    elapsed = app.get(f"/api/claude/runs/{view['id']}").json()["metrics"]["elapsed_s"]   # a fast fake run may round to 0.0 s (CI)
+    assert panel["week"]["count"] == 1 and panel["week"]["total_s"] == round(elapsed, 1) and panel["week"]["basis"] == "haftalık pencere"
 
 
 def test_an_old_measurement_is_marked_and_a_passed_reset_is_shown(app):

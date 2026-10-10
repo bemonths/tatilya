@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.14.0 -> 9adc235661700dbe0f0bf117fa532f86149a79c1
-main -> a85431167e1ccacd88467dae539e1f46aa7817eb
-app 0.14.0
-schema 14
+tag v0.15.0 -> a59ec652525bdccf753c8ce763e1757b9c767b69
+main -> a59ec652525bdccf753c8ce763e1757b9c767b69
+app 0.15.0
+schema 15
 ```
+
+10 Ekim 2026'da GÖREV-14 Adım 1 ile main `a59ec65`'e (GÖREV-13) fast-forward edildi ve bu commit'e açıklamalı `v0.15.0` etiketi konuldu ("v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi"). main CI (38077344443) ve etiket CI (38077345949) başarılı.
 
 10 Ekim 2026'da GÖREV-13 Adım 1 ile main `a854311`'e (GÖREV-12) fast-forward edildi; etiket konmadı (GÖREV-12 uygulama sürümünü değiştirmedi; v0.15.0 etiketi bir sonraki görevin ilk adımında konacak). Görev dalı CI (38061251798) ve main CI (38066733163) başarılı.
 
@@ -30,17 +32,32 @@ schema 14
 ## Aktif branch
 
 ```text
-gorev-13-claude-baslik
-app 0.15.0
-schema 15
+gorev-14-masaustu-eklenti
+app 0.16.0
+schema 16
 ```
 
 Bu dal:
+- masaüstü programı: Housing Atlas'ın başlatıcısı (konsolsuz `pythonw`, uygulama kipi pencere, tek kopya, 8830–8849 portları, kapanma bekçisi — iş sürerken bekler —, Türkçe hata kutusu, kurulum damgası), `baslat.bat`, masaüstü kısayolu ve simgesi,
+- sol menüde videonun iş akışı: video seçici, 8 adım ve kayıtlardan hesaplanan durumlar, "Sıradaki iş" satırı, VERİ grubu,
+- Claude: kullanım paneli ve "Yenile", aşamalı ilerleme çubuğu, Ayarlar → Talimatlar (sürümler, diskteki değişiklik uyarısı), model takma adları ve `claude-sonnet-5-5`, başlık eki ayarı; yeni adım "Başlık değerlendirme" ve seçmeden önce başlık düzenleme,
+- video paketi seçilen adayın içerik planından; yazar özetinde pencere sütunları tarihli; restoran mahalle toplamı notu,
+- "30A Studio Yardımcısı" Chrome eklentisi (eşleşme, köken denetimi, okuma sırası doğrudan → eklenti → programın tarayıcısı → atla), programın API'sinde başka kökenden gelen durum değiştiren isteklerin reddi,
+- toplulukların plaj erişimi için 13 referans satırı,
+- gerçek veride iki küçük gerçek Claude çalıştırması (kullanım ölçümü; Rosemary Beach köpek fikri "dolmuyor"); main'e alınmadı.
+
+Test:
+- 889 Python
+- 81 frontend
+
+---
+
+Önceki aktif dal `gorev-13-claude-baslik` (v0.15.0 olarak main'e alındı):
 - programın içinde Claude'u kurar: Claude Code çalıştırıcısı (Housing Atlas'tan; yalıtım, akış, ölçüm, Türkçe hatalar, talimat SHA-256'ları), Ayarlar → Claude (genel ve adım başına model, efor, tur sınırı; `<veri>/ayarlar.json`), adım çerçevesi ve onay ekranı (Seç, Düzeltme iste, Reddet), video kaydı (şema 15: `claude_runs`, `videos`, `evidence_packs.video_id`),
 - ilk Claude adımı "Konu ve başlık önerisi" ve Videolar ekranı; talimatlar `thirty_a_claude/ortak.md` ve `baslik.md` (aynen), kanal planı KONSEPT.md'ye Ek C olarak, kanal araştırması repoda,
 - videonun kanıt paketi: başında analiz, kanıtlar yeni paketteki kimlikleriyle,
 - küçük düzeltmeler: restoran saatlerinde boş gün yazılmaz, havalimanı uzaklıkları mil (km dönüşüm), paket listesinde mahalle adı,
-- gerçek veride iki gerçek çalışma (30A geneli 11 aday, Rosemary Beach 10 aday; ikisi de onay bekliyor); main'e alınmadı.
+- gerçek veride iki gerçek çalışma (30A geneli 11 aday, Rosemary Beach 10 aday; ikisi de onay bekliyor); 10 Ekim 2026'da main'e alındı (`v0.15.0`).
 
 Test:
 - 768 Python
@@ -395,7 +412,19 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
 
-## GÖREV-13 — programın içinde Claude: çalıştırıcı, ayarlar, onay ekranı, video kaydı, konu ve başlık önerisi (dal)
+## GÖREV-14 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlık, içerik planından video paketi, tarayıcı eklentisi (dal)
+
+Dal: `gorev-14-masaustu-eklenti`, uygulama 0.16.0, şema 16 (`claude_usage`, `job_progress`, `browser_hosts.method`).
+
+- Gerçek çalışmalar (10 Ekim 2026): "Yenile" 4,4 sn (`haiku` → Claude Haiku 4.5, düşük efor; 5 saatlik %11, haftalık %43); başlık değerlendirme (Opus 5.5, yüksek efor, Claude Code 2.1.284) "Rosemary Beach'e köpeğimizle gitsek nasıl olur?": fikir veriyle dolmuyor, aday yok, 7 eksik veri; 78 sn, 6 tur, 13 araç çağrısı, 416 bin girdi / 7,6 bin çıktı token, maliyet karşılığı 1,18 $.
+- Gerçek DB: `data/` tam yedeği (`work/yedek/20261010-2330/`), program masaüstü kısayoluyla açıldı, v15 → v16; `claude_runs` 3 → 4, `claude_usage` 0 → 2, `evidence_packs` 6 → 8, `jobs` 36 → 37, `job_progress` 0 → 1; `integrity_check` ok, `foreign_key_check` boş. Toplayıcı çalışmadı, başlık seçilmedi.
+- Eklenti yalnız yerel deneme sayfalarında sınandı (Playwright'in Chromium'u, geçici profil); gerçek sitelerden eklentiyle veri çekilmedi.
+
+## v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi
+
+10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.15.0` → `a59ec65`). İçerik aşağıdaki GÖREV-13 bölümünde.
+
+## GÖREV-13 — programın içinde Claude: çalıştırıcı, ayarlar, onay ekranı, video kaydı, konu ve başlık önerisi (main'e alındı)
 
 Dal: `gorev-13-claude-baslik`, uygulama 0.15.0, şema 15.
 
@@ -430,7 +459,7 @@ Dal: `gorev-11-kanit-paketi`, uygulama 0.14.0, şema 14 (v0.14.0 olarak main'e a
 ## Yeni geliştiricinin bu dosyadan çıkarması gereken sonuç
 
 Stable ürün:
-**v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar**
+**v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi**
 
 Çalışan veri domain'leri:
 **beach + weather + restaurants + neighborhoods + iklim + elle doğrulanmış referans tablosu + konaklama profili + kiralama şirketlerinden konaklama fiyatları** ve plaj–mahalle eşlemesi v3; `gorev-09-kapsama-restoran` dalında ayrıca **genişletilmiş fiyat kapsaması** ve **restoranların kendi sitelerinden bilgiler**
@@ -442,4 +471,4 @@ Yanlış sonraki adım:
 **Book>Direct date search'i full inventory diye kodlamak**; program türetimi mahalle eşlemelerini resmî bilgi gibi sunmak
 
 Doğru yaklaşım:
-`gorev-12-yazar-ozeti` yönetici incelemesinden sonra main'e alınır; makale yazar özetinden yazılır, metindeki her sayı sayı listesine (CSV) karşı, plaj hukuku ve çelişkili satırlar yayından önce yeniden kontrol edilir (yönetici kararı).
+`gorev-14-masaustu-eklenti` yönetici incelemesinden sonra main'e alınır; kullanıcı programı masaüstü simgesiyle açar, başlığı kendisi seçer; makale seçilen başlığın içerik planından kurulan veri paketinden yazılır, metindeki her sayı sayı listesine (CSV) karşı, plaj hukuku ve çelişkili satırlar yayından önce yeniden kontrol edilir (yönetici kararı). Eklentiyle gerçek sitelerden ilk çekimi kullanıcı başlatır.

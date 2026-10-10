@@ -1,6 +1,6 @@
 # M14 — Kanıt paketi
 
-Tarih: 10 Ekim 2026 · Görev: GÖREV-11, GÖREV-12 (yazar özeti, ayrı sayı listesi, oynak konular) · Dal: `gorev-12-yazar-ozeti` · Şema `14` (GÖREV-12'de değişmedi) · Uygulama `0.14.0` · Paket biçimi `30a-studio-kanit-paketi/2`
+Tarih: 10 Ekim 2026 · Görev: GÖREV-11, GÖREV-12 (yazar özeti, ayrı sayı listesi, oynak konular), GÖREV-14 (içerik planından video paketi, hafta tarihleri, restoran notu) · Dal: `gorev-14-masaustu-eklenti` · Şema `16` · Uygulama `0.16.0` · Paket biçimi `30a-studio-kanit-paketi/2`
 
 ## Amaç
 
@@ -115,6 +115,38 @@ Metni yazan kişinin tek başına çalışabileceği kısa Markdown dosyası. Ku
 - **Paketteki hiçbir satır özetten sessizce düşmez**: her K kimliği ya kendi satırıyla ya da bir tablo satırının kimlik aralığıyla görünür (test).
 - Hedef boyut: ilk video ≤100 KB, Rosemary Beach ≤30 KB. Aşılırsa içerik düşürülmez; neden rapora yazılır ve biçim sadeleştirilir. GÖREV-12'de ilk video özeti ~110 KB'ta kaldı: kalan büyüklüğün çoğu referans satırlarının notları (araştırma geçmişi: hangi görevde neyin bulunamadığı) ve kaynak listesindeki uzun resmî adresler; bu notların kısaltılması referans tablosunda editoryal bir karardır.
 
+## Video paketi: seçilen adayın içerik planından (GÖREV-14)
+
+Yönetici kararı (GÖREV-13 sonrası, karar 1–2): bir video kaydının paketi şablondan değil, seçilen adayın içerik planından kurulur
+(`studio/evidence/plan.py`, şablon anahtarı `video-plani`). Videolar ekranındaki "Kanıt paketi üret" bu paketi üretir.
+
+- **Bölümler planın bölümleridir**, aynı sırayla: bölüm başlığı `bolum`, sorusu `ne_anlatir`.
+- **Her bölümde** planın gösterdiği kanıt satırları ve bu satırların ait olduğu **blokların tamamı** bulunur (blok: kaynak paketin bir
+  bölümünde bir bloğun ürettiği ardışık satırlar). Bloğun tamamı bağlam içindir: yalnız Temmuz hücresi değil bütün konaklama tablosu gelir.
+  Bir blok birden çok bölümde geçiyorsa ilk geçtiği bölümde tam yazılır; sonraki bölümler oraya gönderme yapar.
+- **Kaynak paketler** adayın girdileridir: 30A paketi (`veri_ozeti_30a.md`) ve varsa mahalle paketi (`veri_ozeti_mahalle.md`), bugünkü
+  halleriyle (kayıtlı paket güncelse o, değilse aynı şablon ve parametrelerle yeniden üretilir). Planın her kanıtı GÖREV-13'teki kimlik
+  eşlemesiyle yeniden bulunur (blok + referans satırı ya da ifade + değer): aynı satır, değeri farklı satır ya da artık olmayan satır; bu
+  yanına yazılır. Satırlar paket içinde yeniden numaralanır (K0001…), her biri geldiği özeti, oradaki K kimliğini ve kaynak paketi taşır.
+- **Başlık:** videonun başlığı ve Türkçe karşılığı, izleyicinin sorusu, kanca (değerleriyle), neden önerildiği, eksik veri; videonun
+  bölgesi ve referans satırları için hesaplanan bilinen boşluklar; yayından önce kontrol edilecek satırlar.
+- Yazar özeti ve sayı listesi her pakette olduğu gibi aynı makineyle üretilir.
+- "Yeni şablon gerekir" artık paketi engellemez; bilgi olarak kalır. Şablon paketleri (`ilk-video`, `mahalle-rehberi`) veri evreni ve
+  Claude'un okuduğu veri özetleri olarak kalır.
+
+Deneme (10 Ekim 2026, gerçek verinin `work/` kopyası, geçici video kaydı): Rosemary Beach çalışmasının ilk adayından 6 bölüm, 118 satır;
+planın bütün kanıtları yeni pakette aynı değerle bulundu.
+
+## Hafta tarihleri ve restoran notu (GÖREV-14)
+
+- Yazar özetinde pencere sütunu olan bütün tablolarda (konaklama fiyatı, çeyrekler, oda grubu, ilan sayısı) sütun başlığı pencerenin
+  tarihlerini taşır: "Mar 2027 (13–20)"; ay sonunu aşan konaklamada iki ay yazılır ("May 2027 (29 May–5 Haz)"); aynı ay iki pencere
+  içeriyorsa ikisi ayrı sütundur (`blocks.window_column`). Sebep: Mart penceresi (13–20 Mart) Dallas ISD bahar tatiliyle (15–19 Mart)
+  çakışıyor; hangi hafta olduğu bilinmeden "mart nisandan pahalı" gibi bir sonuç yanlış yorumlanır.
+- Restoran tablolarında mahalle satırlarının toplamı restoran sayısından büyükse nedeni yazılır: dizinde birden çok mahalleye bağlı
+  restoran bağlı olduğu her mahallede sayılır (`blocks.overlap_note`). Sayılar sabit yazılmaz, üretim anında hesaplanır; tek mahalle
+  paketinde başka mahalleye de bağlı restoran sayısı yazılır.
+
 ## Yeni şablon nasıl yazılır
 
 1. Destinasyonun şablon klasörüne (`thirty_a_evidence/`) yeni bir JSON dosyası koyun; anahtarı benzersiz olsun.
@@ -132,7 +164,7 @@ Metni yazan kişinin tek başına çalışabileceği kısa Markdown dosyası. Ku
 
 ## Testler
 
-`tests/test_evidence.py` (GÖREV-12 eklemeleri): sayı listesinin yalnız yapılandırılmış alanlardan gelmesi ve ad, adres, yol numarasının ("30A"daki 30 gibi) listeye girmemesi; referans satırının yalnız değer alanıyla girmesi; CSV'nin JSON listesiyle aynı olması; özet ve CSV'nin pakete bağlı ve SHA-256'lı saklanması, değişmiş ekin reddi, eski üretimin eksiz görünmesi; özette her K kimliğinin görünmesi; özetteki her sayının paketteki değer olması; eksik hücrenin "—" olması; kullanım notunun blok başına bir kez ve aynen yazılması; küçük örnek işaretinin eşiğe uyması; adres, SHA-256 ve alıntının özette olmaması; ortak not cümlelerinin bir kez yazılması; oynak konuların ve çelişkili satırların paketin ve özetin başında olması; vergi payı cümlesi. GÖREV-11'den: profil şablonlarının okunması ve her bloğun bir şablonda kullanılması; geçersiz şablonların nedeniyle reddi; parametre çözme ve doldurma; şablon ya da parametre eksikse üretimin reddi; çekim yokken her çekime dayalı bloğun "veri yok" yazması ve hiçbir bölümün boş kalmaması; kullanım notunun, etiketin ve kaynağın satıra geçmesi (referans durumlarına göre not, çelişki notu, yerine geçilmiş satırların dışarıda kalması); her referans satırının Türkçe ifadesi; tabloda olmayan referans kimliğinin "veri yok" olması; fiyat bloğunda küçük örnek ve kendi envanteri kuralları; sayı kontrol listesinin her satırdaki her sayıyı içermesi; Markdown ile JSON'un aynı satırları taşıması; tarihli dosyalar, SHA-256 ve kayıt; değişmiş dosyanın reddi; API.
+`tests/test_video_plan_pack.py` (GÖREV-14): bölümlerin planı izlemesi, planın satırları ve bloklarının tamamı, bir bloğun bir kez yazılıp sonra gönderme yapılması; Videolar ekranındaki düğmenin plan paketini özet ve sayı listesiyle üretmesi; pencere sütunlarının tarihleri ve aynı ayın iki penceresinin ayrı kalması; restoran notunun mahalle toplamının neden büyük olduğunu söylemesi. `tests/test_evidence.py` (GÖREV-12 eklemeleri): sayı listesinin yalnız yapılandırılmış alanlardan gelmesi ve ad, adres, yol numarasının ("30A"daki 30 gibi) listeye girmemesi; referans satırının yalnız değer alanıyla girmesi; CSV'nin JSON listesiyle aynı olması; özet ve CSV'nin pakete bağlı ve SHA-256'lı saklanması, değişmiş ekin reddi, eski üretimin eksiz görünmesi; özette her K kimliğinin görünmesi; özetteki her sayının paketteki değer olması; eksik hücrenin "—" olması; kullanım notunun blok başına bir kez ve aynen yazılması; küçük örnek işaretinin eşiğe uyması; adres, SHA-256 ve alıntının özette olmaması; ortak not cümlelerinin bir kez yazılması; oynak konuların ve çelişkili satırların paketin ve özetin başında olması; vergi payı cümlesi. GÖREV-11'den: profil şablonlarının okunması ve her bloğun bir şablonda kullanılması; geçersiz şablonların nedeniyle reddi; parametre çözme ve doldurma; şablon ya da parametre eksikse üretimin reddi; çekim yokken her çekime dayalı bloğun "veri yok" yazması ve hiçbir bölümün boş kalmaması; kullanım notunun, etiketin ve kaynağın satıra geçmesi (referans durumlarına göre not, çelişki notu, yerine geçilmiş satırların dışarıda kalması); her referans satırının Türkçe ifadesi; tabloda olmayan referans kimliğinin "veri yok" olması; fiyat bloğunda küçük örnek ve kendi envanteri kuralları; sayı kontrol listesinin her satırdaki her sayıyı içermesi; Markdown ile JSON'un aynı satırları taşıması; tarihli dosyalar, SHA-256 ve kayıt; değişmiş dosyanın reddi; API.
 
 ## Sınırlar
 

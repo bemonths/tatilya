@@ -1,0 +1,222 @@
+{
+ "calisma": "b87d84142f474bd6b98c0789760f36ab",
+ "adim": "baslik_degerlendirme",
+ "hazirlik": "b87d84142f47",
+ "destinasyon": "30a",
+ "secim": {
+  "bolge": "Rosemary Beach",
+  "bolge_id": "rosemary-beach",
+  "aile": "hepsi",
+  "not": "",
+  "kullanici_basligi": "Rosemary Beach'e köpeğimizle gitsek nasıl olur?",
+  "baslik_eki": {
+   "en": " | 30A Florida Vacation",
+   "tr": " | 30A Florida Tatili"
+  }
+ },
+ "duzeltme": null,
+ "talimat_surumu": {
+  "commit": "e7f4a87d056c532e90f16f85a163a07a9f271b7d",
+  "files": [
+   {
+    "path": "studio/destinations/thirty_a_claude/ortak.md",
+    "sha256": "d53a66bb92bca62038de153a161ead6c68bf08ab6787950fd26c4d4dbb044ad2",
+    "modified_at": "2026-10-10T16:20:09+00:00"
+   },
+   {
+    "path": "studio/destinations/thirty_a_claude/baslik_degerlendirme.md",
+    "sha256": "acdaade6ea17c3fda39f5f66c80e0a3868464dc6d831e40bb0349402910906c7",
+    "modified_at": "2026-10-10T20:20:48+00:00"
+   },
+   {
+    "path": "studio/ai/schemas/baslik_degerlendirme.schema.json",
+    "sha256": "6b5caa46d621cf96c3c6d16a826031f4365872ccb265b129b696aeb031e52d44",
+    "modified_at": "2026-10-10T19:31:08+00:00"
+   }
+  ],
+  "birlesik_talimat": "0ac63678528a10867ee9cc5eda4241b537209507c871f3a52659d2a3a4db1c68",
+  "calisma_semasi": "eccbe9c94fa13ba92f960e6c685ab30a2632d08bd6fe54203fde30a249641df2"
+ },
+ "girdiler": [
+  {
+   "dosya": "kanal_plani.md",
+   "aciklama": "kanal planı",
+   "sha256": "d57d8a06e5b089dd84274083f66e3b736c5c1363edc4efb4f135e82f735323c2"
+  },
+  {
+   "dosya": "kanal_arastirmasi.md",
+   "aciklama": "kanal araştırması",
+   "sha256": "789699996c4e0bc696e602e04a5a14cb6187b6951577bb37155289ccd0e75473"
+  },
+  {
+   "dosya": "secim.md",
+   "aciklama": "kullanıcının seçimi",
+   "sha256": "c0445195d570e6ab5e5dbd01e5edd687c54d7f1083508c6e4018b955754c682d"
+  },
+  {
+   "dosya": "veri_ozeti_30a.md",
+   "aciklama": "30A verisinin yazar özeti",
+   "paket_id": "103e05e7bf7c489587a041001d940971",
+   "paket_uretildi": "program ya da profil dosyaları paketten sonra değişti",
+   "sha256": "275f074aab3d24e67346c70470a8029536c1367e07b2f596a082b985dd8c59ed"
+  },
+  {
+   "dosya": "veri_ozeti_mahalle.md",
+   "aciklama": "Rosemary Beach yazar özeti",
+   "paket_id": "f3c2de5a27604518a25529a789efa8cd",
+   "paket_uretildi": "program ya da profil dosyaları paketten sonra değişti",
+   "sha256": "caaca67968b6e225622c86ccf1d0c7a063770630016c32b4f7923d1ad7c08d88"
+  },
+  {
+   "dosya": "sablonlar.md",
+   "aciklama": "şablonlar",
+   "sha256": "0d8eb4d791573d85e2304a6e038ba220015a8bb6a9aca2898570f9872fd0469c"
+  },
+  {
+   "dosya": "onceki_oneriler.md",
+   "aciklama": "önceki öneriler (30 başlık)",
+   "sha256": "acb8f4c0701fab3df8ec38d281e596ec66f5d54b1a6c74c17a5118228a72c9d2"
+  },
+  {
+   "dosya": "kullanici_basligi.md",
+   "aciklama": "kullanıcının başlığı ya da fikri",
+   "sha256": "8b3b9bb6ecae708b3f98ff9664cbf8406cf74bbb2c09271920571efbcb06dee4"
+  },
+  {
+   "dosya": "baslik_olculeri.md",
+   "aciklama": "başlığın ölçüleri (başlık önerisi talimatının kopyası)",
+   "sha256": "25a39fcb9bcd9d4bebecb789fb32045e475c9f52e875ee80a85580bae60ca72e"
+  }
+ ],
+ "model": "claude-opus-5-5",
+ "efor": "high",
+ "tur_siniri": 30,
+ "araclar": [
+  "Read",
+  "Glob",
+  "Grep",
+  "Write",
+  "Edit"
+ ],
+ "izinler": [
+  "Read(./**)",
+  "Write(./baslik_degerlendirme.json)",
+  "Edit(./baslik_degerlendirme.json)"
+ ],
+ "ilerleme_tahmini": {
+  "beklenen_s": 300.0,
+  "dayanak": "önceki başarılı çalışma yok; varsayılan 5 dk"
+ },
+ "calisma_sonucu": {
+  "command": "claude.exe -p --output-format stream-json --verbose --append-system-prompt-file C:\\Users\\1\\Documents\\Codex\\2026-09-29\\referenced-chatgpt-conversation-this-is-an\\outputs\\30a-studio\\data\\claude\\b87d84142f47\\baslik_degerlendirme\\b87d84142f474bd6b98c0789760f36ab\\talimat.md --tools Read,Glob,Grep,Write,Edit --allowedTools Read(./**) Write(./baslik_degerlendirme.json) Edit(./baslik_degerlendirme.json) --permission-mode dontAsk --max-turns 30 --setting-sources \"\" --strict-mcp-config --disable-slash-commands --model claude-opus-5-5 --effort high",
+  "started_at": "2026-10-10T20:32:32+00:00",
+  "finished_at": "2026-10-10T20:33:50+00:00",
+  "session_id": "6c278215-8240-4a62-bebc-fd28d90328ba",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "num_turns": 6,
+  "tool_calls": 13,
+  "cc_num_turns": 14,
+  "duration_ms": 76986,
+  "duration_api_ms": 76367,
+  "total_cost_usd": 1.1782624,
+  "usage": {
+   "input_tokens": 12,
+   "cache_creation_input_tokens": 120852,
+   "cache_read_input_tokens": 295192,
+   "output_tokens": 7618,
+   "output_tokens_details": {
+    "thinking_tokens": 2162
+   },
+   "server_tool_use": {
+    "web_search_requests": 0,
+    "web_fetch_requests": 0
+   },
+   "service_tier": "standard",
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 120852,
+    "ephemeral_5m_input_tokens": 0
+   },
+   "inference_geo": "global",
+   "iterations": [
+    {
+     "input_tokens": 2,
+     "output_tokens": 885,
+     "cache_read_input_tokens": 119610,
+     "cache_creation_input_tokens": 4840,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 4840
+     },
+     "type": "message"
+    }
+   ],
+   "speed": "standard"
+  },
+  "model_usage": {
+   "claude-opus-5-5": {
+    "inputTokens": 12,
+    "outputTokens": 7618,
+    "cacheReadInputTokens": 295192,
+    "cacheCreationInputTokens": 120852,
+    "webSearchRequests": 0,
+    "costUSD": 1.1782624,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 2162,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "permission_denials": [],
+  "denied": [],
+  "stop_reason": "end_turn",
+  "result": "Değerlendirmeyi bitirdim ve `baslik_degerlendirme.json` dosyasına yazdım. Kısaca: **\"Rosemary Beach'e köpeğimizle gitsek nasıl olur?\" fikri bugünkü veriyle 15–17 dakikalık bir videoyu doldurmuyor. Bu yüzden başlık adayı yazmadım.**\n\n**Elimizde olanlar:** Walton County kurallarına göre ilçenin halka açık plajlarına hayvan giremez. İstisna yalnız hizmet hayvanları ve izinli köpeklerdir (K0097). Bu izni yalnız ilçedeki mülk sahipleri ve daimi sakinler alabiliyor; izinle bile köpek plajda yalnız 15:30–08:30 arasında ve tasmalı bulunabiliyor (K0098). Kural ihlalinin cezası 500 dolara kadar çıkabiliyor (K0119). Bu bilgiler ancak bir dakikalık bir bölüm eder. Üstelik Rosemary Beach'e özgü değil, bütün 30A için geçerli.\n\n**Önemli eksik veriler:**\n- **Özel plajdaki kural:** Rosemary Beach'in plajı topluluğa ait ve köpekle ilgili kuralını hiçbir kaynağımız söylemiyor.\n- **Kiralık evler ve oteller:** Evcil hayvan kabul edip etmedikleri ve ücretleri bilinmiyor.\n- **Restoranlar:** Köpek kabul edenler bilinmiyor.\n- **Veteriner:** En yakın veteriner ve acil veteriner verimizde yok.\n- **Köpekle gidilecek yerler:** Yürüyüş yolları, parklar ve ormanların köpek kuralları bilinmiyor.\n- **Köpeklere açık plaj:** Ziyaretçi köpeklerinin girebildiği en yakın plaj bilinmiyor.\n\n**Öneri:** Bilgi şimdilik iki yerde bir bölüm olarak kullanılabilir: Rosemary Beach tam rehberinde ya da daha önce önerilen \"30A Beach Rules … Dogs\" videosunda. Eksik veriler toplanırsa bu konu tek bir mahalle yerine bütün 30A'yı kapsayan \"köpekle 30A tatili\" videosu olarak daha güçlü olur. İzleyici yorumlarında bu soru gerçekten soruluyor.",
+  "errors": [],
+  "returncode": 0,
+  "elapsed_s": 78.2,
+  "stderr": "",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "model_used": "claude-opus-5-5",
+  "claude_version": "2.1.284",
+  "stream_file": "akis.jsonl",
+  "thinking_s": 36.9,
+  "metrics": {
+   "elapsed_s": 78.2,
+   "api_s": 76.4,
+   "thinking_s": 36.9,
+   "turns": 6,
+   "tool_calls": 13,
+   "tools": {
+    "okuma": 12,
+    "yazma": 1,
+    "web": 0,
+    "diger": 0
+   },
+   "tool_s": {
+    "okuma": 1.3,
+    "yazma": 0.2,
+    "web": 0.0,
+    "diger": 0.0
+   },
+   "tokens": {
+    "input": 12,
+    "cache_creation": 120852,
+    "cache_read": 295192,
+    "output": 7618,
+    "source": "result"
+   },
+   "cost_usd": 1.1782624
+  },
+  "failure": null
+ },
+ "durum": "awaiting_approval",
+ "sorunlar": [],
+ "paketler": {
+  "veri_ozeti_30a.md": "103e05e7bf7c489587a041001d940971",
+  "veri_ozeti_mahalle.md": "f3c2de5a27604518a25529a789efa8cd"
+ }
+}

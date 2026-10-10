@@ -1,10 +1,14 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.15.0 (geliştirme dalı `gorev-13-claude-baslik`) — programın içinde Claude: konu ve başlık önerisi, video kaydı, Ayarlar'da model ve efor** · son stable etiket: v0.14.0 (kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar); main GÖREV-12'de (yazar özeti ve ayrı sayı listesi).
+30A veri ve içerik üretim uygulaması · **v0.16.0 (geliştirme dalı `gorev-14-masaustu-eklenti`) — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlığını değerlendirme, içerik planından video paketi ve tarayıcı eklentisi** · son stable etiket ve main: v0.15.0 (programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi).
 
 ## Açılış
 
-Bu klasördeki **baslat.bat** dosyasına çift tıklayın. İlk açılışta gerekli paketler kurulabilir. Uygulama tarayıcıda `http://127.0.0.1:8830` adresinde açılır. Başlatma penceresi açık kalmalıdır. Durdurmak için bu pencerede **Ctrl+C** kullanın.
+Programı masaüstündeki **30A Studio** simgesiyle açın. Program kendi penceresinde açılır (adres çubuğu ve sekme yoktur); konsol penceresi açılmaz. Pencereyi kapatınca program da kapanır; o sırada bir iş (veri toplama, Claude çalışması, eklenti işi) sürüyorsa iş bitince kapanır ve bu İşler panelinde yazar. Program zaten açıksa simge yeni bir program açmaz, açık pencereyi öne getirir.
+
+İlk kurulum: bu klasördeki **baslat.bat** dosyasına çift tıklayın. Gerekli paketleri kurar, masaüstüne "30A Studio" kısayolunu oluşturur ve programı açar. Kısayol silinirse `kisayol-olustur.ps1` dosyasına sağ tıklayıp "PowerShell ile çalıştır" deyin ya da `powershell -NoProfile -ExecutionPolicy Bypass -File kisayol-olustur.ps1` komutunu çalıştırın. Program güncellenip yeni paket gerekirse açılırken kurulumu kendisi başlatır.
+
+Program 127.0.0.1 üzerinde 8830–8849 aralığındaki ilk boş portta çalışır (Housing Atlas 8790–8809 kullanır; ikisi aynı anda açık olabilir). Açılış ve hata kayıtları `data/gunluk/uygulama.log` dosyasındadır.
 
 ## İlk deneme
 
@@ -50,10 +54,11 @@ v0.1–v0.12 veritabanı açılırken önce `data/backups/` içine SQLite yedeğ
 - [Günlük ihtiyaç ve arabasız tatil ölçüleri](docs/M13-GUNLUK-IHTIYAC.md)
 - [Kanıt paketi](docs/M14-KANIT-PAKETI.md)
 - [Claude adımları ve Videolar](docs/M15-CLAUDE-ADIMLARI.md)
+- [Tarayıcı eklentisi](docs/M16-TARAYICI-EKLENTISI.md) · [kurulum rehberi](eklenti/KURULUM.md)
 
 ## Geliştirme
 
-Python 3.12 veya sonrası gerekir. Yeni sanal ortamda `python -m pip install -e ".[test]"` ile kurulur. Testler `python -m pytest -q` ile, uygulama `python -m studio` ile çalışır. Tarayıcı açmadan çalıştırmak için `python -m studio --no-browser`; ayrı deneme verileri için `--data-dir` kullanın. Testler canlı ağ veya Claude çağrısı yapmaz.
+Python 3.12 veya sonrası gerekir. Yeni sanal ortamda `python -m pip install -e ".[test]"` ile kurulur. Testler `python -m pytest -q` ile, uygulama `python -m studio` ile çalışır (pencereli, bekçili). Pencere açmadan çalıştırmak için `python -m studio --no-browser` (ya da `--no-window`); ayrı deneme verileri için `--data-dir`, port için `--port` kullanın; bu kipte program Ctrl+C ya da Ctrl+Break ile kapanır. Testler canlı ağ veya Claude çağrısı yapmaz.
 
 GitHub Actions, Python 3.12 üzerinde editable test kurulumu ve pytest çalıştırır: [iş akışları](https://github.com/bemonths/tatilya/actions). Testler gerçek HTTP bağlantısını engeller.
 
@@ -151,6 +156,28 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 **Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model, efor ve en fazla tur. Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
+
+## Masaüstü, iş akışı, Claude kullanımı ve kendi başlığın · v0.16.0
+
+Sol menünün üstünde **video seçici** ve seçili videonun kaç adımının bittiği ("●●○○○○○○ 2/8 adım"), altında videonun sekiz adımı (Veri, Konu ve başlık, Veri paketi, Video metni, Kontrol, Görsel plan, Video üretimi, Yayın hazırlığı) ve her birinin durumu yazar; durumlar kayıtlardan hesaplanır. Her adımın ekranı "Sıradaki iş" satırıyla başlar. Sol menünün altında **Claude kullanımı**: 5 saatlik ve haftalık kullanım yüzdesi, sıfırlanma zamanı, son ölçüm ve bu haftaki Claude çalışmaları; **Yenile** en küçük bir Claude çağrısıyla ölçümü tazeler. İşler panelinde Claude çalışmasının ilerleme çubuğu, geçen süre ve tahmini kalan süre görünür.
+
+**Videolar** ekranında **Kendi başlığını yaz**: aklınızdaki başlığı ya da fikri (Türkçe ya da İngilizce) bölgeyle birlikte yazın; Claude fikrin elimizdeki veriyle bir videoyu doldurup doldurmadığını söyler, doldurmuyorsa neyin eksik olduğunu yazar, dolduruyorsa en çok üç başlık önerir. Önerilen bir başlığı seçmeden önce **Başlığı düzenle** ile değiştirebilirsiniz; yalnız Türkçe karşılığı değiştirdiyseniz **İngilizcesini Claude yazsın** düğmesi çıkar. Seçilen başlığın veri paketi, başlığın içerik planındaki bölümlerle kurulur.
+
+**Ayarlar**: **Talimatlar** (Claude'a verilen talimat dosyalarını programın içinden düzenleme; önceki sürümler saklanır, "Bu sürüme dön" ile geri alınır), **Başlık eki** (İngilizce ve Türkçe başlık eki), **Claude** (model ve efor; "Yenile" çağrısının modeli burada yazar), **Tarayıcı eklentisi**. Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md), [M14](docs/M14-KANIT-PAKETI.md).
+
+## Tarayıcı eklentisi · v0.16.0
+
+Bazı sitelere programın kendi tarayıcısıyla girilemiyor ama sizin Chrome'unuzla girilebiliyor. **30A Studio Yardımcısı** eklentisi bu sitelerin sayfalarını sizin Chrome'unuzda, ayrı bir pencerede açıp yalnız sayfanın içeriğini programa verir. Çerezlerinize, parolalarınıza ve geçmişinize erişmez; tıklamaz, yazı yazmaz, giriş ve ödeme sayfalarını atlar; her site için izni siz verirsiniz. Doğrulama sayfası çıkarsa pencereyi öne getirir ve bildirim gösterir; doğrulamayı siz yaparsınız.
+
+Kurulum (bir kez):
+1. Chrome'da `chrome://extensions` adresini açın.
+2. Sağ üstten **Geliştirici modu**nu açın.
+3. **Paketlenmemiş öğe yükle** ile bu klasördeki `eklenti` klasörünü seçin.
+4. Eklentiyi araç çubuğuna sabitleyin.
+5. Programda **Ayarlar → Tarayıcı eklentisi** ekranındaki eşleşme kodunu eklentinin penceresine yazın.
+6. Aynı ekrandaki **Deneme** düğmesine basın.
+
+Resimli rehber: [eklenti/KURULUM.md](eklenti/KURULUM.md). Ayrıntılar: [M16](docs/M16-TARAYICI-EKLENTISI.md).
 
 ## Kanıt paketi · v0.14.0
 
