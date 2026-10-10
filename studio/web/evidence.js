@@ -16,6 +16,10 @@ export function attachedLinks(pack) {
   return `${extras.yazar_ozeti?`<a class="source-link" href="${esc(packLink(pack.id,"yazar-ozeti"))}" download>Yazar özeti ↓</a>`:""}
     ${extras.sayilar?`<a class="source-link" href="${esc(packLink(pack.id,"sayilar"))}" download>Sayı listesi (CSV) ↓</a>`:""}`;
 }
+// every template's parameter choices: a pack's region shows by name whichever template is selected (GÖREV-13)
+export function choiceNames(templates) {
+  return Object.fromEntries((templates || []).flatMap(t=>(t.parameters || []).flatMap(p=>(p.choices || []).map(c=>[c.id,c.name]))));
+}
 export function packRow(pack, names={}) {
   const params=paramsText(pack.params,names);
   return `<tr><td><strong>${esc(pack.title)}</strong>${params?`<small>${esc(params)}</small>`:""}<small class="source-host">${esc(pack.template_key)} · sürüm ${esc(pack.template_version)}</small></td>
@@ -46,7 +50,7 @@ export class EvidenceScreen {
     if(!body || !this.templates) return;
     if(!this.templates.length) {body.innerHTML='<section class="quality-result empty"><h2>Şablon yok</h2><p>Bu destinasyon için kanıt paketi şablonu tanımlanmamış.</p></section>';return;}
     const template=this.template();
-    const names=Object.fromEntries((template?.parameters[0]?.choices || []).map(c=>[c.id,c.name]));
+    const names=choiceNames(this.templates);
     body.innerHTML=`<section class="library evidence-form"><div class="library-title"><h2>Paket üret</h2><small>Son başarılı çekimlerden üretilir; dosyalar veri klasörüne tarihli ve SHA-256'lı kaydedilir.</small></div>
       <div class="toolbar"><label>Şablon <select id="evidence-template">${this.templates.map(t=>`<option value="${esc(t.key)}" ${t.key===this.selected?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
       ${(template?.parameters || []).map(p=>`<label>${esc(p.label || p.key)} <select data-param="${esc(p.key)}"><option value="">Seçin…</option>${p.choices.map(c=>`<option value="${esc(c.id)}" ${this.values[p.key]===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>`).join("")}

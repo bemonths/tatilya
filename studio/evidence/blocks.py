@@ -11,6 +11,7 @@ number checklist never reads digits out of a statement, and a placement hint (`t
 uses to lay numeric series out as tables. Statements are unchanged.
 """
 import csv
+import re
 import statistics
 from collections import Counter
 
@@ -313,6 +314,18 @@ def reference_label(row_):
 VIDEO_RULE = "Video dili:"
 
 
+MILE_KM = 1.609344
+PLAIN = re.compile(r"^\d+(\.\d+)?$")
+
+
+def reference_metric(value, unit):
+    """A reference value in miles carries its km conversion (GÖREV-13): 13.4 mil -> 21.6 km, a conversion of the shown value."""
+    if unit and unit.split(" ")[0] == "mil" and value and PLAIN.match(value):
+        digits = len(value.partition(".")[2]) or 1
+        return converted(float(value) * MILE_KM, digits, "km")
+    return None
+
+
 def split_video_rule(note):
     """A reference row's note may carry its own video-language rule ("Video dili: …", from the M document); it goes to the usage note."""
     if not note or VIDEO_RULE not in note:
@@ -351,6 +364,7 @@ def references(data, spec):
                                 "sha256": ref["belge_sha256"] or None, "referans": ref["id"], "durum": ref["durum"], "konu": ref["konu"],
                                 "guven": ref["guven"], "yeniden_kontrol_tarihi": ref["yeniden_kontrol_tarihi"]},
                         label=reference_label(ref), usage=usage, quote=ref["kisa_alinti"] or None, note=note,
+                        metric=reference_metric(ref["deger"], ref["birim"]),
                         conflict=ref.get("celiski_notu") or None))
     return rows
 

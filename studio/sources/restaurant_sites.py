@@ -602,6 +602,12 @@ def toast_state_menus(state, seen):
     return menus
 
 
+def hours_text(text):
+    """Hours as written for display: comma-separated parts the source left empty are dropped (", Tu 17:00-21:00," -> "Tu 17:00-21:00");
+    a text with no part left is empty."""
+    return ", ".join(part.strip() for part in (text or "").split(",") if part.strip())
+
+
 def schema_hours(objects):
     """{day index: 'HH:MM–HH:MM' or 'kapalı'} and the verbatim text from openingHoursSpecification / openingHours."""
     days, texts = {}, []
@@ -618,10 +624,10 @@ def schema_hours(objects):
                 if day is not None and opens and closes:
                     span = f"{opens[:5]}–{closes[:5]}"
                     days[day] = f"{days[day]}, {span}" if day in days and span not in days[day] else span
-            texts.append(f"{', '.join(clean(str(n)).rsplit('/', 1)[-1] for n in names)} {opens}–{closes}")
+            texts.append(hours_text(f"{', '.join(clean(str(n)).rsplit('/', 1)[-1] for n in names)} {opens}–{closes}"))
         hours = item.get("openingHours")
         for entry in hours if isinstance(hours, list) else ([hours] if isinstance(hours, str) else []):
-            texts.append(clean(entry))
+            texts.append(hours_text(clean(entry)))
             parsed = parse_hours_text(entry)
             for day, value in parsed.items():
                 days.setdefault(day, value)
@@ -1961,7 +1967,14 @@ def load(con, run_id):
             regions.setdefault(row["external_id"], []).append(row["canonical_region_id"])
     facts, menus, items = {}, {}, {}
     for row in con.execute("SELECT * FROM restaurant_facts WHERE run_id=?", (run_id,)):
-        facts.setdefault(row["external_id"], []).append({**dict(row), "data": json.loads(row["data"]) if row["data"] else None})
+        fact = {**dict(row), "data": json.loads(row["data"]) if row["data"] else None}
+        if fact["field"] == "hours":
+            # runs before GÖREV-13 stored the empty days of a site's text (", , Tu 17:00-21:00"); they are not written, and an hours
+            # fact with neither a day nor any text says nothing
+            fact["detail"] = hours_text(fact["detail"]) or None
+            if not fact["detail"] and not fact["data"]:
+                continue
+        facts.setdefault(row["external_id"], []).append(fact)
     for row in con.execute("SELECT * FROM restaurant_menus WHERE run_id=? ORDER BY external_id, menu_id", (run_id,)):
         menus.setdefault(row["external_id"], []).append(dict(row))
     for row in con.execute("SELECT * FROM restaurant_menu_items WHERE run_id=? ORDER BY external_id, menu_id, position", (run_id,)):

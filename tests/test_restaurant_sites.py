@@ -642,3 +642,29 @@ def test_api_stores_summarizes_and_rolls_back(tmp_path, monkeypatch):
                 assert con.execute(f"SELECT COUNT(*) FROM {table} WHERE run_id=?", (failed["id"],)).fetchone()[0] == 0
                 assert con.execute(f"SELECT COUNT(*) FROM {table} WHERE run_id=?", (job["id"],)).fetchone()[0] > 0
             assert con.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def test_hours_text_drops_the_days_a_site_left_empty():
+    """GÖREV-13: ", Tu 17:00-21:00," is written "Tu 17:00-21:00"; a text of only separators says nothing."""
+    assert rs.hours_text(", Tu 17:00-21:00, We 17:00-21:00,") == "Tu 17:00-21:00, We 17:00-21:00"
+    assert rs.hours_text(", , , , , ,") == "" and rs.hours_text(None) == ""
+    assert rs.hours_text("Monday, Tuesday 09:00–22:00") == "Monday, Tuesday 09:00–22:00"
+    days, text = rs.schema_hours([{"openingHours": ", Tu 17:00-21:00, We 17:00-21:00"}])
+    assert text == "Tu 17:00-21:00, We 17:00-21:00" and days[1] == "17:00–21:00"
+
+
+def test_stored_hours_with_empty_days_are_read_without_them(tmp_path, monkeypatch):
+    tr.install_mock(monkeypatch, tr.DirectoryMock())
+    install(monkeypatch)
+    with TestClient(create_app(tmp_path)) as client:
+        assert tr.start(client)["status"] == "done"
+        job = start_sites(client)
+        with client.app.state.db.connect() as con:      # what runs before GÖREV-13 stored for such a site
+            con.execute("UPDATE restaurant_facts SET detail=', Mo 11:00-21:00, , Tu 11:00-21:00,' WHERE run_id=? AND field='hours'", (job["id"],))
+        detail = client.get(f"/api/restaurant-site-runs/{job['id']}/restaurant", params={"external_id": "/listing/coast-table/"}).json()
+        assert detail["facts"]["hours"]["detail"] == "Mo 11:00-21:00, Tu 11:00-21:00"
+        with client.app.state.db.connect() as con:
+            con.execute("UPDATE restaurant_facts SET detail=', , ,', data=NULL WHERE run_id=? AND field='hours'", (job["id"],))
+        detail = client.get(f"/api/restaurant-site-runs/{job['id']}/restaurant", params={"external_id": "/listing/coast-table/"}).json()
+        assert "hours" not in detail["facts"]
+        assert client.get(f"/api/restaurant-site-runs/{job['id']}").json()["coverage"]["with_hours"] == 0

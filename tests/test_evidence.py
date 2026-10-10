@@ -223,7 +223,7 @@ def test_reference_rows_contribute_only_their_table_value(db):
     data = B.BlockData(db, "30a", thirty_a, date(2026, 10, 10))
     road = B.references(data, {"block": "references", "ids": ["genel-30a-ilce-yolu"]})[0]
     assert "60660100" in road["ifade_en"] and "30A" in road["ifade"]                    # road id and road name sit in the statement
-    assert [(e["tur"], e["deger"]) for e in P.numbers_of({**road, "id": "K0001"})] == [("ana", "18.561")]
+    assert [(e["tur"], e["deger"]) for e in P.numbers_of({**road, "id": "K0001"})] == [("ana", "18.561"), ("donusum", 29.871)]
     law = B.references(data, {"block": "references", "ids": ["hukuk-walton-2016-karar"]})[0]
     assert [(e["tur"], e["deger"]) for e in P.numbers_of({**law, "id": "K0002"})] == [("ana", law["deger"])]
 
@@ -486,3 +486,15 @@ def test_volatile_topics_and_contradictions_open_the_pack_and_the_summary(priced
     for text in (evidence.markdown(priced), S.render(priced)):
         part = text.split("## Yayından önce kontrol edilecek satırlar", 1)[1].split("\n## ", 1)[0]
         assert [line.split(" · ")[0][2:] for line in part.splitlines() if line.startswith("- K")] == expected
+
+
+def test_airport_distances_are_miles_with_their_km_conversion(db):
+    """GÖREV-13: the value is in miles (our computation stays labelled so); km is a conversion of the shown value."""
+    data = B.BlockData(db, "30a", thirty_a, date(2026, 10, 10))
+    rows = {r["kaynak"]["referans"]: r for r in B.references(data, {"block": "references", "ids": ["havalimani-ecp", "havalimani-pns", "timpoochee-ilce-bakim"]})}
+    ecp = rows["havalimani-ecp"]
+    assert (ecp["deger"], ecp["birim"], ecp["etiket"]) == ("13.4", "mil (kuş uçuşu)", "bizim hesabımız")
+    assert ecp["ek_degerler"] == [{"tur": "donusum", "deger": 21.6, "birim": "km"}] and ecp["deger_ek"] == "21.6 km"
+    assert "km" not in ecp["ifade"] and rows["havalimani-pns"]["deger_ek"] == "89.5 km"
+    assert rows["timpoochee-ilce-bakim"]["ek_degerler"] == []                       # "26+" is not a single number
+    assert [(e["tur"], e["deger"]) for e in P.numbers_of({**ecp, "id": "K0001"})] == [("ana", "13.4"), ("donusum", 21.6)]

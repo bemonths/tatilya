@@ -688,3 +688,12 @@ test('evidence screen asks for every template parameter before generating', asyn
   assert.equal(screen.busy,false);
   assert.equal(drawn,1);
 });
+
+import {choiceNames} from '../studio/web/evidence.js';
+
+test('a pack lists its neighborhood by name whichever template is selected (GÖREV-13)', () => {
+  const templates=[{key:'ilk-video',parameters:[]},{key:'mahalle-rehberi',parameters:[{key:'mahalle',choices:[{id:'rosemary-beach',name:'Rosemary Beach'}]}]}];
+  assert.deepEqual(choiceNames(templates),{'rosemary-beach':'Rosemary Beach'});
+  assert.match(packRow({id:'x',title:'Mahalle rehberi',template_key:'mahalle-rehberi',template_version:'1',params:{mahalle:'rosemary-beach'},created_at:'',
+    section_count:8,evidence_count:1,number_count:1,missing_count:0,markdown_sha256:'a'.repeat(64),json_sha256:'b'.repeat(64)},choiceNames(templates)),/mahalle: Rosemary Beach/);
+});
