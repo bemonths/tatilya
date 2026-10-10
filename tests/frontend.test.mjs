@@ -707,6 +707,8 @@ import {suffixSection} from '../studio/web/claude.js';
 import {instructionLine} from '../studio/web/videos.js';
 import {editProblems, editForm, reviewSummary, runRow as videoRunRow, videoCard as videoCardOf} from '../studio/web/videos.js';
 import {packHead} from '../studio/web/workflow.js';
+import * as E from '../eklenti/logic.js';
+import {connectionText, extensionSection, trialRows} from '../studio/web/extension.js';
 
 const titleOptions={available:true,whole_region:'30A geneli',regions:[{id:'rosemary-beach',name:'Rosemary Beach'}],families:['Genel planlama','Deneyim'],all_families:'hepsi',
   claude:{found:true,api_key_warning:null}};
@@ -881,4 +883,95 @@ test('pack head: everything before the first plan section', () => {
   const text='# Başlık — yazar özeti\n\n## Video\n\nkanca\n\n## Bilinen boşluklar\n\n- boşluk\n\n## 1. Bölüm\n\nsatırlar';
   assert.equal(packHead(text),'# Başlık — yazar özeti\n\n## Video\n\nkanca\n\n## Bilinen boşluklar\n\n- boşluk');
   assert.equal(packHead('# Yalnız baş'),'# Yalnız baş');
+});
+
+// GÖREV-14 Adım 7: the browser extension's pure logic (eklenti/logic.js) and Settings → Tarayıcı eklentisi.
+
+test('extension: finds the program on 8830–8849, remembered port first, and knows it by its health answer', () => {
+  assert.deepEqual([E.PORTS[0], E.PORTS.at(-1), E.PORTS.length], [8830, 8849, 20]);
+  assert.deepEqual(E.portOrder(8833).slice(0, 3), [8833, 8830, 8831]);
+  assert.equal(E.portOrder(undefined)[0], 8830);
+  assert.ok(E.healthOk({app: 'thirtya-studio', pid: 1}));
+  assert.ok(!E.healthOk({app: 'housing-atlas'}) && !E.healthOk(null));
+});
+
+test('extension: the job queue takes jobs first come first served and never the same one twice', () => {
+  const queue = new E.JobQueue();
+  assert.ok(queue.add({id: 'a'}) && queue.add({id: 'b'}));
+  assert.ok(!queue.add({id: 'a'}) && !queue.add({}) && !queue.add(null));
+  assert.equal(queue.size, 2);
+  assert.equal(queue.take().id, 'a');
+  assert.equal(queue.take().id, 'b');
+  assert.equal(queue.take(), null);
+  queue.forget('a');
+  assert.ok(queue.add({id: 'a'}));
+});
+
+test('extension: at least the gap between two pages of one domain, other domains not held back', () => {
+  const pacer = new E.Pacer(8);
+  assert.equal(pacer.delayFor('ornek.test', 1000), 0);
+  pacer.mark('www.ornek.test', 1000);
+  assert.equal(pacer.delayFor('ornek.test', 3000), 6000);
+  assert.equal(pacer.delayFor('https://ornek.test/a', 9000), 0);
+  assert.equal(pacer.delayFor('baska.test', 3000), 0);
+  assert.equal(new E.Pacer().gapMs, 8000);
+});
+
+test('extension: verification and block pages are known by the program\'s own markers', () => {
+  assert.ok(E.isVerification('<html><head><title>Just a moment...</title>', ''));
+  assert.ok(E.isVerification('<script>window._cf_chl_opt={}</script>', ''));
+  assert.ok(E.isVerification('<div id="px-captcha"></div>', ''));
+  assert.ok(E.isVerification('<p>Press &amp; Hold</p>', ''));
+  assert.ok(E.isVerification('<html></html>', 'Just a moment...'));
+  assert.ok(!E.isVerification('<html><title>Menu</title><script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>', 'Menu'));
+  assert.ok(!E.isVerification('<form><div class="cf-turnstile"></div></form>', 'Contact'));
+  assert.ok(E.isBlocked('<h1>Sorry, you have been blocked</h1>') && !E.isBlocked('<h1>Hello</h1>'));
+  assert.equal(E.classify({html: '<title>Just a moment...</title>', title: 'Just a moment...', url: 'https://a.test/'}), 'dogrulama');
+});
+
+test('extension: a login or payment page is not read; an ordinary page with a sign-in link is', () => {
+  assert.ok(E.isLogin({html: '<form><input type="password" name="p"></form>', url: 'https://a.test/'}));
+  assert.ok(E.isLogin({html: '<p>x</p>', url: 'https://a.test/account/login?next=/'}));
+  assert.ok(E.isLogin({html: '', url: 'https://a.test/x', title: 'Sign in to continue'}));
+  assert.ok(!E.isLogin({html: '<a href="/login">Sign in</a><h1>Menu</h1>', url: 'https://a.test/menu', title: 'Menu'}));
+  assert.ok(E.isPayment({html: '', url: 'https://a.test/checkout/'}));
+  assert.ok(E.isPayment({html: '<input autocomplete="cc-number">', url: 'https://a.test/order'}));
+  assert.ok(!E.isPayment({html: '<p>Pay at the door</p>', url: 'https://a.test/menu'}));
+  assert.equal(E.classify({html: '<input type=password>', url: 'https://a.test/'}), 'giris');
+  assert.equal(E.classify({html: '<p>ok</p>', url: 'https://a.test/payment'}), 'odeme');
+  assert.equal(E.classify({html: '<p>ok</p>', url: 'https://a.test/menu'}), 'oku');
+  assert.deepEqual(E.pageResult('giris', {url: 'https://a.test/login', title: 'Log in', html: '<secret>'}, 'giriş gerekiyor'),
+    {durum: 'giris', son_adres: 'https://a.test/login', baslik: 'Log in', http_durumu: null, not: 'giriş gerekiyor'});
+  assert.equal(E.pageResult('tamam', {url: 'u', html: '<p>x</p>', status: 200}).html, '<p>x</p>');
+});
+
+test('extension: permissions are per site (and its subdomains); the local program needs none of its own', () => {
+  assert.deepEqual(E.originPatterns('www.order.online'), ['https://order.online/*', 'https://*.order.online/*', 'http://order.online/*', 'http://*.order.online/*']);
+  const granted = ['http://127.0.0.1/*', ...E.originPatterns('cvs.com')];
+  assert.ok(E.isPermitted('www.cvs.com', granted) && E.isPermitted('shop.cvs.com', granted));
+  assert.ok(!E.isPermitted('publix.com', granted) && !E.isPermitted('notcvs.com', granted));
+  assert.deepEqual(E.permittedDomains(granted), ['cvs.com']);
+  assert.ok(E.isLocal('127.0.0.1') && E.isLocal('http://127.0.0.1:8830/eklenti-deneme') && !E.isLocal('cvs.com'));
+  assert.equal(E.domainOf('https://WWW.Publix.com/locations'), 'publix.com');
+});
+
+test('extension: wait rules are seconds or an element, with limits', () => {
+  assert.deepEqual(E.normalizeWait({saniye: 5}), {seconds: 5, selector: null, maxSeconds: 60});
+  assert.deepEqual(E.normalizeWait({oge: '#icerik'}), {seconds: 0, selector: '#icerik', maxSeconds: 60});
+  assert.deepEqual(E.normalizeWait({saniye: 500}).seconds, 60);
+  assert.deepEqual(E.normalizeWait(undefined), {seconds: 2, selector: null, maxSeconds: 60});
+  assert.equal(E.bytesToBase64(new Uint8Array([104, 105])), 'aGk=');
+});
+
+test('Settings → Tarayıcı eklentisi: connection, code, domains, speed, steps, trials', () => {
+  const view = {eslesti: true, bagli: true, surum: '0.16.0', son_gorulme: '2026-10-10T20:00:00+00:00', kod: 'K7QM-3XRA', izinli_alan_adlari: ['cvs.com'],
+    izin_bekleyen_alan_adlari: ['publix.com'], aralik_saniye: 8, aralik_sinirlari: [3, 120], kurulum: ['Bir', 'İki'], klasor: 'C:/30a-studio/eklenti',
+    sorunlu_siteler: [{alan_adi: 'realjoy.com'}, {alan_adi: 'order.online'}]};
+  assert.equal(connectionText(view).tone, 'green');
+  assert.match(connectionText({...view, bagli: false}).text, /^Bağlı değil/);
+  assert.match(connectionText({eslesti: false}).text, /^Eşleşmedi/);
+  const html = extensionSection(view, {trial: {durum: 'tamam', baslik: 'Deneme', bayt: 2048, sha256: 'abc', dosya: 'raw/eklenti/x.html'}});
+  assert.match(html, /K7QM-3XRA.*Kodu yenile.*cvs\.com.*publix\.com.*min="3" max="120" value="8".*<li>Bir<\/li><li>İki<\/li>.*Deneme.*okundu.*realjoy\.com, order\.online.*Sorunlu sitelerden birer sayfa dene/s);
+  assert.match(trialRows([{alan_adi: 'cvs.com', durum: 'dogrulama', bayt: 4096, not: 'süre doldu'}]), /cvs\.com.*doğrulama geçilmedi.*4 KB.*süre doldu/s);
+  assert.equal(trialRows([]), '');
 });

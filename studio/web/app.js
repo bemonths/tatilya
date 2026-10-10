@@ -17,6 +17,7 @@ import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepN
 import {renderClaudeSettings, renderSuffixSettings} from "./claude.js";
 import {UsagePanel, claudeBar, claudeProgress, progressText as claudeProgressText} from "./usage.js";
 import {InstructionEditor} from "./instructions.js";
+import {ExtensionSettings} from "./extension.js";
 
 const $ = selector => document.querySelector(selector);
 const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:""};
@@ -258,7 +259,9 @@ function renderSettings() {
     `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">Destinasyonların kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
     <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Veri, kanıt paketi ve konu önerisi hazır</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Videolar ekranında Claude ile konu ve başlık önerisi ve video kaydı kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Claude ile video metni ve metnin kontrolü. Görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div><div class="info-grid claude-grid" id="claude-settings-slot"><p class="muted">Claude ayarları yükleniyor…</p></div>
     <div class="info-grid claude-grid"><div id="suffix-settings-slot"><p class="muted">Başlık eki yükleniyor…</p></div><div id="usage-settings-slot"></div></div>
-    <div class="info-grid claude-grid" id="instructions-slot"><p class="muted">Talimatlar yükleniyor…</p></div>`;
+    <div class="info-grid claude-grid" id="instructions-slot"><p class="muted">Talimatlar yükleniyor…</p></div>
+    <div class="info-grid claude-grid" id="extension-slot"><p class="muted">Tarayıcı eklentisi yükleniyor…</p></div>`;
+  new ExtensionSettings($("#extension-slot")).load();
   renderClaudeSettings($("#claude-settings-slot"));
   renderSuffixSettings($("#suffix-settings-slot"));
   api("claude/usage").then(view=>{const slot=$("#usage-settings-slot");if(slot) slot.innerHTML=`<section class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p>${esc(view.refresh.text)}</p><p class="muted">Model: <code>${esc(view.refresh.model)}</code> · efor: ${view.refresh.effort==="low"?"düşük":esc(view.refresh.effort)}</p></section>`;}).catch(()=>{});
@@ -273,7 +276,7 @@ function renderJobResultLink(job) {
 function renderJobs() {
   const jobs = state.data.jobs;
   $("#jobs-count").textContent = jobs.filter(active).length;
-  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${claudeBar(job) || `<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress>`}${job.waiting_for?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor</span> ${esc(job.waiting_for)}</p>`:""}<p>${esc(job.message)}</p>${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${renderJobResultLink(job)}</article>`).join("") :
+  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${claudeBar(job) || `<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress>`}${job.waiting_for?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor</span> ${esc(job.waiting_for)}</p>`:""}<p>${esc(job.message)}</p>${active(job) && job.progress_info?.tur==="eklenti" && job.progress_info.bekliyor?`<button data-handover-job="${job.id}">Programın tarayıcısına devret</button> `:""}${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${renderJobResultLink(job)}</article>`).join("") :
     '<div class="empty"><div class="empty-icon">⌁</div><h3>Henüz iş yok</h3><p>Kaynak ekranında “Kayıtları kontrol et” düğmesine bastığında işin durumu ve sonucu burada görünür.</p></div>';
   updateAuditButtons();
 }
@@ -441,6 +444,12 @@ $("#jobs-content").addEventListener("click",async event=>{
     cancel.disabled=true;
     try {await api(`jobs/${cancel.dataset.cancelJob}/cancel`,{method:"POST"});state.data.jobs=await api("jobs");renderJobs();}
     catch(error){toast(error.message);cancel.disabled=false;}
+  }
+  const handover=event.target.closest("[data-handover-job]");
+  if(handover) {
+    handover.disabled=true;
+    try {await api(`tarayici-eklentisi/devret/${handover.dataset.handoverJob}`,{method:"POST"});state.data.jobs=await api("jobs");renderJobs();toast("İş programın kendi tarayıcısına devredildi.");}
+    catch(error){toast(error.message);handover.disabled=false;}
   }
   if(event.target.closest("[data-view-report]")) toggleJobs(false);
 });

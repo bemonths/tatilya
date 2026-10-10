@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import csv
 import io
 import json
@@ -22,11 +23,27 @@ from . import evidence
 from .ai import settings as claude_settings
 from .ai.service import ClaudeService
 from .watchdog import Watchdog
+from . import extension as ext
 from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
 WEB = Path(__file__).parent / "web"
+EXTENSION_PREFIX = "/api/eklenti/"
+EXTENSION_DIR = Path(__file__).resolve().parent.parent / "eklenti"
+EXTENSION_STEPS = [
+    "Chrome'da adres çubuğuna chrome://extensions yazıp açın.",
+    "Sağ üstteki “Geliştirici modu” anahtarını açın.",
+    "“Paketlenmemiş öğe yükle” düğmesine basın ve bu klasörü seçin: programın klasöründeki eklenti klasörü.",
+    "Araç çubuğundaki yapboz simgesine tıklayıp “30A Studio Yardımcısı”nı sabitleyin (raptiye).",
+    "Eklenti simgesine tıklayın; açılan pencereye bu ekrandaki eşleşme kodunu yazıp “Eşleştir”e basın.",
+    "Bu ekrandaki “Deneme” düğmesine basın; programın kendi deneme sayfası eklentiyle açılır ve sonucu burada görünür.",
+]
+EXTENSION_TRIAL_PAGE = """<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>30A Studio · eklenti deneme sayfası</title></head>
+<body><h1>30A Studio eklenti deneme sayfası</h1><p>Bu sayfa programın kendi yerel sayfasıdır; gerçek bir site değildir.</p>
+<p id="bekleniyor">Sayfanın bir bölümü JavaScript ile çiziliyor…</p>
+<script>setTimeout(() => { const p = document.createElement('p'); p.id = 'deneme-sonuc'; p.textContent = 'JavaScript ile çizilen bölüm hazır.';
+document.body.appendChild(p); document.getElementById('bekleniyor').remove(); }, 1500);</script></body></html>"""
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "data"
 
 
@@ -40,7 +57,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         db.recover_jobs()
         app.state.claude = ClaudeService(db, db.path.parent)
         app.state.claude.recover()
-        app.state.jobs = JobQueue(db)
+        app.state.jobs = JobQueue(db, extension=app.state.extension)
         app.state.batches = refresh.BatchRunner(db, app.state.jobs)
         app.state.batches.recover()
         try:
@@ -53,11 +70,39 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     app = FastAPI(title="30A Studio", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.db = db
     app.state.watchdog = watchdog or Watchdog.from_env(has_active_jobs=db.has_active_work, on_waiting=db.note_active_jobs)
+    app.state.extension = ext.ExtensionBridge(db.path.parent)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
+
+    def extension_cors(response, origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        return response
 
     @app.middleware("http")
     async def local_requests(request: Request, call_next):
+        if request.url.path.startswith(EXTENSION_PREFIX):
+            # GÖREV-14: the extension's API answers only the paired extension's origin with the pairing code; CORS only for it
+            origin, bridge = request.headers.get("origin") or "", request.app.state.extension
+            pairing = request.url.path == EXTENSION_PREFIX + "eslestir"
+            allowed = origin.startswith(ext.ORIGIN_PREFIX) and (pairing or origin == bridge.config.get("koken"))
+            if request.method == "OPTIONS":
+                if not allowed:
+                    return JSONResponse({"detail": "Bu köken eklenti API'sine erişemez."}, status_code=403)
+                response = Response(status_code=204)
+                response.headers["Access-Control-Allow-Methods"] = "POST"
+                response.headers["Access-Control-Allow-Headers"] = f"content-type, {ext.HEADER}"
+                response.headers["Access-Control-Max-Age"] = "600"
+                return extension_cors(response, origin)
+            if request.method != "POST" or not allowed:
+                return JSONResponse({"detail": "Bu köken eklenti API'sine erişemez."}, status_code=403)
+            if not pairing and not bridge.authorized(origin, request.headers.get(ext.HEADER)):
+                return extension_cors(JSONResponse({"detail": "Eşleşme kodu geçersiz; Ayarlar → Tarayıcı eklentisi ekranındaki kodu yeniden yazın."},
+                                                   status_code=403), origin)
+            return extension_cors(await call_next(request), origin)
         if request.method not in ("GET", "HEAD", "OPTIONS"):
+            # GÖREV-14: the user's browser now talks to the program; a state-changing request from another site is refused
+            if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
+                return JSONResponse({"detail": "Bu istek uygulama penceresinden gelmiyor."}, status_code=403)
             origin = request.headers.get("origin")
             if origin and urlsplit(origin).netloc != request.headers.get("host"):
                 return JSONResponse({"detail": "Bu istek uygulama penceresinden gelmiyor."}, status_code=403)
@@ -133,6 +178,165 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                                       "provenance": {"scope":"Destinasyonda yapılandırılmış hava örnek noktaları."}},
                 "beach_connector": {"name": "south-walton-beaches", "source_url": beaches.SOURCE_URL, "method": "JSON", "scope": beaches.SCOPE,
                                     "feature_labels": beaches.FEATURE_LABELS}}
+
+    # --- Browser extension (GÖREV-14, Adım 7) ------------------------------------------------------------------------------------
+
+    def bridge():
+        return app.state.extension
+
+    async def json_body(request):
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "İstek okunamadı.") from None
+        if not isinstance(body, dict):
+            raise HTTPException(422, "İstek okunamadı.")
+        return body
+
+    @app.post("/api/eklenti/eslestir")
+    async def extension_pair(request: Request):
+        body = await json_body(request)
+        if not bridge().pair(request.headers.get("origin"), request.headers.get(ext.HEADER), body.get("surum")):
+            raise HTTPException(403, "Eşleşme kodu yanlış ya da program başka bir eklentiyle eşleşmiş. Ayarlar → Tarayıcı eklentisi ekranındaki "
+                                     "kodu yazın; gerekirse “Kodu yenile” ile yeni kod alın.")
+        return {"eslesti": True, "program": "thirtya-studio", "surum": __version__, "aralik_saniye": bridge().gap()}
+
+    @app.post("/api/eklenti/sor")
+    async def extension_ask(request: Request):
+        body = await json_body(request)
+        bridge().touch(body.get("surum"), body.get("izinli"))
+        return {"is": bridge().take(), "aralik_saniye": bridge().gap(), "sorma_araligi_saniye": 3,
+                "izin_bekleyen": sorted(bridge().pending)}
+
+    @app.post("/api/eklenti/is/{session_id}/sonraki")
+    def extension_next(session_id: str):
+        bridge().last_seen = bridge().clock()
+        return bridge().next_item(session_id)
+
+    @app.post("/api/eklenti/is/{session_id}/sonuc")
+    async def extension_result(session_id: str, request: Request):
+        body = await json_body(request)
+        if not bridge().deliver(session_id, str(body.get("oge_id") or ""), body):
+            raise HTTPException(404, "Bu iş ya da sayfa beklenmiyor.")
+        return {"alindi": True}
+
+    @app.post("/api/eklenti/is/{session_id}/durum")
+    async def extension_state(session_id: str, request: Request):
+        body = await json_body(request)
+        found = bridge().report(session_id, verifying=body.get("dogrulama") if isinstance(body.get("dogrulama"), str) else None,
+                                missing=body.get("izin_yok") if isinstance(body.get("izin_yok"), str) else None)
+        if not found:
+            raise HTTPException(404, "Bu iş bulunamadı.")
+        return {"alindi": True}
+
+    @app.post("/api/eklenti/is/{session_id}/bitti")
+    async def extension_done(session_id: str, request: Request):
+        body = await json_body(request)
+        bridge().finished(session_id, body.get("hata") if isinstance(body.get("hata"), str) else None)
+        return {"alindi": True}
+
+    @app.get("/api/tarayici-eklentisi")
+    def extension_settings(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Settings → Tarayıcı eklentisi: connection, pairing code, domains, speed, install steps, the trial sites."""
+        selected(destination_id)
+        profile = PROFILES.get(destination_id)
+        pictures = sorted(p.name for p in (EXTENSION_DIR / "kurulum").glob("*.png")) if (EXTENSION_DIR / "kurulum").is_dir() else []
+        return {**bridge().status(), "klasor": str(EXTENSION_DIR), "kurulum": EXTENSION_STEPS, "kurulum_resimleri": pictures,
+                "sorunlu_siteler": [{"alan_adi": d, "adres": u, "aciklama": n} for d, u, n in getattr(profile, "EXTENSION_TRIAL_SITES", ())]}
+
+    @app.post("/api/tarayici-eklentisi/kod-yenile")
+    def extension_renew():
+        bridge().renew()
+        return bridge().status()
+
+    @app.put("/api/tarayici-eklentisi/ayarlar")
+    async def extension_speed(request: Request):
+        body = await json_body(request)
+        try:
+            bridge().set_gap(body.get("aralik_saniye"))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return bridge().status()
+
+    def trial_read(url, label, *, wait=None, timeout=240):
+        if not bridge().paired:
+            raise Conflict("Eklenti eşleşmemiş: önce kurulum adımlarını izleyip eşleşme kodunu eklentiye yazın.")
+        if not bridge().connected:
+            raise Conflict("Eklenti bağlı değil: Chrome'u açın (eklenti açıkken birkaç saniyede bir programa bağlanır).")
+        session = bridge().open(ext.domain_of(url), purpose=label)
+        try:
+            result = session.page(url, wait or {"saniye": 3}, timeout=timeout)
+        except ext.ExtensionError as exc:
+            raise Conflict(str(exc)) from exc
+        finally:
+            session.close()
+        return bridge().save_raw(result, label)
+
+    @app.post("/api/tarayici-eklentisi/deneme")
+    async def extension_trial(request: Request):
+        """"Deneme": the extension opens the program's own local trial page (not a real site) and the result is shown."""
+        url = str(request.base_url).rstrip("/") + "/eklenti-deneme"
+        return await asyncio.to_thread(trial_read, url, "deneme", wait={"oge": "#deneme-sonuc"}, timeout=120)
+
+    @app.post("/api/tarayici-eklentisi/sorunlu-siteler", status_code=201)
+    def extension_problem_sites(destination_id: str = DEFAULT_DESTINATION_ID):
+        """"Sorunlu sitelerden birer sayfa dene": one page of each site, read by the extension in a background job (the user presses it)."""
+        selected(destination_id)
+        profile = PROFILES.get(destination_id)
+        sites = list(getattr(profile, "EXTENSION_TRIAL_SITES", ()))
+        if not sites:
+            raise HTTPException(404, "Bu destinasyon için sorunlu site listesi yok.")
+        if not bridge().paired:
+            raise Conflict("Eklenti eşleşmemiş: önce eşleşme kodunu eklentiye yazın.")
+        job_id = db.add_job("eklenti_deneme", "Tarayıcı eklentisi · sorunlu sitelerden birer sayfa", destination_id=destination_id)
+
+        def work():
+            access = ext.JobAccess(bridge(), db, job_id)
+            rows = []
+            db.update_job(job_id, status="running", progress=1, message=f"{len(sites)} site eklentiyle okunacak.")
+            for number, (domain, url, note) in enumerate(sites, 1):
+                job = db.job(job_id)
+                if not job or job["status"] not in ("queued", "running"):
+                    return
+                try:
+                    session = access.open(domain, purpose="sorunlu site denemesi")
+                    try:
+                        result = session.page(url, {"saniye": 5}, canceled=lambda: (db.job(job_id) or {}).get("status") not in ("queued", "running"))
+                    finally:
+                        session.close()
+                    record = bridge().save_raw(result, f"sorunlu site · {domain}")
+                    rows.append({"alan_adi": domain, "aciklama": note, "durum": result["durum"], "baslik": result.get("baslik"),
+                                 "http_durumu": result.get("http_durumu"), "bayt": record["bayt"], "sha256": record["sha256"], "dosya": record["dosya"],
+                                 "not": result.get("not")})
+                except Exception as exc:
+                    rows.append({"alan_adi": domain, "aciklama": note, "durum": "hata", "not": f"{type(exc).__name__}: {str(exc)[:160]}"})
+                db.update_job(job_id, progress=int(100 * number / len(sites)), message=f"{number}/{len(sites)} · {domain}: {rows[-1]['durum']}")
+            db.update_job(job_id, status="done", progress=100, result={"siteler": rows},
+                          message=f"{sum(r['durum'] == 'tamam' for r in rows)}/{len(rows)} site eklentiyle okundu.")
+
+        threading.Thread(target=work, name="eklenti-deneme", daemon=True).start()
+        return db.job(job_id)
+
+    @app.post("/api/tarayici-eklentisi/devret/{job_id}")
+    def extension_hand_over(job_id: str):
+        """The job panel's "Programın tarayıcısına devret": the job's pages go to the program's own browser."""
+        if db.job(job_id) is None:
+            raise HTTPException(404, "İş bulunamadı.")
+        reason = bridge().hand_over(job_id)
+        db.update_job(job_id, message=reason, progress_info={"tur": "eklenti", "bekliyor": False, "devredildi": True})
+        return db.job(job_id)
+
+    @app.get("/eklenti-kurulum/{name}")
+    def extension_guide_image(name: str):
+        """The install guide's pictures (eklenti/kurulum/*.png) for Settings → Tarayıcı eklentisi."""
+        path = (EXTENSION_DIR / "kurulum" / name).resolve()
+        if path.parent != (EXTENSION_DIR / "kurulum").resolve() or path.suffix != ".png" or not path.is_file():
+            raise HTTPException(404, "Resim bulunamadı.")
+        return FileResponse(path, media_type="image/png")
+
+    @app.get("/eklenti-deneme")
+    def extension_trial_page():
+        return Response(EXTENSION_TRIAL_PAGE, media_type="text/html; charset=utf-8")
 
     @app.get("/api/workflow")
     def workflow_view(destination_id: str = DEFAULT_DESTINATION_ID, video_id: str | None = None):

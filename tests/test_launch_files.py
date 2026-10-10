@@ -50,6 +50,13 @@ def test_committed_icons_match_generator(tmp_path: Path) -> None:
         assert png_pixels(committed[size]) == png_pixels(fresh[size])
 
 
+def test_extension_icons_match_generator(tmp_path: Path) -> None:
+    fresh = {path.name: path.read_bytes() for path in make_icon.build_extension(tmp_path)}
+    assert sorted(fresh) == ["128.png", "16.png", "32.png", "48.png"]
+    for name, data in fresh.items():
+        assert png_pixels((ROOT / "eklenti" / "icons" / name).read_bytes()) == png_pixels(data)
+
+
 def test_icon_uses_program_colours_and_name() -> None:
     svg = (IMG / "30a.svg").read_text(encoding="utf-8")
     assert "<title>30A Studio</title>" in svg

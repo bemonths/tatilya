@@ -32,7 +32,7 @@ from urllib.parse import quote, urlencode, urljoin, urlsplit, urlunsplit
 import httpx
 
 from .base import CollectionCanceled, CollectionResult, SourceError
-from .browser_verification import FINAL_WAIT_SECONDS, GRACE_SECONDS, host_key, mark_hosts
+from .browser_verification import FINAL_WAIT_SECONDS, GRACE_SECONDS, host_key, mark_hosts, record_methods
 from .climate_http import check, pause
 
 CONNECTOR_VERSION = "restaurant-sites/1"
@@ -1497,6 +1497,7 @@ class BrowserPages:
         self.session = None
         self.last = {}
         self.protected = set()
+        self.methods = {}                        # host -> 'eklenti' | 'tarayici': what read it (browser_hosts.method, GÖREV-14)
 
     def start(self):
         if self.session is None:
@@ -1531,9 +1532,12 @@ class BrowserPages:
                     raise SourceError(f"Site engel sayfası gösterdi ({host}).")
         finally:
             self.last[host] = time.monotonic()
+        method = getattr(session, "method_note", "tarayıcı")      # GÖREV-14: "eklenti" when the user's Chrome read it
+        if 200 <= (status or 0) < 400:
+            self.methods[host_key(url)] = "eklenti" if method == "eklenti" else "tarayici"
         digest, stamp = self.store.save(restaurant=restaurant, requested=url, final_url=final, status=status, content_type=content_type,
-                                        body=body, note=f"{note} (tarayıcı)")
-        return Document(url, final, status, content_type, body, digest, stamp, f"{note} (tarayıcı)")
+                                        body=body, note=f"{note} ({method})")
+        return Document(url, final, status, content_type, body, digest, stamp, f"{note} ({method})")
 
     def grace_period(self, session, host, url):
         """Most verification pages clear by themselves in a real browser; one that does not is left for the end of the run."""
@@ -1740,7 +1744,7 @@ def review_note(run):
                                         "raw_sha256": None, "method": "gözden geçirme"}
 
 
-def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None):
+def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None, extension=None):
     """Read every restaurant's own site once (its pages, menus and documents) and return the facts with their provenance.
 
     First pass: plain HTTP for every site (also one that showed a verification page in an earlier run), several restaurants side by
@@ -1748,7 +1752,11 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
     theirs blocked plain HTTP (a verification page or a refusal, on the home page or a menu page), and only that host's pages are
     read with the browser (RoutedPages); a menu that merely needs JavaScript is not opened in the browser (user decision,
     9 October 2026). The second reading replaces the first only when it read more. A site still verifying after the grace period is left for the
-    end: then the waiting sites open in tabs, the job lists them once and waits VERIFY_TIMEOUT for the user."""
+    end: then the waiting sites open in tabs, the job lists them once and waits VERIFY_TIMEOUT for the user.
+
+    GÖREV-14: when the browser extension is paired (`extension`, studio.extension.JobAccess), the second pass reads the blocked hosts
+    in the user's own Chrome through it (studio.sources.extension_reader.ExtensionPages); after a hand-over the program's own browser
+    takes the rest. The extension waits for the user on a verification page itself; such a site is not waited for again at the end."""
     restaurants = (config.get("input") or {}).get("restaurants") if config else None
     if not restaurants:
         raise SourceError("Önce restoran dizini toplanmalı: işletme siteleri son restoran çekimindeki kayıtlardan okunur.")
@@ -1761,7 +1769,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
     client = client or httpx.Client(timeout=httpx.Timeout(30, connect=15), verify=True)
     fetcher = Fetcher(client, store, pacer, canceled)
     done, lock, last = [0], threading.Lock(), [0.0]
-    marks = {}
+    marks, methods = {}, {}
     progress(1, f"{len(restaurants)} restoranın kendi sitesi okunacak.")
 
     def one(restaurant):
@@ -1797,8 +1805,16 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                 if block["reason"] == "challenge":
                     marks[host] = {"host": host, "url": block["url"], "reason": "doğrulama sayfası"}
         second = [index for index, run in enumerate(runs) if run.needs_browser]
-        if second and browser is not False and (browser is not None or browser_available()):
-            pages = browser if browser is not None and not isinstance(browser, bool) else BrowserPages(store, canceled, waiting)
+        through_extension = extension is not None and extension.paired
+        if second and browser is not False and (browser is not None or through_extension or browser_available()):
+            if browser is not None and not isinstance(browser, bool):
+                pages = browser
+            elif through_extension:
+                from .extension_reader import ExtensionPages
+                fallback = (lambda: CdpPages(None)) if browser_available() else None
+                pages = BrowserPages(store, canceled, waiting, opener=lambda profile: ExtensionPages(extension, fallback, canceled), grace=0)
+            else:
+                pages = BrowserPages(store, canceled, waiting)
             if pages.store is None:
                 pages.store = store
             if pages.waiting is None:
@@ -1863,6 +1879,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                             runs[index] = retry
             finally:
                 if isinstance(pages, BrowserPages):
+                    methods.update(pages.methods)
                     pages.close()
             store.flush()
         for run in runs:
@@ -1877,10 +1894,11 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
         hosts = sorted(marks.values(), key=lambda m: m["host"])
         metadata = {**snapshot, "site_statuses": statuses, "menu_count": len(menus), "menus_read": sum(m["status"] == "read" for m in menus),
                     "item_count": len(items), "fact_count": len(facts), "overrides": len(overrides),
-                    "readings": sum(len(v) for v in readings.values()), "browser_hosts": hosts}
+                    "readings": sum(len(v) for v in readings.values()), "browser_hosts": hosts, "okuma_yontemleri": methods}
         progress(97, f"{len(sites)} restoran, {len(menus)} menü ve {len(items)} menü kalemi kaydediliyor.")
         return CollectionResult(sites, len(sites), statuses["no_site"], None, metadata,
-                                {"snapshot": snapshot, "facts": facts, "menus": menus, "items": items, "browser_hosts": hosts})
+                                {"snapshot": snapshot, "facts": facts, "menus": menus, "items": items, "browser_hosts": hosts,
+                                 "okuma_yontemleri": methods})
     finally:
         try:
             store.flush()
@@ -2056,10 +2074,13 @@ class RestaurantSitesConnector:
     def supports(self, source):
         return source_host(source.get("url")) is not None
 
-    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None):
+    uses_extension = True
+
+    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None):
         if not context.restaurants:
             raise SourceError("Bu destinasyon için restoran yapılandırması yok.")
-        return collect(raw_path, progress, canceled, config={**context.restaurants, "browser_hosts": context.browser_hosts}, waiting=waiting)
+        return collect(raw_path, progress, canceled, config={**context.restaurants, "browser_hosts": context.browser_hosts}, waiting=waiting,
+                       extension=extension)
 
     def store_records(self, con, run_id, records, related=None):
         snapshot = related["snapshot"]
@@ -2082,6 +2103,7 @@ class RestaurantSitesConnector:
             [(run_id, i["external_id"], i["menu_id"], i["position"], i["section"], i["section_class"], i["class_basis"], i["name"], i["price_text"],
               i["price"], i["price_rule"], i["method"]) for i in related["items"]])
         mark_hosts(con, related.get("browser_hosts", []), CONNECTOR_VERSION)
+        record_methods(con, related.get("okuma_yontemleri"))
 
     def read_records(self, con, run_id):
         return [dict(r) for r in con.execute("SELECT * FROM restaurant_sites WHERE run_id=? ORDER BY name, external_id", (run_id,))]

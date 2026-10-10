@@ -23,6 +23,8 @@ DESIGN = 256
 ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 PNG_SIZE = 192
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "studio" / "web" / "img"
+EXTENSION_OUT = Path(__file__).resolve().parent.parent / "eklenti" / "icons"
+EXTENSION_SIZES = (16, 32, 48, 128)          # the browser extension's icons (GÖREV-14)
 
 NAVY = "#0E1B26"
 ORANGE = "#F5965E"
@@ -218,6 +220,17 @@ def build(out_dir: Path) -> list[Path]:
     return list(files)
 
 
+def build_extension(out_dir: Path) -> list[Path]:
+    """The extension's PNG icons (16, 32, 48, 128 px) in its own folder."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    files = []
+    for size in EXTENSION_SIZES:
+        path = out_dir / f"{size}.png"
+        path.write_bytes(encode_png(size, render_rgba(size)))
+        files.append(path)
+    return files
+
+
 def main(argv: list[str] | None = None) -> None:
     for stream in (sys.stdout, sys.stderr):
         try:
@@ -226,8 +239,9 @@ def main(argv: list[str] | None = None) -> None:
             pass
     parser = argparse.ArgumentParser(description="Program simgesini üretir.")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="çıktı klasörü")
+    parser.add_argument("--eklenti", type=Path, default=EXTENSION_OUT, help="tarayıcı eklentisinin simge klasörü")
     args = parser.parse_args(argv)
-    for path in build(args.out):
+    for path in build(args.out) + build_extension(args.eklenti):
         print(f"Yazıldı: {path}")
 
 

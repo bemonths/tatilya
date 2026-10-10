@@ -89,6 +89,19 @@ CHANNEL = {
     "title_suffix": {"en": " | 30A Florida Vacation", "tr": " | 30A Florida Tatili"},
 }
 
+# GÖREV-14 (Adım 7): one page of each site the reports name as unreadable from this computer, for Settings → Tarayıcı eklentisi →
+# "Sorunlu sitelerden birer sayfa dene" (the user presses it). Addresses come from the records of earlier runs.
+EXTENSION_TRIAL_SITES = (
+    ("realjoy.com", "https://realjoy.com/northwest-florida/south-walton-30a-miramar-beach-sandestin/30a/seacrest-beach/town-of-prominence/"
+                    "rental/town-of-prominence-326b-seaside-paradise/351363", "kiralama şirketi ilanı (61 ilan; okuyucu yok)"),
+    ("order.online", "https://order.online/business/smallcakes-cupcakery-56407", "restoran menüsü (doğrulama geçmedi)"),
+    ("hcafloridahealthcare.com", "https://www.hcafloridahealthcare.com/locations/breakfast-point-emergency", "acil sağlık noktası"),
+    ("cvs.com", "https://www.cvs.com/store-locator/cvs-pharmacy-locations/Florida/Miramar-Beach", "eczane zinciri"),
+    ("publix.com", "https://www.publix.com/locations", "süpermarket zinciri"),
+    ("winndixie.com", "https://www.winndixie.com/locator", "süpermarket zinciri"),
+    ("thefreshmarket.com", "https://www.thefreshmarket.com/your-market/store-locator", "süpermarket zinciri"),
+)
+
 ANCHOR_PROVENANCE = {
     "source_url": "https://www.visitsouthwalton.com/beach-bay-access-locations/",
     "selection": "53 kıyı erişim kaydının boylam sıralamasından batı / orta / doğu örnekleri",

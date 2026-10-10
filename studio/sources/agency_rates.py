@@ -37,7 +37,7 @@ import httpx
 from .agency_adapters import ADAPTERS, DEFAULT_GUESTS, AdapterError
 from .agency_matching import address_match, json_ld_unit, location_match, normalize_address, same_rooms
 from .base import CollectionCanceled, CollectionResult, SourceError
-from .browser_verification import GRACE_SECONDS, host_key, mark_hosts
+from .browser_verification import GRACE_SECONDS, host_key, mark_hosts, record_methods
 from .bookdirect_lodging import is_front_host, quartiles
 from .climate_http import check, pause
 from .price_history import annotate_windows, compare, season_groups
@@ -401,10 +401,12 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                     "priced_listings": len(priced), "quote_count": len(quotes), "own_listings": len(own_rows),
                     "own_priced": len({(q["domain"], q["site_listing_id"]) for q in own_quotes if q["status"] == "priced"}),
                     "published_rents": len(published), "companies": companies, "scope": SCOPE,
-                    "browser_hosts": sorted(shared.marks.values(), key=lambda m: m["host"])}
+                    "browser_hosts": sorted(shared.marks.values(), key=lambda m: m["host"]),
+                    "okuma_yontemleri": dict(getattr(shared.verifier, "methods", None) or {})}
         progress(97, f"{len(listings)} ilan, {len(quotes)} fiyat sorgusu, kendi envanterinden {len(own_rows)} ev ve {len(order)} şirket sonucu kaydediliyor.")
         related = {"snapshot": snapshot, "windows": windows_rows, "companies": companies, "quotes": quotes, "own_listings": own_rows,
-                   "own_quotes": own_quotes, "published": published, "browser_hosts": metadata["browser_hosts"]}
+                   "own_quotes": own_quotes, "published": published, "browser_hosts": metadata["browser_hosts"],
+                   "okuma_yontemleri": metadata["okuma_yontemleri"]}
         return CollectionResult([listings[i] for i in sorted(listings)], len(listings), statuses["no_url"] + statuses["no_adapter"], None,
                                 metadata, related)
     finally:
@@ -1058,13 +1060,18 @@ class AgencyRatesConnector:
     def supports(self, source):
         return source_host(source.get("url")) is not None
 
-    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None):
+    uses_extension = True
+
+    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None):
         lodging, agency = context.lodging, context.agency
         if not lodging or not agency:
             raise SourceError("Bu destinasyon için kiralama şirketi fiyat yapılandırması yok.")
         if lodging["clone_host"] != source_host(source["url"]):
             raise SourceError("Kaynağın Book>Direct adresi destinasyonun konaklama yapılandırmasıyla uyuşmuyor.")
         verifier = self.verifier_factory() if self.verifier_factory else default_verifier()
+        if extension is not None and extension.paired:        # GÖREV-14: the user's own Chrome first, the program's browser after a hand-over
+            from .extension_reader import ExtensionVerifier
+            verifier = ExtensionVerifier(extension, fallback=verifier)
         return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts},
                        verifier=verifier, waiting=waiting)
 
@@ -1100,6 +1107,7 @@ class AgencyRatesConnector:
             [(run_id, p["lodging_id"], p["window_key"], p["season_start"], p["season_end"], p["rate_text"], p["rate_period"], p["rent_low"],
               p["rent_high"], p["basis"], p["source_url"], json.dumps(p["raw_sha256"])) for p in related.get("published", [])])
         mark_hosts(con, related.get("browser_hosts", []), CONNECTOR_VERSION)
+        record_methods(con, related.get("okuma_yontemleri"))
 
     def read_records(self, con, run_id):
         return [decode_listing(r) for r in con.execute("SELECT * FROM agency_rate_listings WHERE run_id=? ORDER BY title, lodging_id", (run_id,))]

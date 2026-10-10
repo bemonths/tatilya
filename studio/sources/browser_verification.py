@@ -320,6 +320,15 @@ def mark_hosts(con, hosts, connector):
                     (host, item.get("url"), item.get("reason") or "doğrulama sayfası", connector, now, now))
 
 
+def record_methods(con, methods):
+    """GÖREV-14: which way of reading worked for a host that refused direct requests ({host: 'eklenti' | 'tarayici' | 'dogrudan'});
+    only hosts already in browser_hosts are updated."""
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    for host, method in (methods or {}).items():
+        if method in ("eklenti", "tarayici", "dogrudan"):
+            con.execute("UPDATE browser_hosts SET method=?, method_at=? WHERE host=?", (method, now, host_key(host)))
+
+
 def warm_up(entries, profile=None, canceled=lambda: False, session_factory=None):
     """Open every 'read with the browser' site in its own tab of the profile's browser (left open for the user); returns
     [(host, url, state)] with state 'açık', 'doğrulama bekliyor' or 'engel sayfası'."""

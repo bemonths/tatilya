@@ -34,3 +34,5 @@
 /* GÖREV-14: own title, evaluation summary, editing a title before choosing it */
 .review-summary{padding:4px 19px 12px;font-size:12px}.review-summary h3{font-size:12px;margin:8px 0}.review-summary p{margin:0 0 6px;color:#c0cfda}.title-edit{border:1px solid #f5965e44;border-radius:8px;padding:12px 14px;margin-top:10px;background:#f5965e08}.title-edit label{display:block;font-size:11px;color:#baccd8;margin-bottom:10px}.title-edit input{margin-top:6px}.decision-actions [hidden]{display:none!important}
 .pack-head .pack-head-text{margin:0 19px 19px;max-height:520px;overflow:auto;white-space:pre-wrap;font-size:11px}
+.extension-settings{grid-column:1/-1}.extension-code{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}.extension-code strong{font:600 20px/1 Consolas,monospace;letter-spacing:3px;color:var(--accent)}.extension-steps{padding-left:20px;font-size:12px;color:#c0cfda}.extension-steps li{margin:4px 0}
+.extension-guide img{display:block;max-width:100%;border:1px solid var(--line);border-radius:8px;margin:10px 0}.extension-guide summary{cursor:pointer;font-size:12px;color:var(--accent)}

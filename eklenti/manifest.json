@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "30A Studio Yardımcısı",
+  "version": "0.16.0",
+  "description": "30A Studio programının istediği sayfaları kendi penceresinde açar ve yalnız sayfanın içeriğini programa verir.",
+  "permissions": ["tabs", "scripting", "storage", "alarms", "notifications"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {
+    "default_title": "30A Studio Yardımcısı",
+    "default_popup": "popup.html",
+    "default_icon": {"16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png"}
+  },
+  "icons": {"16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png"},
+  "minimum_chrome_version": "120"
+}
