@@ -1,16 +1,19 @@
-"""Daily-need points from OpenStreetMap (Overpass API): supermarkets and grocery stores, convenience stores, pharmacies, urgent care
-and bicycle rental, for the destination's configured area and categories. © OpenStreetMap katkıcıları, ODbL.
+"""Daily-need points from OpenStreetMap (Overpass API): big supermarkets and local or gourmet markets, convenience stores, pharmacies,
+emergency departments, urgent care and bicycle rental, for the destination's configured area and categories. © OpenStreetMap
+katkıcıları, ODbL.
 
-Generic core: the area (a bounding box) and the categories (OpenStreetMap tag sets) come from the destination configuration in
-SQLite; one small Overpass query per run, its raw answer kept with SHA-256. Supermarkets are cross-checked by a person against the
-chains' own store locators (a reviewed destination file): a store the chain's site lists that OpenStreetMap lacks is added as a
-point labelled "zincirin kendi sitesi"; an OpenStreetMap store the chain's site shows as closed is reported.
+Generic core: the area (a bounding box) and the categories (OpenStreetMap tag sets, optionally a brand list and "verified only") come
+from the destination configuration in SQLite; one small Overpass query per run, its raw answer kept with SHA-256. Reviewed point files
+(a person checks the chains' store locators and the hospital systems' location pages; column `kategori`) confirm OpenStreetMap points,
+add what OpenStreetMap lacks with the file's source label ("zincirin kendi sitesi", "kurumun kendi sitesi") and report closed places;
+in a verified-only category an OpenStreetMap point no reviewed row confirms is left out and reported.
 
 Distances are computed when read: great-circle ("kuş uçuşu") from each listing of the latest lodging run to the nearest point of
 each category and to the nearest public beach access of the county list; nothing about walking routes is claimed.
 """
 import csv
 import json
+import re
 import statistics
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,14 +42,30 @@ def overpass_query(area, categories):
     for category in categories:
         for tags in category["filters"]:
             selector = "".join(f'["{key}"="{value}"]' for key, value in tags.items())
-            clauses.append(f"nwr{selector}({bbox});")
+            clause = f"nwr{selector}({bbox});"
+            if clause not in clauses:                 # two categories may share a tag set (big and local supermarkets)
+                clauses.append(clause)
     return f"[out:json][timeout:90];({''.join(clauses)});out center tags;"
 
 
+def words(text):
+    """Lower-case words of a name, apostrophes dropped and hyphens as spaces ("Winn-Dixie" -> "winn dixie", "Trader Joe's" -> "trader joes")."""
+    return " ".join(re.sub(r"[^0-9a-z ]+", " ", (text or "").lower().replace("'", "").replace("’", "")).split())
+
+
+def has_brand(brands, *texts):
+    """Whether one of the brand names appears as whole words in one of the texts (brand, name, operator)."""
+    haystack = [f" {words(t)} " for t in texts if t]
+    return any(f" {words(brand)} " in text for brand in brands for text in haystack)
+
+
 def category_of(tags, categories):
-    """The first category one of whose tag sets the element carries in full; None when none."""
+    """The first category one of whose tag sets the element carries in full and, when the category lists brands, whose brand, name or
+    operator carries one of them; None when none."""
     for category in categories:
         if any(all(tags.get(key) == value for key, value in wanted.items()) for wanted in category["filters"]):
+            if category.get("brands") and not has_brand(category["brands"], tags.get("brand"), tags.get("name"), tags.get("operator")):
+                continue
             return category["category_key"]
     return None
 
@@ -94,55 +113,110 @@ def parse(body, categories):
     return points, stamp
 
 
-def read_chain_checks(path):
+def read_reviewed(path, categories, default_category=None):
+    """Rows of a reviewed point file (a chain's store locator, a hospital system's location pages), each with its category
+    (`kategori`; the brand category when the file has no such column, as the GÖREV-10 supermarket file)."""
     if not path or not Path(path).is_file():
         return []
     with open(path, encoding="utf-8-sig") as handle:
         rows = [dict(r) for r in csv.DictReader(handle)]
+    keys = {c["category_key"] for c in categories}
     for row in rows:
         if row.get("durum") not in CHAIN_STATUSES:
-            raise SourceError(f"Zincir mağaza dosyasında bilinmeyen durum: {row.get('durum')!r}.")
+            raise SourceError(f"Gözden geçirilmiş nokta dosyasında bilinmeyen durum: {row.get('durum')!r} ({Path(path).name}).")
+        row["kategori"] = (row.get("kategori") or default_category or "").strip()
+        if row["kategori"] not in keys:
+            raise SourceError(f"Gözden geçirilmiş nokta dosyasında yapılandırmada olmayan kategori: {row['kategori']!r} ({Path(path).name}).")
     return rows
 
 
+def read_chain_checks(path, categories=None):
+    """GÖREV-10 name kept for callers: the supermarket chain file read with the brand category as default."""
+    categories = categories or [{"category_key": "big_supermarket"}]
+    default = next((c["category_key"] for c in categories if c.get("brands")), categories[0]["category_key"])
+    return read_reviewed(path, categories, default)
+
+
 def same_brand(chain, point):
-    words = chain.lower().replace("'", "")
-    text = " ".join(v for v in (point.get("brand"), point.get("name")) if v).lower().replace("'", "")
-    return words in text or (text and text.split()[0] in words.split())
+    """A reviewed row's chain or system and an OpenStreetMap point: the chain's name in the point's brand, name or operator, or the
+    point's first word in the chain's name ("Sacred Heart Hospital ..." and "Ascension Sacred Heart")."""
+    if has_brand([chain], point.get("brand"), point.get("name"), point.get("operator") or (point.get("tags") or {}).get("operator")):
+        return True
+    text = words(" ".join(v for v in (point.get("brand"), point.get("name")) if v))
+    return bool(text) and text.split()[0] in words(chain).split()
 
 
-def merge_chain_checks(points, rows, supermarket_key="supermarket"):
-    """(points with the chain sites' additions, check rows with their outcome)."""
+def merge_reviewed(points, rows, categories, source_label="zincirin kendi sitesi"):
+    """(points with the reviewed file's additions and notes, check rows with their outcome). An open place OpenStreetMap also has
+    (by `osm_id`, or the same brand within MATCH_KM in the same category) confirms that point; one OpenStreetMap lacks is added with
+    the file's source label; a closed one is noted on the OpenStreetMap point; a chain whose site could not be read leaves a note on
+    its OpenStreetMap points. In a category that counts only confirmed points (verified_only), an OpenStreetMap point no row
+    confirms is left out of the points and reported."""
     by_id = {p["point_id"]: p for p in points}
-    checks = []
+    checks, confirmed = [], set()
     for row in rows:
+        category = row["kategori"]
         latitude = float(row["enlem"]) if row.get("enlem") else None
         longitude = float(row["boylam"]) if row.get("boylam") else None
         osm = by_id.get((row.get("osm_id") or "").strip())
         if osm is None and latitude is not None and row["durum"] in ("açık", "kapalı"):
-            near = [p for p in points if p["category_key"] == supermarket_key and same_brand(row["zincir"], p)
+            near = [p for p in points if p["category_key"] == category and p["source"] == "openstreetmap" and same_brand(row["zincir"], p)
                     and distance_km(latitude, longitude, p["latitude"], p["longitude"]) <= MATCH_KM]
             osm = min(near, key=lambda p: distance_km(latitude, longitude, p["latitude"], p["longitude"])) if near else None
         if row["durum"] == "açık" and osm is not None:
             outcome = "osm_ile_ayni"
+            confirmed.add(osm["point_id"])
+            osm["note"] = " ".join(v for v in (osm.get("note"), f"{row['zincir']} sitesinde doğrulandı ({row.get('kontrol_tarihi')}).") if v)
         elif row["durum"] == "açık":
             if latitude is None or longitude is None:
-                raise SourceError(f"Zincir mağaza dosyasında koordinatsız açık mağaza: {row['zincir']} · {row['magaza']}.")
+                raise SourceError(f"Gözden geçirilmiş nokta dosyasında koordinatsız açık yer: {row['zincir']} · {row['magaza']}.")
             outcome = "eklendi"
-            points.append({"point_id": f"zincir/{row['zincir']}/{row['magaza']}", "category_key": supermarket_key, "name": row["magaza"],
-                           "brand": row["zincir"], "latitude": latitude, "longitude": longitude, "source": "zincirin kendi sitesi",
+            prefix = "zincir" if source_label == "zincirin kendi sitesi" else "kurum"
+            points.append({"point_id": f"{prefix}/{row['zincir']}/{row['magaza']}", "category_key": category, "name": row["magaza"],
+                           "brand": row["zincir"], "latitude": latitude, "longitude": longitude, "source": source_label,
                            "osm_type": None, "osm_id": None, "tags": None, "address": row.get("adres") or None, "source_url": row.get("magaza_url") or None,
-                           "checked_on": row.get("kontrol_tarihi") or None, "note": row.get("not") or None})
+                           "checked_on": row.get("kontrol_tarihi") or None,
+                           "note": " ".join(v for v in (row.get("not"), f"Koordinat: {row['koordinat_kaynagi']}." if row.get("koordinat_kaynagi") else None) if v) or None})
         elif row["durum"] == "kapalı" and osm is not None:
             outcome = "osmde_var_zincirde_kapali"
             osm["note"] = f"{row['zincir']} sitesinde kapalı görünüyor ({row.get('kontrol_tarihi')})."
-        elif row["durum"] == "bölgede mağaza yok":
-            outcome = "bolgede_yok"
+        elif row["durum"] == "okunamadı":
+            outcome = "okunamadi"
+            for point in points:
+                if point["category_key"] == category and point["source"] == "openstreetmap" and same_brand(row["zincir"], point):
+                    point["note"] = " ".join(v for v in (point.get("note"), f"{row['zincir']} sitesi bu bilgisayardan doğrulanamadı ({row.get('kontrol_tarihi')}).") if v)
         else:
-            outcome = "okunamadi" if row["durum"] == "okunamadı" else "bolgede_yok"
-        checks.append({"chain": row["zincir"], "store": row["magaza"], "address": row.get("adres") or None, "latitude": latitude,
-                       "longitude": longitude, "store_url": row.get("magaza_url") or None, "checked_on": row.get("kontrol_tarihi"),
+            outcome = "bolgede_yok"
+        checks.append({"category_key": category, "chain": row["zincir"], "store": row["magaza"], "address": row.get("adres") or None,
+                       "latitude": latitude, "longitude": longitude, "store_url": row.get("magaza_url") or None, "checked_on": row.get("kontrol_tarihi"),
                        "status": row["durum"], "osm_point_id": osm["point_id"] if osm else None, "outcome": outcome, "note": row.get("not") or None})
+    return points, checks, confirmed
+
+
+def drop_unconfirmed(points, checks, categories, confirmed):
+    """verified_only categories keep only the OpenStreetMap points a reviewed row confirmed; the others are reported."""
+    verified_only = {c["category_key"] for c in categories if c.get("verified_only")}
+    kept = []
+    for point in points:
+        if point["category_key"] in verified_only and point["source"] == "openstreetmap" and point["point_id"] not in confirmed:
+            checks.append({"category_key": point["category_key"], "chain": "OpenStreetMap",
+                           "store": f"{point.get('name') or 'adı yok'} · {point['point_id']}", "address": point.get("address"), "latitude": point["latitude"],
+                           "longitude": point["longitude"], "store_url": point.get("source_url"), "checked_on": None, "status": "açık",
+                           "osm_point_id": point["point_id"], "outcome": "osm_dogrulanamadi",
+                           "note": "OpenStreetMap'te var; resmî kaynakta doğrulanamadı, ölçülere girmedi."})
+            continue
+        kept.append(point)
+    return kept, checks
+
+
+def merge_chain_checks(points, rows, categories=None):
+    """GÖREV-10 shape kept for callers and tests: one reviewed file of the chain label; returns (points, checks)."""
+    categories = categories or [{"category_key": rows[0]["kategori"] if rows and rows[0].get("kategori") else "big_supermarket"}]
+    for row in rows:
+        row.setdefault("kategori", categories[0]["category_key"])
+        if not row["kategori"]:
+            row["kategori"] = categories[0]["category_key"]
+    points, checks, _ = merge_reviewed(points, rows, categories)
     return points, checks
 
 
@@ -158,13 +232,23 @@ def collect(raw_path, progress, canceled, *, config, client=None, today=None):
         query = overpass_query(area, categories)
         body, _ = reader.get(OVERPASS_URL, suffix=".json", note="overpass", content_types={"application/json"}, params={"data": query})
         points, stamp = parse(body, categories)
-        progress(70, f"{len(points)} nokta okundu; zincir mağaza kontrolü ekleniyor.")
-        points, checks = merge_chain_checks(points, read_chain_checks(config.get("chain_checks")))
+        progress(70, f"{len(points)} nokta okundu; gözden geçirilmiş zincir ve kurum kontrolleri ekleniyor.")
+        files = list(config.get("reviewed_files") or ())
+        if config.get("chain_checks") and not any(str(path) == str(config["chain_checks"]) for path, _ in files):
+            files.insert(0, (config["chain_checks"], "zincirin kendi sitesi"))
+        brand_category = next((c["category_key"] for c in categories if c.get("brands")), categories[0]["category_key"])
+        checks, confirmed = [], set()
+        for path, label in files:
+            points, found, ok = merge_reviewed(points, read_reviewed(path, categories, brand_category), categories, label)
+            checks += found
+            confirmed |= ok
+        points, checks = drop_unconfirmed(points, checks, categories, confirmed)
         today = (today or datetime.now(timezone.utc).date()).isoformat()
         counts = {c["category_key"]: sum(p["category_key"] == c["category_key"] for p in points) for c in categories}
         metadata = {"area": area, "categories": [{k: c[k] for k in ("category_key", "label")} for c in categories], "query": query,
                     "osm_timestamp": stamp, "request_count": len(reader.manifest["responses"]), "point_counts": counts,
-                    "chain_checks": len(checks), "added_from_chains": sum(c["outcome"] == "eklendi" for c in checks), "attribution": ATTRIBUTION}
+                    "chain_checks": len(checks), "added_from_chains": sum(c["outcome"] == "eklendi" for c in checks),
+                    "osm_unconfirmed": sum(c["outcome"] == "osm_dogrulanamadi" for c in checks), "attribution": ATTRIBUTION}
         snapshot = {"area": area, "categories": categories, "queried_on": today, "osm_timestamp": stamp,
                     "request_count": len(reader.manifest["responses"]), "element_count": sum(p["source"] == "openstreetmap" for p in points),
                     "chain_check_count": len(checks)}
@@ -294,10 +378,10 @@ class DailyNeedsConnector:
             [(run_id, p["point_id"], p["category_key"], p["name"], p["brand"], p["latitude"], p["longitude"], p["source"], p["osm_type"], p["osm_id"],
               json.dumps(p["tags"], ensure_ascii=False) if p["tags"] is not None else None, p["address"], p["source_url"], p["checked_on"], p["note"])
              for p in records])
-        con.executemany("""INSERT INTO poi_chain_checks (run_id,chain,store,address,latitude,longitude,store_url,checked_on,status,osm_point_id,outcome,note)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        con.executemany("""INSERT INTO poi_chain_checks (run_id,chain,store,address,latitude,longitude,store_url,checked_on,status,osm_point_id,outcome,note,
+            category_key) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, c["chain"], c["store"], c["address"], c["latitude"], c["longitude"], c["store_url"], c["checked_on"], c["status"],
-              c["osm_point_id"], c["outcome"], c["note"]) for c in related.get("checks", [])])
+              c["osm_point_id"], c["outcome"], c["note"], c.get("category_key")) for c in related.get("checks", [])])
 
     def read_records(self, con, run_id):
         return [dict(r) for r in con.execute("SELECT * FROM poi_points WHERE run_id=? ORDER BY category_key, name", (run_id,))]

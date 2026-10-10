@@ -20,7 +20,7 @@ from studio.migration_v10 import upgrade_v10
 from studio.sources import bookdirect_lodging as bl
 from studio.sources.base import CollectionCanceled, SourceError
 from studio.sources.registry import DEFAULT_REGISTRY
-from tests.legacy import V10_TABLES, V11_TABLES, V12_TABLES, V13_TABLES
+from tests.legacy import V10_TABLES, V11_TABLES, V12_TABLES, V13_TABLES, V14_TABLES
 from tests.test_beaches import HEADERS, finished
 from tests.test_climate import make_v8, table_counts
 from tests.test_destinations import add_destination
@@ -519,10 +519,10 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 14
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
-        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, **V11_TABLES, **V12_TABLES, **V13_TABLES, "sources": len(before["sources"]) + 4}
+        assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, "sources": len(before["sources"]) + 4}
         after = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before}
         assert {t: r for t, r in after.items() if t != "sources"} == {t: r for t, r in before.items() if t != "sources"}
         assert after["sources"][:len(before["sources"])] == before["sources"]
@@ -553,7 +553,7 @@ def test_v9_to_v10_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 14
 
 
 def test_v10_never_duplicates_an_existing_lodging_source_or_overwrites_configuration(tmp_path):
@@ -632,9 +632,9 @@ def test_v10_to_v11_migration_adds_listing_link_columns(tmp_path):
     db = Database(path); db.initialize()
     with sqlite3.connect(path) as con:
         columns = [row[1] for row in con.execute("PRAGMA table_info(lodging_listings)")]
-        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 14
         with pytest.raises(sqlite3.OperationalError):
             con.execute("BEGIN IMMEDIATE"); upgrade_v11(con)                     # columns already exist; the transaction rolls back
         con.rollback()
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 14
 

@@ -130,7 +130,7 @@ def seed_v13_configuration(con, profile):
     if area:
         con.execute("INSERT OR IGNORE INTO destination_poi_areas (destination_id,south,west,north,east,note) VALUES (?,?,?,?,?,?)",
                     (destination_id, area["south"], area["west"], area["north"], area["east"], area["note"]))
-    for order, (key, label, filters) in enumerate(getattr(profile, "DAILY_NEEDS_CATEGORIES", ())):
+    for order, (key, label, filters, *_) in enumerate(getattr(profile, "DAILY_NEEDS_CATEGORIES", ())):
         con.execute("INSERT OR IGNORE INTO destination_poi_categories (destination_id,category_key,label,filters,sort_order,enabled) VALUES (?,?,?,?,?,1)",
                     (destination_id, key, label, json.dumps(filters, ensure_ascii=False), order))
     seed_source(con, profile, "https://www.openstreetmap.org/?kaynak=gunluk-ihtiyac")

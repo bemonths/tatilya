@@ -17,8 +17,9 @@ from .migration_v10 import upgrade_v10
 from .migration_v11 import upgrade_v11
 from .migration_v12 import upgrade_v12
 from .migration_v13 import upgrade_v13
+from .migration_v14 import upgrade_v14
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -59,14 +60,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -85,7 +86,9 @@ class Database:
                     upgrade_v11(con)
                 if version < 12:
                     upgrade_v12(con)
-                upgrade_v13(con)
+                if version < 13:
+                    upgrade_v13(con)
+                upgrade_v14(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -141,6 +144,7 @@ class Database:
             upgrade_v11(con)
             upgrade_v12(con)
             upgrade_v13(con)
+            upgrade_v14(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -183,9 +187,11 @@ class Database:
                 restaurants["input"]=self.restaurant_input(con,identifier)
             browser_hosts=tuple(r[0] for r in con.execute("SELECT host FROM browser_hosts ORDER BY host"))
             area=con.execute("SELECT south,west,north,east,note FROM destination_poi_areas WHERE destination_id=?",(identifier,)).fetchone()
-            categories=[{**dict(r),"filters":json.loads(r["filters"])} for r in con.execute(
-                "SELECT category_key,label,filters FROM destination_poi_categories WHERE destination_id=? AND enabled=1 ORDER BY sort_order",(identifier,))]
-            daily_needs={"area":dict(area),"categories":categories,"chain_checks":getattr(profile,"CHAIN_STORE_CHECKS",None)} if area and categories else None
+            categories=[{**dict(r),"filters":json.loads(r["filters"]),"brands":json.loads(r["brands"]) if r["brands"] else None,
+                         "verified_only":bool(r["verified_only"])} for r in con.execute(
+                "SELECT category_key,label,filters,brands,verified_only FROM destination_poi_categories WHERE destination_id=? AND enabled=1 ORDER BY sort_order",(identifier,))]
+            reviewed=getattr(profile,"REVIEWED_POINT_FILES",None) or ((getattr(profile,"CHAIN_STORE_CHECKS",None),"zincirin kendi sitesi"),)
+            daily_needs={"area":dict(area),"categories":categories,"reviewed_files":[(path,label) for path,label in reviewed if path]} if area and categories else None
         return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts,daily_needs)
 
     @staticmethod

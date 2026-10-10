@@ -2,9 +2,10 @@ import {destinationRows} from "./destinations.js";
 import {api, esc, date} from "./api.js";
 
 export const DAILY_NEEDS_CONNECTOR="openstreetmap-daily-needs";
-export const SOURCE_LABELS={"openstreetmap":"OpenStreetMap","zincirin kendi sitesi":"zincirin kendi sitesi"};
+export const SOURCE_LABELS={"openstreetmap":"OpenStreetMap","zincirin kendi sitesi":"zincirin kendi sitesi","kurumun kendi sitesi":"kurumun kendi sitesi"};
 export const OUTCOME_LABELS={osm_ile_ayni:"OpenStreetMap'te de var",eklendi:"OpenStreetMap'te yok; zincirin sitesinden eklendi",
-  osmde_var_zincirde_kapali:"OpenStreetMap'te var; zincirin sitesinde kapalı",bolgede_yok:"zincirin bölgede mağazası yok",okunamadi:"zincirin sitesi okunamadı"};
+  osmde_var_zincirde_kapali:"OpenStreetMap'te var; zincirin sitesinde kapalı",bolgede_yok:"zincirin bölgede mağazası yok",okunamadi:"zincirin sitesi okunamadı",
+  osm_dogrulanamadi:"OpenStreetMap'te var; resmî kaynakta doğrulanamadı (ölçülere girmedi)"};
 const active=job=>["queued","running"].includes(job.status);
 
 /** Great-circle distance in miles and metres; a missing value stays visibly missing. */
@@ -34,8 +35,8 @@ export class DailyNeeds {
     if(!runs.some(r=>r.id===this.selectedRun)) {this.selectedRun=runs[0]?.id || null;this.snapshot=null;}
     const run=runs.find(r=>r.id===this.selectedRun), sequence=++this.sequence;
     const attribution=data.daily_needs_connector?.attribution || "© OpenStreetMap katkıcıları, ODbL";
-    target.innerHTML=`<section class="connector-strip agency-strip"><div><span class="eyebrow">OPENSTREETMAP · GÜNLÜK İHTİYAÇ</span><h2>Market, eczane, acil sağlık, bisiklet kiralama</h2>
-      <p>${esc(attribution)} · süpermarketler zincirlerin kendi mağaza bulucularıyla gözden geçirildi · mesafeler kuş uçuşu</p></div>
+    target.innerHTML=`<section class="connector-strip agency-strip"><div><span class="eyebrow">OPENSTREETMAP · GÜNLÜK İHTİYAÇ</span><h2>Market, eczane, acil servis ve acil bakım, bisiklet kiralama</h2>
+      <p>${esc(attribution)} · süpermarket ve eczane zincirleri kendi mağaza bulucularıyla, acil servis ve acil bakım noktaları kurumların kendi sayfalarıyla gözden geçirildi · mesafeler kuş uçuşu</p></div>
       <button class="primary" data-action="collect-daily-needs" ${!source || busy?"disabled":""}>${busy?"Toplama sürüyor…":"↓ Günlük ihtiyaç noktalarını topla"}</button></section>`+
       (run?`<div class="collection-version"><label>Sürüm <select id="daily-needs-version" aria-label="Günlük ihtiyaç sürümü">${runs.map((r,i)=>`<option value="${esc(r.id)}" ${r.id===run.id?"selected":""}>${i===0?"Son çekim · ":""}${esc(date(r.fetched_at))} · ${r.record_count} nokta · ${esc(r.id.slice(0,6))}</option>`).join("")}</select></label><a class="download-link" href="/api/daily-needs-runs/${esc(run.id)}/raw" download>↓ Ham Overpass yanıtını indir</a></div><div id="daily-needs-body"><p>Özet yükleniyor…</p></div>`:
       `<section class="quality-result empty"><h2>Henüz günlük ihtiyaç çekimi yok</h2><p>“Günlük ihtiyaç noktalarını topla” OpenStreetMap'e tek bir küçük Overpass sorgusu gönderir ve sonucu ham kopyasıyla kaydeder. Mesafeler son konaklama çekimindeki ilanlardan okuma anında hesaplanır.</p></section>`);
@@ -59,9 +60,9 @@ export class DailyNeeds {
       <section class="library climate-block"><div class="library-title"><h2>Noktalar</h2><small>${snap.categories.map(c=>`<button class="tab ${c.category_key===this.category?"active":""}" data-daily-category="${esc(c.category_key)}">${esc(c.label)} · ${counts[c.category_key]}</button>`).join(" ")}</small></div>
       <div class="table-scroll"><table class="lodging-table"><thead><tr><th>NOKTA</th><th>ADRES</th><th>KOORDİNAT</th><th>KAYNAK</th></tr></thead>
       <tbody>${points.map(p=>`<tr><td>${esc(p.name || "adı yok")}${p.brand && p.brand!==p.name?`<small>${esc(p.brand)}</small>`:""}${p.note?`<small>${esc(p.note)}</small>`:""}</td><td>${esc(p.address || "—")}</td><td>${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}</td><td>${pointSource(p)}${p.checked_on?`<small>kontrol ${esc(p.checked_on)}</small>`:""}</td></tr>`).join("") || '<tr><td colspan="4">Bu kategoride nokta yok.</td></tr>'}</tbody></table></div></section>
-      ${snap.checks.length?`<section class="library climate-block"><div class="library-title"><h2>Zincir mağaza kontrolü</h2><small>Süpermarket zincirlerinin kendi mağaza bulucuları (elle gözden geçirildi).</small></div>
-      <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ZİNCİR</th><th>MAĞAZA</th><th>SONUÇ</th><th>KONTROL</th></tr></thead>
-      <tbody>${snap.checks.map(c=>`<tr><td>${esc(c.chain)}</td><td>${esc(c.store)}${c.address?`<small>${esc(c.address)}</small>`:""}</td><td>${esc(OUTCOME_LABELS[c.outcome] || c.outcome)}${c.note?`<small>${esc(c.note)}</small>`:""}</td><td>${esc(c.checked_on)}${c.store_url?`<small><a class="source-link" href="${esc(c.store_url)}" target="_blank" rel="noopener noreferrer">mağaza sayfası ↗</a></small>`:""}</td></tr>`).join("")}</tbody></table></div></section>`:""}`;
+      ${snap.checks.length?`<section class="library climate-block"><div class="library-title"><h2>Zincir ve kurum kontrolü</h2><small>Zincirlerin kendi mağaza bulucuları ve hastane sistemlerinin, acil bakım zincirlerinin kendi konum sayfaları (elle gözden geçirildi).</small></div>
+      <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ZİNCİR / KURUM</th><th>YER</th><th>SONUÇ</th><th>KONTROL</th></tr></thead>
+      <tbody>${snap.checks.map(c=>`<tr><td>${esc(c.chain)}${c.category_key && snap.labels[c.category_key]?`<small>${esc(snap.labels[c.category_key])}</small>`:""}</td><td>${esc(c.store)}${c.address?`<small>${esc(c.address)}</small>`:""}</td><td>${esc(OUTCOME_LABELS[c.outcome] || c.outcome)}${c.note?`<small>${esc(c.note)}</small>`:""}</td><td>${esc(c.checked_on)}${c.store_url?`<small><a class="source-link" href="${esc(c.store_url)}" target="_blank" rel="noopener noreferrer">mağaza sayfası ↗</a></small>`:""}</td></tr>`).join("")}</tbody></table></div></section>`:""}`;
     box.querySelectorAll("[data-daily-category]").forEach(button=>button.addEventListener("click",()=>{this.category=button.dataset.dailyCategory;this.draw(target);}));
   }
 }

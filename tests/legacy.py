@@ -34,8 +34,10 @@ V12_TABLES = {"agency_rate_own_listings": 0, "agency_rate_own_quotes": 0, "agenc
               "restaurant_sites": 0, "restaurant_facts": 0, "restaurant_menus": 0, "restaurant_menu_items": 0,
               "browser_hosts": 0}
 # Tables created by v13 and their rows in an upgraded 30A database (configuration only: refresh intervals, daily-need area and categories).
-V13_TABLES = {"destination_refresh_intervals": 4, "refresh_batches": 0, "destination_poi_areas": 1, "destination_poi_categories": 5,
+V13_TABLES = {"destination_refresh_intervals": 4, "refresh_batches": 0, "destination_poi_areas": 1, "destination_poi_categories": 7,
               "poi_snapshots": 0, "poi_points": 0, "poi_chain_checks": 0}
+# Tables created by v14 (GÖREV-11; v14 also replaces the 5 daily-need categories with the profile's 7, counted above).
+V14_TABLES = {"evidence_packs": 0}
 
 
 def without_added_sources(sources):

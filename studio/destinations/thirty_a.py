@@ -186,14 +186,27 @@ REFRESH_INTERVALS = (("bookdirect-lodging", 1), ("agency-lodging-rates", 1), ("s
 DAILY_NEEDS_AREA = {"south": 30.20, "west": -86.40, "north": 30.45, "east": -85.84,
                     "note": "30A kıyısı ve arkasındaki US-98 koridoru; 30A'nın iki ucundaki ilanların en yakın noktası kesilmesin diye batıda "
                             "Miramar Beach'in doğu ucu, doğuda Panama City Beach'in batı ucu da alana dahil (en yakın nokta 30A dışında olabilir)."}
-# OpenStreetMap tags of each category: a point belongs to the first category one of whose tag sets it carries in full.
+# Supermarket chains whose stores count as "big supermarkets" (GÖREV-11 decision): a store whose brand or name carries one of these
+# names is a big supermarket, every other supermarket or grocery store a local or gourmet market. Matching is by whole words.
+BIG_SUPERMARKET_BRANDS = ["Publix", "Walmart", "Winn-Dixie", "Aldi", "Target", "The Fresh Market", "Fresh Market", "Whole Foods", "Trader Joe's"]
+# OpenStreetMap tags of each category: a point belongs to the first category one of whose tag sets it carries in full (and, when the
+# category lists brands, whose brand or name carries one of them). verified_only: an OpenStreetMap point of the category counts only
+# when a reviewed official source confirms it (GÖREV-11: emergency and urgent care, from hospital systems' and urgent-care chains'
+# own location pages).
 DAILY_NEEDS_CATEGORIES = (
-    ("supermarket", "Süpermarket ve market", [{"shop": "supermarket"}, {"shop": "grocery"}]),
-    ("convenience", "Küçük market", [{"shop": "convenience"}, {"shop": "general"}]),
-    ("pharmacy", "Eczane", [{"amenity": "pharmacy"}, {"healthcare": "pharmacy"}]),
-    ("urgent_care", "Acil sağlık", [{"amenity": "hospital"}, {"healthcare": "urgent_care"}, {"amenity": "clinic", "emergency": "yes"}]),
-    ("bike_rental", "Bisiklet kiralama", [{"amenity": "bicycle_rental"}, {"shop": "bicycle", "service:bicycle:rental": "yes"}]),
+    ("big_supermarket", "Büyük süpermarket", [{"shop": "supermarket"}, {"shop": "grocery"}], {"brands": BIG_SUPERMARKET_BRANDS}),
+    ("local_market", "Yerel ve gurme market", [{"shop": "supermarket"}, {"shop": "grocery"}], {}),
+    ("convenience", "Küçük market", [{"shop": "convenience"}, {"shop": "general"}], {}),
+    ("pharmacy", "Eczane", [{"amenity": "pharmacy"}, {"healthcare": "pharmacy"}], {}),
+    ("emergency", "Acil servis", [{"amenity": "hospital"}, {"healthcare": "hospital"}, {"amenity": "clinic", "emergency": "yes"},
+                                  {"healthcare": "emergency"}], {"verified_only": True}),
+    ("urgent_care", "Acil bakım (urgent care)", [{"healthcare": "urgent_care"}, {"amenity": "urgent_care"},
+                                                 {"healthcare:speciality": "urgent_care"}], {"verified_only": True}),
+    ("bike_rental", "Bisiklet kiralama", [{"amenity": "bicycle_rental"}, {"shop": "bicycle", "service:bicycle:rental": "yes"}], {}),
 )
-# Supermarket chains' own store locators reviewed by a person (GÖREV-10): stores in the area with the locator's address, coordinates,
-# page and check date; a store OpenStreetMap does not have is added as a point labelled "zincirin kendi sitesi".
+# Reviewed files of points checked by a person on the owners' own sites (category column `kategori`): supermarket and pharmacy chains'
+# store locators (GÖREV-10, GÖREV-11) and hospital systems' and urgent-care chains' location pages (GÖREV-11). A point OpenStreetMap does
+# not have is added with the file's source label.
 CHAIN_STORE_CHECKS = Path(__file__).with_name("thirty_a_chain_stores.csv")
+HEALTH_POINTS = Path(__file__).with_name("thirty_a_health_points.csv")
+REVIEWED_POINT_FILES = ((CHAIN_STORE_CHECKS, "zincirin kendi sitesi"), (HEALTH_POINTS, "kurumun kendi sitesi"))

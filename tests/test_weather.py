@@ -318,7 +318,7 @@ def test_v3_migration_preserves_every_table_and_raw_with_backup(tmp_path):
     raw = (tmp_path / 'raw/old-success/source.html').read_bytes()
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 13
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 14
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         assert without_added_snapshot(snapshot_tables(con)) == before
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
@@ -336,7 +336,7 @@ def test_fresh_and_legacy_upgrade_chains(tmp_path, version):
     if version: make_legacy_db(path, version)
     db = Database(path); db.initialize()
     with db.connect() as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 13
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 14
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         for table in ('weather_locations', 'weather_forecast_periods', 'weather_alerts', 'weather_alert_anchors'):
             assert con.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0

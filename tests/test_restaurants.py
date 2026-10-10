@@ -105,7 +105,7 @@ def test_registry_and_fresh_seed(tmp_path):
         assert DEFAULT_REGISTRY.for_source(source).diff_enabled
         assert data['restaurant_runs'] == []
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 13
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 14
 
 
 @pytest.mark.parametrize('version', [1, 2, 3, 4])
@@ -116,7 +116,7 @@ def test_upgrade_chain(tmp_path, version):
     else: make_legacy_db(path, version)
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 13
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 14
         assert con.execute('PRAGMA foreign_key_check').fetchall() == []
         assert con.execute('SELECT COUNT(*) FROM restaurant_records').fetchone()[0] == 0
         assert con.execute('SELECT COUNT(*) FROM restaurant_regions').fetchone()[0] == 0
@@ -513,7 +513,7 @@ def test_nullable_description_published_to_db_api_and_metadata(tmp_path, monkeyp
         assert snapshot['run']['metadata']['description_missing_count'] == 1
         assert snapshot['run']['record_count'] == 2
         with client.app.state.db.connect() as con:
-            assert con.execute('PRAGMA user_version').fetchone()[0] == 13
+            assert con.execute('PRAGMA user_version').fetchone()[0] == 14
             description_column = next(row for row in con.execute('PRAGMA table_info(restaurant_records)') if row['name'] == 'description')
             assert description_column['notnull'] == 0
             assert con.execute('SELECT COUNT(*) FROM restaurant_records WHERE run_id=? AND description IS NULL', (job['id'],)).fetchone()[0] == 1
