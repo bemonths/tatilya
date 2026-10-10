@@ -320,4 +320,4 @@ Talimat metinlerine dokunulmadı. Önerim yok; iki gerçek çalışmada talimat 
 
 ## Dal CI
 
-DAL_CI
+Kod commit'i `3ad742d` için dal CI 38069038708 başarılı; belge ve teslim commit'i `43e03e5` için dal CI 38071098269 başarılı (https://github.com/bemonths/tatilya/actions/runs/38071098269). Bu satırı ekleyen son commit yalnız raporu değiştirir.
