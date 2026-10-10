@@ -4,11 +4,17 @@ import {api, esc, date} from "./api.js";
 // changed on disk after it was opened; every save keeps the previous content; a deleted tone goes to the archive and can be taken back.
 // The warning phrases of the program's check are edited at the bottom with the same rules (they are never given to Claude).
 
+/** The first line of a tone's text, short enough for the list (tones are often one paragraph). */
+export function shortLine(text, limit=160) {
+  const value=String(text||"");
+  return value.length>limit?value.slice(0,limit).replace(/\s+\S*$/,"")+"…":value;
+}
+
 export function toneRows(list) {
   if(!list.tonlar?.length) return '<p class="muted">Ton yok.</p>';
   return `<div class="table-scroll"><table class="reference-table tone-table"><thead><tr><th>TON</th><th>METNİN İLK SATIRI</th><th>SON DEĞİŞİKLİK</th><th>VARSAYILAN</th><th>KULLANIM</th><th></th></tr></thead><tbody>
     ${list.tonlar.map(t=>`<tr data-tone-row="${esc(t.dosya)}"><td><strong>${esc(t.ad)}</strong><small class="source-host">${esc(t.dosya)}.md</small></td>
-      <td class="tone-first">${esc(t.ilk_satir)}</td><td>${esc(date(t.degisti))}</td>
+      <td class="tone-first" title="${esc(t.ilk_satir)}">${esc(shortLine(t.ilk_satir))}</td><td>${esc(date(t.degisti))}</td>
       <td>${t.varsayilan?'<span class="tag green">varsayılan</span>':`<button type="button" class="quiet" data-tone-default="${esc(t.dosya)}">Varsayılan yap</button>`}</td>
       <td>${t.kullanim} metin sürümü</td>
       <td class="tone-actions"><button type="button" data-tone-edit="${esc(t.dosya)}">Düzenle</button> <button type="button" class="quiet" data-tone-delete="${esc(t.dosya)}" ${list.tonlar.length<2?"disabled":""}>Sil</button></td></tr>`).join("")}
@@ -18,7 +24,7 @@ export function toneRows(list) {
 export function archiveRows(list) {
   if(!list.arsiv?.length) return '<p class="muted">Arşivde ton yok.</p>';
   return `<div class="table-scroll"><table class="reference-table"><thead><tr><th>TON</th><th>İLK SATIR</th><th>ARŞİVLENDİ</th><th>KULLANIM</th><th></th></tr></thead><tbody>
-    ${list.arsiv.map(a=>`<tr><td><strong>${esc(a.ad)}</strong><small class="source-host">${esc(a.dosya)}.md</small></td><td class="tone-first">${esc(a.ilk_satir)}</td>
+    ${list.arsiv.map(a=>`<tr><td><strong>${esc(a.ad)}</strong><small class="source-host">${esc(a.dosya)}.md</small></td><td class="tone-first">${esc(shortLine(a.ilk_satir))}</td>
       <td>${esc(date(a.arsivlendi))}</td><td>${a.kullanim} metin sürümü</td><td><button type="button" data-tone-unarchive="${esc(a.id)}">Geri al</button></td></tr>`).join("")}</tbody></table></div>`;
 }
 

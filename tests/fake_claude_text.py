@@ -105,7 +105,8 @@ def section(cwd, prompt):
     text = (cwd / "bolum.md").read_text(encoding="utf-8") if (cwd / "bolum.md").is_file() else ""
     ids = re.findall(r"^- (K\d{4}) \(planın gösterdiği\)", text, re.M) or re.findall(r"^- (K\d{4})", text, re.M) or ["K0001"]
     budget = int((re.search(r"Kelime bütçesi: yaklaşık (\d+)", text) or [None, "350"])[1])
-    sentences, words, index = [], 0, 0
+    tone = task_value(prompt, "Ton") or ""
+    sentences, words, index = [], 0, sum(map(ord, tone)) % len(FILLER)      # each tone starts its filler elsewhere
     if number == 1:
         sentences.append(f"It is an amazing place to start the story [{ids[0]}].")
     if number == 3:
@@ -131,9 +132,14 @@ def merge(cwd, prompt):
             "notlar": []}
 
 
+STYLES = {"Araştırmacı dost": "a friend who did the reading", "Hikâye anlatıcısı": "a story told in order", "Pratik planlayıcı": "a plan with the numbers first",
+          "Belgesel anlatıcı": "a slow documentary", "Vlogger": "a quick chat"}
+
+
 def ends(cwd, prompt):
     ids = ids_in(cwd / "metin.md") or ["K0001"]
-    intro = " ".join(["You came here with one question and this text answers it with the records we found [{}].".format(ids[0]),
+    style = STYLES.get(task_value(prompt, "Ton") or "", "a plain text")
+    intro = " ".join(["You came here with one question and this text, told as {}, answers it with the records we found [{}].".format(style, ids[0]),
                       "We go through it part by part and keep to what the sources say [{}].".format(ids[-1])] + [
         "Every claim you hear rests on a record you could open yourself."] * 4)
     closing = " ".join(["That is what the records show and the choice is yours [{}].".format(ids[0]),

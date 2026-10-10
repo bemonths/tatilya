@@ -64,11 +64,17 @@ def active_runs(db):
         return [decode_run(r) for r in con.execute(f"SELECT * FROM text_runs WHERE status IN ({','.join('?' * len(ACTIVE))})", ACTIVE)]
 
 
+INTERRUPTED_TEXT = "Program kapanırken yarıda kaldı; “Devam” kalan adımları çalıştırır."
+
+
 def recover(db):
-    """A run left running or waiting by an app that closed is "yarıda kaldı" now ("Devam" goes on with what is left)."""
+    """A run left running or waiting by an app that closed is "yarıda kaldı" now ("Devam" goes on with what is left); its job, which the
+    general recovery marked with the source checks' sentence, says the same."""
     with db.connect() as con:
         con.execute(f"""UPDATE text_runs SET status='interrupted', reason='program_kapandi', reason_text=?, wait_until=NULL, updated_at=?
-            WHERE status IN ({','.join('?' * len(ACTIVE))})""", ("Program kapanırken yarıda kaldı; “Devam” kalan adımları çalıştırır.", now(), *ACTIVE))
+            WHERE status IN ({','.join('?' * len(ACTIVE))})""", (INTERRUPTED_TEXT, now(), *ACTIVE))
+        con.execute("UPDATE jobs SET message=? WHERE kind='claude_metin' AND status='interrupted' AND message LIKE 'Önceki oturumda yarıda kaldı.%'",
+                    (INTERRUPTED_TEXT,))
         con.execute("UPDATE text_sessions SET status='canceled', finished_at=?, error=? WHERE status='running'",
                     (now(), "Program kapanırken kesildi."))
 

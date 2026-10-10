@@ -137,6 +137,7 @@ class Context:
     tone_index: int = 0
     tone_count: int = 1
     stage: str = "plan"
+    stage_text: str = "Plan"
     sections_done: int = 0
     sections_total: int = 0
     job_checked: float = 0.0
@@ -687,14 +688,14 @@ class TextService(TextViews):
                 self.limit_until[ctx.run["id"]] = until
                 text = f"Claude kullanım sınırı: {local_clock(until)}'te kendiliğinden sürecek."
                 store.update_run(self.db, ctx.run["id"], status="waiting_limit", wait_until=iso(until), reason="kullanim_siniri", reason_text=text)
-                self.log(ctx, text, progress_info={**self.progress_info(ctx, ctx.stage), "bekleme": {"bitis": iso(until), "metin": text}})
+                self.log(ctx, text, progress_info={**self.progress_info(ctx, ctx.stage_text), "bekleme": {"bitis": iso(until), "metin": text}})
                 try:
                     self.sleep(ctx, until)
                 finally:
                     self.limit_until.pop(ctx.run["id"], None)
                     self.trial_after[ctx.run["id"]] = self.clock.time()
                 store.update_run(self.db, ctx.run["id"], status="running", wait_until=None, reason=None, reason_text=None, finished_at=None)
-                self.log(ctx, "Kullanım sınırı beklemesi bitti; çalışma sürüyor.", progress_info=self.progress_info(ctx, ctx.stage))
+                self.log(ctx, "Kullanım sınırı beklemesi bitti; çalışma sürüyor.", progress_info=self.progress_info(ctx, ctx.stage_text))
 
     # ------------------------------------------------------------------------------------------------------------------- progress
 
@@ -742,7 +743,8 @@ class TextService(TextViews):
             body = f"bölümler {ctx.sections_done}/{ctx.sections_total} bitti"
         else:
             body = text or STAGE_WORDS.get(stage, stage)
-        info = self.progress_info(ctx, head + body)
+        ctx.stage_text = head + body
+        info = self.progress_info(ctx, ctx.stage_text)
         self.db.update_job(ctx.job_id, progress=info["yuzde"], progress_info=info)
 
     # ------------------------------------------------------------------------------------------------------------------- the plan

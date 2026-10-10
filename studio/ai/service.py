@@ -76,7 +76,7 @@ class ClaudeService:
         channel = getattr(profile, "CHANNEL", None) or {}
         return {"available": bool(channel), "whole_region": channel.get("whole_region"), "regions": self.regions(destination_id),
                 "families": list(channel.get("families") or ()), "all_families": title.ALL_FAMILIES, "steps": [
-                    {"key": s.key, "title": s.title} for s in steps.STEPS.values()], "claude": claude_info.info(self.settings()["claude_path"])}
+                    {"key": s.key, "title": s.title} for s in steps.ordered()], "claude": claude_info.info(self.settings()["claude_path"])}
 
     def settings(self):
         return claude_settings.load(self.data_dir)

@@ -11,6 +11,7 @@ import uuid
 from studio.ai import settings as claude_settings
 from studio.database import Database
 from studio.text import engine as E
+from studio.text import store
 from tests.legacy import V17_TABLES, drop_v17
 from tests.text_helpers import FakeClock, add_video, app, open_app, sessions, start_text, text_env, text_job, wait_run  # noqa: F401
 
@@ -168,11 +169,16 @@ def test_the_section_writers_run_side_by_side_within_the_session_limit(app, monk
 def test_the_usage_threshold_holds_new_sessions_and_the_run_goes_on_by_itself(app, monkeypatch):
     add_video(app)
     monkeypatch.setenv("FAKE_CLAUDE_USAGE", "0.95,0.20")      # the first session reports 95 % of the 5-hour window (threshold 90 %)
+    service, shown = app.app.state.text, []
+    original_log = service.log
+    monkeypatch.setattr(service, "log", lambda ctx, text, **fields: (shown.append(fields.get("progress_info")), original_log(ctx, text, **fields))[1])
     view = start_text(app)
     assert view["status"] == "awaiting_comparison"
     job = text_job(app)
     waits = [e["text"] for e in job["log"] if e["text"].startswith("Claude kullanım sınırı:")]
     assert waits and waits[0].endswith("'te kendiliğinden sürecek.")
+    waiting = [info for info in shown if info and info.get("bekleme")]
+    assert waiting and all(not info["asama"].startswith(("metin_", "plan")) for info in waiting)    # the stage in words, not the step's key
     assert any("Kullanım eşiğe geldi (5 saatlik pencere)" in e["text"] for e in job["log"])
     assert any(e["text"] == "Kullanım sınırı beklemesi bitti; çalışma sürüyor." for e in job["log"])
     assert any(s >= 3600 * 0.5 for s in [sum(app.clock.slept)])           # the clock went past the reset (+2 minutes)
@@ -242,6 +248,23 @@ def test_a_run_cut_by_the_app_closing_is_yarida_kaldi_and_devam_goes_on(text_env
         view = wait_run(again, run["id"])
         assert view["status"] == "awaiting_comparison" and len(sessions(view, "metin_plan")) == 1
         assert [s["status"] for s in sessions(view, "metin_plan_elestiri")] == ["canceled", "done"]
+    finally:
+        again.__exit__(None, None, None)
+
+
+def test_a_run_left_behind_by_a_killed_app_says_so_on_its_job_too(text_env):
+    client = open_app(text_env / "data", FakeClock())
+    add_video(client)
+    run = start_text(client)
+    client.__exit__(None, None, None)
+    with sqlite3.connect(text_env / "data" / "studio.sqlite3") as con:    # as if the process had been killed while the run waited
+        con.execute("UPDATE text_runs SET status='waiting_limit' WHERE id=?", (run["id"],))
+        con.execute("UPDATE jobs SET status='running', finished_at=NULL WHERE id=(SELECT job_id FROM text_runs WHERE id=?)", (run["id"],))
+    again = open_app(text_env / "data", FakeClock())
+    try:
+        assert again.get(f"/api/metin/calismalar/{run['id']}").json()["status"] == "interrupted"
+        job = text_job(again)
+        assert job["status"] == "interrupted" and job["message"] == store.INTERRUPTED_TEXT   # not the source checks' "Kontrolü yeniden başlatabilirsiniz"
     finally:
         again.__exit__(None, None, None)
 

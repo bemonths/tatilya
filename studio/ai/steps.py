@@ -125,6 +125,13 @@ def register(step):
     return step
 
 
+def ordered():
+    """The registered steps in Settings order (settings.CLAUDE_STEPS), whatever order their modules were imported in."""
+    from .settings import CLAUDE_STEPS
+    rank = {key: index for index, (key, _) in enumerate(CLAUDE_STEPS)}
+    return sorted(STEPS.values(), key=lambda step: rank.get(step.key, len(rank)))
+
+
 def get(key):
     if key not in STEPS:
         raise StepError("Böyle bir Claude adımı yok.")

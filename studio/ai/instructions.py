@@ -49,7 +49,7 @@ def files(profile, hidden=False):
         found.append({"key": path.stem, "name": path.name, "title": title, "kind": kind, "path": path})
 
     add(Path(folder) / COMMON, "Ortak kurallar (bütün adımlar)", "talimat")
-    for step in steps.STEPS.values():
+    for step in steps.ordered():
         for name in step.instructions:
             if name.startswith("metin_") and text.get("voice"):
                 add(text["voice"], VOICE_TITLE, "talimat")

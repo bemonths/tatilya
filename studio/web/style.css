@@ -48,3 +48,4 @@
 .tones-card,.warnings-card{grid-column:1/-1}.tone-table td{vertical-align:top}.tone-first{color:var(--muted);max-width:420px}.tone-actions{white-space:nowrap}.tone-actions button{font-size:10px;min-height:29px;padding:5px 10px}.tone-form{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}.tone-form textarea{min-height:120px}.tone-long{color:var(--yellow)}.warnings-text{min-height:220px}
 .checkbox-label{display:flex!important;flex-wrap:wrap;gap:8px;align-items:center}.checkbox-label input{width:auto;min-height:0;margin:0!important}.checkbox-label .form-note{flex-basis:100%}.text-settings label .form-note{display:block;margin-top:4px}
 @media(max-width:700px){.tone-choice{grid-template-columns:1fr}.run-actions{flex-direction:column;align-items:flex-start}}
+.text-plan th:first-child,.text-plan td:first-child{width:46px}.text-plan td:nth-child(2){min-width:260px}.text-plan td:nth-child(3){min-width:220px}
