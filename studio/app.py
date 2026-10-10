@@ -2,6 +2,7 @@ import asyncio
 import csv
 import io
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -20,6 +21,7 @@ from .models import EvidencePackInput, JobInput, RunDecisionInput, SourceInput, 
 from . import evidence
 from .ai import settings as claude_settings
 from .ai.service import ClaudeService
+from .watchdog import Watchdog
 from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
@@ -28,7 +30,7 @@ WEB = Path(__file__).parent / "web"
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "data"
 
 
-def create_app(data_dir: Path | None = None, registry=None):
+def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog | None = None):
     registry = registry or DEFAULT_REGISTRY
     db = Database((data_dir or DEFAULT_DATA) / "studio.sqlite3", registry)
 
@@ -50,6 +52,7 @@ def create_app(data_dir: Path | None = None, registry=None):
 
     app = FastAPI(title="30A Studio", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.db = db
+    app.state.watchdog = watchdog or Watchdog.from_env(has_active_jobs=db.has_active_work, on_waiting=db.note_active_jobs)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
 
     @app.middleware("http")
@@ -75,7 +78,12 @@ def create_app(data_dir: Path | None = None, registry=None):
 
     @app.get("/api/health")
     def health():
-        return {"app": "thirtya-studio", "version": __version__}
+        return {"app": "thirtya-studio", "version": __version__, "pid": os.getpid()}
+
+    @app.post("/api/heartbeat", status_code=204)
+    def heartbeat(request: Request):
+        request.app.state.watchdog.heartbeat()
+        return Response(status_code=204)
 
     def selected(identifier):
         try: return db.destination(identifier)
@@ -690,16 +698,21 @@ def create_app(data_dir: Path | None = None, registry=None):
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
         selected(destination_id)
+        guard = request.app.state.watchdog
         async def stream():
             previous = None
-            while not await request.is_disconnected():
-                data = json.dumps(await asyncio.to_thread(db.jobs,destination_id), ensure_ascii=False)
-                if data != previous:
-                    yield f"event: jobs\ndata: {data}\n\n"
-                    previous = data
-                else:
-                    yield ": ping\n\n"
-                await asyncio.sleep(1)
+            guard.stream_opened()
+            try:
+                while not await request.is_disconnected():
+                    data = json.dumps(await asyncio.to_thread(db.jobs,destination_id), ensure_ascii=False)
+                    if data != previous:
+                        yield f"event: jobs\ndata: {data}\n\n"
+                        previous = data
+                    else:
+                        yield ": ping\n\n"
+                    await asyncio.sleep(1)
+            finally:
+                guard.stream_closed()
         return StreamingResponse(stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
 
     app.mount("/static", StaticFiles(directory=WEB), name="static")

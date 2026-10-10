@@ -1,5 +1,5 @@
 import {destinationOptions, storedDestination, persistDestination, resetDestinationState} from "./destinations.js";
-import {api, esc, host, date, setDestination, destinationRevision, destinationPath} from "./api.js";
+import {api, esc, host, date, setDestination, destinationRevision, destinationPath, startHeartbeat} from "./api.js";
 import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen, SITE_CONNECTOR} from "./restaurants.js";
@@ -504,4 +504,5 @@ async function start(destinationId=storedDestination(localStorage)) {
 }
 
 $("#destination-select").addEventListener("change",event=>start(event.target.value));
+startHeartbeat();
 start();

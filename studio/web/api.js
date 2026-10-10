@@ -30,3 +30,10 @@ export function esc(value) {
 
 export function host(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; } }
 export function date(value) { return value ? new Date(value).toLocaleString("tr-TR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"}) : "—"; }
+
+// GÖREV-14: the shutdown watchdog closes the server when the window is gone; the window says it is alive every 10 s.
+export function startHeartbeat(interval=10000) {
+  const beat=()=>fetch("/api/heartbeat",{method:"POST",headers:{"X-Studio-Request":"1"}}).catch(()=>{});
+  beat();
+  return setInterval(beat,interval);
+}

@@ -1,0 +1,7 @@
+# Windows betikleri her yerde CRLF (cmd etiketleri LF ile yanlış çalışabilir)
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# İkili dosyalar
+*.ico binary
+*.png binary

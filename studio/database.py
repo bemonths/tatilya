@@ -349,6 +349,22 @@ class Database:
                     message if status in ("failed", "canceled", "interrupted") else None, identifier))
             return True
 
+    def has_active_work(self):
+        """Is any job (collector, audit, Claude run, extension work) or refresh batch still queued or running?
+        The shutdown watchdog keeps the server open until this is False."""
+        with self.connect() as con:
+            return bool(con.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running') LIMIT 1").fetchone() or
+                        con.execute("SELECT 1 FROM refresh_batches WHERE status='running' LIMIT 1").fetchone())
+
+    def note_active_jobs(self, text):
+        """Appends a note to the log of every queued or running job without changing its current message."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            for row in con.execute("SELECT id, log FROM jobs WHERE status IN ('queued','running')").fetchall():
+                entries = json.loads(row["log"])
+                entries.append({"at": now(), "text": text})
+                con.execute("UPDATE jobs SET log=? WHERE id=?", (json.dumps(entries, ensure_ascii=False), row["id"]))
+
     def recover_jobs(self):
         with self.connect() as con:
             con.execute("DELETE FROM job_waits")
