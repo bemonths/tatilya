@@ -243,4 +243,4 @@ Paket dosyalarının hepsi gerçek veriden üretildi.
 
 ## Dal CI
 
-DAL_CI
+Kod ve teslim commit'i `f6041d1` için dal CI çalışması 38061119283: başarılı (https://github.com/bemonths/tatilya/actions/runs/38061119283). Bu rapor satırını ekleyen son commit yalnız raporu değiştirir.
