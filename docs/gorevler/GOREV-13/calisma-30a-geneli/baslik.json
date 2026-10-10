@@ -1,0 +1,1317 @@
+{
+  "surum": 1,
+  "adim": "baslik",
+  "notlar": [
+    "Bütün kanıtlar veri_ozeti_30a.md (paket 3a8b1fc1) içindendir. Bu çalışmada mahalle özeti verilmediği için iki mahalle adayı (Seaside, Rosemary Beach) da 30A özetindeki mahalle satırlarıyla planlandı; mahalle-rehberi paketi kurulunca restoran saatleri ve erişim ayrıntıları eklenecek.",
+    "Programda yalnız iki şablon var (ilk-video, mahalle-rehberi). 11 adayın 8'i yeni şablon gerektiriyor. Önerilen öncelik: plaj erişimi, haftalık maliyet ve en iyi ay; araştırmada üçü de rakiplerin boş bıraktığı ve izleyicinin en çok sorduğu konular.",
+    "Plaj erişimi hukukuna dayanan her aday (K0069–K0082) yayından önce yeniden kontrol edilmeli; 10 Ekim 2026'dan sonraki bir ilçe kararı K0082 özetini değiştirebilir. K0081 hiçbir başlıkta ve planda kullanılmadı; 'özel plaj kalmadı' denmez.",
+    "‘Kendi tarihsel verimizden videolar’ ailesinden aday yok: elimizde kiralama fiyatlarının tek bir anlık görüntüsü (Ekim 2026) var; fiyatın zaman içinde nasıl değiştiğini gösterecek seri henüz birikmedi.",
+    "Erişilebilirlik (K0821–K0834) ve Alys Beach ayrı video olarak önerilmedi: erişilebilirlik verisi 15–17 dakikayı taşımıyor, ilk-video ve plaj erişimi videolarının içinde kalmalı; Alys Beach fiyatları tek şirketin kendi envanterinden geldiği ve Book>Direct'te yalnız 7 ilan göründüğü için şimdilik ayrı rehber zayıf kalır.",
+    "Restoran özetinde mahalle sayılarının toplamı 141, bilinen boşluklar notu ise 138 restoran diyor; restoran ağırlıklı adaylardan önce bu fark kontrol edilmeli."
+  ],
+  "adaylar": [
+    {
+      "baslik_en": "30A Florida for First-Timers: Which Town, Which Month and What a Week Costs",
+      "baslik_tr": "İlk kez 30A Florida'ya gidenler için: hangi kasaba, hangi ay ve bir hafta ne tutar",
+      "bolge": "30A geneli",
+      "aile": "Genel planlama",
+      "neden_onerildi": "En çok izlenen 30A videosu genel bir ilk-kez rehberi (435 bin izlenme), ama rakiplerin hiçbiri fiyatı, sezonu ve plaj erişimini veriyle anlatmıyor. Kanalın açılış videosu olarak bütün ailelerin kapısını açar ve mevcut ilk-video şablonuyla hemen kurulabilir.",
+      "izleyici_sorusu": "30A'ya ilk kez gidiyorum: hangi kasabada ve hangi ayda kalmalıyım, bir hafta ne tutar ve gitmeden neyi bilmeliyim?",
+      "kanca": {
+        "metin": "30A bir kasaba değil: FDOT'un yol envanterinde 18.561 millik bir ilçe yolu (CR 30A). Destin ve Fort Walton Beach ise Walton County'de bile değil. Bu yol boyunca resmî dizinde 13 mahalle var ve kiralama şirketlerinin sitelerinde sorduğumuz bir haftanın ortancası Ocak'ta Seagrove'da yaklaşık $1,885'ten Temmuz'da WaterColor'da yaklaşık $10,765'e çıkıyor.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0001"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0002"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0006"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0364"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0346"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "30A nedir ve nerededir",
+          "ne_anlatir": "30A'nın bir ilçe yolu olduğu, Walton County içindeki yeri, Destin ve Fort Walton Beach'in başka ilçede olduğu; Visit South Walton'ın 16 mahallesinden programın 13'ü kapsadığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0001"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0002"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0003"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0006"}
+          ]
+        },
+        {
+          "bolum": "13 mahalle tek bakışta",
+          "ne_anlatir": "Resmî dizinin etiketleri, Temmuz 2027 aramasında görünen ilan sayıları (tarih ve pencere söylenerek) ve mahalleye düşen halka açık erişim sayısıyla mahallelerin karakteri.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0007"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0013"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0018"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0027"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0030"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0033"}
+          ]
+        },
+        {
+          "bolum": "Plaj erişiminin gerçeği",
+          "ne_anlatir": "Islak kumun herkese açık olduğu, halka açık erişim listesinde Seaside, WaterColor, Alys ve Rosemary'de nokta olmadığı, bugünkü hukuki durumun K0082'deki özet kadarıyla anlatılması.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0056"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0041"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0042"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0048"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0082"}
+          ]
+        },
+        {
+          "bolum": "Hangi ay: hava, deniz ve kasırga",
+          "ne_anlatir": "Destin havalimanı 1991–2020 normalleri, Panama City Beach istasyonunun deniz suyu ortalamaları ve 1991–2025 kasırga sayımı; dönemler ve istasyonlar açıkça söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0129"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0132"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0183"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0192"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0195"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0206"}
+          ]
+        },
+        {
+          "bolum": "Kalabalık ve okul tatilleri",
+          "ne_anlatir": "Turist vergisi tahsilatının aylara dağılımı, mevsimlik doluluk ve en çok ziyaretçi gönderen şehirlerin okul tatil haftaları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0217"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0211"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0224"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0228"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0233"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0234"}
+          ]
+        },
+        {
+          "bolum": "Bir hafta ne tutar",
+          "ne_anlatir": "Seçilmiş mahallelerde Ocak ve Temmuz haftası için vergi ve ücret dahil 7 gecelik ortanca (ilan sayısı ve çeyreklerle) ve ilçenin yıllık ortalama günlük fiyatı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0364"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0346"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0222"}
+          ]
+        },
+        {
+          "bolum": "Yemek",
+          "ne_anlatir": "Mahalle başına restoran sayısı ve menülerden hesaplanan fiyat seviyesi aralığı (bizim sınıflamamız olarak).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0554"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0586"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0678"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"}
+          ]
+        },
+        {
+          "bolum": "Araba, market, acil sağlık ve havalimanı",
+          "ne_anlatir": "Golf arabası kuralı, en yakın büyük süpermarket ve acil servise kuş uçuşu ortancalar ve üç havalimanının kuş uçuşu uzaklığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0790"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0738"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0711"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0766"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0778"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0779"}
+          ]
+        },
+        {
+          "bolum": "Plaj kuralları, güvenlik ve erişilebilirlik",
+          "ne_anlatir": "Bayrak renkleri, cankurtaran saatleri, cam yasağı, ceza üst sınırı ve plaj tekerlekli sandalyesinin nerede bulunduğu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0114"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0115"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0086"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0106"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0822"}
+          ]
+        },
+        {
+          "bolum": "Merak: planlı kasabalar nasıl doğdu",
+          "ne_anlatir": "Seaside, Rosemary Beach ve Alys Beach'in planlanma tarihleri ve Truman Show bağlantısı; kapanışta mahalle videolarına köprü.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0837"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0839"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0840"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0841"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Fiyatı okunamayan büyük kiralama şirketleri var (360blue 256, Cottage Rental Agency 82, RealJoy 61, Vrbo 52 ilan); haftalık ortancalar bu şirketleri içermiyor.",
+        "Gulf Place fiyatları küçük örnek; Alys Beach fiyatları tek şirketin kendi envanteri ve diğer mahallelerle karşılaştırılmaz.",
+        "Restoranların yaklaşık yarısında (72/138) fiyat seviyesi hesaplanamadı.",
+        "Uçak bileti, araç kiralama, market ve bisiklet ya da golf arabası kiralama maliyeti yok.",
+        "Havalimanı ve market mesafeleri kuş uçuşu; sürüş süresi ve trafik sıkışıklığı ölçümü yok."
+      ],
+      "sablon": "ilk-video",
+      "parametreler": {},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "30A yolunun sade haritası, üzerinde 13 nokta; büyük yazı ‘IT'S A ROAD, NOT A TOWN’ ve köşede küçük bir takvim ile dolar işareti."
+    },
+    {
+      "baslik_en": "Which 30A Beaches Are Actually Public? The Law, the Map and Where to Park",
+      "baslik_tr": "30A'da hangi plajlar gerçekten halka açık? Yasa, harita ve nereye park edilir",
+      "bolge": "30A geneli",
+      "aile": "Genel planlama",
+      "neden_onerildi": "Araştırmada izleyicinin en çok tartıştığı ve en çok yanlış bildiği konu bu; en çok izlenen rehberin altındaki en beğenilen yorum plaj erişimi şikâyeti. Elimizde 53 halka açık erişimin mahalle eşlemesi ve 1970 anayasa maddesinden Şubat 2026 temyiz kararına kadar kaynaklı bir hukuk zinciri var; rakiplerde hiçbiri yok.",
+      "izleyici_sorusu": "Kiraladığım evin önündeki kuma oturabilir miyim; halka açık plaj nerede başlar, kalmadığım bir kasabanın plajına nasıl gider ve nereye park ederim?",
+      "kanca": {
+        "metin": "30A'nın en bilinen beş topluluğunda (Seaside, WaterColor, WaterSound, Alys Beach ve Rosemary Beach) ilçenin halka açık plaj erişimi listesinde tek bir nokta yok. Florida 2025'te 2018 tarihli customary use kanununu kaldırdı ve Şubat 2026'da temyiz mahkemesi 2024 kararını hükümsüz saydı; peki bugün kuru kum kimin?",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0041"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0042"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0045"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0048"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0074"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0077"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Islak kum ve kuru kum: kural nereden geliyor",
+          "ne_anlatir": "Florida Anayasası'na göre ortalama yüksek su çizgisinin altının halk adına devlette olduğu ve herkesin 26 mil boyunca ıslak kumda yürüyebildiği.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0069"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0056"}
+          ]
+        },
+        {
+          "bolum": "On yılın hukuk hikâyesi (2016–2026)",
+          "ne_anlatir": "İlçenin 2016 kararı, 2018 kanunu, 1.194 mülklük dava, 95 parsel ve 20 ft uzlaşmaları, 2025'te kanunun kaldırılması, Şubat 2026 temyiz kararı ve ilçenin beyanı; 2026 kararları arasında customary use olmadığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0070"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0071"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0072"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0073"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0074"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0076"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0077"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0078"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0079"}
+          ]
+        },
+        {
+          "bolum": "Bugün ne söylenebilir, ne söylenemez",
+          "ne_anlatir": "K0082 özetinin izleyici diline çevrilmesi; ilçe turizm dairesinin ‘üçte iki’ ifadesi yalnız çelişkisiyle birlikte; 2025 kanununun erozyon çizgisi hükmü ve Walton'a uyduğunun doğrulanmadığı. ‘Özel plaj kalmadı’ denmez.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0082"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0080"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0075"}
+          ]
+        },
+        {
+          "bolum": "Halka açık erişim haritası",
+          "ne_anlatir": "İlçe listesindeki 53 erişimin mahallelere dağılımı; kaynaklı eşleme ile yaklaşık eşlemenin ayrı söylenmesi (yaklaşık olanlar yalnız ‘civarında’).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0033"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0034"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0039"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0040"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0043"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0044"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0050"}
+          ]
+        },
+        {
+          "bolum": "Erişimi olmayan topluluklar ve kendi kuralları",
+          "ne_anlatir": "Alys Beach'in plajını özel ilan etmesi ve ücretsiz park yerleri; WaterColor'ın ücretli park yerleri; Rosemary ve WaterSound için 2023 rehberindeki park bilgisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0065"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0064"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0066"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0067"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0068"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0053"}
+          ]
+        },
+        {
+          "bolum": "Bölgesel erişimler, park ve ücretsiz servisler",
+          "ne_anlatir": "11 bölgesel erişimin olanakları, mahalle erişimlerinin yürüyerek gelenler için olduğu, iki Park and Ride otoparkının ücretleri ve servis saatleri, Seaside servisi ve saatlik parkı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0054"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0055"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0057"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0058"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0059"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0060"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0063"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0062"}
+          ]
+        },
+        {
+          "bolum": "Halka açık plajda yer kurmak",
+          "ne_anlatir": "Çadır ve şemsiye ölçüleri, kumul mesafesi, gece bırakılan eşya kuralı ve ilçe plajında gece park yasağı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0087"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0088"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0090"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0091"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0105"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Toplulukların kendi misafirlerine açık özel erişimleri ve kiracıların bu erişimleri kullanma kuralları resmî kaynaktan toplanmadı (ilçe listesi yalnız halka açık erişimleri veriyor).",
+        "Park and Ride ücretleri 2023 rehberinden; güncel ücretler için gösterilen parkwaltonco.org alınmadı. Seaside'ın saatlik park ücreti tutarı yok.",
+        "Uzlaşmalardaki 20 ft geçiş alanının bugün geçerli olup olmadığını hiçbir birincil kaynak söylemiyor (K0080 çelişkili).",
+        "Mayıs 2026'daki önergenin resmî metni ve sonucu doğrulanamadı; 10 Ekim 2026'dan sonraki ilçe kararları yayından önce kontrol edilmeli.",
+        "Kiralık evlerden en yakın halka açık erişime mesafe bu özette yok."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Kumsalın üstten görüntüsü, ıslak kum ile kuru kum arasında kesik çizgi; bir yanda ‘PUBLIC?’, öbür yanda ‘PRIVATE?’ yazısı."
+    },
+    {
+      "baslik_en": "What a Week on 30A Really Costs: Rental Prices for All 13 Beach Towns, Month by Month",
+      "baslik_tr": "30A'da bir hafta gerçekte ne tutar: 13 sahil kasabasında ay ay kiralık ev fiyatları",
+      "bolge": "30A geneli",
+      "aile": "Masraf ve bütçe",
+      "neden_onerildi": "Araştırmaya göre ‘30A tatili ne kadar tutar’ sorusuna cevap veren 30A'ya özel bir video yok; arama Miami ve Orlando bütçe videolarına düşüyor. Elimizde 13 mahalle × 12 ay için kiralama şirketlerinin kendi sitelerinden, vergi ve ücret dahil haftalık toplam ortancaları, oda gruplarına göre fiyatlar, ilçenin mevsimlik ortalama günlük fiyatı, menü fiyatları ve park ücretleri var.",
+      "izleyici_sorusu": "30A'da bir haftalık tatil bize gerçekte ne kadara mal olur ve hangi mahallede, hangi ayda daha az öderiz?",
+      "kanca": {
+        "metin": "Ekim 2026'da kiralama şirketlerinin kendi sitelerinde sorduğumuzda, Ocak 2027 haftası için Seagrove'daki 207 evin vergi ve ücret dahil haftalık ortancası yaklaşık $1,885'ti; Temmuz 2027 haftası için WaterColor'daki 52 evin ortancası yaklaşık $10,765.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0364"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0346"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Fiyatları nasıl topladık",
+          "ne_anlatir": "Book>Direct'te görünen ilanlardan şirketlerin kendi sitelerine gidilerek 7 gecelik toplamın sorulduğu; ortanca, çeyrek ve ilan sayısının ne anlama geldiği; fiyatı okunamayan şirketler.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0027"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0362"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"}
+          ]
+        },
+        {
+          "bolum": "Temmuz haftası, mahalle mahalle",
+          "ne_anlatir": "Yaz zirvesinde 13 mahallenin ortanca ve çeyrekleri; küçük örnekli Gulf Place karşılaştırmaya girmez, Alys ayrı anlatılır.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0286"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0322"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0334"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0346"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0394"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0430"}
+          ]
+        },
+        {
+          "bolum": "Aynı mahalle, farklı ay",
+          "ne_anlatir": "En büyük örnekli Seagrove'da 12 ayın ortancası; Mart'taki bahar sıçraması ve Eylül'deki düşüş; ilçenin mevsimlik ortalama günlük fiyatıyla karşılaştırma.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0363"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0364"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0366"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0372"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0225"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0229"}
+          ]
+        },
+        {
+          "bolum": "Oda sayısı ne kadar fark eder",
+          "ne_anlatir": "Ocak ve Temmuz'da 1–2, 3, 4 ve 5+ odalı evlerin ortancaları; iki aile birlikte kiralarsa kişi başı düşünme.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0490"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0494"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0496"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0497"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0482"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0486"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0526"}
+          ]
+        },
+        {
+          "bolum": "Alys Beach neden ayrı anlatılıyor",
+          "ne_anlatir": "Alys fiyatlarının tek şirketin kendi envanterinden geldiği, Book>Direct'te yalnız 7 ilan göründüğü; rakamlar verilir ama diğer mahallelerle sıralanmaz.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0030"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0398"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0406"}
+          ]
+        },
+        {
+          "bolum": "Yemek bütçesi",
+          "ne_anlatir": "Menülerden hesaplanan ana yemek ortancalarının aralığı; dört fiyat seviyesinden örnekler (bizim sınıflamamız olarak).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0650"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0661"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0679"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0698"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"}
+          ]
+        },
+        {
+          "bolum": "Küçük masraflar: park, eyalet parkları ve vergi",
+          "ne_anlatir": "Park and Ride ücretleri, Grayton, Topsail, Deer Lake ve Point Washington giriş ücretleri ve kısa süreli kiralamalardaki %5 turist vergisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0057"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0797"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0799"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0801"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0804"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0232"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Fiyatı okunamayan şirketler (360blue 256, Cottage Rental Agency 82, RealJoy 61, Vrbo 52, 30A Beach Girls 48, Vacasa 21, Outdoor Shower 21 ilan) ve siteleri engelleyen 51 ilan ortancalara girmedi.",
+        "Fiyatların yaklaşık %6'sında sitenin toplamı vergi ve ücret kalemleriyle doğrulanamadı.",
+        "Market, uçak, araç kiralama, bisiklet ve golf arabası kiralama maliyetleri yok; günlük toplam bütçe bu yüzden kurulamıyor.",
+        "Otel fiyatları ayrıca toplanmadı; ilçe ADR'si otel ve kiralık evi birleşik veriyor.",
+        "Fiyatlar tek bir anlık görüntü (10 Ekim 2026); son dakika fiyat değişimi bilinmiyor.",
+        "Restoran fiyatı yalnız ana yemek ortancası; içki, bahşiş ve vergi yok."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "İki takvim yaprağı yan yana: ‘JAN $1,885’ ve ‘JUL $10,765’; altında küçük harflerle ‘median, 7 nights, taxes & fees’."
+    },
+    {
+      "baslik_en": "The Best Time to Visit 30A: Weather, Water, Hurricanes, Crowds and Prices by Month",
+      "baslik_tr": "30A'ya gitmenin en iyi zamanı: ay ay hava, deniz, kasırga, kalabalık ve fiyat",
+      "bolge": "30A geneli",
+      "aile": "Sezon ve zamanlama",
+      "neden_onerildi": "Yorumlarda ‘sakin ve mavi su için hangi ay’, ‘kasırga sezonu dışında hangi aylar’ soruları sık geçiyor. Elimizde iklim normalleri, deniz suyu, 1991–2025 kasırga sayımı, turist vergisi deseni, mevsimlik doluluk ve fiyat, okul tatilleri, etkinlikler ve trafik mevsim oranları bir arada var.",
+      "izleyici_sorusu": "30A'ya hangi ayda gitmeliyim: deniz ne zaman ısınır, kasırga riski ne zaman, kalabalık ve fiyatlar ne zaman düşer?",
+      "kanca": {
+        "metin": "Walton County'nin turist vergisinde Temmuz yılın yaklaşık %20'sini, Ocak %2.1'ini taşıyor. Ekim'de Panama City Beach istasyonunun deniz suyu ortalaması hâlâ 78.5 °F; ama 1991–2025'te 30A koridorunun 50 deniz mili içine giren beş kasırganın ikisi Ekim'de geldi.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0217"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0211"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0192"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0195"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0200"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Yıl bir bakışta: ziyaretçi yükü ay ay",
+          "ne_anlatir": "Turist vergisi tahsilatının FY2021–25 ortalama aylık payları ve dört mevsimin doluluk oranları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0208"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0211"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0213"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0216"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0217"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0224"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0226"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0228"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0230"}
+          ]
+        },
+        {
+          "bolum": "Hava: sıcaklık, yağış ve sıcak günler",
+          "ne_anlatir": "Destin havalimanının 1991–2020 normallerinde aylık en yüksek ve en düşük, yağışlı gün ve 90 °F üstü gün sayısı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0123"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0127"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0129"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0132"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0166"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0178"}
+          ]
+        },
+        {
+          "bolum": "Deniz suyu",
+          "ne_anlatir": "PCBF1 istasyonunun aylık ortalamaları ve kaç yıla dayandığı; Nisan ile Kasım'ın benzerliği.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0183"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0186"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0187"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0190"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0192"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0193"}
+          ]
+        },
+        {
+          "bolum": "Kasırga riski",
+          "ne_anlatir": "Resmî sezon ve Eylül zirvesi; 1991–2025'te koridora yaklaşan 13 tropikal fırtına ve 5 kasırganın aylara dağılımı ve adları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0206"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0207"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0196"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0197"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0200"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0202"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0205"}
+          ]
+        },
+        {
+          "bolum": "Okul tatilleri: kalabalık nereden geliyor",
+          "ne_anlatir": "Ziyaretçilerin geldiği ilk beş pazar ve bu bölgelerdeki örnek okul bölgelerinin güz ve bahar tatili haftaları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0233"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0234"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0235"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0236"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0237"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0238"}
+          ]
+        },
+        {
+          "bolum": "Fiyatlar aya göre",
+          "ne_anlatir": "Seagrove ve Seaside'da 12 ayın haftalık ortancası; mevsimlik ortalama günlük fiyat.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0364"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0366"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0373"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0352"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0227"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0231"}
+          ]
+        },
+        {
+          "bolum": "Etkinlik takvimi",
+          "ne_anlatir": "Ocak'tan Aralık'a yıllık etkinlikler; tarihi kesin olanlar ve henüz açıklanmayanlar ayrı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0239"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0240"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0242"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0243"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0244"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0246"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0248"}
+          ]
+        },
+        {
+          "bolum": "Yoldaki mevsim ve sezonla değişen hizmetler",
+          "ne_anlatir": "FDOT mevsim oranlarından trafiğin yıllık ortalamaya göre ay ay seyri (sıkışıklık iddiası olmadan); cankurtaran sezonu, plaj tekerlekli sandalyesi ve kaplumbağa yuvalama sezonu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0252"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0257"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0264"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0821"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0103"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "İklim 30A'nın içinden değil, Destin–Fort Walton Beach havalimanından; deniz suyu Panama City Beach istasyonundan ve 30A kıyısıyla aynı olduğu doğrulanmadı.",
+        "Dalga, rüzgâr, su berraklığı ve denizanası verisi yok; ‘sakin ve mavi su’ sorusuna doğrudan cevap verilemiyor.",
+        "Plajdaki gerçek kalabalık ölçülmüyor; vergi payı ve doluluk dolaylı göstergeler.",
+        "Kasırga sayımı küçük (5 kasırga); ay ay risk sıralaması olarak sunulmamalı.",
+        "Okul takvimleri yalnız beş örnek bölge; Kentucky ve Tennessee'nin diğer bölgeleri ve özel okullar yok.",
+        "Restoran ve dükkânların mevsimlik kapanış bilgisi yok."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "12 aylık renkli şerit; Temmuz koyu kırmızı ve ‘20%’, Ekim'in üstünde küçük bir kasırga simgesi; başlık ‘WHEN TO GO’."
+    },
+    {
+      "baslik_en": "30A in Winter: What You Get (and Give Up) When Rentals Cost Far Less",
+      "baslik_tr": "Kışın 30A: kiralar çok daha ucuzken ne kazanırsınız, nelerden vazgeçersiniz",
+      "bolge": "30A geneli",
+      "aile": "Sezon ve zamanlama",
+      "neden_onerildi": "Konu motorunun ‘dönem’ ekseninde fiyat farkının en güçlü olduğu dönem kış. Fiyat, hava, deniz, kalabalık, kışa özgü kurallar (ateş saatleri, cankurtaran ve tekerlekli sandalye sezonu dışı) ve Ocak–Şubat festivalleri tek bir karar videosunu dolduruyor. En iyi ay videosundan farklı olarak tek döneme ve ‘bu indirim neyin karşılığı’ sorusuna odaklanır; ikisi arka arkaya yayımlanmamalı.",
+      "izleyici_sorusu": "Kışın 30A'ya gidersem ne kadar tasarruf ederim, hava ve deniz nasıl olur, nelerden vazgeçmiş olurum?",
+      "kanca": {
+        "metin": "Walton County'nin turizm çalışmalarına göre Aralık 2025–Şubat 2026'da otel ve kiralık evlerin ortalama günlük fiyatı $213.82'ydi; Haziran–Ağustos 2025'te $500.54. Ama aynı kış aylarında Panama City Beach istasyonunda deniz suyu ortalaması 60–64 °F ve cankurtaran kuleleri yalnız 1 Mart–31 Ekim arası görevde.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0229"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0225"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0183"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0194"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Kışın fiyatlar",
+          "ne_anlatir": "İlçenin kış ve yaz ortalama günlük fiyatı ile doluluğu; Aralık ve Ocak haftalarının Temmuz'la karşılaştırması (Seagrove, Seaside, Rosemary).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0229"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0228"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0225"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0363"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0352"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0412"}
+          ]
+        },
+        {
+          "bolum": "Hava ve deniz",
+          "ne_anlatir": "Aralık–Şubat normallerinde gündüz ve gece sıcaklıkları, yağış ve yağışlı gün; deniz suyu ortalamaları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0134"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0123"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0124"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0135"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0158"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0170"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0184"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0194"}
+          ]
+        },
+        {
+          "bolum": "Ne kadar sakin",
+          "ne_anlatir": "Turist vergisinin kış aylarındaki payı ve FDOT rekreasyon kategorisinde kış aylarının trafik oranı (sıkışıklık iddiası olmadan).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0210"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0211"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0212"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0252"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0263"}
+          ]
+        },
+        {
+          "bolum": "Kışın değişen kurallar ve hizmetler",
+          "ne_anlatir": "Cankurtaran ve plaj tekerlekli sandalyesi sezonunun bitişi, kış ateş saatleri, kaplumbağa sezonunun sona ermesi, bayrak sisteminin yıl boyu geçerli olması.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0821"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0096"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0103"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0117"}
+          ]
+        },
+        {
+          "bolum": "Kış etkinlikleri",
+          "ne_anlatir": "Kasım sonundan Şubat'a: Şükran Günü koşusu, Seaside geçit töreni ve yılbaşı, 30A Songwriters Festival, 30A Wine Festival ve Seaside yarı maratonu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0248"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0249"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0250"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0239"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0240"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0241"}
+          ]
+        },
+        {
+          "bolum": "Kışın hangi mahalle",
+          "ne_anlatir": "Ocak haftasında mahalle ortancaları; kış aktiviteleri için eyalet parkları ve ormanın saat ve ücretleri.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0280"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0316"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0328"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0340"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0388"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0424"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0798"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0803"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Restoran ve dükkânların kış saatleri ve kapanışları bu özette yok; ‘kışın neler açık’ sorusu şu an cevaplanamıyor.",
+        "Aylık (uzun süreli, snowbird) kiralama fiyatları toplanmadı; yalnız 7 gecelik fiyat var.",
+        "Gün ışığı süresi, rüzgâr ve soğuk cephe sıklığı verisi yok.",
+        "Kış ADR'si otel ve kiralık evi birleşik veriyor; mahalle kırılımı yok.",
+        "Kış fiyatları Ekim 2026'da sorulan tek bir anlık görüntü."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Kumsalda kazaklı bir silüet ve kahve fincanı; büyük yazı ‘$214 vs $501’, altında ‘winter vs summer, per night’."
+    },
+    {
+      "baslik_en": "Do You Need a Car on 30A? Golf Cart Laws, Grocery and ER Distances, and Traffic",
+      "baslik_tr": "30A'da arabaya ihtiyacınız var mı? Golf arabası kuralları, market ve acil servis mesafeleri, trafik",
+      "bolge": "30A geneli",
+      "aile": "Sorun çözen videolar",
+      "neden_onerildi": "Kanal planında ‘kiralık araba şart mı’ açıkça sorun çözen konu olarak geçiyor; yorumlarda trafik ve park şikâyeti sık. Elimizde golf arabası ve LSV hukuku (eyalet, ilçe, şerif), her mahalleden market, eczane ve acil sağlığa kuş uçuşu mesafe ortancaları, servisler, havalimanı uzaklıkları ve FDOT yol sayımları var.",
+      "izleyici_sorusu": "30A'da araba kiralamam şart mı, yoksa bisiklet, golf arabası ve servislerle idare edebilir miyim? Market ve hastane ne kadar uzakta?",
+      "kanca": {
+        "metin": "Walton County golf arabalarının ilçenin bakımını yaptığı kamu yollarında açıkça yasak olduğunu söylüyor; şerif ofisi ise hiçbir kamu yolunda yasal olmadığını yazıyor. 30A da bir ilçe yolu.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0790"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0791"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0001"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Golf arabası ve LSV: yasa ne diyor",
+          "ne_anlatir": "Eyalet kanunu, ilçenin ve şerifin açıklamaları; LSV'nin 35 mph ve altı yollarda, tescil ve sigortayla kullanılabildiği; bisiklet yolunda ve US 98'de yasak; LSV'de açık alkol cezası.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0784"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0786"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0787"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0788"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0790"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0791"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0792"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0793"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0794"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0111"}
+          ]
+        },
+        {
+          "bolum": "Bisiklet ve Timpoochee Trail",
+          "ne_anlatir": "Yolun uzunluğu iki resmî sayfada farklı (19 ve 18.5 mil; çelişki açıkça söylenir); çok amaçlı yollarda golf arabası kuralı; 30A'daki hız önerisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0781"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0782"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0783"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0789"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0795"}
+          ]
+        },
+        {
+          "bolum": "Market ve eczane ne kadar uzak",
+          "ne_anlatir": "Mahalle mahalle ilanların en yakın büyük süpermarket, yerel market ve eczaneye kuş uçuşu ortancası ve 1 mil içindeki ilan payı (‘yürüme mesafesi’ denmeden).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0708"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0710"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0733"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0738"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0743"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0748"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0764"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0769"}
+          ]
+        },
+        {
+          "bolum": "Acil sağlık",
+          "ne_anlatir": "Acil servis ve acil bakım merkezlerinin adresleri; batıdan doğuya acil servise kuş uçuşu ortancanın nasıl değiştiği.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0711"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0741"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0751"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0772"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0773"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0774"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0775"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0777"}
+          ]
+        },
+        {
+          "bolum": "Arabasız plaja gitmek: servisler ve park",
+          "ne_anlatir": "İki Park and Ride servisi, Seaside servisi, Seaside ve WaterColor'da ücretli park, Alys'te ücretsiz park yerleri; ilçe erişim otoparklarında gece park yasağı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0057"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0059"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0060"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0063"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0064"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0066"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0105"}
+          ]
+        },
+        {
+          "bolum": "Havalimanından gelmek",
+          "ne_anlatir": "ECP, VPS ve PNS'nin 30A'nın uçlarına kuş uçuşu uzaklığı; hangi uçtan girildiği.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0778"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0779"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0780"}
+          ]
+        },
+        {
+          "bolum": "Yol sayımları: 30A ve US 98",
+          "ne_anlatir": "2025 AADT: 30A sayım noktalarıyla US 98 sayım noktalarının farkı; trafiğin yaz aylarında yıllık ortalamaya oranı. Sıkışıklık ya da süre iddiası yapılmaz.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0807"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0816"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0819"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0806"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0811"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0257"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0277"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Sürüş süresi ve sıkışıklık ölçümü yok; mesafeler kuş uçuşu ve ‘yürüme mesafesi’ denemez.",
+        "Uber/Lyft ya da taksi bulunabilirliği, araç, bisiklet ve LSV kiralama ücretleri yok.",
+        "İlçenin golf arabasına açtığı bir yol bulunamadı; şerifin LSV yasak yollar haritası yalnız görüntü, yol listesi çıkarılmadı.",
+        "Publix, CVS, Winn-Dixie ve The Fresh Market gibi zincirlerin noktaları kendi sitelerinden doğrulanamadı.",
+        "Timpoochee Trail uzunluğu çelişkili; ilçenin resmî değeri bulunamadı."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Golf arabası silüetinin üstünde kırmızı soru işareti; yanında yol tabelası ‘COUNTY ROAD 30A’."
+    },
+    {
+      "baslik_en": "30A Beach Rules That Can Cost You $500: Flags, Tents, Dogs, Bonfires and More",
+      "baslik_tr": "30A'da size 500 dolara mal olabilecek plaj kuralları: bayraklar, çadırlar, köpekler, plaj ateşi ve dahası",
+      "bolge": "30A geneli",
+      "aile": "Sorun çözen videolar",
+      "neden_onerildi": "‘30A'da yapılan en büyük hatalar’ videosu 125 bin izlenmeyle sorun çözen formatın çalıştığını gösteriyor. Elimizde ilçenin 2025 tarihli plaj yönetmeliği, itfaiye bölgesinin bayrak ve ateş kuralları ve alkol kuralları madde madde var; her biri tatilcinin gün içinde karşılaştığı somut bir durum.",
+      "izleyici_sorusu": "30A plajında neye izin var, neye yok? Çadır, köpek, alkol, plaj ateşi ve bayraklar konusunda başımı belaya sokmamak için neyi bilmeliyim?",
+      "kanca": {
+        "metin": "Walton County'nin plaj yönetmeliğine göre bir kuralı çiğnemek ihlal başına 500 dolara kadar ceza; gece plajda bırakılan şemsiye ve sandalye terk edilmiş sayılıp ilçenin malı oluyor; itfaiye bölgesine göre izinsiz plaj ateşinin cezası 500 dolar.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0106"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0091"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0092"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0121"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Bayraklar ve cankurtaran",
+          "ne_anlatir": "Beş bayrağın anlamı, bayrağın ilçe genelindeki en kötü koşulu gösterdiği, günde iki kontrol, kapalı deniz emrine uyma zorunluluğu ve 2026 cankurtaran saatleri.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0112"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0113"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0114"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0115"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0116"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0117"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0118"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0102"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"}
+          ]
+        },
+        {
+          "bolum": "Çadır, şemsiye ve gece bırakılan eşya",
+          "ne_anlatir": "Çadır ve şemsiye ölçüleri, kara tarafındaki yarı kuralı ve Grayton istisnası, kumul mesafesi, gece eşya bırakma yasağı ve sonucu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0087"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0088"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0089"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0090"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0091"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0092"}
+          ]
+        },
+        {
+          "bolum": "Köpekler",
+          "ne_anlatir": "Halka açık plajlarda hayvan yasağı ve köpek izninin yalnız ilçe mülk sahiplerine ve daimi sakinlere verildiği; tatilci için ne anlama geldiği.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0084"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0085"}
+          ]
+        },
+        {
+          "bolum": "Alkol ve cam",
+          "ne_anlatir": "Cam yasağı; ilçe yönetmeliğinde alkol hükmü olmadığı ama turizm dairesinin kutu ve plastik şartı; eyalet parklarında alkol yasağı; 21 yaş; golf arabası ve LSV'de açık kap.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0086"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0107"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0108"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0109"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0110"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0111"}
+          ]
+        },
+        {
+          "bolum": "Plaj ateşi ve ızgara",
+          "ne_anlatir": "İzin şartı ve yaş sınırı, mevsime göre saatler, mesafeler, kömür ızgara yasağı ve ceza.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0093"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0094"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0095"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0096"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0097"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0119"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0120"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0121"}
+          ]
+        },
+        {
+          "bolum": "Kum çukuru, kürek, havai fişek ve kamp",
+          "ne_anlatir": "Çukur ölçüsü ve doldurma zorunluluğu, metal kürek yasağı, kişisel havai fişek yasağı, plajda ve otoparkta gece kalma yasağı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0100"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0101"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0098"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0099"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0105"}
+          ]
+        },
+        {
+          "bolum": "Kaplumbağa sezonu ve kuralların geçtiği yer",
+          "ne_anlatir": "1 Mayıs–31 Ekim yuvalama sezonu ve gece kuralları; kuralların Highway 20'nin güneyinde geçerli olduğu; özel topluluk plajlarının ayrıca kendi kuralları olduğu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0103"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0104"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0083"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0065"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Kaplumbağa sezonunda kiralık evlerin dış aydınlatma kuralları ayrı yönetmelikte; aranmadı.",
+        "Ceza tutarlarını belirleyen kurul kararları ve Resolution 2021-151 metni alınmadı.",
+        "Yönetmeliğin hangi kıyı kesiminde ‘ilçe plajı’ sayıldığını belge göstermiyor.",
+        "Özel topluluk plajlarının (Alys, Rosemary, Seaside, WaterColor) kendi kuralları toplanmadı.",
+        "Akıntı kaynaklı olay veya kurtarma istatistiği yok."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Kumda yan yana kırmızı ve mor bayrak; büyük yazı ‘$500’, altında ‘per violation’."
+    },
+    {
+      "baslik_en": "Staying in Seaside, the Truman Show Town on 30A: What to Expect",
+      "baslik_tr": "30A'daki Truman Show kasabası Seaside'da kalmak: neyle karşılaşırsınız",
+      "bolge": "Seaside",
+      "aile": "Bölgesel derin rehberler",
+      "neden_onerildi": "Bölgesel rehberler kanalın omurgası; araştırmada mahalle talebi Seaside, Rosemary ve Alys'te toplanıyor ve ‘seaside florida’ araması The Truman Show ile bağlantılı. Merak kapısı filmden açılır, içerik ise plaj erişimi, park, konaklama fiyatı, yemek ve günlük ihtiyaçlarla tatil kararına döner. Mahalle-rehberi şablonuyla kurulabilir. Seaside'ın diğer konuları (arabasız tatil, aileler, nerede yenir) sonraki videolara kalır.",
+      "izleyici_sorusu": "Seaside'da kalmak nasıl bir deneyim: plaja, yemeğe ve markete nasıl ulaşırım, bir hafta ne tutar, kimler için uygun?",
+      "kanca": {
+        "metin": "The Truman Show 1997'de Seaside'da çekildi ve 400.000 dolarlık çekim ücreti kasabanın okulunun yapımında kullanıldı. Bugün ilçenin halka açık plaj erişimi listesinde Seaside'da nokta yok ve Temmuz 2027 haftası için sorduğumuz 97 evin vergi ve ücret dahil haftalık ortancası yaklaşık $8,680.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0839"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0042"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Seaside nasıl doğdu",
+          "ne_anlatir": "1946'da alınan arazi, Robert ve Daryl Davis, Duany ve Plater-Zyberk; inşaat yılındaki çelişki (1981 / 1982) açıkça söylenir; Truman Show (ikincil kaynak olarak).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0836"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0837"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0838"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0839"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0843"}
+          ]
+        },
+        {
+          "bolum": "Plaj erişimi, park ve servis",
+          "ne_anlatir": "İlçe listesinde Seaside'da halka açık erişim olmadığı, ıslak kum kuralı, saatlik ücretli park ve Highway 331'den ücretsiz servis; kalmayanlar için yakındaki seçenekler.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0042"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0082"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0063"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0044"}
+          ]
+        },
+        {
+          "bolum": "Konaklama: ay ay ve oda sayısına göre",
+          "ne_anlatir": "Temmuz 2027 aramasında görünen ilan sayısı; 12 ayın haftalık ortancası ve çeyrekleri; Ocak ve Temmuz'da oda gruplarına göre fiyat.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0026"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0352"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0354"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0360"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0482"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0486"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0487"}
+          ]
+        },
+        {
+          "bolum": "Yemek",
+          "ne_anlatir": "Seaside'daki 19 restoran; fiyatı hesaplanabilen 10'unun seviyeleri, çevrimiçi rezervasyon ve çocuk menüsü sayıları; taco barından fine dining'e örnekler.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0586"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0587"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0592"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0593"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0676"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0677"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0678"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0680"}
+          ]
+        },
+        {
+          "bolum": "Market, eczane ve acil sağlık",
+          "ne_anlatir": "İlanların büyük süpermarkete ve yerel markete yakınlığı; eczane ve acil servisin kuş uçuşu uzaklığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0738"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0739"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0740"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0741"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0742"}
+          ]
+        },
+        {
+          "bolum": "Yıl boyu etkinlikler",
+          "ne_anlatir": "Şubat yarı maratonundan yılbaşına Seaside'ın tekrarlayan etkinlikleri; Escape to Create'in 2027'de olmadığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0241"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0244"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0245"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0246"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0249"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0250"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0251"}
+          ]
+        },
+        {
+          "bolum": "Ne zaman gidilir (30A geneli)",
+          "ne_anlatir": "30A genelinden etiketli olarak: turist vergisi deseni, hava ve deniz suyu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0217"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0213"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0129"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0190"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Seaside'ın saatlik park ücreti tutarı yok; kaynak sayfada tarih tutarsızlığı var.",
+        "Seaside'da kalan kiracıların özel plaj erişimine ilişkin kurallar resmî kaynaktan okunmadı.",
+        "Truman Show bilgisi yalnız ikincil kaynakta (CNU); Seaside'ın kendi sitesinde yok.",
+        "Bu çalışmada mahalle özeti verilmedi; restoran saatleri, plaj erişim olanakları ve bisiklet kiralama mesafesi mahalle paketinde gelecek.",
+        "Yürünebilirlik ölçülmüyor; kasabanın içinde yürüyerek yaşamayı yalnız kuş uçuşu mesafelerle anlatabiliriz.",
+        "Restoranların 9'unda fiyat seviyesi hesaplanamadı."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "seaside"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Pastel renkli Seaside evleri önünde büyük yazı ‘THE TRUMAN SHOW TOWN’, köşede küçük bir 30A harita işareti ve ‘$8,680/wk*’."
+    },
+    {
+      "baslik_en": "Why People Pay So Much to Stay in Rosemary Beach, 30A — and What They Get",
+      "baslik_tr": "İnsanlar Rosemary Beach'te kalmak için neden bu kadar ödüyor ve karşılığında ne alıyor",
+      "bolge": "Rosemary Beach",
+      "aile": "Bölgesel derin rehberler",
+      "neden_onerildi": "Rosemary hakkındaki merak videosu 173 bin izlenme ve 772 yorum aldı; yorumlar fiyat, özel plaj ve ‘bu kasaba kimin için’ etrafında. Kanal planındaki örnek paketleme bu. Video ‘neden’ sorusunu kanıtın taşıyabildiği kadar cevaplar: fiyatı, plaj erişimini, yemeği ve günlük ihtiyaçları gösterir. Not: Temmuz ortancasında WaterColor ve Seaside Rosemary'den yüksek; video Rosemary'yi ‘en pahalı’ diye sunmamalı.",
+      "izleyici_sorusu": "Rosemary Beach parasına değer mi: orada kalınca plaja, yemeğe, markete nasıl ulaşırım ve aynı paraya başka yerde ne bulurum?",
+      "kanca": {
+        "metin": "Rosemary Beach'te ilçenin halka açık plaj erişimi listesinde nokta yok. Temmuz 2027 haftası için sorduğumuz 91 evin vergi ve ücret dahil haftalık ortancası yaklaşık $7,223; aynı hafta Seagrove'daki 262 evin ortancası yaklaşık $5,234.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Rosemary Beach nasıl planlandı",
+          "ne_anlatir": "DPZ'nin 1995 tasarımı, New Urbanism bağlamı, resmî dizindeki etiketleri.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0840"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0837"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0843"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0018"}
+          ]
+        },
+        {
+          "bolum": "Plaj erişimi ve park",
+          "ne_anlatir": "Halka açık erişim olmadığı, Barrett Square dükkân otoparkı, ıslak kum kuralı; yakın Inlet Beach erişimleri (yaklaşık eşleme olarak).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0052"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0067"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0082"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0050"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0832"}
+          ]
+        },
+        {
+          "bolum": "Bir hafta ne tutar",
+          "ne_anlatir": "Görünen ilan sayısı, 12 ayın ortancası ve geniş çeyrek aralığı, oda gruplarına göre Ocak ve Temmuz fiyatları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0031"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0412"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0414"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0420"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0522"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0526"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0528"}
+          ]
+        },
+        {
+          "bolum": "Aynı paraya başka yerde",
+          "ne_anlatir": "Temmuz haftasında yeterli örnekli komşu mahallelerin ortancaları (Seagrove, Seacrest, Inlet Beach, Seaside, WaterColor); karşılaştırma yalnız 20+ ilanlı hücrelerle.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0370"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0394"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0430"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0346"}
+          ]
+        },
+        {
+          "bolum": "Yemek",
+          "ne_anlatir": "12 restoran; fiyatı hesaplanabilen 3'ünün seviyeleri, çevrimiçi rezervasyon ve çocuk menüsü sayısı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0626"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0627"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0632"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0633"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0701"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0702"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"}
+          ]
+        },
+        {
+          "bolum": "Günlük ihtiyaçlar ve sağlık",
+          "ne_anlatir": "Yerel markete yakınlık, büyük süpermarket ve eczane uzaklığı, acil bakım merkezine yakınlık ve acil servisin uzaklığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0763"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0764"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0765"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0766"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0767"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0777"}
+          ]
+        },
+        {
+          "bolum": "Etkinlikler ve ulaşım",
+          "ne_anlatir": "Rosemary Beach Uncorked ve Şükran Günü koşusu; ECP havalimanına yakınlık ve 30A'nın doğu ucundaki yol sayımı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0247"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0248"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0778"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0809"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Topluluk derneğinin (RBPOA) resmî park ve plaj kuralları bulunamadı; ziyaretçi park bilgisi 2023 tarihli ilçe rehberinden.",
+        "Kiracılara verilen park kartı ve özel plaj erişimi ayrıntısı yok.",
+        "12 restoranın 9'unda fiyat seviyesi hesaplanamadı.",
+        "‘Neden pahalı’ sorusunu açıklayacak değişkenler (ev büyüklüğü, plaja mesafe, mimari kod, otel fiyatları) toplanmadı; video fiyatı gösterir, nedenini kanıtla açıklayamaz.",
+        "Bu çalışmada mahalle özeti verilmedi; restoran saatleri ve bisiklet kiralama mesafesi mahalle paketinde gelecek."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Rosemary Beach'in taş döşeli sokağı ve kuleli evleri; büyük yazı ‘WORTH IT?’ ve fiyat etiketi ‘$7,223/wk*’."
+    },
+    {
+      "baslik_en": "East 30A vs West 30A: Beaches, Prices, Groceries and Hospitals Compared",
+      "baslik_tr": "Doğu 30A ile Batı 30A: plajlar, fiyatlar, marketler ve hastaneler karşılaştırması",
+      "bolge": "30A geneli",
+      "aile": "Karşılaştırmalar",
+      "neden_onerildi": "Kanal planı karşılaştırmaları sonraki katman sayıyor; bu yüzden listede tek karşılaştırma var ve bölge rehberlerinden sonra yayımlanması önerilir. Rakip rehberin ‘batıyı unuttun’ diye eleştirilmesi bir boşluk; elimizde iki yarıyı plaj erişimi, fiyat, acil sağlık, market, havalimanı ve trafik sayımıyla yan yana koyacak veri var.",
+      "izleyici_sorusu": "30A'nın doğusunda mı batısında mı kalmalıyım; plaj, fiyat, market ve hastane açısından fark ne?",
+      "kanca": {
+        "metin": "OpenStreetMap'e göre Dune Allen'daki ilanların en yakın acil servise kuş uçuşu ortancası 3.9 mil, WaterSound'da 15.31 mil. Halka açık erişim listesinde batıdaki Dune Allen'a kaynaklı eşlemeyle 5 erişim düşüyor; doğudaki Rosemary ve Alys'e hiç.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0711"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0751"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0034"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0048"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Doğu ve batı nereden ayrılır",
+          "ne_anlatir": "Yolun FDOT'taki batı ve doğu kesimleri ve 13 mahallenin sıralaması; ayrımın editoryal tanım olduğu açıkça söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0001"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0006"}
+          ]
+        },
+        {
+          "bolum": "Karakter",
+          "ne_anlatir": "Resmî dizinin etiketleriyle iki yarının karakteri (sakin, yürünebilir, mimari, yemek).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0007"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0010"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0011"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0017"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0018"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0019"}
+          ]
+        },
+        {
+          "bolum": "Plaj erişimi",
+          "ne_anlatir": "Mahalleye düşen halka açık erişimler ve ADA olanaklı bölgesel erişimlerin iki yarıya dağılımı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0034"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0039"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0040"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0045"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0048"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0050"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0828"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0832"}
+          ]
+        },
+        {
+          "bolum": "Fiyatlar",
+          "ne_anlatir": "Ocak ve Temmuz haftalık ortancaları, yalnız yeterli örnekli hücrelerle; Gulf Place ve Alys karşılaştırmaya girmez.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0280"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0286"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0322"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0334"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0382"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0394"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0430"}
+          ]
+        },
+        {
+          "bolum": "Market, eczane ve acil sağlık",
+          "ne_anlatir": "İki yarıda büyük süpermarket, eczane, acil servis ve acil bakıma kuş uçuşu ortancalar; doğudaki acil servisin bölge kutusunun dışında Panama City Beach'te olduğu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0708"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0711"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0726"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0763"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0766"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0772"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0773"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0774"}
+          ]
+        },
+        {
+          "bolum": "Yemek",
+          "ne_anlatir": "Mahalle başına restoran sayısı ve fiyat seviyesi dağılımı iki yarıda.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0538"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0554"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0570"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0618"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0626"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0634"}
+          ]
+        },
+        {
+          "bolum": "Havalimanı ve yol",
+          "ne_anlatir": "VPS batı ucuna, ECP doğu ucuna yakın; 30A'nın batı ve doğu uç sayımları ve bitişik US 98 sayımları (sıkışıklık iddiası olmadan).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0778"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0779"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0807"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0809"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0812"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0820"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Doğu ile batı arasında resmî bir sınır yok; ayrım editoryal olarak tanımlanmalı ve videoda söylenmeli.",
+        "Sürüş süresi yok; mesafeler kuş uçuşu.",
+        "Gulf Place fiyatları küçük örnek, Alys fiyatları kendi envanteri; ikisi fiyat karşılaştırmasına girmez.",
+        "Restoranların yaklaşık yarısında fiyat seviyesi hesaplanamadı.",
+        "Plajın kendisine ilişkin (kum, kalabalık, su) karşılaştırılabilir ölçüm yok."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Ortadan ikiye bölünmüş 30A haritası; sol yarı mavi ‘WEST’, sağ yarı turuncu ‘EAST’, ortada büyük ‘VS’."
+    },
+    {
+      "baslik_en": "What Eating Out on 30A Really Costs: Menu Prices Town by Town",
+      "baslik_tr": "30A'da dışarıda yemek gerçekte ne tutar: kasaba kasaba menü fiyatları",
+      "bolge": "30A geneli",
+      "aile": "Deneyim",
+      "neden_onerildi": "Yorumlarda restoran beklemeleri, rezervasyon ve sağlıklı yemek soruluyor; tatil bütçesinin ikinci büyük kalemi yemek. Elimizde 13 mahallede işletmelerin kendi sitelerindeki menülerden hesaplanmış ana yemek ortancaları, çevrimiçi rezervasyon ve çocuk menüsü bilgisi var. Sıralama yapılmaz; kasabaların yemek karakteri ve fiyat aralığı gösterilir.",
+      "izleyici_sorusu": "30A'da dışarıda yemek ne kadar tutar, hangi kasabada ne tür yerler var, çocuklu aile olarak nereye gidebiliriz?",
+      "kanca": {
+        "metin": "İşletmelerin kendi sitelerindeki menülere göre ana yemek ortancası Seaside'daki Bud & Alley's Taco Bar'da yaklaşık $9, Rosemary Beach'teki Restaurant Paradis'te yaklaşık $47. Menüsünü okuyabildiğimiz 30A restoranları bu aralıkta nereye düşüyor?",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0678"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Fiyatları nasıl okuduk",
+          "ne_anlatir": "Ana yemek ortancası ve dört seviyenin sınırları (bizim sınıflamamız); seviyesi hesaplanamayan restoranlar ve nedeni.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0554"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0555"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0642"}
+          ]
+        },
+        {
+          "bolum": "Batı 30A: Dune Allen'dan Blue Mountain'a",
+          "ne_anlatir": "Dune Allen, Gulf Place, Santa Rosa Beach ve Blue Mountain'daki restoran sayıları ve örnek menü ortancaları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0538"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0546"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0562"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0643"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0645"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0651"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0653"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0658"}
+          ]
+        },
+        {
+          "bolum": "Grayton Beach ve WaterColor",
+          "ne_anlatir": "Grayton'un 15 restoranı ve seviyeleri, WaterColor'ın 5 restoranı; örnek ortancalar.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0570"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0578"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0661"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0662"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0669"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0670"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0672"}
+          ]
+        },
+        {
+          "bolum": "Seaside ve Seagrove",
+          "ne_anlatir": "Her iki kasabada dört seviyenin de bulunduğu; ucuzdan pahalıya örnekler.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0586"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0594"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0676"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0677"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0678"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0685"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0689"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0691"}
+          ]
+        },
+        {
+          "bolum": "Doğu 30A: WaterSound'dan Inlet Beach'e",
+          "ne_anlatir": "WaterSound, Seacrest, Alys, Rosemary ve Inlet Beach'te restoran sayıları ve örnek ortancalar.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0602"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0610"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0618"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0626"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0634"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0694"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0697"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0700"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0706"}
+          ]
+        },
+        {
+          "bolum": "Çocuklu aileler ve rezervasyon",
+          "ne_anlatir": "Mahalle başına çocuk menüsü ve çevrimiçi rezervasyon bulunan restoran sayısı; bulunamayan olanak için ‘yok’ denmez.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0577"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0593"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0592"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0600"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0633"}
+          ]
+        },
+        {
+          "bolum": "İçki: plajda, parkta ve yolda",
+          "ne_anlatir": "Plajda kutu ve plastik şartı, eyalet parklarında alkol yasağı, 21 yaş ve LSV'de açık kap cezası.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0108"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0109"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0110"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0111"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Restoranların yaklaşık yarısında (72/138) fiyat seviyesi hesaplanamadı; mahalle sayılarının toplamı (141) ile boşluk notu (138) arasındaki fark kontrol edilmeli.",
+        "Rezervasyon yalnız çevrimiçi rezervasyon olarak sayıldı; bekleme listesi ve sıra uygulaması bu özette yok.",
+        "Çalışma saatleri, kahvaltı ve öğle ayrımı bu özette yok.",
+        "İçki, bahşiş ve vergi dahil gerçek hesap tutarı yok; yalnız ana yemek ortancası.",
+        "Kalite, yorum veya popülerlik verisi kullanılmıyor; ‘en iyi’ listesi yapılamaz.",
+        "Market fiyatları yok; evde yemek seçeneğiyle karşılaştırılamıyor."
+      ],
+      "sablon": null,
+      "parametreler": {},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Açık bir menü kâğıdı, iki fiyat daire içinde: ‘$9’ ve ‘$47’; başlık ‘SAME ROAD’."
+    }
+  ]
+}

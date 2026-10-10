@@ -4,10 +4,12 @@
 
 ```text
 tag v0.14.0 -> 9adc235661700dbe0f0bf117fa532f86149a79c1
-main -> 9adc235661700dbe0f0bf117fa532f86149a79c1
+main -> a85431167e1ccacd88467dae539e1f46aa7817eb
 app 0.14.0
 schema 14
 ```
+
+10 Ekim 2026'da GÖREV-13 Adım 1 ile main `a854311`'e (GÖREV-12) fast-forward edildi; etiket konmadı (GÖREV-12 uygulama sürümünü değiştirmedi; v0.15.0 etiketi bir sonraki görevin ilk adımında konacak). Görev dalı CI (38061251798) ve main CI (38066733163) başarılı.
 
 10 Ekim 2026'da GÖREV-12 Adım 1 ile main `9adc235`'e (GÖREV-11) fast-forward edildi ve bu commit'e açıklamalı `v0.14.0` etiketi konuldu ("v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar"). Görev dalı CI (38054575393), main CI (38058332541) ve etiket CI (38058336127) başarılı.
 
@@ -28,12 +30,25 @@ schema 14
 ## Aktif branch
 
 ```text
-gorev-12-yazar-ozeti
-app 0.14.0
-schema 14
+gorev-13-claude-baslik
+app 0.15.0
+schema 15
 ```
 
 Bu dal:
+- programın içinde Claude'u kurar: Claude Code çalıştırıcısı (Housing Atlas'tan; yalıtım, akış, ölçüm, Türkçe hatalar, talimat SHA-256'ları), Ayarlar → Claude (genel ve adım başına model, efor, tur sınırı; `<veri>/ayarlar.json`), adım çerçevesi ve onay ekranı (Seç, Düzeltme iste, Reddet), video kaydı (şema 15: `claude_runs`, `videos`, `evidence_packs.video_id`),
+- ilk Claude adımı "Konu ve başlık önerisi" ve Videolar ekranı; talimatlar `thirty_a_claude/ortak.md` ve `baslik.md` (aynen), kanal planı KONSEPT.md'ye Ek C olarak, kanal araştırması repoda,
+- videonun kanıt paketi: başında analiz, kanıtlar yeni paketteki kimlikleriyle,
+- küçük düzeltmeler: restoran saatlerinde boş gün yazılmaz, havalimanı uzaklıkları mil (km dönüşüm), paket listesinde mahalle adı,
+- gerçek veride iki gerçek çalışma (30A geneli 11 aday, Rosemary Beach 10 aday; ikisi de onay bekliyor); main'e alınmadı.
+
+Test:
+- 768 Python
+- 64 frontend
+
+---
+
+Önceki aktif dal `gorev-12-yazar-ozeti` (10 Ekim 2026'da main'e alındı; etiket konmadı):
 - kanıt paketinden **yazar özeti** üretir (aynı üretim, aynı paket nesnesi; Türkçe, ABD birimleriyle; tablolar ve K kimlik aralıkları; blok başına bir kez kullanım notu; kaynak listesi),
 - sayı listesini ayrı CSV'ye taşır ve yalnız yapılandırılmış alanlardan üretir (`ek_degerler`); ad, adres, yol ve karar numarası gürültüsü kalktı (ilk video: 3.003 → 1.723 sayı),
 - şablonlara oynak konuları ekler; plaj erişimi hukuku ve çelişkili satırlar paketin ve özetin başında "yayından önce kontrol" listesinde,
@@ -380,7 +395,14 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
 
-## GÖREV-12 — yazar özeti, ayrı sayı listesi, oynak konular (dal)
+## GÖREV-13 — programın içinde Claude: çalıştırıcı, ayarlar, onay ekranı, video kaydı, konu ve başlık önerisi (dal)
+
+Dal: `gorev-13-claude-baslik`, uygulama 0.15.0, şema 15.
+
+- Gerçek çalışmalar (Opus 5.5, yüksek efor, Claude Code 2.1.284): 30A geneli 11 aday, 7 aile, 8'i yeni şablon gerektiriyor, 9 dk, 5 tur, 371 bin girdi / 65 bin çıktı token, maliyet karşılığı 2,55 $; Rosemary Beach 10 aday, 3'ü yeni şablon gerektiriyor, 7,5 dk, 6 tur, 460 bin / 53 bin token, 2,36 $. İki çalışmada da doğrulama sorunu ve reddedilen araç çağrısı yok; ikinci çalışma birincinin başlıklarını tekrar etmedi.
+- Gerçek DB: `data/` tam yedeği (`work/yedek/20261010-1947/`), v14 → v15, `claude_runs` 2, `evidence_packs` 4 → 6, `jobs` 33 → 35; `integrity_check` ok, `foreign_key_check` boş. Toplayıcı çalışmadı.
+
+## GÖREV-12 — yazar özeti, ayrı sayı listesi, oynak konular (main'e alındı)
 
 Dal: `gorev-12-yazar-ozeti`, uygulama 0.14.0, şema 14 (değişmedi), paket biçimi `30a-studio-kanit-paketi/2`.
 

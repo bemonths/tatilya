@@ -1,0 +1,1000 @@
+{
+  "surum": 1,
+  "adim": "baslik",
+  "notlar": [
+    "Bütün adaylar Rosemary Beach hakkındadır. Daha önce önerilen 'Why People Pay So Much to Stay in Rosemary Beach, 30A — and What They Get' başlığı mahallenin tam rehberini ve 'neden bu kadar pahalı' açısını zaten kapsadığı için burada ikinci bir tam rehber önermedim; adaylar mahallenin konu evreninin diğer parçalarına (plaj erişimi, arabasız tatil, yemek, aileler, belirli dönem, bütçe, karşılaştırma, kuruluş hikâyesi) dağıtıldı.",
+    "Mevcut şablonla kurulur dediğim adaylarda Rosemary'ye özgü bölümler mahalle-rehberi (rosemary-beach) paketinden gelir. Bazı bölümler (plaj hukuku, golf arabası kuralları, okul takvimleri, bölgesel erişimlerin olanakları, komşu mahallelerin restoranları) yalnız ilk-video paketinde (veri_ozeti_30a.md) var; bu adaylarda o paketin de yanına alınması gerekir. Hangi bölümün hangi pakete dayandığı içerik planındaki kanıtlarda görülüyor.",
+    "Rosemary Beach'in kiralık ev fiyatları 7 gecelik, vergi ve ücretler dahil toplamların ortancasıdır (K0034–K0053, veri_ozeti_mahalle.md). Kullanım notu gereği videoda 'bir hafta $X tutar' denmez; kaç ilandan hesaplandığı ve çeyrekler söylenir.",
+    "Günlük ihtiyaç mesafeleri kuş uçuşudur; hiçbir adayda 'yürüme mesafesi' ya da süre iddiası yapılmamalı.",
+    "veri_ozeti_30a.md'deki K0081 ('özel plaj kalmadı' iddiası) videoda kullanılmaz; K0080 çelişkilidir, kullanılırsa çelişki söylenmelidir. Plaj erişimiyle ilgili adaylarda bunlara dayanmadım.",
+    "Rosemary Beach'in kendi misafirlerine açık özel plaj erişimleri hakkında (kaç tane, kimler kullanabilir) elimizde kaynaklı satır yok. Bu boşluk plaj erişimi, aileler ve yazın Rosemary adaylarını en çok etkileyen eksik veridir."
+  ],
+  "adaylar": [
+    {
+      "baslik_en": "Rosemary Beach Has No Public Beach Access. So How Do You Get to the Sand on 30A?",
+      "baslik_tr": "Rosemary Beach'te halka açık plaj erişimi yok. 30A'da kuma nasıl ulaşırsınız?",
+      "bolge": "Rosemary Beach",
+      "aile": "Sorun çözen videolar",
+      "neden_onerildi": "Kanal araştırmasına göre izleyicinin en çok tartıştığı konu halka açık ve özel plaj ayrımı; Rosemary de yorumlarda özel plaj örneği olarak geçiyor. Elimizde Rosemary'ye özgü net bir bulgu var: ilçenin halka açık erişim listesinde Rosemary'ye düşen erişim sıfır, ama ilanların ortancası en yakın halka açık erişime kuş uçuşu 0.37 mil. 30A genelindeki plaj erişimi videosundan farkı, tek bir mahallede kalacak birinin pratik sorusuna cevap vermesi.",
+      "izleyici_sorusu": "Rosemary Beach'te kalırsam ya da günübirlik gidersem plaja nereden, nasıl girerim; kumun hangi kısmında durabilirim?",
+      "kanca": {
+        "metin": "Walton County'nin halka açık plaj erişimi listesinde Rosemary Beach'e düşen erişim sayısı sıfır; buna karşın Rosemary'deki ilanların ortancası, ilçe listesindeki en yakın halka açık erişime kuş uçuşu yaklaşık 0.37 mil uzakta ve ilanların %93'ü 1 mil içinde.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0002"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0081"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Sıfır erişim ne demek",
+          "ne_anlatir": "İlçenin halka açık erişim listesinde Rosemary'ye eşlenen erişim yok; Visit South Walton'ın 2023 otopark rehberi de mahallede halka açık plaj erişimi listelemiyor. Listenin topluluğun kendi misafirlerine açık özel erişimleri içermediği söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0002"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0005"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"}
+          ]
+        },
+        {
+          "bolum": "Islak kum, kuru kum ve bugünkü hukuki durum",
+          "ne_anlatir": "Ortalama yüksek su çizgisinin altı halka açık, üstündeki kuru kumun bir kısmı özel; 2017 ilçe kararı, 2018 kanunu, 2025'teki kaldırma ve Şubat 2026 temyiz kararıyla bugün ne yürürlükte, ne değil. 26 mil boyunca ıslak kumda yürünebileceği bilgisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0007"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0069"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0070"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0071"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0074"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0077"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0078"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0056"}
+          ]
+        },
+        {
+          "bolum": "En yakın halka açık erişimler",
+          "ne_anlatir": "İlanlardan en yakın halka açık erişime kuş uçuşu ortanca mesafe; komşu Inlet Beach'e kaynaklı eşlemeyle düşen iki erişim ve Inlet Beach bölgesel erişiminin listede yazan olanakları (ADA tuvalet, yürüyüş yolu, otopark, plaj tekerlekli sandalyesi). Bölgesel erişim ile mahalle erişimi farkı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0081"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0050"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0832"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0054"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0055"}
+          ]
+        },
+        {
+          "bolum": "Günübirlik gelen için park",
+          "ne_anlatir": "Ziyaretçi için kaynaklı tek bilgi: Barrett Square boyunca ilk gelen alır esasıyla dükkân otoparkı (2023 rehberi, ücret ve süre yok). Kiracılara park kartı verildiği bilgisi. Bilginin tarihi açıkça söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0006"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0067"}
+          ]
+        },
+        {
+          "bolum": "Yürümekte zorlananlar için",
+          "ne_anlatir": "İlçe listesinde Rosemary'ye düşen ADA olanaklı ya da plaj tekerlekli sandalyeli erişim yok; ücretsiz plaj tekerlekli sandalyesinin verildiği yerler ve dönem (1 Mart–31 Ekim), en yakını Inlet Beach.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0003"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0004"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0821"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0822"}
+          ]
+        },
+        {
+          "bolum": "Kuma çıkınca: bayraklar, cankurtaran, kurallar",
+          "ne_anlatir": "Bayrak renkleri ve bayrağın ilçe genelindeki en tehlikeli koşulu gösterdiği; 2026 cankurtaran sezonu ve saatleri; cam yasağı ve çadır kuralları (çadır kurallarının ilçe plajları için yazıldığı uyarısıyla).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0112"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0114"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0115"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0117"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0086"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0087"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Rosemary Beach'in kiracılarına ve sakinlerine açık özel plaj erişimleri (sayı, yer, kullanım koşulu) için kaynaklı satır yok; 'Rosemary'de kalırsanız plaja şuradan girersiniz' denemez.",
+        "Ziyaretçi otoparkı bilgisi 2023 tarihli ve ücret ya da süre sınırı vermiyor.",
+        "En yakın halka açık erişim mesafesi ilanlardan hesaplanmış kuş uçuşu ortancadır; kasaba merkezinden ya da yürüyüş yolu üzerinden mesafe yok.",
+        "Rosemary önündeki kumda cankurtaran kulesi olup olmadığı bilinmiyor."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Kumsalın kuşbakışı görüntüsü, ıslak kum ile kuru kum arasına çizilmiş ince bir çizgi; üstte büyük '0 PUBLIC ACCESSES', altta küçük 'Rosemary Beach, 30A'."
+    },
+    {
+      "baslik_en": "30A's Rosemary Beach in November: Uncorked, a Thanksgiving 10K and Roughly Half July's Rent",
+      "baslik_tr": "Kasımda 30A'nın Rosemary Beach'i: Uncorked, Şükran Günü 10K koşusu ve temmuzun yaklaşık yarısı kira",
+      "bolge": "Rosemary Beach",
+      "aile": "Sezon ve zamanlama",
+      "neden_onerildi": "Konu motorunda 'Rosemary Beach × belirli bir ay' boş ve zamanlaması iyi: bugün 10 Ekim 2026, Kasım yaklaşıyor. Rosemary'de Kasımda iki tekrarlanan etkinlik var (14 Kasım Uncorked, 26 Kasım Şükran Günü 10K). Kasım haftasının fiyat ortancası temmuzunkinin yaklaşık yarısı; buna karşılık deniz soğuyor ve cankurtaran sezonu bitmiş oluyor. Bu, kalabalık ve fiyattan kaçmak isteyen izleyici için gerçek bir takas kararı.",
+      "izleyici_sorusu": "Kasımda Rosemary Beach'e gitmek mantıklı mı; ne kazanırım, nelerden vazgeçerim?",
+      "kanca": {
+        "metin": "Kiralama şirketlerinin sitelerinde 9 Ekim 2026'da sorduğumuz Rosemary evlerinde Kasım 2026 haftasının vergi ve ücretler dahil ortancası yaklaşık $3,727 (48 ilan), Temmuz 2027 haftasınınki yaklaşık $7,223 (91 ilan); aynı ay Rosemary'de Uncorked (14 Kasım) ve Şükran Günü 10K'sı (26 Kasım) var.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0034"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0042"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0083"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0084"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Kasımda bir haftanın fiyatı",
+          "ne_anlatir": "Kasım ortancası ve çeyrekleri ($2,491–$6,264), Aralık ve Ekim'le yan yana; temmuzla oran. Kaç ilandan hesaplandığı ve vergilerin %94'te dahil olduğu söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0034"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0035"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0045"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0042"}
+          ]
+        },
+        {
+          "bolum": "Hava ve deniz",
+          "ne_anlatir": "Destin istasyonunun 1991–2020 Kasım normalleri (en yüksek 72.1 °F, en düşük 53 °F, yağış, yağışlı gün) ve Panama City Beach istasyonunda Kasım deniz suyu ortalaması 70.3 °F; istasyonların 30A içinde olmadığı söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0095"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0107"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0119"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0131"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0155"}
+          ]
+        },
+        {
+          "bolum": "Rosemary'nin Kasım etkinlikleri",
+          "ne_anlatir": "Rosemary Beach Uncorked'un 15. yılı (14 Kasım 2026) ve 30A 10K Thanksgiving Day Races (26 Kasım 2026); aynı ay 30A'daki Seaside etkinlikleri (Seeing Red Wine Festival, Holiday Parade) bağlam olarak.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0083"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0084"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0246"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0249"}
+          ]
+        },
+        {
+          "bolum": "Kalabalık: Kasım ne kadar sakin",
+          "ne_anlatir": "South Walton turist vergisi tahsilatında Kasımın payı %3 (FY2021–FY2025 ortalaması), Temmuzun %20; sonbahar 2025 doluluk ve ortalama günlük fiyat.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0158"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0166"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0226"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0227"}
+          ]
+        },
+        {
+          "bolum": "Kasımda değişen kurallar ve hizmetler",
+          "ne_anlatir": "2026 cankurtaran sezonu 31 Ekim'de bitiyor; ücretsiz plaj tekerlekli sandalyesi 1 Mart–31 Ekim arası; Kasım–Şubat plaj ateşi saatleri; kasırga sezonunun resmî bitişi 30 Kasım.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0821"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0096"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0206"}
+          ]
+        },
+        {
+          "bolum": "Kasımda nerede yenir",
+          "ne_anlatir": "Restoranların sitelerinde yazan saatler (ör. Edward's, Restaurant Paradis, Summer Kitchen Café) ve rezervasyon durumu; saatlerin mevsime göre değişip değişmediğinin bilinmediği uyarısı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0066"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0071"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0072"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Şükran Günü haftasının fiyatı ayrıca sorgulanmadı; Kasım ortancası tek bir pencereye dayanır, tatil haftası daha pahalı olabilir.",
+        "Rosemary restoranlarının kış ya da sezon dışı saatleri ayrıca toplanmadı.",
+        "Kasım için okul tatili takvimi (Şükran Günü haftası) veride yok.",
+        "10K parkuru ve etkinlik günlerinde park düzeni okunmadı."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Sakin bir Kasım öğleden sonrası, boş kumsal; iki büyük etiket: 'JULY $7,223' üstü çizili, yanında 'NOV $3,727'; köşede küçük 'median week, Rosemary Beach'."
+    },
+    {
+      "baslik_en": "Rosemary Beach in Summer: What Peak Season on 30A Costs, Feels Like and Risks",
+      "baslik_tr": "Yazın Rosemary Beach: 30A'da yoğun sezonun maliyeti, havası ve riskleri",
+      "bolge": "Rosemary Beach",
+      "aile": "Sezon ve zamanlama",
+      "neden_onerildi": "Ailelerin çoğu okul tatili yüzünden yaz aylarına bağlı; onlar için soru 'ne zaman' değil 'yazın gidersem ne olur'. Rosemary'nin en yüksek haftalık ortancası Haziran–Temmuz'da ve oda sayısına göre Temmuz fiyatları sert yükseliyor. Sıcak gün sayısı, deniz suyu, kasırga ve kalabalık verisiyle 15 dakikalık bir 'yaz gerçeği' videosu kurulabiliyor. Kasım adayıyla birlikte aynı mahallenin iki ayrı dönem videosu olur, sezon evrenini tüketmez.",
+      "izleyici_sorusu": "Yaz tatilini Rosemary Beach'te yaparsam ne kadar öderim, hava ve deniz nasıl olur, nelere hazırlıklı olmalıyım?",
+      "kanca": {
+        "metin": "Rosemary'de 9 Ekim 2026'da sorduğumuz Temmuz 2027 haftasında 4 yatak odalı evlerin vergi ve ücretler dahil ortancası yaklaşık $12,817 (16 ilan), aynı evlerin Ocak 2027 ortancası yaklaşık $5,956 (9 ilan); Destin istasyonunun normallerine göre Temmuzda ortalama 14.9 gün 90 °F'ı aşıyor.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0052"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0048"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0139"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Haziran, Temmuz, Ağustos: üç ayrı yaz fiyatı",
+          "ne_anlatir": "Üç yaz penceresinin ortancaları ve çeyrekleri; Ağustosun Haziran–Temmuz'dan belirgin düşük olduğu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0041"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0042"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0043"}
+          ]
+        },
+        {
+          "bolum": "Ev büyüklüğüne göre Temmuz fiyatı",
+          "ne_anlatir": "1–2, 3, 4 ve 5+ yatak odalı evlerin Temmuz ortancaları ve görünen ilanların oda dağılımı; grup büyüklüğüne göre ne beklenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0050"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0051"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0052"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0053"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0030"}
+          ]
+        },
+        {
+          "bolum": "Sıcaklık, yağmur ve deniz",
+          "ne_anlatir": "Haziran–Ağustos en yüksek sıcaklıklar, 90 °F üstü gün sayıları, yağış ve yağışlı gün; deniz suyu ortalamaları 82–86 °F. İstasyonların 30A dışında olduğu söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0091"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0138"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0139"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0140"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0128"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0151"}
+          ]
+        },
+        {
+          "bolum": "Kasırga riski, sayılarla",
+          "ne_anlatir": "1991–2025 arasında 30A kıyı koridorunun 50 deniz mili içinde kasırga gücüne ulaşan 5 fırtına ve hangi aylarda girdikleri; sezonun zirvesi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0169"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0171"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0172"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0179"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0207"}
+          ]
+        },
+        {
+          "bolum": "Kalabalık ve yol",
+          "ne_anlatir": "Turist vergisinde Haziran ve Temmuzun payı; yaz 2025 doluluğu ve ortalama günlük fiyat; FDOT'un Walton rekreasyon kategorisinde Temmuz trafiğinin yıllık ortalamaya oranı ve 30A doğu ucu sayım noktası.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0165"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0166"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0224"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0225"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0258"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0809"}
+          ]
+        },
+        {
+          "bolum": "Yaz plajı: güvenlik ve kaplumbağa sezonu",
+          "ne_anlatir": "Cankurtaran saatleri, bayraklar ve mor bayrak; 1 Mayıs–31 Ekim kaplumbağa yuvalama sezonu ve gece plajda eşya bırakma kuralı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0114"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0116"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0103"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0091"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Yaz için tek tarihli birer hafta sorgulandı; 4 Temmuz haftası gibi tatil haftalarının fiyatı ayrıca yok.",
+        "Rosemary'ye özgü kalabalık ölçümü yok; turist vergisi ve doluluk South Walton ya da Walton County genelidir.",
+        "Rosemary önündeki kumda cankurtaran kulesi olup olmadığı bilinmiyor.",
+        "Restoranlarda yaz bekleme süreleri veride yok."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Öğle güneşinde kalabalık bir sahil; üstte termometre ikonu '14.9 days over 90°F', altta '$12,817 / week (4BR, July median)'."
+    },
+    {
+      "baslik_en": "Rosemary Beach Without a Car: What's Close, What's Far and the 30A Golf Cart Catch",
+      "baslik_tr": "Arabasız Rosemary Beach: ne yakın, ne uzak ve 30A'daki golf arabası tuzağı",
+      "bolge": "Rosemary Beach",
+      "aile": "Deneyim",
+      "neden_onerildi": "Rosemary resmî dizinde 'Walkable' etiketli ve veride bunu destekleyen bir desen var: gurme market, bisiklet kiralama ve en yakın halka açık plaj erişimi ilanların çoğuna 1 mil içinde. Öte yandan büyük süpermarket, eczane ve acil servis uzak; golf arabası kuralları da birçok ziyaretçinin bildiğinden sıkı. Bu, konu motorundaki 'arabasız' açısının tam karşılığı ve kanalın kaynaklı-pratik çizgisine uygun.",
+      "izleyici_sorusu": "Rosemary Beach'te kalırsam araba kiralamam gerekir mi; golf arabası ya da bisikletle idare edebilir miyim?",
+      "kanca": {
+        "metin": "OpenStreetMap'e göre Rosemary ilanlarının %91'i en yakın gurme markete ve bisiklet kiralamaya kuş uçuşu 1 mil içinde; ama yalnız %1'i büyük bir süpermarkete 1 mil içinde ve en yakın acil servise ortanca mesafe kuş uçuşu 13.57 mil.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0075"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0080"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0074"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0078"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "1 mil içinde ne var",
+          "ne_anlatir": "Yerel ve gurme market, bisiklet kiralama ve en yakın halka açık plaj erişimine kuş uçuşu ortancalar ve 1 mil içindeki ilan payları; resmî dizindeki 'Walkable' etiketi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0075"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0080"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0081"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0001"}
+          ]
+        },
+        {
+          "bolum": "Arabaya ihtiyaç duyduracak yerler",
+          "ne_anlatir": "Büyük süpermarket, küçük market, eczane, acil bakım ve acil servis mesafeleri; en yakın acil bakım ve acil servis noktalarının adları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0074"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0076"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0077"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0079"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0078"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0777"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0773"}
+          ]
+        },
+        {
+          "bolum": "Havalimanından gelmek",
+          "ne_anlatir": "ECP, VPS ve PNS havalimanlarının 30A koridoruna kuş uçuşu uzaklıkları; ECP'nin doğu uca en yakın olduğu. Sürüş mesafesi olmadığı söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0778"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0779"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0780"}
+          ]
+        },
+        {
+          "bolum": "Golf arabası ve LSV tuzağı",
+          "ne_anlatir": "Florida kanunu, Walton County ve şerif ofisine göre golf arabalarının kamu yollarındaki durumu; LSV'nin 35 mph sınırı, tescil ve sigorta şartı, US 98 ve kaldırım yasağı, LSV'de açık alkol kabı yasağı ve cezalar.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0784"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0790"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0791"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0787"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0788"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0793"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0794"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0111"}
+          ]
+        },
+        {
+          "bolum": "Bisiklet ve Timpoochee Trail",
+          "ne_anlatir": "Bisiklet kiralama mesafesi; Timpoochee Trail'in uzunluğu için iki farklı resmî değer (19 ve 18.5 mil) çelişkiyle birlikte; çok amaçlı yollarda golf arabası yasağı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0080"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0781"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0782"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0789"}
+          ]
+        },
+        {
+          "bolum": "Arabasız yemek",
+          "ne_anlatir": "Mahalledeki restoran ve kahve kayıtları, açılış saatleri; kahvaltıdan akşama mahalle içinde neyin açık olduğu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0054"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0072"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0067"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0066"}
+          ]
+        },
+        {
+          "bolum": "Araba kiralarsanız: trafik ve park",
+          "ne_anlatir": "30A doğu ucu ve US 98 sayım noktalarının 2025 yıllık ortalamaları; Walton rekreasyon kategorisinde aylara göre trafik oranı; ziyaretçi otoparkı bilgisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0809"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0820"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0252"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0258"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0006"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Mesafeler kuş uçuşudur; yürüyüş ya da bisiklet yolu üzerinden mesafe ve süre yok.",
+        "Taksi, araç paylaşımı ya da Rosemary'ye servis olup olmadığı veride yok.",
+        "Kiracılar için park kuralları yalnız park kartı notu düzeyinde; ücret ve yer sayısı yok.",
+        "Büyük süpermarket noktaları (Publix, Winn-Dixie, The Fresh Market) zincirlerin sitesinden doğrulanamadı; OpenStreetMap'e dayanır."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Rosemary merkezli bir harita; 1 millik daire içinde market, bisiklet ve plaj ikonları yeşil, dışarıda süpermarket ve hastane kırmızı; köşede üstü çizili golf arabası."
+    },
+    {
+      "baslik_en": "Eating in Rosemary Beach, 30A: Who Takes Reservations, Who Doesn't and What Dinner Costs",
+      "baslik_tr": "30A'da Rosemary Beach'te yemek: kim rezervasyon alıyor, kim almıyor ve akşam yemeği ne tutuyor",
+      "bolge": "Rosemary Beach",
+      "aile": "Deneyim",
+      "neden_onerildi": "Kanal araştırmasında restoranlar izleyicinin pratik şikâyetlerinden biri ('birçok restoran rezervasyon almıyor, erken gidip isminizi yazdırın'). Rosemary resmî dizinde 'Foodie Favorite' etiketli ve elimizde işletmelerin kendi sitelerinden rezervasyon, çocuk menüsü, saat ve menü fiyatı verisi var. Bu, konu motorundaki 'nerede yenir' açısı; 30A geneli menü fiyatı videosundan farklı olarak tek mahallede bir tatil haftasının yemek düzenini anlatır.",
+      "izleyici_sorusu": "Rosemary Beach'te kalırsam kahvaltı, öğle ve akşam için seçeneklerim neler, rezervasyon yapabilir miyim ve akşam yemeği ne kadar tutar?",
+      "kanca": {
+        "metin": "İşletmelerin kendi sitelerine göre (9 Ekim 2026) Rosemary'de menü fiyatı okunabilen üç restoranın ana yemek ortancaları yaklaşık $25, $35 ve $47; Edward's ve La Crema rezervasyon almadığını yazıyor, Restaurant Paradis telefonla rezervasyon alıyor.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0066"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0069"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0071"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Mahallede ne var",
+          "ne_anlatir": "Verimizdeki 12 kayıt ve ne oldukları: restoranlar, kahve dükkânı, şarap ve provizyon dükkânı; sitesinde Rosemary menüsü bulunamayan bir kayıt. 'Foodie Favorite' etiketi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0054"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0063"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0064"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0001"}
+          ]
+        },
+        {
+          "bolum": "Akşam yemeği ne tutar",
+          "ne_anlatir": "Fiyat seviyesi hesaplanabilen üç restoranın ana yemek ortancaları ve bizim sınıflamamızdaki seviyeleri ($$$ ve $$$$); Pescado'da yalnız 3 fiyatlı ana yemek olduğu için seviye hesaplanmadığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0055"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0058"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0059"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0066"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0069"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0071"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0070"}
+          ]
+        },
+        {
+          "bolum": "Rezervasyon: kim alıyor, kim almıyor",
+          "ne_anlatir": "Çevrimiçi rezervasyon bağlantısı olan (Gallion's), telefonla alan (Paradis), almadığını yazan (Edward's, La Crema, Summer Kitchen) ve sitesinde bilgi olmayanlar; 'bilgi yok'un 'almıyor' demek olmadığı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0060"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0067"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0071"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0066"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0069"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0072"}
+          ]
+        },
+        {
+          "bolum": "Kahvaltı ve öğle",
+          "ne_anlatir": "Sabah açılan yerler ve saatleri: Amavida (6:30), Summer Kitchen Café (7:30–15:00), Havana Beach Bar & Grill (8–14), Gallion's (9:00'dan), Pescado'nun Çarşamba–Pazar brunch'ı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0072"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0068"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0067"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0070"}
+          ]
+        },
+        {
+          "bolum": "Çocuklarla yemek ve 18 yaş kuralı",
+          "ne_anlatir": "Sitesinde çocuk menüsü olan 5 kayıt; Pescado ve The Courtyard at Pescado'nun 15:00'ten sonra 18 yaş sınırı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0061"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0070"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0073"}
+          ]
+        },
+        {
+          "bolum": "Evde yemek: market seçenekleri",
+          "ne_anlatir": "Yerel ve gurme markete kuş uçuşu 0.25 mil (%91 1 mil içinde), büyük süpermarkete 1.36 mil; CK Feed & Supply'ın provizyon dükkânı olarak kaydı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0075"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0074"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0063"}
+          ]
+        },
+        {
+          "bolum": "30A'da komşu mahallelerin restoranları",
+          "ne_anlatir": "Bağlam için Alys Beach ve Inlet Beach'te fiyat seviyesi olan restoranlar ve ana yemek ortancaları; mesafe söylenmeden, yalnız 30A'daki komşu topluluklar olarak.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0697"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0698"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0700"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0704"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0706"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "12 kaydın 9'unda fiyat seviyesi hesaplanamadı (menü yok, fiyat yok ya da JavaScript ile çiziliyor); Summer Kitchen ve Havana'nın menüleri tarayıcıyla okunmadı.",
+        "Pescado ile The Courtyard at Pescado aynı saatleri ve aynı fiyatları gösteriyor; ayrı işletme mi, aynı yerin iki bölümü mü doğrulanmadı.",
+        "Creative Crepes için yalnız giriş gerektiren sosyal medya sayfası var; saat ve menü yok.",
+        "Bekleme süresi, kalabalık ya da kalite bilgisi yok; sıralama yapılamaz.",
+        "Komşu mahallelerdeki restoranlara Rosemary'den mesafe hesaplanmadı."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Akşam ışığında bir restoran terası; üç fiyat etiketi '$25 · $35 · $47' ve büyük harflerle 'NO RESERVATIONS?'"
+    },
+    {
+      "baslik_en": "Taking Kids to Rosemary Beach, 30A: Bedrooms, Kid Menus, Beach Flags and the Nearest ER",
+      "baslik_tr": "Çocuklarla 30A'da Rosemary Beach: yatak odaları, çocuk menüleri, plaj bayrakları ve en yakın acil servis",
+      "bolge": "Rosemary Beach",
+      "aile": "Deneyim",
+      "neden_onerildi": "Kanal araştırmasında çocuklu aileler açıkça soru soruyor ('8 ve 5 yaşında çocuklarımız var, nereyi önerirsin') ve Rosemary resmî dizinde 'Family' etiketli. Veride ailelerin karar verirken bakacağı somut noktalar var: oda sayısına göre ev fiyatları, çocuk menüsü olan yerler, bir restoranın 15:00'ten sonra 18 yaş sınırı, en yakın acil bakım ve acil servis, plaj güvenliği ve okul tatili haftaları.",
+      "izleyici_sorusu": "Rosemary Beach çocuklu bir aile için uygun mu; nerede kalırız, ne yeriz, plajda ve sağlıkta neye dikkat ederiz?",
+      "kanca": {
+        "metin": "OpenStreetMap'e göre Rosemary ilanlarının ortancası en yakın acil bakım merkezine kuş uçuşu yaklaşık 1.05 mil, en yakın acil servise ise yaklaşık 13.57 mil; mahalledeki Pescado'nun sitesi 15:00'ten sonra yalnız 18 yaş üstünü kabul ettiğini yazıyor.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0079"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0078"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0070"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Ailelere göre konaklama",
+          "ne_anlatir": "Temmuz 2027 aramasında görünen ilanların oda dağılımı (3, 4, 5 ve 6+ oda) ve tür dağılımı (ev, kondo, otel); 'Family' etiketi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0030"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0031"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0032"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0021"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0023"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0001"}
+          ]
+        },
+        {
+          "bolum": "Aile evinin fiyatı: Ocak ve Temmuz",
+          "ne_anlatir": "3, 4 ve 5+ yatak odalı evlerin Ocak ve Temmuz ortancaları, ilan sayılarıyla; okul tatiline bağlı ailelerin ödediği fark.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0047"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0048"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0051"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0052"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0053"}
+          ]
+        },
+        {
+          "bolum": "Çocuklarla plaj",
+          "ne_anlatir": "Mahallede ilçe listesinde halka açık erişim olmadığı ve kuru kum durumu; bayrak renkleri ve mor bayrak; cankurtaran sezonu ve saatleri; kumda çukur kuralı ve cam yasağı (ilçe plajları için yazıldığı uyarısıyla).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0002"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0007"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0113"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0114"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0116"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0122"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0100"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0086"}
+          ]
+        },
+        {
+          "bolum": "Çocuklarla yemek",
+          "ne_anlatir": "Sitesinde çocuk menüsü olan 5 kayıt; erken açılan kahvaltı yerleri; Pescado'nun Çarşamba–Pazar 15:00'e kadar her yaşa açık, sonrasında 18 yaş sınırı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0061"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0072"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0070"}
+          ]
+        },
+        {
+          "bolum": "Sağlık: acil bakım, acil servis, eczane",
+          "ne_anlatir": "Acil bakım, acil servis ve eczaneye kuş uçuşu ortancalar; en yakın noktaların adları (Inlet Beach acil bakımı, Panama City Beach ve Miramar Beach acil servisleri).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0079"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0078"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0077"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0777"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0773"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0774"}
+          ]
+        },
+        {
+          "bolum": "Ailelerin geldiği haftalar",
+          "ne_anlatir": "Ziyaretçilerin en çok geldiği pazarlar ve bu bölgelerdeki örnek okul takvimlerinde 2026 güz ve 2027 bahar tatilleri; Haziran–Temmuz'un turist vergisindeki payı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0233"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0234"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0235"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0237"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0165"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0166"}
+          ]
+        },
+        {
+          "bolum": "Sıcak ve deniz",
+          "ne_anlatir": "Yazın 90 °F üstü gün sayısı ve deniz suyu sıcaklığı; baharda (Mart–Nisan) daha serin su.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0139"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0151"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0147"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0148"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Rosemary içindeki oyun alanı, havuz ya da çocuk etkinliği bilgisi yok.",
+        "Rosemary önündeki kumda cankurtaran kulesi olup olmadığı bilinmiyor.",
+        "Rosemary'nin kiracılara açık özel plaj erişimleri hakkında kaynaklı satır yok.",
+        "Okul takvimleri örnek bölgelerdir; 'en büyük okul bölgesi' denemez."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "Sahilde kumdan kale yapan iki çocuğun arkadan silueti; yanında küçük harita pimleri 'Urgent care 1.05 mi' ve 'ER 13.57 mi'."
+    },
+    {
+      "baslik_en": "Can You Do 30A's Rosemary Beach on a Budget? The Cheapest Weeks, by the Numbers",
+      "baslik_tr": "30A'nın Rosemary Beach'i bütçeyle yapılır mı? En ucuz haftalar, rakamlarla",
+      "bolge": "Rosemary Beach",
+      "aile": "Masraf ve bütçe",
+      "neden_onerildi": "Kanal araştırmasına göre 30A'ya özel bütçe videosu yok ve Rosemary pahalı bir yer olarak biliniyor. Daha önce önerilen 'neden bu kadar ödüyorlar' başlığı değeri anlatır; bu aday ise sınırlı bütçeli izleyicinin sorusunu sorar: en ucuz pencere, en küçük ev, en düşük çeyrek ne gösteriyor ve yemek ile ekstralar ne getiriyor. Ay ay fiyat ve çeyrek verisi bunu taşıyacak kadar zengin.",
+      "izleyici_sorusu": "Rosemary Beach'te kalmayı bütçem kaldırır mı; hangi hafta ve hangi büyüklükte ev en uygun, yanında neler harcarım?",
+      "kanca": {
+        "metin": "Rosemary'de sorduğumuz evlerde Aralık 2026 haftasının vergi ve ücretler dahil ortancası yaklaşık $3,487 (70 ilan) ve alt çeyreği yaklaşık $2,482; Temmuz 2027'de ortanca yaklaşık $7,223 (91 ilan), üst çeyrek yaklaşık $12,028.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0035"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0042"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "Bu fiyatlar nereden geliyor",
+          "ne_anlatir": "Kiralama şirketlerinin kendi sitelerinde 9 Ekim 2026'da sorulan 7 gecelik toplamlar; %94'ünde vergi ve ücretlerin dahil olduğu; fiyatı okunamayan büyük şirketler ve bunun ne anlama geldiği; Choctawhatchee Körfezi'nin güneyinde %5 turist vergisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0034"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0232"}
+          ]
+        },
+        {
+          "bolum": "On iki ayın fiyat tabanı",
+          "ne_anlatir": "Her ayın ortancası ve alt çeyreği; en düşük pencereler (Aralık, Kasım, Şubat, Ocak) ve en yüksekler (Temmuz, Haziran, Ekim, Mart).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0034"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0035"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0036"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0037"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0038"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0041"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0042"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0045"}
+          ]
+        },
+        {
+          "bolum": "Küçük ev, küçük fatura",
+          "ne_anlatir": "1–2 yatak odalı evlerin Ocak ($2,793) ve Temmuz ($4,440) ortancaları ile büyük evlerinkiler; görünen ilanlarda 1 ve 2 odalı ilan sayısı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0046"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0050"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0053"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0028"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0029"}
+          ]
+        },
+        {
+          "bolum": "Ucuz haftaların bedeli: hava ve deniz",
+          "ne_anlatir": "Aralık–Şubat'ın Destin normalleri ve deniz suyu ortalamaları (60–64 °F); ucuz pencerenin plaj günü açısından ne anlama geldiği.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0096"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0085"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0145"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0156"}
+          ]
+        },
+        {
+          "bolum": "Yemek bütçesi",
+          "ne_anlatir": "Fiyat seviyesi hesaplanan Rosemary restoranlarının hepsinin bizim sınıflamamızda $$$ ya da $$$$ olduğu, ana yemek ortancaları; evde yemek için gurme market ve süpermarket mesafeleri.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0055"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0058"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0059"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0066"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0071"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0075"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0074"}
+          ]
+        },
+        {
+          "bolum": "Ucuz günler: eyalet parkları ve orman",
+          "ne_anlatir": "30A'daki eyalet parkları ve Point Washington Eyalet Ormanı'nın giriş ücretleri ve saatleri.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0797"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0799"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0801"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0804"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "360blue, Cottage Rental Agency, Vrbo gibi şirketlerin fiyatı okunamadı; ortanca yalnız fiyatı okunan ilanlardandır.",
+        "Market sepeti, bisiklet kiralama ve plaj ekipmanı fiyatları veride yok; günlük toplam bütçe hesaplanamaz.",
+        "Rosemary restoranlarının 9'unda fiyat seviyesi yok; ucuz yemek seçenekleri hakkında kanıt sınırlı.",
+        "Minimum konaklama süreleri ve kısa (7 geceden az) kalış fiyatları sorgulanmadı."
+      ],
+      "sablon": "mahalle-rehberi",
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": false,
+      "kapak_fikri": "On iki aylık sütun grafik, Aralık sütunu vurgulu; üstte '$2,482?' sorusu, altta 'Rosemary Beach, 30A'."
+    },
+    {
+      "baslik_en": "Rosemary Beach vs Seaside on 30A: Prices, Beach Access, Restaurants and Who Each Town Suits",
+      "baslik_tr": "30A'da Rosemary Beach ile Seaside: fiyatlar, plaj erişimi, restoranlar ve hangi kasaba kime uyar",
+      "bolge": "Rosemary Beach",
+      "aile": "Karşılaştırmalar",
+      "neden_onerildi": "Kanal planı ilk karşılaştırma örneği olarak tam bu ikiliyi veriyor ve kanal araştırması mahalle talebinin Rosemary, Seaside ve Alys'te toplandığını gösteriyor. Veride net bir bulgu var: sorduğumuz 12 pencerenin hepsinde Rosemary'nin haftalık ortancası Seaside'ınkinden düşük. Karşılaştırmalar kanalın sonraki katmanı olduğu için bu aday zamanlaması kullanıcıya bırakılarak sunuluyor.",
+      "izleyici_sorusu": "30A'nın iki planlı kasabası Rosemary Beach ile Seaside arasında kalıyorum; hangisi benim tatilime daha uygun ve fark ne kadar?",
+      "kanca": {
+        "metin": "Kiralama şirketlerinin sitelerinde 9 Ekim 2026'da sorduğumuz 12 haftalık pencerenin hepsinde Rosemary'nin vergi ve ücretler dahil ortancası Seaside'ınkinden düşük; Temmuz 2027'de Rosemary yaklaşık $7,223 (91 ilan), Seaside yaklaşık $8,680 (97 ilan). İkisinde de ilçe listesinde halka açık plaj erişimi yok.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0042"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "İki planlı kasaba",
+          "ne_anlatir": "Seaside'ın 1981'de başlayan inşaatı ve planlayıcıları, DPZ'nin Rosemary'yi 1995'te tasarladığı; resmî dizindeki etiketler (ikisinde de Architecture ve Walkable). Seaside tarihi için DPZ ile kasabanın kendi sitesi arasındaki çelişki söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0837"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0838"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0840"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0013"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0018"}
+          ]
+        },
+        {
+          "bolum": "Ay ay haftalık fiyat",
+          "ne_anlatir": "İki mahallenin 12 penceredeki ortancaları ve çeyrekleri, ilan sayılarıyla; farkın en büyük ve en küçük olduğu aylar (Ekim ve Ocak'ta fark küçük).",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0410"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0412"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0421"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0350"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0352"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0358"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0361"}
+          ]
+        },
+        {
+          "bolum": "Ev büyüklüğüne göre",
+          "ne_anlatir": "Oda gruplarına göre Ocak ve Temmuz ortancaları; Seaside'da 5+ odada ilan sayısının küçük olduğu uyarısı; görünen ilan sayıları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0522"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0527"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0482"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0487"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0031"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0026"}
+          ]
+        },
+        {
+          "bolum": "Plaj erişimi ve park",
+          "ne_anlatir": "İkisinde de ilçe listesinde halka açık erişim yok; Seaside'ın ücretli saatlik parkı ve ücretsiz servisi, Rosemary'de yalnız dükkân otoparkı bilgisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0042"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0062"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0063"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0067"}
+          ]
+        },
+        {
+          "bolum": "Restoranlar",
+          "ne_anlatir": "Restoran sayısı, fiyat seviyesi dağılımı, çevrimiçi rezervasyon ve çocuk menüsü sayıları; Seaside'da $ seviyesinde yer olması, Rosemary'de hesaplananların $$$ ve üstü olması.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0586"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0588"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0626"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0678"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0701"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"}
+          ]
+        },
+        {
+          "bolum": "Market ve sağlık mesafeleri",
+          "ne_anlatir": "Büyük süpermarket, gurme market, eczane, acil servis ve acil bakıma kuş uçuşu ortancalar; Rosemary'nin acil bakıma yakın, Seaside'ın süpermarkete yakın olduğu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0738"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0742"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0763"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0767"}
+          ]
+        },
+        {
+          "bolum": "Yıl boyu etkinlikler",
+          "ne_anlatir": "Seaside'ın yıllık etkinlikleri (4 Temmuz, Halloweener Derby, Seeing Red, Holiday Parade, yılbaşı) ile Rosemary'nin Uncorked ve Şükran Günü 10K'sı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0244"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0246"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0249"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0247"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0248"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "İki kasabanın kendi misafirlerine açık özel plaj erişimleri hakkında kaynaklı satır yok.",
+        "Ortancalar farklı ev karışımlarından gelir; aynı büyüklük ve konumda evlerin eşleştirilmiş karşılaştırması yok.",
+        "Kalabalık, gürültü ya da gece hayatı için mahalle düzeyinde ölçüm yok.",
+        "Rosemary'de ziyaretçi otoparkı bilgisi 2023 tarihli; Seaside park ücreti tutarı sayfada yok."
+      ],
+      "sablon": null,
+      "parametreler": {"mahalle_a": "rosemary-beach", "mahalle_b": "seaside"},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Ekran ikiye bölünmüş: solda Rosemary, sağda Seaside; ortada 'VS' ve altında iki fiyat '$7,223 · $8,680 (July median)'."
+    },
+    {
+      "baslik_en": "Rosemary Beach or Inlet Beach on 30A? Beach Access, Rental Prices and Restaurants Compared",
+      "baslik_tr": "30A'da Rosemary Beach mi Inlet Beach mi? Plaj erişimi, kiralık ev fiyatları ve restoranlar karşılaştırması",
+      "bolge": "Rosemary Beach",
+      "aile": "Karşılaştırmalar",
+      "neden_onerildi": "Rosemary'ye bakan izleyicinin gerçek alternatiflerinden biri doğu ucundaki Inlet Beach; veride ilginç bir desen var: Temmuzda iki mahallenin ortancaları neredeyse aynı, Ocakta Rosemary belirgin pahalı. Inlet Beach'e ilçe listesinde iki halka açık erişim düşüyor, Rosemary'ye sıfır; Inlet Beach bölgesel erişiminde plaj tekerlekli sandalyesi var. Bu, 'Rosemary'nin içinde mi kalmalıyım, dışında mı' sorusunun veriyle cevaplanabilen bir biçimi. Inlet Beach için ayrı rehber talebi küçük olduğundan Inlet'i Rosemary videosunun içinden anlatmak kanal planındaki 'küçük bölgeler birleşik videoda' yaklaşımına da uyar.",
+      "izleyici_sorusu": "Rosemary Beach'te kalmak yerine Inlet Beach'te kalsam neyi kazanır, neyi kaybederim?",
+      "kanca": {
+        "metin": "Temmuz 2027 haftası için sorduğumuz evlerde ortanca Rosemary'de yaklaşık $7,223 (91 ilan), Inlet Beach'te yaklaşık $7,115 (41 ilan); Ocak 2027'de ise Rosemary yaklaşık $4,159, Inlet Beach yaklaşık $2,956. İlçenin halka açık erişim listesinde Inlet Beach'e kaynaklı eşlemeyle 2 erişim, Rosemary'ye 0 erişim düşüyor.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0430"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0412"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0424"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0050"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "İki mahallenin resmî tarifi",
+          "ne_anlatir": "Resmî dizindeki etiketler (Rosemary: Architecture, Music & Nightlife, Walkable; Inlet: Tranquil, Water Sports) ve Temmuz aramasında görünen ilan sayıları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0018"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0019"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0031"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0032"}
+          ]
+        },
+        {
+          "bolum": "Plaj erişimi",
+          "ne_anlatir": "Rosemary'de sıfır, Inlet Beach'te iki kaynaklı erişim; Inlet Beach bölgesel erişiminin listede yazan olanakları ve ücretsiz plaj tekerlekli sandalyesi; kuru kumun hukuki durumu.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0049"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0050"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0832"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0822"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0082"}
+          ]
+        },
+        {
+          "bolum": "Ay ay haftalık fiyat",
+          "ne_anlatir": "İki mahallenin 12 penceredeki ortancaları ve çeyrekleri; farkın kışın açılıp yazın kapandığı desen.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0410"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0412"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0418"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0422"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0424"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0430"}
+          ]
+        },
+        {
+          "bolum": "Ev büyüklüğüne göre",
+          "ne_anlatir": "Oda gruplarına göre Ocak ve Temmuz ortancaları; Inlet Beach'te bazı oda gruplarında ilan sayısının küçük olduğu uyarısı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0522"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0526"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0530"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0534"}
+          ]
+        },
+        {
+          "bolum": "Restoranlar",
+          "ne_anlatir": "Restoran sayıları ve fiyat seviyeleri; Inlet Beach'te $$ seviyesinde iki yer, Rosemary'de hesaplananların $$$ ve üstü olması.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0626"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0634"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0706"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0707"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0703"}
+          ]
+        },
+        {
+          "bolum": "Market ve sağlık",
+          "ne_anlatir": "Süpermarket, gurme market, eczane, acil servis ve acil bakıma kuş uçuşu ortancalar; Inlet Beach'teki acil bakım merkezi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0763"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0767"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0768"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0772"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0777"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "İki mahalle arasındaki mesafe ve Inlet Beach'ten Rosemary'nin kasaba merkezine ulaşım verisi yok; 'yan komşu' ya da 'yürüyerek' denemez.",
+        "Inlet Beach için mahalle paketi kurulmadı; plaj erişimi otoparkı ve mahalleye özgü referanslar eksik.",
+        "Inlet Beach'in ikinci kaynaklı erişiminin adı ve olanakları özette ayrıca yok.",
+        "Inlet Beach Temmuz 1–2 oda grubunda yalnız 6 ilan var; küçük örnek."
+      ],
+      "sablon": null,
+      "parametreler": {"mahalle_a": "rosemary-beach", "mahalle_b": "inlet-beach"},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Bir sahil yolu tabelası iki yönü gösteriyor: 'Rosemary Beach' ve 'Inlet Beach'; altta '0 vs 2 public beach accesses'."
+    },
+    {
+      "baslik_en": "Rosemary Beach Was Designed in 1995. What a Planned 30A Town Means for Your Vacation",
+      "baslik_tr": "Rosemary Beach 1995'te tasarlandı. Planlı bir 30A kasabası tatiliniz için ne demek",
+      "bolge": "Rosemary Beach",
+      "aile": "Bölgesel derin rehberler",
+      "neden_onerildi": "Kanal araştırmasında Rosemary hakkındaki en başarılı videolardan biri şehircilik merakı üzerine ('Did Florida Actually Build A European City?', 173 bin izlenme). Bu aday aynı merakı kanalın çizgisine çeviriyor: planlı kasabanın tarihini kısa ve kaynaklı anlatıp tatilci için sonuçlarına (yürünebilirlik, plaj erişimi, konaklama türü, kasaba merkezinde yemek ve etkinlik) bağlıyor. Mahallenin kendisini anlatan ikinci bir giriş kapısı olur, ama içerik pratik kalır.",
+      "izleyici_sorusu": "Rosemary Beach neden böyle görünüyor ve planlı bir kasabada kalmak tatilimi nasıl etkiler?",
+      "kanca": {
+        "metin": "Planlama firması DPZ, Rosemary Beach'i 1995'te tasarladığını listeliyor; aynı firma 30A'da Seaside'ı da planladı. Bugün resmî dizin Rosemary'yi 'Walkable' ve 'Architecture' olarak etiketliyor, ama ilçenin halka açık plaj erişimi listesinde mahalleye düşen erişim yok.",
+        "kanitlar": [
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0082"},
+          {"dosya": "veri_ozeti_30a.md", "kimlik": "K0837"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0001"},
+          {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0002"}
+        ]
+      },
+      "icerik_plani": [
+        {
+          "bolum": "1995'teki plan",
+          "ne_anlatir": "DPZ'nin Rosemary'yi 1995'te Paul Borden, Leucadia National Corp. ve Patrick Bienvenue için tasarladığı; 30A'daki diğer DPZ kasabaları (Seaside, Alys Beach) ile zaman çizgisi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0082"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0837"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0841"}
+          ]
+        },
+        {
+          "bolum": "New Urbanism nedir, Seaside'dan Rosemary'ye",
+          "ne_anlatir": "Seaside'ın kuruluşu ve Truman Show bağlantısı kısa bağlam olarak; Charter of the New Urbanism'in 1996'da kabulü. Seaside'ın kendini 'ilk' diye tanıtmasının bağımsız doğrulanmadığı söylenir.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0836"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0839"},
+            {"dosya": "veri_ozeti_30a.md", "kimlik": "K0843"}
+          ]
+        },
+        {
+          "bolum": "Planın sahadaki karşılığı: yakın olanlar",
+          "ne_anlatir": "Gurme market, bisiklet kiralama ve en yakın halka açık plaj erişimine kuş uçuşu ortancalar ve 1 mil içindeki ilan payları; 'Walkable' etiketi.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0001"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0075"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0080"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0081"}
+          ]
+        },
+        {
+          "bolum": "Planlı kasabada konaklama",
+          "ne_anlatir": "Görünen ilanların tür dağılımı (ev ve kulübe, kondo ve villa, otel, pansiyon) ve oda dağılımı; Temmuz ve Ocak ortancaları.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0021"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0022"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0023"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0024"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0036"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0042"}
+          ]
+        },
+        {
+          "bolum": "Planın plajdaki sınırı",
+          "ne_anlatir": "Mahalleye düşen halka açık erişim olmaması, ıslak ve kuru kum ayrımı, ziyaretçi için dükkân otoparkı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0002"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0007"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0006"}
+          ]
+        },
+        {
+          "bolum": "Kasaba merkezinde yaşam",
+          "ne_anlatir": "Mahalledeki restoran ve dükkân kayıtları, saatleri; her yıl tekrarlanan Uncorked ve Şükran Günü 10K'sı.",
+          "kanitlar": [
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0054"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0067"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0069"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0083"},
+            {"dosya": "veri_ozeti_mahalle.md", "kimlik": "K0084"}
+          ]
+        }
+      ],
+      "eksik_veri": [
+        "Rosemary'nin mimari kuralları, sokak düzeni, meydanları ve 'Avrupa' etkisi hakkında kaynaklı satır yok; bu, başlığın merak tarafını taşıyacak en önemli eksik.",
+        "Kuruluş yılı, ilk satışlar ya da kurucuların kendi anlatımı yok; elimizde yalnız DPZ'nin tasarım yılı var.",
+        "Barrett Square yalnız otopark rehberinde geçiyor; kasaba merkezinin tanımı yok.",
+        "Topluluk derneğinin (RBPOA) kuralları bulunamadı."
+      ],
+      "sablon": null,
+      "parametreler": {"mahalle": "rosemary-beach"},
+      "yeni_sablon_gerekir": true,
+      "kapak_fikri": "Eski bir plan çizimi görünümünde Rosemary sokak haritası üzerine '1995' damgası; bir köşede bugünkü kasabanın fotoğrafı."
+    }
+  ]
+}

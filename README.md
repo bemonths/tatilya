@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.14.0 (geliştirme dalı `gorev-12-yazar-ozeti`) — kanıt paketinden yazar özeti ve ayrı sayı listesi** · son stable etiket: v0.14.0 (kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar). Genel kaynak toplama altyapısı; plaj, NWS hava, restoran ve mahalle toplayıcıları, plaj erişimlerini mahallelere bağlayan yöntemi etiketli eşleme katmanı ve iklim toplayıcıları (NOAA normalleri, deniz suyu sıcaklığı, kasırga geçmişi) hazır. Housing Atlas'tan bağımsız bir projedir. (Eski `v0.7-lodging-inventory` dalı yalnız konaklama keşif belgesidir; bu sürümle ilgisi yoktur.)
+30A veri ve içerik üretim uygulaması · **v0.15.0 (geliştirme dalı `gorev-13-claude-baslik`) — programın içinde Claude: konu ve başlık önerisi, video kaydı, Ayarlar'da model ve efor** · son stable etiket: v0.14.0 (kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar); main GÖREV-12'de (yazar özeti ve ayrı sayı listesi).
 
 ## Açılış
 
@@ -49,6 +49,7 @@ v0.1–v0.12 veritabanı açılırken önce `data/backups/` içine SQLite yedeğ
 - [Restoran bilgileri: işletmelerin kendi siteleri](docs/M12-RESTORAN-BILGILERI.md)
 - [Günlük ihtiyaç ve arabasız tatil ölçüleri](docs/M13-GUNLUK-IHTIYAC.md)
 - [Kanıt paketi](docs/M14-KANIT-PAKETI.md)
+- [Claude adımları ve Videolar](docs/M15-CLAUDE-ADIMLARI.md)
 
 ## Geliştirme
 
@@ -144,6 +145,12 @@ v0.14.0 (GÖREV-11): süpermarketler **büyük süpermarket** (Publix, Walmart, 
 ## Restoran fiyat seviyesi gözden geçirmesi · v0.13.0
 
 Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü verisi (schema.org, Toast, ohbz), sekmeli menüler ve elle okunan menüler eklendi; ekler, içecekler ve çocuk kalemleri ana yemek sayılmaz; tapas menülerinde küçük tabak ortancası, sabit menülerde "sabit menü fiyatı" ayrı gösterilir; kahve, tatlı ve dondurma yerleri "ana yemek sunmuyor" diye işaretlenir. Seviyesi olmayan her restoranın yanında tek satırlık nedeni yazar. Ayrıntılar: [M12](docs/M12-RESTORAN-BILGILERI.md).
+
+## Videolar ve Claude · v0.15.0
+
+**Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
+
+**Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model, efor ve en fazla tur. Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
 
 ## Kanıt paketi · v0.14.0
 

@@ -13,17 +13,17 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | `baslat.bat` |
-| Stable branch | `main` @ `9adc235661700dbe0f0bf117fa532f86149a79c1` (GÖREV-11: kanıt paketi, günlük ihtiyaçta resmî acil sağlık ve büyük süpermarket ayrımı, referans tablosu genişlemesi ve trafik; 10 Ekim 2026'da GÖREV-12 Adım 1 ile fast-forward) |
+| Stable branch | `main` @ `a85431167e1ccacd88467dae539e1f46aa7817eb` (GÖREV-12: yazar özeti, ayrı sayı listesi, oynak konular; 10 Ekim 2026'da GÖREV-13 Adım 1 ile fast-forward; uygulama 0.14.0, şema 14; bu adımda etiket konmadı) |
 | Stable tag | `v0.14.0` → `9adc235` — **v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar** (önceki: `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.14.0` / `14` (main ve `v0.14.0`) |
-| Aktif geliştirme dalı | `gorev-12-yazar-ozeti` — kanıt paketinden yazar özeti (aynı üretimden kısa Türkçe Markdown: tablolar, her tablo satırının K kimlik aralığı, blok başına bir kez kullanım notu, kaynak listesi), sayı listesi ayrı CSV ve yalnız yapılandırılmış alanlardan (ad, adres, yol numarası gürültüsü yok), şablonlarda oynak konular ve "Yayından önce kontrol edilecek satırlar", yönetici kararları (okul bölgesi video dili, bölge kutusu dışındaki acil servis kuralı, plaj hukuku her videodan önce) |
-| Aktif dal durumu | Uygulama `0.14.0`, şema `14` (değişmedi; paket biçimi `30a-studio-kanit-paketi/2`); gerçek veri kopyasında denendi; gerçek veride "Kanıt paketi" ekranından iki paket yeniden üretildi (toplayıcı çalışmadı); main'e alınmadı; karar yöneticinin |
+| Stable uygulama sürümü / şema | `0.14.0` / `14` (main ve `v0.14.0`; v0.15.0 etiketi bir sonraki görevin ilk adımında konacak) |
+| Aktif geliştirme dalı | `gorev-13-claude-baslik` — programın içinde Claude: Claude Code çalıştırıcısı (Housing Atlas'tan; yalıtım, akış, ölçüm, Türkçe hatalar), Ayarlar → Claude (model, efor, tur sınırı), adım çerçevesi ve onay ekranı, video kaydı, ilk Claude adımı "Konu ve başlık önerisi" ve Videolar ekranı; videonun kanıt paketi başında analiziyle; küçük düzeltmeler (restoran saatleri, havalimanı mili, paket listesinde mahalle adı) |
+| Aktif dal durumu | Uygulama `0.15.0`, şema `15`; geçiş gerçek veri kopyasında denendi; gerçek veride iki gerçek "Konu ve başlık önerisi" çalışması yapıldı (30A geneli, Rosemary Beach), ikisi de onay bekliyor; başlık seçimi kullanıcının; main'e alınmadı |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main @ 9adc235 (38058332541) ve etiket `v0.14.0` (38058336127) başarılı; görev dalının sonucu `docs/gorevler/GOREV-12/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 733 Python testi + 60 frontend testi (main/v0.14.0: 716 + 59) |
+| Son CI | main @ a854311 (38066733163) başarılı; etiket `v0.14.0` → 9adc235 (38058336127) başarılı; görev dalının sonucu `docs/gorevler/GOREV-13/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 768 Python testi + 64 frontend testi (main: 733 + 60) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
-| Gerçek veritabanı | 10 Ekim 2026'da (GÖREV-11) tam yedekten (`work/yedek/20261010-1548/`) sonra normal kullanımla şema 14'e yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v13-*`); günlük ihtiyaç toplayıcısı çalıştı (ilk denemede Overpass sunucu hatası, ikincide tamam), referans tablosu yüklendi, iki kanıt paketi üretildi (`data/evidence/`). 10 Ekim 2026'da (GÖREV-12) tam yedekten (`work/yedek/20261010-1739/`) sonra uygulama gerçek veriyle açıldı ve "Kanıt paketi" ekranından iki paket (dört dosyalı) yeniden üretildi; yalnız `evidence_packs` 2 → 4, GÖREV-11 paketleri yerinde. Şema 14; main'deki 0.14.0 açar. |
+| Gerçek veritabanı | 10 Ekim 2026'da (GÖREV-13) tam yedekten (`work/yedek/20261010-1947/`) sonra normal kullanımla şema 15'e yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v14-*`); Videolar ekranından iki gerçek konu ve başlık çalışması (`data/claude/`), veri özetleri için iki kanıt paketi; toplayıcı çalışmadı. Şema 15 dosyasını main'deki 0.14.0 açmaz; uygulama bu dal main'e alınana kadar `gorev-13-claude-baslik` dalından çalıştırılır. |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
 | Konaklama durumu | Tarihli arama anlık görüntüleri, aylık pencere kuralıyla (çekim ayından sonraki 12 ayın 15'ini içeren hafta); kiralama şirketlerinin kendi sitelerinden fiyat (24 şirket): 10 Ekim 2026 aylık çekiminde 1.131 ilan şirket sitesinde bulundu, 1.080 ilana en az bir ayda fiyat alındı; Alys Beach'in kendi envanterinden 73 ev (hepsi fiyatlı); 12/13 mahallede Book>Direct ilanlarıyla fiyat. Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
 | Restoran bilgileri | Görev dalında işletmelerin kendi sitelerinden: 138 restoranın 113'ünde site çalışıyor; 66 restoranda fiyat seviyesi (GÖREV-09'da 33), seviyesi olmayan her restoranın tek satırlık nedeni; 91 restoranda saat, 94'ünde menü, 46'sında rezervasyon bilgisi. Günlük ihtiyaç (GÖREV-11 çekimi): OpenStreetMap'ten 42 nokta + zincirin sitesinden 1 + kurumların sitelerinden 4; acil servis ve acil bakım yalnız resmî kaynaklı. Ayrıntı `docs/M12-RESTORAN-BILGILERI.md`, `docs/M13-GUNLUK-IHTIYAC.md` |
@@ -295,6 +295,10 @@ Genel çekirdek `studio/evidence/` (şablon okuma, veri blokları, paket, saklam
 
 Aynı üretimden iki dosya daha: **yazar özeti** (`<paket>-yazar-ozeti.md`; `studio/evidence/summary.py`, paket nesnesinden yazılır, veritabanına sorgu yapmaz; Türkçe, ABD birimleriyle; sayı serileri tablo, her tablo satırı K kimlik aralığıyla biter; her bloğun kullanım notu bir kez ve aynen; diğer satırlar tek satır; adres, SHA-256, alıntı ve İngilizce ifade yok; sonda kaynak listesi) ve **sayı listesi** (`<paket>-sayilar.csv`: `kanit, tur, deger, birim, etiket`). Liste yalnız yapılandırılmış alanlardan gelir (değer ve `ek_degerler`: çeyrekler, örneklem, pay, aralık, dönüşüm); ifade metni taranmaz, bu yüzden "30A"daki 30, yol kimliği, adres ve karar numarası listeye girmez; referans satırı yalnız değer alanıyla girer. Ekler JSON'un `dosyalar` alanında SHA-256'larıyla; şema değişmedi. Şablonlarda `oynak_konular` (30A: `plaj-hukuku`): bu konuların satırları ve bütün çelişkili satırlar paketin ve özetin başında "Yayından önce kontrol edilecek satırlar". Gerçek veride ilk video paketi 843 satır, 1.723 sayı (GÖREV-11: 732 satır, 3.003 sayı), Markdown 466 KB (903 KB), özet 110 KB (hedef 100 KB; içerik düşürülmedi, neden raporda); Rosemary Beach özeti 28 KB. Ayrıntı: `docs/M14-KANIT-PAKETI.md`.
 
+### 9.13b Programın içinde Claude: konu ve başlık önerisi (GÖREV-13, şema 15)
+
+Video için yapılacak her şey programın içinden yapılır (kullanıcı kararı, 10 Ekim 2026). Genel çekirdek `studio/ai/`: Claude Code çalıştırıcısı (The Housing Atlas Stüdyo'dan taşındı: `claude -p --output-format stream-json --verbose --append-system-prompt-file … --tools … --allowedTools … --permission-mode dontAsk --max-turns … --setting-sources "" --strict-mcp-config --disable-slash-commands`; kullanıcının ayarları, kancaları, MCP'leri, becerileri, claude.ai bağlayıcıları ve otomatik bellek yüklenmez; abonelik kullanılır, `ANTHROPIC_API_KEY` uyarısı), Ayarlar → Claude (`<veri>/ayarlar.json`: genel ve adım başına model, efor, tur sınırı), adım çerçevesi (talimat dosyaları destinasyonda, şema çekirdekte, yalnız klasörde okuma ve tek JSON dosyası yazma), onay ekranı (Seç, Düzeltme iste — yeni oturum —, Reddet; doğrulama sorunları ayrı), video kaydı (`videos`, seçilen adayın bütün analizi, kanıtlar değerleri ve paketleriyle) ve çalışma kaydı (`claude_runs`; klasör `<veri>/claude/<hazırlık>/<adım>/<çalışma>/`, talimat SHA-256'ları). İlk adım "Konu ve başlık": talimatlar `studio/destinations/thirty_a_claude/ortak.md`, `baslik.md` (aynen); girdiler kanal planı (KONSEPT.md, Ek C ile), kanal araştırması, seçim, ilk video ve mahalle yazar özetleri (eskiyse yeniden üretilir), şablonlar, önceki öneriler; 8–12 aday, şema ve anlam denetimleri. Videolar ekranında öneri alınır, başlık seçilir, video kaydının kanıt paketi üretilir (başında video analizi ve kanıtların yeni paketteki karşılığı). Gerçek veride iki çalışma: 30A geneli 11 aday (7 aile), Rosemary Beach 10 aday; ikisinde de doğrulama sorunu yok. Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md`.
+
 ### 9.14 Referans tablosu genişlemesi ve trafik (GÖREV-11)
 
 Referans tablosu 152 satır: plaj erişimi hukuku (anayasa, 2016 ilçe kararı, 2018 kanunu, dava, 2025'te kanunun kaldırılması, 18 Şubat 2026 temyiz kararı; "yeni yasa, özel plaj kalmadı" iddiası doğrulanamadı), erişilebilirlik, ziyaretçi kökeni ve beş okul bölgesinin 2026–27 tatilleri, 13 tekrarlayan etkinlik, kasabaların tarihçesi; her satırın Türkçe ifadesi `thirty_a_references_tr.csv`. FDOT 2025 AADT ve Walton mevsim faktörleri `thirty_a_traffic.csv` (aylık oran bizim hesabımız). Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
@@ -393,12 +397,16 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve tag `v0.14.0` → `9adc235661700dbe0f0bf117fa532f86149a79c1` (uygulama 0.14.0, şema 14; 10 Ekim 2026'da GÖREV-12 Adım 1 ile fast-forward ve açıklamalı etiket "v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar"; main CI 38058332541 ve etiket CI 38058336127 başarılı).
+Stable: main @ `a85431167e1ccacd88467dae539e1f46aa7817eb` (GÖREV-12; 10 Ekim 2026'da GÖREV-13 Adım 1 ile fast-forward, etiket konmadı; main CI 38066733163 başarılı); son etiket `v0.14.0` → `9adc235661700dbe0f0bf117fa532f86149a79c1` (uygulama 0.14.0, şema 14; main CI 38058332541, etiket CI 38058336127 başarılı).
 
-Aktif dal `gorev-12-yazar-ozeti`:
-- 733 Python testi ve 60 frontend testi geçti (tam takım art arda en az 3 kez)
-- yazar özeti, ayrı sayı listesi (CSV), oynak konular ve yayından önce kontrol listesi (M14); okul satırlarının video dili (M9); bölge kutusu dışındaki acil servis kuralı (M13); şema 14, uygulama 0.14.0; gerçek veride iki paket yeniden üretildi
+Aktif dal `gorev-13-claude-baslik`:
+- 768 Python testi ve 64 frontend testi geçti (tam takım art arda en az 3 kez; testler gerçek Claude'u çağırmaz, sahte claude kullanılır)
+- Claude çalıştırıcısı, Ayarlar → Claude, adım çerçevesi ve onay ekranı, video kaydı, konu ve başlık adımı, Videolar ekranı (M15); şema 15, uygulama 0.15.0; gerçek veride iki gerçek çalışma
 - main'e alınmadı
+
+Önceki aktif dal `gorev-12-yazar-ozeti` (10 Ekim 2026'da GÖREV-13 Adım 1 ile main'e alındı; etiket konmadı):
+- 733 Python testi ve 60 frontend testi geçti
+- yazar özeti, ayrı sayı listesi, oynak konular (M14); şema 14, uygulama 0.14.0
 
 Önceki aktif dal `gorev-11-kanit-paketi` (v0.14.0 olarak main'e alındı):
 - 716 Python testi ve 59 frontend testi geçti (tam takım art arda en az 3 kez)
@@ -552,5 +560,5 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 ---
 
 **Son güncelleme:** 10 Ekim 2026  
-**Stable:** v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar (`9adc235`)  
-**Aktif geliştirme:** `gorev-12-yazar-ozeti` — kanıt paketinden yazar özeti, ayrı sayı listesi (CSV), oynak konular, uygulama 0.14.0, şema 14 (yönetici incelemesinde)
+**Stable:** main @ `a854311` (GÖREV-12, uygulama 0.14.0); son etiket v0.14.0 — kanıt paketi, büyük süpermarket ayrımı, resmî acil sağlık noktaları ve izleyici sorularından gelen referanslar (`9adc235`)  
+**Aktif geliştirme:** `gorev-13-claude-baslik` — programın içinde Claude: çalıştırıcı, Ayarlar → Claude, onay ekranı, video kaydı, konu ve başlık önerisi; uygulama 0.15.0, şema 15 (yönetici incelemesinde)
