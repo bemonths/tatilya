@@ -1,0 +1,83 @@
+{
+  "key": "ilk-video",
+  "version": "1",
+  "title": "30A'ya ilk kez gidecekler için tam karar rehberi",
+  "question": "30A'ya ilk kez gidecek biri hangi mahallede, hangi ayda, ne kadar bütçeyle ve nelere dikkat ederek kalmalı? (Paket yalnız bu sorunun kanıtını verir; karar editoryal katmandadır.)",
+  "dimensions": {"bolge": "30A", "karar": "ilk ziyaret planı", "donem": "tüm yıl", "gezgin_tipi": "ilk kez gelen"},
+  "parameters": [],
+  "sections": [
+    {"key": "nedir", "title": "30A nedir ve nerededir",
+     "question": "30A bir yer mi, bir yol mu; Walton County, Destin ve Fort Walton Beach ile ilişkisi ne?",
+     "blocks": [
+       {"block": "references", "ids": ["genel-30a-ilce-yolu", "genel-destin-okaloosa", "genel-south-walton-tanim", "genel-mahalle-sayisi"]},
+       {"block": "neighborhoods"},
+       {"block": "references", "ids": ["havalimani-ecp", "havalimani-vps", "havalimani-pns"]}
+     ]},
+    {"key": "mahalleler", "title": "13 mahallenin karakteri",
+     "question": "Resmî dizindeki 13 mahalle hangileri ve her birinde konaklama, restoran ve halka açık plaj erişimi ne kadar?",
+     "blocks": [
+       {"block": "lodging_inventory", "months": ["07"]},
+       {"block": "beach_accesses"}
+     ]},
+    {"key": "plaj-erisimi", "title": "Plaj erişiminin gerçeği",
+     "question": "Hangi topluluklarda ilçenin halka açık erişimi yok, kuru kum kimin ve bugün hukuki durum ne?",
+     "blocks": [
+       {"block": "references", "topics": ["plaj-erisimi"]},
+       {"block": "references", "topics": ["plaj-hukuku"]}
+     ]},
+    {"key": "plaj-kurallari", "title": "Plaj kuralları ve güvenlik",
+     "question": "Bayraklar, cankurtaran, cam, köpek ve çadır kuralları neler?",
+     "blocks": [
+       {"block": "references", "topics": ["plaj-kurallari"]},
+       {"block": "references", "topics": ["guvenlik"]}
+     ]},
+    {"key": "hava", "title": "Hava, deniz suyu ve kasırga",
+     "question": "Aylara göre sıcaklık, yağış, deniz suyu ve kasırga riski ne gösteriyor?",
+     "blocks": [
+       {"block": "climate_months"},
+       {"block": "sea_water"},
+       {"block": "storms", "from": 1991, "to": 2025, "radius_nmi": 50},
+       {"block": "references", "topics": ["kasirga-sezonu"]}
+     ]},
+    {"key": "sezon", "title": "Kalabalık ve sezon",
+     "question": "Yıl içinde ziyaretçi ve fiyat yükü nasıl dağılıyor; okul tatilleri ve büyük etkinlikler ne zaman?",
+     "blocks": [
+       {"block": "tdt_season", "years": 5},
+       {"block": "references", "topics": ["sezon-maliyet"]},
+       {"block": "references", "topics": ["kalabalik"]},
+       {"block": "references", "topics": ["etkinlikler"]},
+       {"block": "traffic", "kinds": ["season"], "categories": ["6001", "6098"]}
+     ]},
+    {"key": "konaklama", "title": "Konaklama maliyeti",
+     "question": "Mahalle ve aya göre bir haftalık kiralık evin toplam fiyatı ve oda gruplarına göre fiyatlar ne?",
+     "blocks": [
+       {"block": "lodging_prices"},
+       {"block": "lodging_bedrooms", "months": ["01", "07"]}
+     ]},
+    {"key": "yemek", "title": "Yemek",
+     "question": "Mahalle başına kaç restoran var, fiyat seviyeleri ve rezervasyon durumu ne?",
+     "blocks": [
+       {"block": "restaurants"}
+     ]},
+    {"key": "ulasim", "title": "Araba ve ulaşım",
+     "question": "Büyük süpermarket, eczane ve acil sağlık ne kadar uzak; golf arabası, park, havalimanı ve trafik kuralları neler?",
+     "blocks": [
+       {"block": "daily_needs", "categories": ["big_supermarket", "local_market", "pharmacy", "emergency", "urgent_care"], "list_points": ["emergency", "urgent_care"]},
+       {"block": "references", "topics": ["ulasim"]},
+       {"block": "references", "topics": ["parklar"]},
+       {"block": "traffic", "kinds": ["aadt"]}
+     ]},
+    {"key": "erisilebilirlik", "title": "Erişilebilirlik",
+     "question": "Tekerlekli sandalyeyle plaja nasıl ulaşılır, hangi erişimler uygun?",
+     "blocks": [
+       {"block": "references", "topics": ["erisilebilirlik"]},
+       {"block": "beach_features"}
+     ]},
+    {"key": "pratik", "title": "Pratik bilgiler ve merak açıları",
+     "question": "Vergi, genel bilgiler ve kasabaların kuruluş hikâyeleri hakkında neler kaynakla söylenebilir?",
+     "blocks": [
+       {"block": "references", "topics": ["genel"]},
+       {"block": "references", "topics": ["tarihce"]}
+     ]}
+  ]
+}

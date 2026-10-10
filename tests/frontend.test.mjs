@@ -640,3 +640,34 @@ test('daily needs show great-circle miles, the share within a mile and the sourc
   assert.match(fixedMenuLine({fixed_menus:[{name:'Chef <Menu>',price_text:'$95',price:95}]}),/Sabit menü fiyatı: Chef &lt;Menu&gt; \$95 <small>\(ana yemek ortancasına karışmaz/);
   assert.equal(fixedMenuLine({}),'');
 });
+
+import {paramsText, packLink, packRow, EvidenceScreen} from '../studio/web/evidence.js';
+
+test('evidence pack rows show parameters, size, missing rows and both downloads with their SHA-256', () => {
+  setDestination('30a');
+  assert.equal(paramsText({mahalle:'rosemary-beach'},{'rosemary-beach':'Rosemary Beach'}), 'mahalle: Rosemary Beach');
+  assert.equal(paramsText({}), '');
+  assert.equal(packLink('abc','markdown'), '/api/evidence-packs/abc/markdown?destination_id=30a');
+  const pack={id:'abc',title:'Mahalle <rehberi>',template_key:'mahalle-rehberi',template_version:'1',params:{mahalle:'seaside'},created_at:'2026-10-10T12:00:00+00:00',
+    section_count:8,evidence_count:172,number_count:549,missing_count:3,markdown_sha256:'a'.repeat(64),json_sha256:'b'.repeat(64)};
+  const html=packRow(pack,{seaside:'Seaside'});
+  assert.match(html,/Mahalle &lt;rehberi&gt;/);
+  assert.match(html,/mahalle: Seaside/);
+  assert.match(html,/172 kanıt satırı · 549 sayı/);
+  assert.match(html,/3 'veri yok' satırı/);
+  assert.match(html,/evidence-packs\/abc\/json\?destination_id=30a/);
+  assert.match(html,/SHA-256 aaaaaaaaaaaaaaaa…/);
+  assert.doesNotMatch(packRow({...pack,missing_count:0}),/veri yok/);
+  setDestination(null);
+});
+
+test('evidence screen asks for every template parameter before generating', async () => {
+  const screen=new EvidenceScreen();
+  screen.templates=[{key:'mahalle-rehberi',title:'Mahalle rehberi',question:'?',parameters:[{key:'mahalle',label:'Mahalle',kind:'region',choices:[]}],sections:[]}];
+  screen.selected='mahalle-rehberi';screen.packs=[];
+  let drawn=0;screen.draw=()=>{drawn++;};
+  await screen.generate(null);
+  assert.equal(screen.message,'Önce Mahalle seçin.');
+  assert.equal(screen.busy,false);
+  assert.equal(drawn,1);
+});

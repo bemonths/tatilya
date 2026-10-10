@@ -63,6 +63,10 @@ BEACH_SUBDIVISIONS = Path(__file__).with_name("thirty_a_beach_subdivisions.csv")
 SUBDIVISION_NEIGHBORHOODS = Path(__file__).with_name("thirty_a_subdivision_neighborhoods.csv")
 # Manually verified reference facts (one per row, with source, quote and document SHA-256); read-only in the app.
 REFERENCE_TABLE = Path(__file__).with_name("thirty_a_references.csv")
+# Turkish statement of every reference row (the table's statements are English, for the video); read by the evidence pack.
+REFERENCE_TRANSLATIONS = Path(__file__).with_name("thirty_a_references_tr.csv")
+# Evidence-pack templates of this destination (one JSON file per template; format in docs/M14-KANIT-PAKETI.md).
+EVIDENCE_TEMPLATES = Path(__file__).with_name("thirty_a_evidence")
 # FDOT 2025 AADT of the CR 30A and US 98 count sites and Walton weekly seasonal factors (monthly ratios are our calculation); the same
 # source columns as the reference table, one fact per row.
 TRAFFIC_TABLE = Path(__file__).with_name("thirty_a_traffic.csv")

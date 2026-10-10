@@ -51,3 +51,11 @@ class JobInput(BaseModel):
     kind: Literal["catalog_audit", "source_collection", "beach_collection"] = "catalog_audit"
     destination_id: str | None = None
     source_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class EvidencePackInput(BaseModel):
+    """An evidence pack request: a template of the destination and its parameter values (a region id per region parameter)."""
+    model_config = ConfigDict(extra="forbid")
+    destination_id: str | None = None
+    template_key: str = Field(min_length=1, max_length=64)
+    params: dict[str, str] = Field(default_factory=dict)

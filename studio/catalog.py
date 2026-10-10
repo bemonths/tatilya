@@ -13,6 +13,7 @@ STEPS = [
     ("sources", "Veri kaynakları", "Kaynak kütüphanesi", "active"),
     ("collect", "Veri toplama", "Üç kaynak hazır", "active"),
     ("quality", "Veri kontrolü", "Katalog kontrolü hazır", "partial"),
+    ("evidence", "Kanıt paketi", "Şablondan kanıt", "active"),
     ("research", "Konu araştırması", "Veriden konuya", "planned"),
     ("competitors", "Rakip analizi", "İçerik fırsatları", "planned"),
     ("brief", "İçerik briefi", "Kapsam ve kaynaklar", "planned"),

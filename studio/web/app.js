@@ -11,6 +11,7 @@ import {ReferencesScreen} from "./references.js";
 import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 import {refreshSection} from "./refresh.js";
+import {EvidenceScreen} from "./evidence.js";
 
 const $ = selector => document.querySelector(selector);
 const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null};
@@ -35,6 +36,7 @@ let climateDoneIds=new Set();
 const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status==="done" && Object.values(CLIMATE_CONNECTORS).includes(j.result?.connector_name)).map(j=>j.id);
 const climateScreen=new ClimateScreen();
 const referencesScreen=new ReferencesScreen();
+const evidenceScreen=new EvidenceScreen();
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
 const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
@@ -53,7 +55,7 @@ function options(values, selected="", empty=null) {
 }
 
 function navigation() {
-  const groups = {0:"VERİ MERKEZİ", 3:"İÇERİK ATÖLYESİ", 7:"ÜRETİM & YAYIN"};
+  const groups = {0:"VERİ MERKEZİ", 3:"İÇERİK ATÖLYESİ", 8:"ÜRETİM & YAYIN"};
   $("#navigation").innerHTML = state.data.steps.map((step,index) => `${groups[index] ? `<div class="group-label">${groups[index]}</div>` : ""}
     <a href="#${step.id}" class="${state.page === step.id ? "active" : ""}" ${state.page === step.id ? 'aria-current="page"' : ""}>
     <span class="step-no">${String(index+1).padStart(2,"0")}</span><span><span class="nav-title">${esc(step.title)}</span><span class="nav-sub" style="display:block">${step.state === "planned" ? "Planlanan aşama" : esc(step.subtitle)}</span></span></a>`).join("");
@@ -76,11 +78,13 @@ function render() {
   lodgingScreen.invalidate();
   climateScreen.invalidate();
   referencesScreen.invalidate();
+  evidenceScreen.invalidate();
   const title = state.data.steps.find(step=>step.id===state.page)?.title || "Çalışma alanı bilgisi";
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
   else if (state.page === "collect") (collectionScreens[location.hash] || beachScreen).render($("#main"),state.data,pageHeading);
   else if (state.page === "quality") renderQuality();
+  else if (state.page === "evidence") evidenceScreen.render($("#main"),state.data,pageHeading);
   else if (state.page === "settings") renderSettings();
   else renderPlanned();
   updateAuditButtons();
@@ -355,7 +359,7 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen]);
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen,evidenceScreen]);
   lodgingScreen.agency=agencyPrices;   // the reset rebuilds each screen from its constructor; the price section is attached again
   lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=lastAgencyId=lastSiteId=null;climateDoneIds=new Set();
   $("#source-dialog").close();

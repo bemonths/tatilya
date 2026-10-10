@@ -16,7 +16,8 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from . import refresh
-from .models import JobInput, SourceInput, SourceUpdate
+from .models import EvidencePackInput, JobInput, SourceInput, SourceUpdate
+from . import evidence
 from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
@@ -543,6 +544,52 @@ def create_app(data_dir: Path | None = None, registry=None):
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham fiyat manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"kiralama-fiyat-{identifier[:8]}.json")
+
+    def evidence_templates_of(destination_id):
+        try:
+            return evidence.destination_templates(PROFILES.get(destination_id))
+        except evidence.TemplateError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.get("/api/evidence-templates")
+    def evidence_templates(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Templates of the destination with their sections and parameter choices (a region parameter offers the canonical regions)."""
+        selected(destination_id)
+        regions = [{"id": r["id"], "name": r["name"]} for r in db.context(destination_id).canonical_regions]
+        return {"templates": [{**{k: t[k] for k in ("key", "version", "title", "question", "dimensions")},
+                               "parameters": [{**p, "choices": regions} for p in t["parameters"]],
+                               "sections": [{k: s[k] for k in ("key", "title", "question")} for s in t["sections"]]}
+                              for t in evidence_templates_of(destination_id).values()]}
+
+    @app.get("/api/evidence-packs")
+    def evidence_packs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return evidence.stored(db, destination_id)
+
+    @app.post("/api/evidence-packs", status_code=201)
+    async def create_evidence_pack(body: EvidencePackInput):
+        """Generate a pack from the latest successful runs and store its Markdown and JSON (dated, with SHA-256) under the data folder."""
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        evidence_templates_of(destination_id)
+        def build():
+            pack = evidence.generate(db, destination_id, PROFILES.get(destination_id), body.template_key, body.params)
+            return evidence.store(db, pack)
+        try:
+            return await asyncio.to_thread(build)
+        except evidence.PackError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/evidence-packs/{identifier}/{kind}")
+    def evidence_pack_file(identifier: str, kind: str):
+        if kind not in ("markdown", "json"):
+            raise HTTPException(404, "Bilinmeyen dosya türü.")
+        try:
+            path, record = evidence.stored_file(db, identifier, "md" if kind == "markdown" else "json")
+        except evidence.PackError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        media = "text/markdown; charset=utf-8" if kind == "markdown" else "application/json"
+        return FileResponse(path, media_type=media, filename=path.name)
 
     @app.get("/api/events")
     async def events(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):

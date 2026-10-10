@@ -1,0 +1,58 @@
+{
+  "key": "mahalle-rehberi",
+  "version": "1",
+  "title": "Mahalle rehberi",
+  "question": "Bu mahallede kalmak nasıl bir deneyim: plaja, yemeğe ve günlük ihtiyaçlara erişim, konaklama fiyatı ve sezon? (Paket yalnız kanıtı verir.)",
+  "dimensions": {"bolge": "mahalle", "karar": "mahalle seçimi", "donem": "tüm yıl", "gezgin_tipi": "genel"},
+  "parameters": [{"key": "mahalle", "label": "Mahalle", "kind": "region"}],
+  "sections": [
+    {"key": "tanim", "title": "Mahallenin resmî tanımı",
+     "question": "Resmî dizin bu mahalleyi nasıl tanımlıyor?",
+     "blocks": [
+       {"block": "neighborhoods", "region": "{mahalle}"}
+     ]},
+    {"key": "plaj", "title": "Plaj erişimleri",
+     "question": "Mahalleye düşen halka açık plaj erişimleri hangileri ve olanakları ne?",
+     "blocks": [
+       {"block": "beach_accesses", "region": "{mahalle}"},
+       {"block": "beach_features", "region": "{mahalle}"},
+       {"block": "references", "topics": ["plaj-erisimi", "plaj-hukuku"], "match": "{mahalle_adi}"}
+     ]},
+    {"key": "konaklama", "title": "Konaklama",
+     "question": "Kaç ilan görünüyor, türü ve oda dağılımı ne, ay ay haftalık fiyat ne?",
+     "blocks": [
+       {"block": "lodging_inventory", "region": "{mahalle}"},
+       {"block": "lodging_inventory", "region": "{mahalle}", "months": ["07"], "detail": true},
+       {"block": "lodging_prices", "region": "{mahalle}"},
+       {"block": "lodging_bedrooms", "region": "{mahalle}", "months": ["01", "07"]}
+     ]},
+    {"key": "restoranlar", "title": "Restoranlar",
+     "question": "Mahallede hangi restoranlar var; seviye, rezervasyon, çocuk menüsü ve saatler ne?",
+     "blocks": [
+       {"block": "restaurants", "region": "{mahalle}", "list": true}
+     ]},
+    {"key": "gunluk", "title": "Günlük ihtiyaç mesafeleri",
+     "question": "Market, eczane, acil sağlık, bisiklet kiralama ve plaj erişimi kuş uçuşu ne kadar uzak?",
+     "blocks": [
+       {"block": "daily_needs", "region": "{mahalle}"}
+     ]},
+    {"key": "mahalleye-ozgu", "title": "Mahalleye özgü referanslar",
+     "question": "Otopark, servis, kurallar ve tarih hakkında bu mahalleyi anan kaynaklı satırlar neler?",
+     "blocks": [
+       {"block": "references", "topics": ["plaj-kurallari", "guvenlik", "ulasim", "parklar", "erisilebilirlik", "tarihce", "genel"], "match": "{mahalle_adi}"}
+     ]},
+    {"key": "etkinlikler", "title": "Etkinlikler",
+     "question": "Mahallede her yıl tekrarlanan etkinlikler neler?",
+     "blocks": [
+       {"block": "references", "topics": ["etkinlikler"], "match": "{mahalle_adi}"}
+     ]},
+    {"key": "hava-sezon", "title": "Hava ve sezon (30A geneli)",
+     "question": "Hava, deniz suyu ve sezon deseni ne? (Bu bölüm mahalleye özgü değildir; 30A genelinden ve öyle etiketli.)",
+     "blocks": [
+       {"block": "climate_months"},
+       {"block": "sea_water"},
+       {"block": "tdt_season", "years": 5},
+       {"block": "storms", "from": 1991, "to": 2025, "radius_nmi": 50}
+     ]}
+  ]
+}
