@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "30A Studio Yardımcısı",
-  "version": "0.16.0",
+  "version": "0.18.0",
   "description": "30A Studio programının istediği sayfaları kendi penceresinde açar ve yalnız sayfanın içeriğini programa verir.",
   "permissions": ["tabs", "scripting", "storage", "alarms", "notifications"],
   "host_permissions": ["http://127.0.0.1/*"],

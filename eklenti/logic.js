@@ -1,22 +1,44 @@
 // 30A Studio Yardımcısı — saf mantık (DOM ve chrome.* kullanmaz; Node testleri bu dosyayı doğrudan sınar).
 //
 // Eklenti yalnız programın istediği adresleri, kendi açtığı pencerede açar ve sayfanın içeriğini programa verir. Tıklamaz, yazı yazmaz,
-// form doldurmaz; giriş ve ödeme sayfalarını okumadan atlar. Doğrulama sayfasında kullanıcıyı bekler (en çok 15 dk).
+// form doldurmaz; giriş ve ödeme sayfalarını okumadan atlar. Doğrulama sayfasında kullanıcıyı bekler (en çok 15 dk); kimsenin
+// geçemeyeceği engelde (erişim reddedildi) ve ABD dışı erişim engelinde (bölge engeli) beklemez, hemen atlar (GÖREV-16).
 
 export const PROGRAM_ID = "thirtya-studio";
 export const PORTS = Array.from({length: 20}, (_, i) => 8830 + i);      // 8830–8849 (Housing Atlas 8790–8809 kullanır)
 export const ASK_EVERY_MS = 3000;
+export const REPORT_EVERY_MS = 4000;     // iş sürerken programa en çok 5 sn arayla canlılık ve durum bildirilir
+export const STUCK_AFTER_MS = 3 * 60 * 1000;
 export const DEFAULT_GAP_S = 8;
 export const VERIFY_WAIT_S = 15 * 60;
 export const MAX_WAIT_S = 60;
 
-// Doğrulama ve engel sayfası işaretleri: programın studio/sources/browser_verification.py dosyasındaki CHALLENGE ve BLOCKED ile aynıdır
-// (bir Python testi bu iki metnin aynı kaldığını denetler).
+// Sayfa türü işaretleri: programın studio/sources/page_kinds.py dosyasındakilerle aynıdır (bir Python testi bu metinlerin ve
+// sayıların aynı kaldığını, iki taraf aynı fikstürlerde aynı sonucu verdiğini denetler).
 export const CHALLENGE_SOURCE = String.raw`<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold`;
-export const BLOCKED_SOURCE = String.raw`Sorry, you have been blocked|You are unable to access`;
+export const CHALLENGE_TITLES_SOURCE = String.raw`^(just a moment|attention required|verify you are human|bir dakika)`;
+export const DENIED_SOURCE = String.raw`Sorry, you have been blocked|You are unable to access|You don(?:'|’|&#39;|&#x27;)t have permission to access|You do not have permission to access`;
+export const DENIED_TITLES_SOURCE = String.raw`^(access denied|403 forbidden|forbidden|error 403)\b`;
+export const REGION_SOURCE = String.raw`outside of the United States|outside the United States|outside the U\.S\.|not available in your country|not available in your region|unable to service customers outside`;
+export const REGION_TITLES_SOURCE = String.raw`^International \| Publix`;
+export const REGION_ADDRESS_SOURCE = String.raw`geo-?block`;
+export const HEAD = 40000;
+export const SHORT_TEXT = 4000;
+export const EMPTY_TEXT = 300;
 const CHALLENGE = new RegExp(CHALLENGE_SOURCE, "i");
-const BLOCKED = new RegExp(BLOCKED_SOURCE, "i");
-const CHALLENGE_TITLES = /^(just a moment|attention required|access denied|verify you are human|bir dakika)/i;
+const CHALLENGE_TITLES = new RegExp(CHALLENGE_TITLES_SOURCE, "i");
+const DENIED = new RegExp(DENIED_SOURCE, "i");
+const DENIED_TITLES = new RegExp(DENIED_TITLES_SOURCE, "i");
+const REGION = new RegExp(REGION_SOURCE, "i");
+const REGION_TITLES = new RegExp(REGION_TITLES_SOURCE, "i");
+const REGION_ADDRESS = new RegExp(REGION_ADDRESS_SOURCE, "i");
+const INVISIBLE = /<(script|style|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>|<!--[\s\S]*?-->/gi;
+const NAMED = {amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " ", reg: "®", copy: "©", trade: "™", rsquo: "’", lsquo: "‘",
+  rdquo: "”", ldquo: "“", ndash: "–", mdash: "—", hellip: "…"};
+
+export const KIND_LABELS = {tamam: "tamam", dogrulama: "doğrulama", erisim_reddedildi: "erişim reddedildi", bolge_engeli: "bölge engeli",
+  yonlendi: "başka siteye yönlendi"};
+export const STAGE_LABELS = {aciliyor: "sayfa açılıyor", okunuyor: "sayfa okunuyor", dogrulama: "doğrulama bekleniyor", bekleme: "bekleme (hız kuralı)"};
 
 const LOGIN_PATH = /\/(log-?in|sign-?in|signin|account\/login|auth\/login|oturum-ac|giris)(\/|$|\?|\.)/i;
 const LOGIN_TITLE = /^(sign in|log in|login|giriş yap|oturum aç)\b/i;
@@ -74,13 +96,47 @@ export function portOrder(remembered) {
   return [...first, ...PORTS.filter(p => p !== remembered)];
 }
 
+function decodeEntities(text) {
+  return text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (whole, name) => {
+    if (name[0] === "#") {
+      const code = name[1] === "x" || name[1] === "X" ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole;
+    }
+    return NAMED[name.toLowerCase()] ?? whole;
+  });
+}
+
+/** The page's readable text: scripts, styles and comments dropped, tags removed, entities decoded, spaces collapsed. */
+export function visibleText(html) {
+  const text = String(html || "").replace(INVISIBLE, " ").replace(/<[^>]+>/g, " ");
+  return decodeEntities(text).replace(/\s+/g, " ").trim();
+}
+
+/** "tamam", "dogrulama", "erisim_reddedildi" or "bolge_engeli" (the same order and rules as page_kinds.classify). */
+export function pageKind(html = "", title = "", url = "", status = null) {
+  const head = String(html || "").slice(0, HEAD);
+  const name = String(title || "").trim();
+  const text = visibleText(head);
+  const code = Number.isFinite(Number(status)) && status !== null && status !== "" ? Number(status) : null;
+  if (REGION_TITLES.test(name) || REGION_ADDRESS.test(String(url || ""))) return "bolge_engeli";
+  if (REGION.test(text) && (code === 403 || code === 451 || text.length < SHORT_TEXT)) return "bolge_engeli";
+  if (DENIED.test(head)) return "erisim_reddedildi";
+  if (CHALLENGE.test(head) || CHALLENGE_TITLES.test(name)) return "dogrulama";
+  if (DENIED_TITLES.test(name) || (code === 403 && text.length < EMPTY_TEXT)) return "erisim_reddedildi";
+  return "tamam";
+}
+
+/** A page that went on to a site the extension may not open: "bolge_engeli" for a geo-block address, else "yonlendi". */
+export function redirectKind(finalUrl) {
+  return REGION_ADDRESS.test(String(finalUrl || "")) ? "bolge_engeli" : "yonlendi";
+}
+
 export function isVerification(html, title = "") {
-  const head = String(html || "").slice(0, 40000);
-  return CHALLENGE.test(head) || CHALLENGE_TITLES.test(String(title || "").trim());
+  return pageKind(html, title) === "dogrulama";
 }
 
 export function isBlocked(html) {
-  return BLOCKED.test(String(html || "").slice(0, 40000));
+  return DENIED.test(String(html || "").slice(0, HEAD));
 }
 
 /** A page that asks the visitor to sign in: a password field, or a sign-in address or title. Such a page is not read. */
@@ -133,19 +189,46 @@ export class JobQueue {
   forget(id) { this.seen.delete(id); }     // the program may hand the same job again (after the service worker was stopped)
 }
 
-/** What is sent to the program for one page. */
+const KEEP_HTML = ["tamam", "dogrulama", "erisim_reddedildi", "bolge_engeli"];
+
+/** What is sent to the program for one page (the page itself for an ordinary page and, as evidence, for a refusal or a block). */
 export function pageResult(state, page = {}, note = null) {
   const result = {durum: state, son_adres: page.url || null, baslik: page.title || "", http_durumu: page.status ?? null, not: note};
-  if (state === "tamam" || state === "dogrulama") result.html = page.html ?? null;
+  if (KEEP_HTML.includes(state)) result.html = page.html ?? null;
   return result;
 }
 
-/** The decision for a page that has loaded (before its wait rule): verification, block, login, payment or read it. */
+/** The decision for a page that has loaded (before its wait rule): a page kind that stops it, login, payment, or read it. */
 export function classify(page) {
-  if (isVerification(page.html, page.title)) return "dogrulama";
+  const kind = pageKind(page.html, page.title, page.url, page.status);
+  if (kind !== "tamam") return kind;
   if (isLogin(page)) return "giris";
   if (isPayment(page)) return "odeme";
   return "oku";
+}
+
+/** The note sent with a page that is not waited for. */
+export function stopNote(kind, page = {}) {
+  if (kind === "erisim_reddedildi") return "Erişim reddedildi (kimsenin geçemeyeceği engel sayfası); beklenmedi, atlandı.";
+  if (kind === "bolge_engeli") return "Bölge engeli: site ABD dışından gelen ziyaretçiye hizmet vermiyor; beklenmedi, atlandı.";
+  if (kind === "yonlendi") return `başka siteye yönlendi: ${domainOf(page.url)}`;
+  return null;
+}
+
+/** The extension window's "Son iş" line: the site, the purpose, the stage and, for a job that stopped moving, since when (GÖREV-16). */
+export function lastJobText(last, now = Date.now()) {
+  if (!last) return "Henüz iş yok.";
+  const head = `${last.alan_adi} · ${last.amac || "iş"}`;
+  const when = new Date(last.zaman || now).toLocaleString("tr-TR");
+  if (last.durum !== "çalışıyor") return `${head} · ${last.durum} · ${when}`;
+  const stage = STAGE_LABELS[last.asama] || "çalışıyor";
+  const moved = Number(last.ilerleme || last.zaman || now);
+  const minutes = Math.floor((now - moved) / 60000);
+  const waiting = last.asama === "dogrulama" && Number.isFinite(last.bitis) ? ` (kalan ${Math.max(0, Math.round((last.bitis - now) / 60000))} dk)` : "";
+  if (last.asama !== "dogrulama" && now - moved > STUCK_AFTER_MS) {
+    return `${head} · takılmış görünüyor: ${minutes} dk'dır ilerlemiyor (son adım: ${stage})`;
+  }
+  return `${head} · ${stage}${waiting} · son ilerleme ${minutes < 1 ? "az önce" : `${minutes} dk önce`}`;
 }
 
 export function bytesToBase64(bytes) {

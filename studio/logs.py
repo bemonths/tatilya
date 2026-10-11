@@ -1,8 +1,10 @@
 """Uygulama günlüğü: `<veri klasörü>/gunluk/uygulama.log` (1 MB × 3 dönen dosya).
 
 Konsolsuz çalışmada (pythonw) `sys.stdout` ve `sys.stderr` yoktur; `print` ve hata dökümleri günlüğe yönlendirilir.
-Housing Atlas'taki `atlas/logs.py`'nin sadeleştirilmiş kopyası (gizli değer maskeleme ve iş günlüğü biçimi yok:
-30A'nın günlüğüne anahtar ya da parola yazılmaz).
+Housing Atlas'taki `atlas/logs.py`'nin sadeleştirilmiş kopyası (iş günlüğü biçimi yok). GÖREV-16: gizli değer maskeleme
+Housing Atlas'taki gibi: bu süreçte kaydedilen ya da okunan gizli değerler (ABD proxy parolası; `studio.credentials`)
+listeye girer ve günlüğe yazılan her mesajda ve hata dökümünde `***` olur; proxy adresi günlükte yalnız `şema://sunucu`
+olarak görünür (`proxy_label`).
 """
 
 import io
@@ -11,6 +13,7 @@ import sys
 import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from urllib.parse import urlsplit
 
 LOGS_DIR = "gunluk"
 APP_LOG_NAME = "uygulama.log"
@@ -19,6 +22,62 @@ BACKUP_COUNT = 3
 
 LEVEL_NAMES = {logging.DEBUG: "AYRINTI", logging.INFO: "BILGI", logging.WARNING: "UYARI",
                logging.ERROR: "HATA", logging.CRITICAL: "HATA"}
+
+
+MASK = "***"
+# Çok kısa değerler maskelenmez: her geçtiği yerde metni bozar, gizlilik kazancı yoktur.
+MIN_SECRET_LENGTH = 4
+_secrets: set[str] = set()
+_secrets_lock = threading.Lock()
+
+
+def register_secret(value: str | None) -> None:
+    if value and len(value) >= MIN_SECRET_LENGTH:
+        with _secrets_lock:
+            _secrets.add(value)
+
+
+def mask(text: str) -> str:
+    with _secrets_lock:
+        values = sorted(_secrets, key=len, reverse=True)
+    for value in values:
+        if value in text:
+            text = text.replace(value, MASK)
+    return text
+
+
+def proxy_label(url: str) -> str:
+    """Proxy adresinin günlükte ve metinlerde görünen biçimi: `şema://sunucu` (port, kullanıcı ve parola olmadan)."""
+    try:
+        parts = urlsplit((url or "").strip())
+        host = parts.hostname
+    except ValueError:
+        return ""
+    if not parts.scheme or not host:
+        return ""
+    return f"{parts.scheme.lower()}://{host}"
+
+
+class MaskFilter(logging.Filter):
+    """Tutucu süzgeci: biçimlenmiş mesajdaki ve hata dökümündeki gizli değerleri maskeler."""
+
+    _formatter = logging.Formatter()
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:
+            if isinstance(record.args, tuple):
+                record.args = tuple(mask(str(arg)) for arg in record.args)
+            return True
+        masked = mask(message)
+        if masked != message:
+            record.msg, record.args = masked, None
+        if record.exc_text:              # another handler may have formatted (and cached) the traceback already
+            record.exc_text = mask(record.exc_text)
+        elif record.exc_info:
+            record.exc_text = mask(self._formatter.formatException(record.exc_info))
+        return True
 
 
 class _Formatter(logging.Formatter):
@@ -49,6 +108,7 @@ def setup_logging(data_dir: Path, *, console: bool = False) -> RotatingFileHandl
         handlers.append(logging.StreamHandler())
     for handler in handlers:
         handler.studio_handler = True
+        handler.addFilter(MaskFilter())
         handler.setFormatter(_Formatter(_FORMAT, _DATE_FORMAT))
         root.addHandler(handler)
     root.setLevel(logging.WARNING)

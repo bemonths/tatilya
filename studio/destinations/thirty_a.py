@@ -101,10 +101,10 @@ TEXT = {
 }
 
 # GÖREV-14 (Adım 7): one page of each site the reports name as unreadable from this computer, for Settings → Tarayıcı eklentisi →
-# "Sorunlu sitelerden birer sayfa dene" (the user presses it). Addresses come from the records of earlier runs.
+# "Sorunlu sitelerden birer sayfa dene" (the user presses it). Addresses come from the records of earlier runs. GÖREV-16: realjoy.com's
+# listing of 11 October 2026 was gone (404); its 30A listing page (a link of that day's raw copy) stays.
 EXTENSION_TRIAL_SITES = (
-    ("realjoy.com", "https://realjoy.com/northwest-florida/south-walton-30a-miramar-beach-sandestin/30a/seacrest-beach/town-of-prominence/"
-                    "rental/town-of-prominence-326b-seaside-paradise/351363", "kiralama şirketi ilanı (61 ilan; okuyucu yok)"),
+    ("realjoy.com", "https://www.realjoy.com/beach-rentals/30a-vacation-rentals", "kiralama şirketinin 30A ilan listesi (okuyucu yok)"),
     ("order.online", "https://order.online/business/smallcakes-cupcakery-56407", "restoran menüsü (doğrulama geçmedi)"),
     ("hcafloridahealthcare.com", "https://www.hcafloridahealthcare.com/locations/breakfast-point-emergency", "acil sağlık noktası"),
     ("cvs.com", "https://www.cvs.com/store-locator/cvs-pharmacy-locations/Florida/Miramar-Beach", "eczane zinciri"),

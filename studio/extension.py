@@ -18,6 +18,13 @@ States the job panel shows: "eklenti bekleniyor" while the extension is paired b
 the program's own browser; after WAIT_EXTENSION_S the hand-over happens by itself and is written down. A verification page pauses the
 extension (it brings its window forward and notifies the user) for at most 15 minutes; then the page is skipped. A login page is marked
 "giriş gerekiyor" and skipped. The extension never clicks or types.
+
+GÖREV-16 (Adım 2): every call of the paired extension counts as "seen". While it works on a job it reports every few seconds what it
+does (sayfa açılıyor, sayfa okunuyor, doğrulama bekleniyor with the time left, bekleme for the pacing rule); Settings and the job panel
+say "Eklenti çalışıyor: <site> · <durum>". "Bağlı değil (Chrome kapalı olabilir)" appears only when nothing was heard for 60 s while a
+job runs (20 s otherwise). A refusal nobody can pass ("erisim_reddedildi") and a region block ("bolge_engeli") are not waited for; a
+page that went on to a site the extension may not open is "yonlendi" (or "bolge_engeli" for a geo-block address). "Bu sayfayı atla"
+(the extension's window or the job panel) skips a page waiting for verification ("atlandi").
 """
 import base64
 import hashlib
@@ -35,6 +42,8 @@ from urllib.parse import urlsplit
 
 PAIRING_FILE = "eklenti.json"
 CONNECTED_S = 20.0
+CONNECTED_BUSY_S = 60.0            # while a job runs the extension may be busy with one page for a while; it reports every ≤5 s
+EXPECTED_VERSION = "0.18.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
 DEFAULT_GAP_S, MIN_GAP_S, MAX_GAP_S = 8, 3, 120
 VERIFY_WAIT_S = 15 * 60
 PAGE_TIMEOUT_S = VERIFY_WAIT_S + 240
@@ -46,8 +55,28 @@ ORIGIN_PREFIX = "chrome-extension://"
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 HEADER = "x-studio-eklenti"
-RESULT_STATES = ("tamam", "dogrulama", "giris", "odeme", "izin_yok", "hata")
+RESULT_STATES = ("tamam", "dogrulama", "giris", "odeme", "izin_yok", "hata", "erisim_reddedildi", "bolge_engeli", "yonlendi", "atlandi")
+KEEP_HTML = ("tamam", "dogrulama", "erisim_reddedildi", "bolge_engeli")      # the page is kept as the raw copy (also as evidence)
+STAGES = ("aciliyor", "okunuyor", "dogrulama", "bekleme")
 MAX_HTML_BYTES = 12_000_000
+
+
+def stage_text(stage, now=None):
+    """'sayfa açılıyor', 'sayfa okunuyor', 'doğrulama bekleniyor (kalan 12 dk)', 'bekleme (hız kuralı)'."""
+    kind = (stage or {}).get("asama")
+    if kind == "aciliyor":
+        return "sayfa açılıyor"
+    if kind == "okunuyor":
+        return "sayfa okunuyor"
+    if kind == "bekleme":
+        return "bekleme (hız kuralı)"
+    if kind == "dogrulama":
+        end = (stage or {}).get("bitis")
+        left = max(0, int(end - (now if now is not None else time.time()))) if isinstance(end, (int, float)) else None
+        if left is None:
+            return "doğrulama bekleniyor"
+        return f"doğrulama bekleniyor (kalan {(left + 59) // 60} dk)" if left >= 120 else f"doğrulama bekleniyor (kalan {left} sn)"
+    return "çalışıyor"
 
 
 class ExtensionError(Exception):
@@ -86,6 +115,8 @@ class Session:
         self.verifying = None
         self.permission_missing_since = None
         self.count = 0
+        self.stage = None                  # GÖREV-16: what the extension last said it does {asama, adres, bitis, zaman}
+        self.skip = False                  # "Bu sayfayı atla" asked from the job panel; told to the extension in its next report
 
     # ---- for collectors (their own thread) ----
 
@@ -244,8 +275,18 @@ class ExtensionBridge:
         return bool(self.config.get("koken"))
 
     @property
+    def busy(self):
+        """A job is in the extension's hands (a session it took and has not finished)."""
+        return any(s.state == "calisiyor" and not (s.closed and not s.queue and not s.in_flight) for s in list(self.sessions.values()))
+
+    @property
     def connected(self):
-        return self.paired and self.last_seen is not None and self.clock() - self.last_seen <= CONNECTED_S
+        limit = CONNECTED_BUSY_S if self.busy else CONNECTED_S
+        return self.paired and self.last_seen is not None and self.clock() - self.last_seen <= limit
+
+    def seen(self):
+        """Every authorized call of the paired extension counts (GÖREV-16)."""
+        self.last_seen = self.clock()
 
     def touch(self, version, allowed):
         self.last_seen = self.clock()
@@ -266,15 +307,26 @@ class ExtensionBridge:
         domain = domain_of(domain)
         return domain in LOCAL_HOSTS or any(domain == a or domain.endswith("." + a) for a in self.allowed)
 
+    def working(self):
+        """'<site> · <durum>' of the session the extension works on now (GÖREV-16), or None."""
+        for session in list(self.sessions.values()):
+            if session.state == "calisiyor" and session.stage:
+                return f"{session.domain} · {stage_text(session.stage, self.clock())}"
+        return None
+
     def status(self):
         with self.lock:
             active = [s for s in self.sessions.values() if s.state in ("bekliyor", "calisiyor") and not s.closed]
+            working = self.working() if self.connected else None
             return {"eslesti": self.paired, "bagli": self.connected, "son_gorulme": datetime.fromtimestamp(self.last_seen, timezone.utc)
                     .isoformat(timespec="seconds") if self.last_seen else None, "surum": self.version, "kod": self.code(),
+                    "beklenen_surum": EXPECTED_VERSION, "eski_surum": bool(self.version) and self.version != EXPECTED_VERSION,
                     "kod_olusturuldu": self.config.get("olusturuldu"), "eslesme_zamani": self.config.get("eslesti"),
                     "izinli_alan_adlari": list(self.allowed), "izin_bekleyen_alan_adlari": sorted(self.pending),
                     "aralik_saniye": self.gap(), "aralik_sinirlari": [MIN_GAP_S, MAX_GAP_S],
-                    "acik_oturumlar": [{"alan_adi": s.domain, "durum": s.state, "dogrulama": s.verifying} for s in active]}
+                    "calisiyor": working, "bagli_esigi_saniye": int(CONNECTED_BUSY_S if self.busy else CONNECTED_S),
+                    "acik_oturumlar": [{"alan_adi": s.domain, "durum": s.state, "dogrulama": s.verifying,
+                                        "asama": stage_text(s.stage, self.clock()) if s.stage else None} for s in active]}
 
     # ---- sessions ----
 
@@ -347,12 +399,23 @@ class ExtensionBridge:
             self.lock.notify_all()
             return True
 
-    def report(self, session_id, *, verifying=None, missing=None):
+    def report(self, session_id, *, verifying=None, missing=None, stage=None):
+        """The extension's word about a session: a verification page, a missing permission, or (GÖREV-16, every ≤5 s while it works)
+        its stage. Returns None for an unknown session, else {"atla": bool} ("Bu sayfayı atla" asked from the job panel)."""
         with self.lock:
             session = self.sessions.get(session_id)
             if session is None:
-                return False
+                return None
             session.active_at = self.clock()
+            if isinstance(stage, dict) and stage.get("asama") in STAGES:
+                left = stage.get("kalan_s")
+                new = {"asama": stage["asama"], "adres": str(stage.get("adres") or "")[:500] or None, "zaman": self.clock(),
+                       "bitis": self.clock() + float(left) if isinstance(left, (int, float)) and not isinstance(left, bool) and 0 <= left <= 7200 else None}
+                text_before = stage_text(session.stage, self.clock()) if session.stage else None
+                session.stage = new
+                text = stage_text(new, self.clock())
+                if text != text_before:
+                    session.notify("asama", f"{session.domain} · {text}")
             if verifying and session.verifying != verifying:
                 session.verifying = verifying
                 session.notify("dogrulama", domain_of(verifying))
@@ -363,7 +426,17 @@ class ExtensionBridge:
                 session.queue.extendleft(reversed(list(session.in_flight.values())))
                 session.in_flight.clear()
                 session.notify("izin_yok", domain_of(missing))
-            return True
+            skip, session.skip = session.skip, False
+            return {"atla": skip}
+
+    def skip_page(self, job_id):
+        """"Bu sayfayı atla" from the job panel: the page of the job's session that waits for verification is skipped."""
+        with self.lock:
+            for session in self.sessions.values():
+                if session.job_id == job_id and session.state == "calisiyor" and (session.verifying or (session.stage or {}).get("asama") == "dogrulama"):
+                    session.skip = True
+                    return True
+        return False
 
     def finished(self, session_id, error=None):
         with self.lock:
@@ -407,9 +480,11 @@ class ExtensionBridge:
             body = body.encode("utf-8")
         digest = hashlib.sha256(body).hexdigest()
         (folder / f"{stem}.html").write_bytes(body)
-        record = {"yontem": "eklenti", "etiket": label, "adres": result.get("adres"), "son_adres": result.get("son_adres"),
+        record = {"yontem": result.get("yontem") or "eklenti", "etiket": label, "adres": result.get("adres"), "son_adres": result.get("son_adres"),
                   "baslik": result.get("baslik"), "durum": result.get("durum"), "http_durumu": result.get("http_durumu"),
-                  "okundu": result.get("okundu"), "sha256": digest, "bayt": len(body), "not": result.get("not")}
+                  "okundu": result.get("okundu") or now_iso(), "sha256": digest, "bayt": len(body), "not": result.get("not")}
+        if result.get("proxy"):
+            record["proxy"] = True              # GÖREV-16: read through the user's US proxy (its address is never written)
         (folder / f"{stem}.json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
         return {**record, "dosya": (folder / f"{stem}.html").relative_to(self.data_dir).as_posix()}
 
@@ -435,12 +510,18 @@ class JobAccess:
                                  {"tur": "eklenti", "bekliyor": False}),
             "izin_yok": (f"Eklentinin {value} için izni yok: Chrome'da eklenti simgesine tıklayıp “İzin ver” düğmesine basın.", None),
             "dogrulama": (f"Kullanıcı doğrulaması bekleniyor: {value}. Chrome'da öne gelen 30A Studio Yardımcısı penceresinde doğrulamayı "
-                          f"tamamlayın (en çok {VERIFY_WAIT_S // 60} dk).", None),
+                          f"tamamlayın (en çok {VERIFY_WAIT_S // 60} dk) ya da “Bu sayfayı atla”ya basın.", None),
             "dogrulama_bitti": ("Doğrulama beklemesi bitti; okuma devam ediyor.", None),
+            "asama": (f"Eklenti çalışıyor: {value}", {"tur": "eklenti", "bekliyor": False, "asama": value}),
         }
         message, info = messages.get(kind, (None, None))
         if message is None or self.db is None or self.job_id is None:
             return
+        if kind == "asama":
+            job = self.db.job(self.job_id) or {}
+            if job.get("waiting_for"):                 # the verification message (with its button) stays while the user is asked
+                self.db.update_job(self.job_id, progress_info={**info, "dogrulama": True})
+                return
         extra = {}
         if kind == "dogrulama":
             extra["waiting_for"] = value

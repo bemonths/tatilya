@@ -10,9 +10,10 @@ from .diagnostics import diagnostic
 class JobQueue:
     """Tek çalışanlı kuyruk. Durum ve sonuçlar SQLite'ta kalıcıdır."""
 
-    def __init__(self, db: Database, extension=None):
+    def __init__(self, db: Database, extension=None, region=None):
         self.db = db
         self.extension = extension          # GÖREV-14: the browser extension bridge (studio.extension), when the app has one
+        self.region = region                # GÖREV-16: () -> RegionAccess (the US proxy and the region-blocked list)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="30a-job")
         self.lock = threading.Lock()
         self.closing = False
@@ -94,6 +95,8 @@ class JobQueue:
             if getattr(connector, "uses_extension", False) and self.extension is not None:
                 from .extension import JobAccess
                 extra["extension"] = JobAccess(self.extension, self.db, identifier)   # GÖREV-14: the user's Chrome, when paired
+            if getattr(connector, "uses_region", False) and self.region is not None:
+                extra["region"] = self.region()        # GÖREV-16: region-blocked domains only through the user's US proxy
             if getattr(connector, "uses_verification", False):
                 def waiting(site):
                     message = (f"Kullanıcı doğrulaması bekleniyor: {site}. Açılan tarayıcı penceresinde doğrulamayı tamamlayın "

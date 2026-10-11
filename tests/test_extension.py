@@ -312,10 +312,17 @@ def test_what_worked_for_a_host_is_kept_in_browser_hosts(client):
 
 
 def test_the_extension_uses_the_programs_verification_markers():
+    """GÖREV-16: every page-kind marker of eklenti/logic.js is the same text as studio/sources/page_kinds.py (and the program's browser
+    uses the same patterns); the numbers of the rules too."""
+    from studio.sources import page_kinds
     logic = (ROOT / "eklenti" / "logic.js").read_text(encoding="utf-8")
-    source = re.search(r"CHALLENGE_SOURCE = String\.raw`([^`]*)`", logic).group(1)
-    blocked = re.search(r"BLOCKED_SOURCE = String\.raw`([^`]*)`", logic).group(1)
-    assert source == bv.CHALLENGE.pattern and blocked == bv.BLOCKED.pattern
+    for name in ("CHALLENGE", "CHALLENGE_TITLES", "DENIED", "DENIED_TITLES", "REGION", "REGION_TITLES", "REGION_ADDRESS"):
+        source = re.search(rf"export const {name}_SOURCE = String\.raw`([^`]*)`", logic).group(1)
+        assert source == getattr(page_kinds, name).pattern, name
+    for name in ("HEAD", "SHORT_TEXT", "EMPTY_TEXT"):
+        assert int(re.search(rf"export const {name} = (\d+);", logic).group(1)) == getattr(page_kinds, name), name
+    assert "access denied" not in re.search(r"CHALLENGE_TITLES_SOURCE = String\.raw`([^`]*)`", logic).group(1)
+    assert bv.CHALLENGE is page_kinds.CHALLENGE and bv.BLOCKED is page_kinds.DENIED
 
 
 def test_the_manifest_asks_only_for_the_narrow_permissions():
@@ -324,9 +331,9 @@ def test_the_manifest_asks_only_for_the_narrow_permissions():
     assert sorted(manifest["permissions"]) == ["alarms", "notifications", "scripting", "storage", "tabs"]
     assert manifest["host_permissions"] == ["http://127.0.0.1/*"] and manifest["optional_host_permissions"] == ["https://*/*", "http://*/*"]
     text = json.dumps(manifest)
-    for forbidden in ("cookies", "history", "bookmarks", "downloads", "debugger", "webRequest", "<all_urls>"):
+    for forbidden in ("cookies", "history", "bookmarks", "downloads", "debugger", "webRequest", "<all_urls>", "proxy"):   # GÖREV-16: no proxy permission
         assert forbidden not in text
     code = "".join((ROOT / "eklenti" / name).read_text(encoding="utf-8") for name in ("background.js", "popup.js", "logic.js"))
-    for forbidden in ("chrome.debugger", "chrome.cookies", "chrome.history", ".click()", "dispatchEvent", "chrome.downloads"):
+    for forbidden in ("chrome.debugger", "chrome.cookies", "chrome.history", ".click()", "dispatchEvent", "chrome.downloads", "chrome.proxy"):
         assert forbidden not in code
     assert all(len(line) < 400 for line in code.splitlines())                                       # readable, not minified

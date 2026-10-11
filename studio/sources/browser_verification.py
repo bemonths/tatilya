@@ -12,6 +12,11 @@ for the end of the run; at the end the waiting sites are opened in tabs, the job
 window (the code never interacts with the check and never disguises the browser). A block page (the site refusing the visitor) stops
 that site at once. Requests to a verified or protected site run inside its page with the browser's own fetch.
 
+GÖREV-16: what a page is comes from studio/sources/page_kinds.py (also the extension's copy). A refusal nobody can pass ("erişim
+reddedildi") and a region block ("bölge engeli": the site serves only visitors inside the United States) are never sent to the user's
+verification; a region block raises RegionBlocked so the caller puts the domain on the region-blocked list (read only through the
+user's US proxy, studio/sources/region_reader.py).
+
 Hosts that once showed a verification page are kept in browser_hosts ("read with the browser"): later runs go to them through the
 browser only, and a warm-up opens them all in tabs before a long run (python -m studio.sources.browser_verification isinma).
 """
@@ -26,10 +31,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
-# The interstitial only (its title, its options object or its page script); a Turnstile box in a form is not one.
-CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|"
-                       r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold", re.I)
-BLOCKED = re.compile(r"Sorry, you have been blocked|You are unable to access", re.I)
+from . import page_kinds
+
+# The interstitial only (its title, its options object or its page script); a Turnstile box in a form is not one (page_kinds).
+CHALLENGE = page_kinds.CHALLENGE
+BLOCKED = page_kinds.DENIED
 FETCH = """async ({url, method, headers, body}) => {
     const response = await fetch(url, {method, headers, body: body === null ? undefined : body, credentials: 'include', redirect: 'follow'});
     const bytes = new Uint8Array(await response.arrayBuffer());
@@ -54,6 +60,14 @@ BROWSERS = (
 
 class SiteBlocked(Exception):
     """The site shows a block page (not a verification page): requests to it stop."""
+
+
+class RegionBlocked(SiteBlocked):
+    """The site serves only visitors inside the United States (GÖREV-16): the domain goes on the region-blocked list."""
+
+    def __init__(self, domain, title="", url="", evidence=None):
+        super().__init__(f"{domain}: bölge engeli ({title or evidence or 'ABD dışı erişim engeli'})"[:200])
+        self.domain, self.title, self.url, self.evidence = domain, title, url, evidence
 
 
 class BrowserUnavailable(Exception):
@@ -172,15 +186,32 @@ class ChromeSession:
             pass
 
 
-def page_state(page):
-    """'blocked', 'challenge' or 'open' for what the page shows now."""
+def page_kind(page):
+    """page_kinds.classify for what the page shows now; None while it is navigating."""
     try:
-        content = page.title() + page.content()[:30000]
+        content, title = page.content(), page.title()
     except Exception:
-        return "challenge"                    # navigating (the check reloads the page): look again
-    if BLOCKED.search(content):
-        return "blocked"
-    return "challenge" if CHALLENGE.search(content) else "open"
+        return None                           # navigating (the check reloads the page): look again
+    return page_kinds.classify(content, title, getattr(page, "url", "") or "", None)
+
+
+def page_state(page):
+    """'blocked' (a refusal or a region block: never waited for), 'challenge' or 'open' for what the page shows now."""
+    kind = page_kind(page)
+    if kind is None:
+        return "challenge"
+    return {"erisim_reddedildi": "blocked", "bolge_engeli": "blocked", "dogrulama": "challenge"}.get(kind, "open")
+
+
+def region_blocked(domain, page):
+    """RegionBlocked for a page that is a region block, else None."""
+    if page_kind(page) != "bolge_engeli":
+        return None
+    try:
+        content, title, url = page.content(), page.title(), getattr(page, "url", "") or ""
+    except Exception:
+        content, title, url = "", "", ""
+    return RegionBlocked(host_key(domain), title, url, page_kinds.evidence(content, title, url))
 
 
 def watch(page, seconds, canceled):
@@ -269,7 +300,7 @@ class BrowserVerifier:
             page.goto(url, wait_until="domcontentloaded", timeout=90_000)
             state = watch(page, timeout, canceled)
             if state == "blocked":
-                raise SiteBlocked(f"{domain}: {page.title()[:80]}")
+                raise region_blocked(domain, page) or SiteBlocked(f"{domain}: {page.title()[:80]}")
             if state == "open":
                 return BrowserTransport(session, page)
             session.close()

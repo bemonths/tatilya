@@ -26,6 +26,8 @@ from .ai.service import ClaudeService
 from .text.engine import TextService
 from .watchdog import Watchdog
 from . import extension as ext
+from . import proxy as proxy_mod
+from .sources import page_kinds, region_reader
 from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
@@ -62,7 +64,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         app.state.text = TextService(db, db.path.parent, app.state.claude)      # GÖREV-15: the video text's chain
         app.state.text.recover()
         app.state.claude.text = app.state.text
-        app.state.jobs = JobQueue(db, extension=app.state.extension)
+        app.state.jobs = JobQueue(db, extension=app.state.extension, region=lambda: app.state.region_access())
         app.state.batches = refresh.BatchRunner(db, app.state.jobs)
         app.state.batches.recover()
         try:
@@ -77,6 +79,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     app.state.db = db
     app.state.watchdog = watchdog or Watchdog.from_env(has_active_jobs=db.has_active_work, on_waiting=db.note_active_jobs)
     app.state.extension = ext.ExtensionBridge(db.path.parent)
+    app.state.region_access = lambda: region_reader.RegionAccess(db, db.path.parent)     # GÖREV-16 (tests give another)
+    app.state.proxy_test = proxy_mod.test
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
 
     def extension_cors(response, origin):
@@ -104,6 +108,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             if not pairing and not bridge.authorized(origin, request.headers.get(ext.HEADER)):
                 return extension_cors(JSONResponse({"detail": "Eşleşme kodu geçersiz; Ayarlar → Tarayıcı eklentisi ekranındaki kodu yeniden yazın."},
                                                    status_code=403), origin)
+            if not pairing:
+                bridge.seen()                    # GÖREV-16: every call of the paired extension counts as "seen"
             return extension_cors(await call_next(request), origin)
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             # GÖREV-14: the user's browser now talks to the program; a state-changing request from another site is refused
@@ -229,11 +235,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.post("/api/eklenti/is/{session_id}/durum")
     async def extension_state(session_id: str, request: Request):
         body = await json_body(request)
-        found = bridge().report(session_id, verifying=body.get("dogrulama") if isinstance(body.get("dogrulama"), str) else None,
-                                missing=body.get("izin_yok") if isinstance(body.get("izin_yok"), str) else None)
-        if not found:
+        answer = bridge().report(session_id, verifying=body.get("dogrulama") if isinstance(body.get("dogrulama"), str) else None,
+                                 missing=body.get("izin_yok") if isinstance(body.get("izin_yok"), str) else None,
+                                 stage=body.get("asama") if isinstance(body.get("asama"), dict) else None)
+        if answer is None:
             raise HTTPException(404, "Bu iş bulunamadı.")
-        return {"alindi": True}
+        return {"alindi": True, **answer}
 
     @app.post("/api/eklenti/is/{session_id}/bitti")
     async def extension_done(session_id: str, request: Request):
@@ -295,33 +302,77 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         if not bridge().paired:
             raise Conflict("Eklenti eşleşmemiş: önce eşleşme kodunu eklentiye yazın.")
         job_id = db.add_job("eklenti_deneme", "Tarayıcı eklentisi · sorunlu sitelerden birer sayfa", destination_id=destination_id)
+        threading.Thread(target=problem_sites_work, args=(job_id, sites), name="eklenti-deneme", daemon=True).start()
+        return db.job(job_id)
 
-        def work():
-            access = ext.JobAccess(bridge(), db, job_id)
-            rows = []
-            db.update_job(job_id, status="running", progress=1, message=f"{len(sites)} site eklentiyle okunacak.")
+    def problem_sites_work(job_id, sites):
+        """GÖREV-16: each site's page and its kind (tamam, doğrulama, erişim reddedildi, bölge engeli, başka siteye yönlendi). A domain on
+        the region-blocked list is not given to the extension: it is read through the US proxy (proxy, then the program's browser with
+        the proxy) or skipped when no proxy is set. A region block the extension meets puts the domain on the list and, with a proxy,
+        the page is tried through it at once."""
+        def canceled():
+            return (db.job(job_id) or {}).get("status") not in ("queued", "running")
+
+        def waiting(site):
+            message = (f"Kullanıcı doğrulaması bekleniyor: {site}. Programın proxy tarayıcısında açılan pencerede doğrulamayı tamamlayın "
+                       f"(en çok {region_reader.VERIFY_WAIT_S // 60} dk)." if site else "Doğrulama beklemesi bitti; deneme devam ediyor.")
+            db.update_job(job_id, message=message, waiting_for=site or "")
+
+        access = ext.JobAccess(bridge(), db, job_id)
+        region = app.state.region_access()
+        reader = region.reader(canceled=canceled, waiting=waiting)
+        rows = []
+        db.update_job(job_id, status="running", progress=1, message=f"{len(sites)} site denenecek.")
+        try:
             for number, (domain, url, note) in enumerate(sites, 1):
-                job = db.job(job_id)
-                if not job or job["status"] not in ("queued", "running"):
+                if canceled():
                     return
                 try:
-                    session = access.open(domain, purpose="sorunlu site denemesi")
-                    try:
-                        result = session.page(url, {"saniye": 5}, canceled=lambda: (db.job(job_id) or {}).get("status") not in ("queued", "running"))
-                    finally:
-                        session.close()
-                    record = bridge().save_raw(result, f"sorunlu site · {domain}")
-                    rows.append({"alan_adi": domain, "aciklama": note, "durum": result["durum"], "baslik": result.get("baslik"),
-                                 "http_durumu": result.get("http_durumu"), "bayt": record["bayt"], "sha256": record["sha256"], "dosya": record["dosya"],
-                                 "not": result.get("not")})
+                    if region.listed(domain):
+                        row = through_proxy(reader, domain, url, note)
+                    else:
+                        session = access.open(domain, purpose="sorunlu site denemesi")
+                        try:
+                            result = session.page(url, {"saniye": 5}, canceled=canceled)
+                        finally:
+                            session.close()
+                        record = bridge().save_raw(result, f"sorunlu site · {domain}")
+                        row = trial_row(domain, note, result, record)
+                        if result["durum"] == "bolge_engeli":
+                            region.mark(domain, title=result.get("baslik") or None, url=url,
+                                        evidence=page_kinds.evidence((result.get("html") or b"").decode("utf-8", errors="replace"),
+                                                                     result.get("baslik"), result.get("son_adres") or url) or result.get("not"))
+                            if region.proxy is not None:
+                                row = {**through_proxy(reader, domain, url, note), "eklenti": "bölge engeli gördü; alan adı listeye eklendi"}
+                            else:
+                                row["not"] = proxy_mod.NO_PROXY_SKIP
                 except Exception as exc:
-                    rows.append({"alan_adi": domain, "aciklama": note, "durum": "hata", "not": f"{type(exc).__name__}: {str(exc)[:160]}"})
-                db.update_job(job_id, progress=int(100 * number / len(sites)), message=f"{number}/{len(sites)} · {domain}: {rows[-1]['durum']}")
-            db.update_job(job_id, status="done", progress=100, result={"siteler": rows},
-                          message=f"{sum(r['durum'] == 'tamam' for r in rows)}/{len(rows)} site eklentiyle okundu.")
+                    row = {"alan_adi": domain, "aciklama": note, "durum": "hata", "tur": "hata", "not": f"{type(exc).__name__}: {str(exc)[:160]}"}
+                rows.append(row)
+                label = ext_states.get(row.get("tur") or row["durum"], row["durum"])
+                tail = f" ({row['not']})" if row.get("tur") == "bolge_engeli" and row.get("not") else ""
+                db.update_job(job_id, progress=int(100 * number / len(sites)), message=f"{number}/{len(sites)} · {domain}: {label}{tail}")
+        finally:
+            reader.close()
+        db.update_job(job_id, status="done", progress=100, result={"siteler": rows},
+                      message=f"{sum(r['durum'] == 'tamam' for r in rows)}/{len(rows)} site okundu.")
 
-        threading.Thread(target=work, name="eklenti-deneme", daemon=True).start()
-        return db.job(job_id)
+    ext_states = {**page_kinds.LABELS, "giris": "giriş gerekiyor", "odeme": "ödeme sayfası", "izin_yok": "izin yok", "hata": "hata",
+                  "atlandi": "kullanıcı atladı"}
+
+    def trial_row(domain, note, result, record):
+        state = result["durum"]
+        return {"alan_adi": domain, "aciklama": note, "durum": state, "tur": state, "yontem": result.get("yontem") or "eklenti",
+                "baslik": result.get("baslik"), "http_durumu": result.get("http_durumu"), "bayt": record["bayt"], "sha256": record["sha256"],
+                "dosya": record["dosya"], "not": result.get("not")}
+
+    def through_proxy(reader, domain, url, note):
+        result = reader.read(url)
+        if result["durum"] != "tamam":
+            return {"alan_adi": domain, "aciklama": note, "durum": "bolge_engeli", "tur": "bolge_engeli", "yontem": None, "baslik": None,
+                    "http_durumu": None, "not": result["not"]}
+        record = bridge().save_raw(result, f"sorunlu site · {domain}")
+        return {**trial_row(domain, note, result, record), "proxy": True}
 
     @app.post("/api/tarayici-eklentisi/devret/{job_id}")
     def extension_hand_over(job_id: str):
@@ -331,6 +382,80 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         reason = bridge().hand_over(job_id)
         db.update_job(job_id, message=reason, progress_info={"tur": "eklenti", "bekliyor": False, "devredildi": True})
         return db.job(job_id)
+
+    @app.post("/api/tarayici-eklentisi/atla/{job_id}")
+    def extension_skip(job_id: str):
+        """GÖREV-16: "Bu sayfayı atla" in the job panel: the page waiting for verification is skipped (the extension hears it within 5 s)."""
+        if db.job(job_id) is None:
+            raise HTTPException(404, "İş bulunamadı.")
+        if not bridge().skip_page(job_id):
+            raise Conflict("Bu işte doğrulama bekleyen sayfa yok.")
+        return {"atlaniyor": True}
+
+    # --- The user's US proxy for region-blocked sites (GÖREV-16, Adım 3) -------------------------------------------------------
+
+    def proxy_view():
+        with db.connect() as con:
+            hosts = proxy_mod.listing(con)
+        return {**proxy_mod.view(db.path.parent), "bolge_engelli": hosts}
+
+    @app.get("/api/abd-proxy")
+    def us_proxy():
+        """Settings → ABD proxy'si: address, user name, "parola kayıtlı" (never the password) and the region-blocked domains."""
+        return proxy_view()
+
+    @app.put("/api/abd-proxy")
+    async def us_proxy_save(request: Request):
+        body = await json_body(request)
+        password = body.get("parola") if isinstance(body.get("parola"), str) else None
+        try:
+            proxy_mod.save(db.path.parent, body.get("adres") if isinstance(body.get("adres"), str) else "",
+                           body.get("kullanici") if isinstance(body.get("kullanici"), str) else "", password or None)
+        except proxy_mod.ProxyError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return proxy_view()
+
+    @app.delete("/api/abd-proxy/parola")
+    def us_proxy_forget():
+        try:
+            proxy_mod.delete_password(db.path.parent)
+        except proxy_mod.ProxyError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return proxy_view()
+
+    @app.post("/api/abd-proxy/dene")
+    async def us_proxy_test():
+        """"Proxy'yi dene": through the proxy to a public IP service; the exit address, its country and a warning when it is not the US.
+        No site of the list is opened."""
+        try:
+            proxy = proxy_mod.load(db.path.parent)
+        except Exception as exc:
+            raise HTTPException(409, str(exc)) from exc
+        try:
+            return await asyncio.to_thread(app.state.proxy_test, proxy)
+        except proxy_mod.ProxyError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/api/abd-proxy/bolge-engelli", status_code=201)
+    async def region_add(request: Request):
+        body = await json_body(request)
+        host = proxy_mod.host_key(body.get("alan_adi") if isinstance(body.get("alan_adi"), str) else "")
+        if not host or "." not in host or len(host) > 253 or not all(part and len(part) <= 63 for part in host.split(".")):
+            raise HTTPException(422, "Bir alan adı yazın (ör. cvs.com).")
+        if host in proxy_mod.LOCAL_HOSTS:
+            raise HTTPException(422, "Programın kendi yerel adresi listeye eklenmez.")
+        with db.connect() as con:
+            if host in proxy_mod.listed_hosts(con):
+                raise HTTPException(409, f"{host} zaten listede.")
+            proxy_mod.mark(con, host, added_by="kullanici")
+        return proxy_view()
+
+    @app.delete("/api/abd-proxy/bolge-engelli/{host}")
+    def region_remove(host: str):
+        with db.connect() as con:
+            if not proxy_mod.unmark(con, host):
+                raise HTTPException(404, "Bu alan adı listede yok.")
+        return proxy_view()
 
     @app.get("/eklenti-kurulum/{name}")
     def extension_guide_image(name: str):

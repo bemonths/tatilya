@@ -1,0 +1,82 @@
+[
+ {
+  "dosya": "cvs-bolge-403.html",
+  "baslik": "",
+  "adres": "https://www.cvs.com/store-locator/cvs-pharmacy-locations/Florida/Miramar-Beach",
+  "http": 403,
+  "tur": "bolge_engeli",
+  "kaynak": "kullanıcının 11 Ekim 2026 denemesi (kısaltıldı)"
+ },
+ {
+  "dosya": "publix-international.html",
+  "baslik": "International | Publix Super Markets",
+  "adres": "https://www.publix.com/locations",
+  "http": 200,
+  "tur": "bolge_engeli",
+  "kaynak": "kullanıcının 11 Ekim 2026 denemesi (kısaltıldı)"
+ },
+ {
+  "dosya": "bos-403.html",
+  "baslik": "",
+  "adres": "https://geo-blocked-site.dpxmedcity.net/",
+  "http": null,
+  "tur": "bolge_engeli",
+  "kaynak": "HCA'nın yönlendiği adres (11 Ekim 2026 denemesi)"
+ },
+ {
+  "dosya": "akamai-access-denied.html",
+  "baslik": "Access Denied",
+  "adres": "https://www.example.test/locator",
+  "http": 403,
+  "tur": "erisim_reddedildi",
+  "kaynak": "Akamai engel sayfası biçimi"
+ },
+ {
+  "dosya": "cloudflare-engellendi.html",
+  "baslik": "Attention Required! | Cloudflare",
+  "adres": "https://example.test/",
+  "http": 403,
+  "tur": "erisim_reddedildi",
+  "kaynak": "Cloudflare engel sayfası biçimi"
+ },
+ {
+  "dosya": "bos-403.html",
+  "baslik": "",
+  "adres": "https://example.test/",
+  "http": 403,
+  "tur": "erisim_reddedildi",
+  "kaynak": "boş 403"
+ },
+ {
+  "dosya": "cloudflare-bir-dakika.html",
+  "baslik": "Just a moment...",
+  "adres": "https://example.test/",
+  "http": 403,
+  "tur": "dogrulama",
+  "kaynak": "Cloudflare doğrulama sayfası biçimi"
+ },
+ {
+  "dosya": "perimeterx-bas-ve-tut.html",
+  "baslik": "Access to this page has been denied",
+  "adres": "https://example.test/",
+  "http": 403,
+  "tur": "dogrulama",
+  "kaynak": "PerimeterX doğrulama sayfası biçimi"
+ },
+ {
+  "dosya": "normal-sayfa.html",
+  "baslik": "Store Locator | Example Market",
+  "adres": "https://example.test/stores",
+  "http": 200,
+  "tur": "tamam",
+  "kaynak": "altbilgide \"outside the United States\" geçen sıradan sayfa"
+ },
+ {
+  "dosya": "normal-sayfa-dogrulama-kutusu.html",
+  "baslik": "Contact us",
+  "adres": "https://example.test/contact",
+  "http": 200,
+  "tur": "tamam",
+  "kaynak": "iletişim formunda Turnstile kutusu (doğrulama sayfası değil)"
+ }
+]

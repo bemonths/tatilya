@@ -1,5 +1,5 @@
 // 30A Studio Yardımcısı — açılır pencere: programla eşleşme, site izinleri, son iş.
-import {originPatterns, permittedDomains} from "./logic.js";
+import {lastJobText, originPatterns, permittedDomains} from "./logic.js";
 
 const $ = selector => document.querySelector(selector);
 const text = (selector, value) => { $(selector).textContent = value; };
@@ -43,8 +43,14 @@ async function draw() {
   }
   if (!waiting.length) $("#bekleyen").innerHTML = '<li class="muted">Yok.</li>';
   const last = state.sonIs;
-  text("#son-is", last ? `${last.alan_adi} · ${last.amac || "iş"} · ${last.durum} · ${new Date(last.zaman).toLocaleString("tr-TR")}` : "Henüz iş yok.");
+  text("#son-is", lastJobText(last));
+  $("#atla-satiri").hidden = !(last && last.durum === "çalışıyor" && last.asama === "dogrulama");
 }
+
+$("#atla").addEventListener("click", async () => {
+  const answer = await chrome.runtime.sendMessage({tur: "atla"});
+  text("#son-is", answer?.ok ? "Sayfa atlanıyor; iş sürüyor." : "Şu anda doğrulama bekleyen sayfa yok.");
+});
 
 $("#kod-formu").addEventListener("submit", async event => {
   event.preventDefault();
@@ -55,4 +61,5 @@ $("#kod-formu").addEventListener("submit", async event => {
 });
 
 chrome.storage.onChanged.addListener(draw);
+setInterval(draw, 15000);     // "Son iş" says when a job stopped moving
 draw();

@@ -85,8 +85,8 @@ def warning_patterns(phrases):
         item = raw.strip()
         if not item or item.startswith("#"):
             continue
-        if item == "I":
-            found.append((item, re.compile(r"(?<![\w'’])I(?![\w'’])")))
+        if item == "I":                  # GÖREV-16: not the road names "I-10", "I-65" (an "I" with a hyphen and a digit after it)
+            found.append((item, re.compile(r"(?<![\w'’])I(?![\w'’]|[-‑–]\d)")))
         else:
             body = re.escape(item).replace("\\'", "['’]").replace("'", "['’]")
             found.append((item, re.compile(rf"(?<![\w'’]){body}(?![\w'’])", re.I)))

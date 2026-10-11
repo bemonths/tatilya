@@ -32,6 +32,7 @@ from urllib.parse import quote, urlencode, urljoin, urlsplit, urlunsplit
 import httpx
 
 from .base import CollectionCanceled, CollectionResult, SourceError
+from . import page_kinds
 from .browser_verification import FINAL_WAIT_SECONDS, GRACE_SECONDS, host_key, mark_hosts, record_methods
 from .climate_http import check, pause
 
@@ -173,7 +174,7 @@ class RawStore:
         self.path, self.lock = path, threading.Lock()
         self.manifest = {"connector": CONNECTOR_VERSION, "responses": []}
 
-    def save(self, *, restaurant, requested, final_url, status, content_type, body, note):
+    def save(self, *, restaurant, requested, final_url, status, content_type, body, note, method=None, proxy=False):
         digest = hashlib.sha256(body).hexdigest()
         with self.lock:
             sequence = len(self.manifest["responses"]) + 1
@@ -186,6 +187,10 @@ class RawStore:
             self.manifest["responses"].append({"sequence": sequence, "restaurant": restaurant, "note": note, "requested_url": requested,
                                                "final_url": final_url, "status": status, "content_type": content_type, "fetched_at": stamp,
                                                "raw_file": relative, "compression": "gzip", "raw_sha256": digest, "bytes": len(body)})
+            if method:
+                self.manifest["responses"][-1]["yontem"] = method
+            if proxy:
+                self.manifest["responses"][-1]["proxy"] = True        # GÖREV-16: the proxy's address is never written
             if sequence % 25 == 0:
                 self._flush()
         return digest, stamp
@@ -218,9 +223,10 @@ class HostPacer:
 
 
 class Fetcher:
-    def __init__(self, client, store, pacer, canceled):
+    def __init__(self, client, store, pacer, canceled, region=None):
         self.client, self.store, self.pacer, self.canceled = client, store, pacer, canceled
         self.cache, self.cache_lock = {}, threading.Lock()
+        self.region, self.reader, self.region_lock = region, None, threading.Lock()   # GÖREV-16: the US proxy for region-blocked domains
 
     def get(self, url, *, restaurant, note):
         """GET with redirects followed (each hop kept). Returns Document or raises httpx.HTTPError / SourceError. Restaurants that
@@ -239,6 +245,8 @@ class Fetcher:
             parts = urlsplit(current)
             if parts.scheme not in ("http", "https") or not parts.hostname:
                 raise SourceError("Geçersiz adres.")
+            if self.region is not None and self.region.listed(current):
+                return self.through_region(url, current, restaurant=restaurant, note=note)
             slot = self.pacer.slot(parts.hostname.lower())
             with slot["lock"]:
                 if slot["last"] is not None:
@@ -252,9 +260,42 @@ class Fetcher:
                                             content_type=content_type, body=body, note=note)
             if status in (301, 302, 303, 307, 308) and headers.get("location"):
                 current = urljoin(current, headers["location"])
+                if self.region is not None and page_kinds.REGION_ADDRESS.search(current):
+                    self.region.mark(parts.hostname, url=url, evidence=f"{host_key(current)} adresine yönlendi")
+                    return self.through_region(url, url, restaurant=restaurant, note=note)
                 continue
+            if self.region is not None and status in (200, 403, 451) and "html" in (content_type or "html").lower():
+                text = body[:page_kinds.HEAD].decode("utf-8", errors="replace")
+                if page_kinds.classify(text, "", current, status) == "bolge_engeli":
+                    self.region.mark(parts.hostname, url=current, evidence=page_kinds.evidence(text, "", current))
+                    return self.through_region(url, current, restaurant=restaurant, note=note)
             return Document(url, current, status, content_type, body, digest, stamp, note)
         raise SourceError("Yönlendirme sınırı aşıldı.")
+
+    def through_region(self, url, current, *, restaurant, note):
+        """GÖREV-16: a region-blocked domain only through the user's US proxy (studio/sources/region_reader.py: proxy, then the
+        program's browser with the proxy, else skipped); without a proxy it is skipped at once."""
+        from ..proxy import NO_PROXY_SKIP
+        if self.region.proxy is None:
+            raise SourceError(NO_PROXY_SKIP)
+        with self.region_lock:                       # one page at a time through the proxy
+            if self.reader is None:
+                self.reader = self.region.reader(canceled=self.canceled)
+            result = self.reader.read(current)
+        if result["durum"] != "tamam":
+            raise SourceError(result["not"])
+        status = int(result.get("http_durumu") or 200)
+        content_type = result.get("content_type") or "text/html; charset=utf-8"
+        body = result["html"] or b""
+        digest, stamp = self.store.save(restaurant=restaurant, requested=current, final_url=result["son_adres"], status=status,
+                                        content_type=content_type, body=body, note=f"{note} ({result['yontem']})", method=result["yontem"],
+                                        proxy=True)
+        return Document(url, result["son_adres"], status, content_type, body, digest, stamp, note)
+
+    def close(self):
+        if self.reader is not None:
+            self.reader.close()
+            self.reader = None
 
     def send(self, url):
         headers = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml,application/pdf,image/*;q=0.8,*/*;q=0.5",
@@ -1489,8 +1530,9 @@ class BrowserPages:
     HTTP in this run (a verification page or a refusal); see RoutedPages. A verification
     page that does not clear within the grace period leaves the restaurant for the end of the run; a block page stops that site."""
 
-    def __init__(self, store, canceled, waiting=None, profile=None, opener=None, grace=None):
+    def __init__(self, store, canceled, waiting=None, profile=None, opener=None, grace=None, region=None):
         self.store, self.canceled, self.waiting = store, canceled, waiting
+        self.region = region                     # GÖREV-16: a region block met here lists the domain
         self.profile = profile
         self.opener = opener                     # tests inject a stand-in: opener(profile) -> object with goto, current, request, wait_all
         self.grace = GRACE_SECONDS if grace is None else grace
@@ -1523,8 +1565,14 @@ class BrowserPages:
             if DOCUMENT_PATH.search(urlsplit(url).path):
                 status, final, content_type, body = session.request(url)
             else:
-                status, final, content_type, body = session.goto(url)
+                try:
+                    status, final, content_type, body = session.goto(url)
+                except SourceError as stop:
+                    if getattr(stop, "domain", None) and self.region is not None:     # extension_reader.RegionStop
+                        self.region.mark(stop.domain, title=stop.title or None, url=stop.url or url, evidence=stop.evidence)
+                    raise
                 text = body.decode("utf-8", errors="replace")[:40000]
+                self.stop_if_refused(host, url, final, status, text)
                 if CHALLENGE.search(text):
                     self.protected.add(host)
                     status, final, content_type, body = self.grace_period(session, host, url)
@@ -1539,6 +1587,16 @@ class BrowserPages:
                                         body=body, note=f"{note} ({method})")
         return Document(url, final, status, content_type, body, digest, stamp, f"{note} ({method})")
 
+    def stop_if_refused(self, host, url, final, status, text):
+        """GÖREV-16: a region block (the domain is listed) or a refusal nobody can pass stops the site; never sent to the user."""
+        kind = page_kinds.classify(text, "", final or url, status)
+        if kind == "bolge_engeli":
+            if self.region is not None:
+                self.region.mark(host, url=url, evidence=page_kinds.evidence(text, "", final or url))
+            raise SourceError(f"bölge engeli: {host} ABD dışından gelen ziyaretçiye hizmet vermiyor; alan adı bölge engelli listeye eklendi.")
+        if kind == "erisim_reddedildi":
+            raise SourceError(f"Site engel sayfası gösterdi ({host}).")
+
     def grace_period(self, session, host, url):
         """Most verification pages clear by themselves in a real browser; one that does not is left for the end of the run."""
         deadline = time.monotonic() + self.grace
@@ -1546,6 +1604,7 @@ class BrowserPages:
             check(self.canceled)
             status, final, content_type, body = session.current()
             text = body.decode("utf-8", errors="replace")[:40000]
+            self.stop_if_refused(host, url, final, status, text)
             if BLOCKED.search(text):
                 raise SourceError(f"Site engel sayfası gösterdi ({host}).")
             if not CHALLENGE.search(text):
@@ -1744,7 +1803,7 @@ def review_note(run):
                                         "raw_sha256": None, "method": "gözden geçirme"}
 
 
-def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None, extension=None):
+def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, browser=None, extension=None, region=None):
     """Read every restaurant's own site once (its pages, menus and documents) and return the facts with their provenance.
 
     First pass: plain HTTP for every site (also one that showed a verification page in an earlier run), several restaurants side by
@@ -1767,7 +1826,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
     store, pacer = RawStore(raw_path), HostPacer()
     owns = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(30, connect=15), verify=True)
-    fetcher = Fetcher(client, store, pacer, canceled)
+    fetcher = Fetcher(client, store, pacer, canceled, region=region)
     done, lock, last = [0], threading.Lock(), [0.0]
     marks, methods = {}, {}
     progress(1, f"{len(restaurants)} restoranın kendi sitesi okunacak.")
@@ -1819,6 +1878,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
                 pages.store = store
             if pages.waiting is None:
                 pages.waiting = waiting
+            if getattr(pages, "region", None) is None:
+                pages.region = region
             deferred = []
             try:
                 for count, index in enumerate(second, 1):
@@ -1904,6 +1965,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, waiting=None, 
             store.flush()
         except OSError:
             pass
+        fetcher.close()
         if owns:
             client.close()
 
@@ -2075,12 +2137,13 @@ class RestaurantSitesConnector:
         return source_host(source.get("url")) is not None
 
     uses_extension = True
+    uses_region = True          # GÖREV-16: region-blocked domains only through the user's US proxy
 
-    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None):
+    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None, region=None):
         if not context.restaurants:
             raise SourceError("Bu destinasyon için restoran yapılandırması yok.")
         return collect(raw_path, progress, canceled, config={**context.restaurants, "browser_hosts": context.browser_hosts}, waiting=waiting,
-                       extension=extension)
+                       extension=extension, region=region)
 
     def store_records(self, con, run_id, records, related=None):
         snapshot = related["snapshot"]

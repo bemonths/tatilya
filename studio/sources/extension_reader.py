@@ -10,6 +10,11 @@ ExtensionPages has the interface of the restaurant collector's browser pages (go
 ExtensionVerifier and ExtensionTransport have the interface of the rental collector's verifier and in-page transport (BrowserVerifier,
 BrowserTransport). The extension itself waits up to 15 minutes for the user on a verification page; a page still verifying after that is
 skipped, so the end-of-run wait of these classes does not wait again for the extension's sites.
+
+GÖREV-16: the extension does not wait on a refusal nobody can pass ("erisim_reddedildi") or on a region block ("bolge_engeli": the site
+serves only visitors inside the United States); a page that went on to a site the extension may not open is "yonlendi"; "atlandi" is
+a page the user skipped. A region block raises RegionStop (pages) or browser_verification.RegionBlocked (verifier) so the collector
+puts the domain on the region-blocked list (studio/proxy.py; read only through the user's US proxy).
 """
 import json
 from urllib.parse import urlencode
@@ -21,7 +26,20 @@ from .base import SourceError
 
 STOPPED = {"giris": "Sayfa giriş istiyor (giriş gerekiyor); eklenti okumadı ve atladı.",
            "odeme": "Ödeme sayfası; eklenti okumadı ve atladı.",
-           "izin_yok": "Eklentiye bu site için izin verilmedi; site atlandı."}
+           "izin_yok": "Eklentiye bu site için izin verilmedi; site atlandı.",
+           "erisim_reddedildi": "Site erişimi reddetti (kimsenin geçemeyeceği engel sayfası); beklenmedi, atlandı.",
+           "yonlendi": "Sayfa başka bir siteye yönlendi; eklenti okumadı.",
+           "atlandi": "Kullanıcı bu sayfayı atladı (doğrulama beklenirken)."}
+
+
+class RegionStop(SourceError):
+    """The extension met a region block (GÖREV-16): the caller lists the domain."""
+
+    def __init__(self, domain, result):
+        from . import page_kinds
+        self.domain, self.title, self.url = domain, result.get("baslik") or "", result.get("son_adres") or result.get("adres") or ""
+        self.evidence = page_kinds.evidence(body_text(result), self.title, self.url) or result.get("not")
+        super().__init__(f"bölge engeli: {domain} ABD dışından gelen ziyaretçiye hizmet vermiyor")
 WAIT = {"saniye": 3}
 
 
@@ -68,8 +86,10 @@ class ExtensionPages:
         except ExtensionError as exc:
             raise httpx.NetworkError(str(exc)[:200]) from exc
         state = result["durum"]
+        if state == "bolge_engeli":
+            raise RegionStop(domain_of(url), result)
         if state in STOPPED:
-            raise SourceError(STOPPED[state])
+            raise SourceError(result.get("not") if state == "yonlendi" and result.get("not") else STOPPED[state])
         if state == "hata":
             raise httpx.NetworkError(result.get("not") or "Eklenti sayfayı okuyamadı.")
         status = 403 if state == "dogrulama" else int(result.get("http_durumu") or 200)
@@ -147,7 +167,7 @@ class ExtensionVerifier:
         self.methods = {}
 
     def __call__(self, domain, url, canceled, timeout):
-        from .browser_verification import BLOCKED, SiteBlocked
+        from .browser_verification import BLOCKED, RegionBlocked, SiteBlocked
         if self.handed:
             return self.through_fallback(domain, url, canceled, timeout)
         session = None
@@ -169,7 +189,10 @@ class ExtensionVerifier:
             self.methods[domain_of(domain)] = "eklenti"
             return ExtensionTransport(session, canceled)
         session.close()
-        if state in ("giris", "odeme"):
+        if state == "bolge_engeli":
+            stop = RegionStop(domain_of(domain), result)
+            raise RegionBlocked(stop.domain, stop.title, stop.url, stop.evidence)
+        if state in ("giris", "odeme", "erisim_reddedildi", "yonlendi"):
             raise SiteBlocked(f"{domain}: {STOPPED[state]}")
         return None
 

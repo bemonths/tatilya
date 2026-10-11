@@ -35,6 +35,11 @@ export function writeBox(options, chosen, busy, message="") {
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}</div></section>`;
 }
 
+/** "N oturum · süre · bin token · $" of a usage (GÖREV-16: the run's total, its plan's share, a tone's share). */
+export function usageText(u) {
+  return `${u.oturum} oturum · ${durationText(u.sure_s)} · ${thousands(Math.round((u.token||0)/1000))} bin token · ${money(u.maliyet_usd)}`;
+}
+
 export function runRows(runs, tones=[]) {
   if(!runs.length) return '<p class="muted run-empty">Henüz metin çalışması yok.</p>';
   return `<div class="table-scroll"><table class="reference-table text-runs"><thead><tr><th>TARİH</th><th>TONLAR</th><th>DURUM</th><th>KULLANIM</th><th>SÜRÜMLER</th><th></th></tr></thead><tbody>
@@ -42,11 +47,12 @@ export function runRows(runs, tones=[]) {
       const written=new Set(run.surumler.map(v=>v.tone_file));
       const more=tones.filter(t=>!run.tones.some(r=>r.dosya===t.dosya));
       const u=run.kullanim;
+      const plan=u.plan;
       return `<tr data-run="${esc(run.id)}"><td>${esc(date(run.created_at))}${run.replan_of?'<small class="source-host">planı yeniden yapıldı</small>':""}</td>
       <td>${run.tones.map(t=>`<span class="tag ${written.has(t.dosya)?"green":""}">${esc(t.ad)}</span>`).join(" ")}</td>
-      <td><span class="tag ${run.status==="error"?"error":["paused","interrupted"].includes(run.status)?"warm":run.status==="awaiting_comparison"?"green":"running"}">${esc(run.status_label)}</span>
+      <td>${run.secildi?`<span class="tag green">seçildi: ${esc(run.secildi)}</span>`:`<span class="tag ${run.status==="error"?"error":["paused","interrupted"].includes(run.status)?"warm":run.status==="awaiting_comparison"?"green":"running"}">${esc(run.status_label)}</span>`}
         ${run.reason_text?`<small class="source-host">${esc(run.reason_text)}</small>`:""}</td>
-      <td>${u.oturum} oturum · ${durationText(u.sure_s)} · ${thousands(Math.round(u.token/1000))} bin token · ${money(u.maliyet_usd)}</td>
+      <td>${usageText(u)}${plan&&plan.oturum?`<small class="source-host">plan: ${usageText(plan)}</small>`:""}</td>
       <td>${run.surumler.map(v=>`<a href="#adim/metin/surum/${encodeURIComponent(v.id)}">${v.number}. ${esc(v.tone_name)}</a>`).join("<br>") || "—"}</td>
       <td class="run-actions">${run.eylemler.devam?`<button data-text-resume="${esc(run.id)}">Devam</button>`:""}${run.eylemler.durdur?`<button class="quiet" data-text-stop="${esc(run.id)}">Durdur</button>`:""}
         ${run.eylemler.plani_goster?`<a class="source-link" href="#adim/metin/plan/${encodeURIComponent(run.id)}">Planı göster</a>`:""}
@@ -80,7 +86,7 @@ export function compareView(compare, lang="tr", tones=[], runId=null) {
   if(!columns.length) return '<p class="muted">Karşılaştırılacak sürüm yok.</p>';
   const head=columns.map(c=>`<div class="compare-head ${c.secili?"chosen":""}"><h3>${esc(c.tone_name)}${c.ton_var?"":' <span class="tag">silinmiş ton</span>'}</h3>
     <p>${thousands(c.words)} kelime · ~${String(c.dakika).replace(".",",")} dk · <span class="mark-count red">${c.red} kırmızı</span> · <span class="mark-count yellow">${c.yellow} sarı</span></p>
-    <p class="muted">${thousands(Math.round((Object.values(c.tokens||{}).reduce((a,b)=>a+(Number(b)||0),0))/1000))} bin token · ${money(c.cost_usd)} · ${durationText(c.elapsed_s||0)} · ${c.number}. sürüm</p>
+    <p class="muted" title="Yalnız bu tonun oturumları; planın kullanımı yukarıda">${thousands(Math.round((Object.values(c.tokens||{}).reduce((a,b)=>a+(Number(b)||0),0))/1000))} bin token · ${money(c.cost_usd)} · ${durationText(c.elapsed_s||0)} · ${c.number}. sürüm</p>
     <div class="decision-actions">${c.secili?'<span class="tag green">seçili</span>':`<button class="primary" data-choose="${esc(c.id)}">Bu tonla devam et</button>`}<a class="source-link" href="#adim/metin/surum/${encodeURIComponent(c.id)}">Tek göster</a></div></div>`).join("");
   const rows=compare.satirlar.map(key=>{
     const title=columns.map(c=>c.parcalar[key]?.baslik).find(Boolean) || key;
@@ -92,7 +98,8 @@ export function compareView(compare, lang="tr", tones=[], runId=null) {
     }).join("");
   }).join("");
   const more=tones.filter(t=>!columns.some(c=>c.tone_file===t.dosya));
-  return `<div class="compare-tools"><div class="lang-switch" role="group" aria-label="Dil">${Object.entries(LANGS).map(([key,label])=>`<button type="button" class="${key===lang?"primary":""}" data-lang="${key}" aria-pressed="${key===lang}">${label}</button>`).join("")}</div>
+  const plans=(compare.planlar||[]).filter(p=>p.kullanim?.oturum).map(p=>`<span class="tag">plan${(compare.planlar||[]).length>1?` (${p.surumler.join(", ")}. sürüm)`:""}: ${esc(usageText(p.kullanim))}</span>`).join(" ");
+  return `${plans?`<p class="compare-plan-usage muted">Planın kullanımı (bütün tonlar için bir kez): ${plans} · sütun başlarında yalnız o tonun kullanımı yazar.</p>`:""}<div class="compare-tools"><div class="lang-switch" role="group" aria-label="Dil">${Object.entries(LANGS).map(([key,label])=>`<button type="button" class="${key===lang?"primary":""}" data-lang="${key}" aria-pressed="${key===lang}">${label}</button>`).join("")}</div>
     ${runId && more.length?`<span class="add-tone"><select id="compare-add-tone" aria-label="Eklenecek ton">${more.map(t=>`<option value="${esc(t.dosya)}">${esc(t.ad)}</option>`).join("")}</select><button id="compare-add" data-run="${esc(runId)}">Bu tonla da yaz</button></span>`:""}</div>
     <div class="compare-scroll"><div class="compare-grid" style="grid-template-columns:150px repeat(${columns.length}, minmax(320px, 1fr))"><div class="compare-corner"></div>${head}${rows}</div></div>`;
 }

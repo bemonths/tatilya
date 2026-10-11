@@ -155,8 +155,10 @@ class HttpTransport:
 
     kind = "http"
 
-    def __init__(self, client):
+    def __init__(self, client, kind=None):
         self.client = client
+        if kind:
+            self.kind = kind                      # GÖREV-16: "proxy" for a region-blocked company through the user's US proxy
 
     def send(self, method, url, *, params=None, data=None, json_body=None, headers=None):
         request = self.client.build_request(method, url, params=params, data=data, json=json_body, headers=headers)
@@ -199,6 +201,8 @@ class RawStore:
                 "sequence": sequence, "company": company, "transport": transport, "note": note, "method": method, "requested_url": requested,
                 "request_body": request_body, "final_url": final_url, "status": status, "content_type": headers.get("content-type"),
                 "fetched_at": stamp, "raw_file": relative, "compression": "gzip", "raw_sha256": digest, "bytes": len(body)})
+            if "proxy" in str(transport):
+                self.manifest["responses"][-1]["proxy"] = True        # GÖREV-16: read through the user's US proxy
             self.unsaved += 1
             if self.unsaved >= 25:
                 self._flush()
@@ -324,7 +328,7 @@ def site_options(site):
             "own_region_id": site.get("own_region_id"), "own_city": site.get("own_city")}
 
 
-def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None):
+def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None, region=None):
     """Ask every configured company site the price of every future window for each listing tied to it (and for its own inventory).
     Companies whose site waits for a human verification are read last, after one shared wait (see the module text)."""
     if not config or not config.get("sites"):
@@ -367,7 +371,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     store = RawStore(raw_path)
     owns = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(45, connect=15), verify=True)
-    shared = Shared(store=store, client=client, canceled=canceled, verifier=verifier, waiting=waiting, active=active, everyone=everyone,
+    shared = Shared(store=store, client=client, canceled=canceled, verifier=verifier, waiting=waiting, active=active, everyone=everyone, region=region,
                     tracker=Progress(progress, sum(max(1, len(groups[d])) for d in order)), marks={})
     progress(1, f"{len(order)} kiralama şirketinin sitesi için {sum(len(groups[d]) for d in order)} ilan sorgulanacak.")
     try:
@@ -471,9 +475,14 @@ class CompanyRun:
         self.deferred = None
         self.adapter = ADAPTERS[site["adapter"]]
         self.protected = bool(site["protected"])
-        self.session = SiteSession(shared.store, site["domain"], HttpTransport(shared.client), shared.canceled,
-                                   allowed=(*site["aliases"], *getattr(self.adapter, "api_hosts", ())),
-                                   gap=PROTECTED_GAP if self.protected else REQUEST_GAP, protected=self.protected)
+        region = getattr(shared, "region", None)
+        self.region = region if region is not None and region.listed(site["domain"]) else None     # GÖREV-16
+        transport, gap = HttpTransport(shared.client), PROTECTED_GAP if self.protected else REQUEST_GAP
+        if self.region is not None and self.region.proxy is not None:
+            transport, gap = HttpTransport(proxy_client(self.region.proxy),
+                                           kind="proxy"), max(gap, PROXY_GAP)
+        self.session = SiteSession(shared.store, site["domain"], transport, shared.canceled,
+                                   allowed=(*site["aliases"], *getattr(self.adapter, "api_hosts", ())), gap=gap, protected=self.protected)
         self.result = {"domain": site["domain"], "company": site["company"], "adapter": site["adapter"], "status": "done",
                        "listing_count": len(members), "verification": None, "message": None, "protected": int(self.protected),
                        "guest_rule": site["guest_rule"], "inventory_count": None, "inventory_raw_sha256": None, "own_count": 0,
@@ -487,19 +496,35 @@ class CompanyRun:
 
     def open_browser(self, url):
         """The computer's browser for this company (one tab). A verification page still on screen after the grace period leaves the
-        company for the end of the run; at the end the user has had the one shared wait."""
+        company for the end of the run; at the end the user has had the one shared wait. GÖREV-16: a region-blocked company goes to the
+        program's own browser through the user's US proxy (never to the extension); a region block met now lists the domain."""
         shared, domain = self.shared, self.site["domain"]
-        if shared.verifier is None:
+        verifier = shared.verifier
+        if self.region is not None:
+            from ..proxy import PROXY_FAILED_SKIP
+            if self.region.proxy is None or self.region.proxy.browser_problem:
+                raise CompanyStopped("stopped_blocked", f"{PROXY_FAILED_SKIP} (programın tarayıcısı bu proxy'yle kullanılamıyor)"
+                                     if self.region.proxy is not None else self.region_skip_text())
+            from .region_reader import proxy_verifier
+            verifier = proxy_verifier(self.region.proxy, sorted(self.region.hosts))
+        if verifier is None:
             self.result["verification"] = "unavailable"
             raise CompanyStopped("verification_unavailable",
                                  "Site doğrulama ekranı gösterdi veya korumalı; bu bilgisayarda tarayıcı kullanılamıyor.")
         timeout = GRACE_SECONDS if self.final_timeout is None else self.final_timeout
         with shared.verify_lock:
             try:
-                browser = shared.verifier(domain, url, shared.canceled, timeout)
+                browser = verifier(domain, url, shared.canceled, timeout)
             except CollectionCanceled:
                 raise
             except Exception as exc:
+                if type(exc).__name__ == "RegionBlocked":
+                    region = getattr(shared, "region", None)
+                    if region is not None:
+                        region.mark(domain, title=getattr(exc, "title", None) or None, url=getattr(exc, "url", None) or url,
+                                    evidence=getattr(exc, "evidence", None))
+                    raise CompanyStopped("stopped_blocked", f"bölge engeli: {domain} ABD dışından gelen ziyaretçiye hizmet vermiyor; alan adı "
+                                         "bölge engelli listeye eklendi (sonraki çekimde ABD proxy'si tanımlıysa onunla okunur).") from None
                 if type(exc).__name__ == "SiteBlocked":
                     raise CompanyStopped("stopped_blocked", f"Site engel sayfası gösterdi ({exc}); şirket durduruldu, yeniden denenmedi.") from None
                 if type(exc).__name__ == "BrowserUnavailable":
@@ -528,9 +553,15 @@ class CompanyRun:
 
     # --- phases ------------------------------------------------------------------------------------------------------------
 
+    def region_skip_text(self):
+        from ..proxy import NO_PROXY_SKIP
+        return NO_PROXY_SKIP
+
     def run(self):
         site, members, shared = self.site, self.members, self.shared
         try:
+            if self.region is not None and self.region.proxy is None:
+                raise CompanyStopped("stopped_blocked", self.region_skip_text())      # GÖREV-16: region-blocked and no US proxy
             with shared.protected_lock if self.protected else nullcontext():
                 if self.protected:
                     first = next((m["listing_url"] for m in members if self.session.allows(m["listing_url"])), None)
@@ -1061,8 +1092,9 @@ class AgencyRatesConnector:
         return source_host(source.get("url")) is not None
 
     uses_extension = True
+    uses_region = True          # GÖREV-16: region-blocked company sites only through the user's US proxy
 
-    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None):
+    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None, region=None):
         lodging, agency = context.lodging, context.agency
         if not lodging or not agency:
             raise SourceError("Bu destinasyon için kiralama şirketi fiyat yapılandırması yok.")
@@ -1073,7 +1105,7 @@ class AgencyRatesConnector:
             from .extension_reader import ExtensionVerifier
             verifier = ExtensionVerifier(extension, fallback=verifier)
         return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts},
-                       verifier=verifier, waiting=waiting)
+                       verifier=verifier, waiting=waiting, region=region)
 
     def store_records(self, con, run_id, records, related=None):
         snapshot = related["snapshot"]
@@ -1114,6 +1146,14 @@ class AgencyRatesConnector:
 
     def comparison_value(self, record):
         raise NotImplementedError("Agency rate diff is disabled.")
+
+
+PROXY_GAP = 8.0             # GÖREV-16: through the US proxy the extension's pacing rule holds (8 s between two pages of a site)
+
+
+def proxy_client(proxy):
+    """A client for one region-blocked company: every request through the user's US proxy; redirects followed by the session."""
+    return httpx.Client(transport=proxy.transport(), timeout=httpx.Timeout(45, connect=15), follow_redirects=False)
 
 
 def default_verifier():

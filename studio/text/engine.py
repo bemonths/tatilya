@@ -330,10 +330,11 @@ class TextService(TextViews):
                 if tone["dosya"] in written:
                     continue
                 self.tone_phase(ctx, tone)
-            store.update_run(self.db, run_id, status="awaiting_comparison", reason=None, reason_text=None, wait_until=None)
+            # the job first: whoever sees the run finished also sees its job done (GÖREV-16: a test read the job a moment too early)
             self.db.update_job(job_id, status="done", progress=100, message="Bütün tonların metni yazıldı; karşılaştırma bekliyor.",
                                result={"metin_calismasi": run_id, "video": run["video_id"]},
                                progress_info={**self.progress_info(ctx, "Bitti"), "yuzde": 100})
+            store.update_run(self.db, run_id, status="awaiting_comparison", reason=None, reason_text=None, wait_until=None)
         except Stopped:
             closing = self.closing
             store.update_run(self.db, run_id, status="interrupted" if closing else "paused", reason="program_kapandi" if closing else "durduruldu",
@@ -894,10 +895,11 @@ class TextService(TextViews):
 
     def save_version(self, ctx, info, document, findings, applied, refused):
         sessions = [s for s in store.sessions(self.db, ctx.run["id"]) if s["status"] == "done" and (s["tone"] in (None, info["dosya"]))]
-        cost = sum((s["metrics"] or {}).get("cost_usd") or 0 for s in sessions)
-        elapsed = sum((s["metrics"] or {}).get("elapsed_s") or 0 for s in sessions)
+        own = [s for s in sessions if s["tone"] == info["dosya"]]       # GÖREV-16: the version's usage is its tone's sessions only
+        cost = sum((s["metrics"] or {}).get("cost_usd") or 0 for s in own)
+        elapsed = sum((s["metrics"] or {}).get("elapsed_s") or 0 for s in own)
         tokens = {}
-        for s in sessions:
+        for s in own:
             for key, value in (((s["metrics"] or {}).get("tokens")) or {}).items():
                 if isinstance(value, (int, float)):
                     tokens[key] = tokens.get(key, 0) + value
@@ -915,7 +917,8 @@ class TextService(TextViews):
             "paket": ctx.pack_record["id"], "plan": {"bolum_sayisi": len(ctx.plan["bolumler"]), "tur": ctx.state.get("plan_turu"),
                                                       "uyarilar": ctx.state.get("plan_uyarilari") or []},
             "oturumlar": [{"adim": s["step"], "parca": s["part"], "calisma": s["id"], "model": s["model"], "efor": s["effort"],
-                           "sure_sn": (s["metrics"] or {}).get("elapsed_s"), "maliyet_usd": (s["metrics"] or {}).get("cost_usd")} for s in sessions],
+                           "sure_sn": (s["metrics"] or {}).get("elapsed_s"), "maliyet_usd": (s["metrics"] or {}).get("cost_usd"),
+                           "ortak": s["tone"] is None} for s in sessions],
             "kelime_sayisi": D.word_count(document), "cumle_sayisi": len(D.sentences(document)), "denetim": counts,
             "son_okuma": {"uygulanan": applied, "uygulanmayan": refused}}
         title = ctx.title

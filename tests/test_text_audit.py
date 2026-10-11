@@ -104,6 +104,18 @@ def test_the_warning_phrases_file_and_the_capital_i_rule():
     assert not [t for t in texts if t[0] in (4, 5)]          # "i" in lower case and "Item" are not the word "I"
 
 
+def test_the_i_rule_leaves_road_names_alone():
+    """GÖREV-16 Adım 4: "I-10" and "I-65" are interstate highways, not the narrator's "I"."""
+    phrases = audit.read_phrases(thirty_a.TEXT["warning_phrases"])
+    found = audit.check(doc(("Most visitors drive in on I-10 from the north [K0001].", ["K0001"]),
+                            ("From Alabama it is I‑65 and then I–10 [K0001].", ["K0001"]),
+                            ("I drove I-10 myself [K0001].", ["K0001"]),
+                            ("Exit I - not a road [K0001].", ["K0001"])), PRICE, phrases=phrases)
+    texts = [(f["no"], f["metin"]) for f in found if f["kural"] == "ses"]
+    assert not [t for t in texts if t[0] in (1, 2)]
+    assert (3, "Uyarı ifadesi: “I”.") in texts and (4, "Uyarı ifadesi: “I”.") in texts
+
+
 # ---- numbers -------------------------------------------------------------------------------------------------------------------
 
 def holds(sentence, *values):

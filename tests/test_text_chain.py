@@ -12,7 +12,7 @@ from studio.ai import settings as claude_settings
 from studio.database import Database
 from studio.text import engine as E
 from studio.text import store
-from tests.legacy import V17_TABLES, drop_v17
+from tests.legacy import V17_TABLES, V18_TABLES, drop_v17
 from tests.text_helpers import FakeClock, add_video, app, open_app, sessions, start_text, text_env, text_job, wait_run  # noqa: F401
 
 TWO = ("arastirmaci_dost", "hikaye_anlaticisi")
@@ -363,9 +363,9 @@ def test_v16_to_v17_adds_the_text_tables_and_keeps_rows(tmp_path):
                   con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 18
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-    assert after == {**before, **V17_TABLES}
+    assert after == {**before, **V17_TABLES, **V18_TABLES}
     assert list((tmp_path / "backups").glob("studio-v16-*.sqlite3"))

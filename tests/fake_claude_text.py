@@ -196,10 +196,34 @@ def output(step, cwd, prompt):
 
 
 def log_session(step, start, end):
+    """One line per session. Sessions run side by side in separate processes and appending is not atomic on Windows (GÖREV-16: a line
+    was once lost), so the append holds a lock file."""
     path = os.environ.get("FAKE_CLAUDE_LOG")
-    if path:
-        with open(path, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"step": step, "start": start, "end": end}) + "\n")
+    if not path:
+        return
+    with open(path + ".lock", "a+b") as lock:
+        locked = False
+        while not locked:
+            try:
+                lock.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                locked = True
+            except OSError:
+                time.sleep(0.01)
+        try:
+            with open(path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"step": step, "start": start, "end": end}) + "\n")
+        finally:
+            lock.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 def now():

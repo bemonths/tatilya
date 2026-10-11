@@ -1081,3 +1081,84 @@ test('GÖREV-15 Ayarlar → Claude: sessions at once, thresholds and "Plandan so
   const form={querySelectorAll:()=>[{dataset:{field:'claude_max_sessions'},type:'number',value:'4'},{dataset:{field:'claude_stop_after_plan'},type:'checkbox',checked:false,value:'on'}]};
   assert.deepEqual(claudeFormValues(form),{claude_max_sessions:4,claude_stop_after_plan:false});
 });
+
+// GÖREV-16: the extension's page kinds (the same fixtures as the Python test), "Son iş", the trial table with kinds, "Eklenti çalışıyor",
+// "Bu sayfayı atla", Settings → ABD proxy'si, and the video text's "seçildi" and plan usage.
+import {skipButton} from '../studio/web/extension.js';
+import {proxySection, testResult, regionRows} from '../studio/web/proxy.js';
+import {usageText} from '../studio/web/text.js';
+
+const KINDS_DIR=new URL('./fixtures/sayfa_turleri/', import.meta.url);
+test('GÖREV-16 eklenti: the page kinds of the shared fixtures, as in page_kinds.py',()=>{
+  const expected=JSON.parse(readFileSync(new URL('beklenen.json',KINDS_DIR),'utf8'));
+  assert.ok(expected.length>=10);
+  for(const c of expected) {
+    const html=readFileSync(new URL(c.dosya,KINDS_DIR),'utf8');
+    assert.equal(E.pageKind(html,c.baslik,c.adres,c.http),c.tur,c.dosya);
+  }
+  assert.equal(E.redirectKind('https://geo-blocked-site.dpxmedcity.net/'),'bolge_engeli');
+  assert.equal(E.redirectKind('https://login.other.test/'),'yonlendi');
+  assert.equal(E.isVerification('<title>Access Denied</title>','Access Denied'),false);          // "access denied" is not a verification any more
+  assert.equal(E.classify({html:'<h1>Access Denied</h1>',title:'Access Denied',url:'https://x.test/',status:403}),'erisim_reddedildi');
+  const region=E.pageResult('bolge_engeli',{url:'https://www.publix.com/',title:'International | Publix',html:'<p>x</p>'},E.stopNote('bolge_engeli'));
+  assert.equal(region.html,'<p>x</p>');assert.match(region.not,/beklenmedi, atlandı/);
+  assert.equal(E.stopNote('yonlendi',{url:'https://geo.other.test/a'}),'başka siteye yönlendi: geo.other.test');
+  assert.equal(E.pageResult('yonlendi',{url:'https://a.test/'}).html,undefined);
+});
+test('GÖREV-16 eklenti: "Son iş" says the stage and when a job stopped moving',()=>{
+  const now=Date.parse('2026-10-11T12:00:00Z');
+  assert.equal(E.lastJobText(null),'Henüz iş yok.');
+  assert.match(E.lastJobText({alan_adi:'cvs.com',amac:'deneme',durum:'çalışıyor',asama:'okunuyor',zaman:now-60000,ilerleme:now-20000},now),/^cvs\.com · deneme · sayfa okunuyor · son ilerleme az önce$/);
+  assert.match(E.lastJobText({alan_adi:'cvs.com',amac:'deneme',durum:'çalışıyor',asama:'okunuyor',zaman:now-900000,ilerleme:now-600000},now),/takılmış görünüyor: 10 dk'dır ilerlemiyor \(son adım: sayfa okunuyor\)/);
+  assert.match(E.lastJobText({alan_adi:'cvs.com',amac:'deneme',durum:'çalışıyor',asama:'dogrulama',zaman:now-900000,ilerleme:now-600000,bitis:now+300000},now),/doğrulama bekleniyor \(kalan 5 dk\)/);
+  assert.match(E.lastJobText({alan_adi:'cvs.com',amac:'deneme',durum:'bitti',zaman:now},now),/cvs\.com · deneme · bitti/);
+  assert.ok(E.REPORT_EVERY_MS<=5000);
+});
+test('GÖREV-16 Ayarlar → Tarayıcı eklentisi: "Eklenti çalışıyor", the old version and the trial table with kinds',()=>{
+  const base={eslesti:true,bagli:true,surum:'0.18.0',son_gorulme:'2026-10-11T12:00:00+00:00'};
+  assert.equal(connectionText({...base,calisiyor:'cvs.com · sayfa okunuyor'}).text,'Eklenti çalışıyor: cvs.com · sayfa okunuyor');
+  assert.match(connectionText({...base,bagli:false}).text,/^Bağlı değil \(Chrome kapalı olabilir\)/);
+  const view={...base,kod:'ABCD-EFGH',izinli_alan_adlari:[],izin_bekleyen_alan_adlari:[],aralik_saniye:8,aralik_sinirlari:[3,120],kurulum:[],klasor:'x',
+    sorunlu_siteler:[{alan_adi:'cvs.com'}],eski_surum:true,beklenen_surum:'0.18.0',surum:'0.16.0'};
+  assert.match(extensionSection(view),/eklenti eski sürüm \(0\.16\.0; programın klasöründeki 0\.18\.0\)/);
+  assert.match(extensionSection(view),/id="extension-connection"/);
+  const html=trialRows([{alan_adi:'publix.com',durum:'tamam',tur:'tamam',yontem:'proxy',bayt:2048},{alan_adi:'cvs.com',durum:'bolge_engeli',tur:'bolge_engeli',not:"bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)"},
+    {alan_adi:'winndixie.com',durum:'erisim_reddedildi',tur:'erisim_reddedildi'},{alan_adi:'hca.test',durum:'yonlendi',tur:'yonlendi',not:'başka siteye yönlendi: geo.test'},
+    {alan_adi:'order.online',durum:'dogrulama',tur:'dogrulama'}]);
+  assert.match(html,/<th>TÜR<\/th>/);
+  assert.match(html,/publix\.com.*>tamam<\/span><small class="source-host">proxy<\/small>/s);
+  assert.match(html,/cvs\.com.*bölge engeli.*ABD proxy&#39;si tanımlı değil|cvs\.com.*bölge engeli.*ABD proxy'si tanımlı değil/s);
+  assert.match(html,/erişim reddedildi/);assert.match(html,/başka siteye yönlendi/);assert.match(html,/doğrulama geçilmedi/);
+  assert.equal(skipButton({id:'j1',progress_info:{tur:'eklenti'},waiting_for:'cvs.com'}),'<button data-skip-job="j1">Bu sayfayı atla</button> ');
+  assert.equal(skipButton({id:'j1',progress_info:{tur:'eklenti'},waiting_for:''}),'');
+  assert.equal(skipButton({id:'j1',progress_info:{tur:'claude'},waiting_for:'x'}),'');
+});
+test('GÖREV-16 Ayarlar → ABD proxy\'si: empty, saved password, the test result and the list',()=>{
+  const empty=proxySection({adres:'',kullanici:'',parola_kayitli:false,tanimli:false,notlar:[],bolge_engelli:[]});
+  assert.match(empty,/ABD proxy'si \(bölge engeli için\)/);assert.match(empty,/id="proxy-test" disabled/);assert.match(empty,/Listede alan adı yok\./);
+  assert.match(empty,/bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz/);
+  const saved=proxySection({adres:'http://proxy.example:8080',kullanici:'abd',parola_kayitli:true,tanimli:true,notlar:["Chrome, kullanıcı adı ve parola isteyen SOCKS5 proxy'yi desteklemiyor"],
+    bolge_engelli:[{host:'cvs.com',title:null,evidence:'CVS.com is not available outside of the United States',added_by:'program',first_seen_at:'2026-10-11T11:34:14+00:00',last_seen_at:'2026-10-11T11:34:14+00:00',url:'https://www.cvs.com/x'},
+      {host:'winndixie.com',added_by:'kullanici',first_seen_at:'2026-10-11T12:00:00+00:00',last_seen_at:'2026-10-11T12:00:00+00:00'}]});
+  assert.match(saved,/<span class="tag green">kayıtlı<\/span>/);assert.match(saved,/placeholder="kayıtlı \(değiştirmek için yazın\)"/);
+  assert.match(saved,/id="proxy-password" type="password"/);assert.doesNotMatch(saved,/id="proxy-password"[^>]*value=/);
+  assert.match(saved,/id="proxy-forget"/);assert.match(saved,/id="proxy-test">/);assert.match(saved,/SOCKS5 proxy&#39;yi desteklemiyor/);
+  assert.match(saved,/data-region-remove="cvs.com"/);assert.match(saved,/<td>program<\/td>/);assert.match(saved,/<td>siz<\/td>/);assert.match(saved,/outside of the United States/);
+  const ok=testResult({ok:true,ip:'203.0.113.7',ulke:'US',uyari:null,satirlar:['Proxy: http://proxy.example (kullanıcı adıyla)','Çıkış adresi 203.0.113.7, ülke US.']});
+  assert.match(ok,/tag green">Çıkış adresi 203\.0\.113\.7 · ülke US/);assert.doesNotMatch(ok,/ABD'de görünmüyor/);
+  const tr=testResult({ok:true,ip:'198.51.100.2',ulke:'TR',uyari:"Proxy'nin çıkış adresi ABD'de görünmüyor",satirlar:[]});
+  assert.match(tr,/tag warm">Çıkış adresi 198\.51\.100\.2 · ülke TR/);assert.match(tr,/claude-warning">Proxy&#39;nin çıkış adresi ABD&#39;de görünmüyor\./);
+  assert.match(testResult({error:"ABD proxy'si tanımlı değil"}),/claude-warning/);assert.equal(testResult(null),'');
+  assert.match(regionRows([]),/Listede alan adı yok/);
+});
+test('GÖREV-16 Video metni: "seçildi" in the runs, the plan line and the plan usage above the comparison',()=>{
+  const usage={oturum:12,sure_s:600,token:120000,maliyet_usd:0.5,plan:{oturum:2,sure_s:60,token:20000,maliyet_usd:0.1}};
+  const html=runRows([{...RUN,kullanim:usage,secildi:'Araştırmacı dost'}],OPTIONS.tonlar);
+  assert.match(html,/tag green">seçildi: Araştırmacı dost<\/span>/);assert.doesNotMatch(html,/duraklatıldı<\/span>/);
+  assert.match(html,/plan: 2 oturum · 1 dk · 20 bin token · 0,10 \$/);
+  assert.equal(usageText({oturum:2,sure_s:60,token:20000,maliyet_usd:0.1}),'2 oturum · 1 dk · 20 bin token · 0,10 $');
+  const compare=compareView({...COMPARE,planlar:[{metin_calismasi:'r1',surumler:[1,2],kullanim:{oturum:2,sure_s:60,token:20000,maliyet_usd:0.1}}]},'tr');
+  assert.match(compare,/Planın kullanımı \(bütün tonlar için bir kez\): <span class="tag">plan: 2 oturum/);
+  assert.match(compare,/title="Yalnız bu tonun oturumları; planın kullanımı yukarıda"/);
+  assert.match(compareView({...COMPARE,planlar:[{surumler:[1],kullanim:{oturum:2,sure_s:60,token:1,maliyet_usd:0.1}},{surumler:[2],kullanim:{oturum:2,sure_s:60,token:1,maliyet_usd:0.1}}]},'tr'),/plan \(1\. sürüm\)/);
+});

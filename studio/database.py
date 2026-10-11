@@ -21,8 +21,9 @@ from .migration_v14 import upgrade_v14
 from .migration_v15 import upgrade_v15
 from .migration_v16 import upgrade_v16
 from .migration_v17 import upgrade_v17
+from .migration_v18 import upgrade_v18
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -63,14 +64,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -97,7 +98,9 @@ class Database:
                     upgrade_v15(con)
                 if version < 16:
                     upgrade_v16(con)
-                upgrade_v17(con)
+                if version < 17:
+                    upgrade_v17(con)
+                upgrade_v18(con, self.path.parent)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -157,6 +160,7 @@ class Database:
             upgrade_v15(con)
             upgrade_v16(con)
             upgrade_v17(con)
+            upgrade_v18(con, self.path.parent)
             reconcile_connector_defaults(con)
 
     def destinations(self):

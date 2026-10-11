@@ -50,14 +50,15 @@ class TextViews:
     # ---- runs --------------------------------------------------------------------------------------------------------------------
 
     def usage_of(self, run_id):
+        """The run's whole usage, with (GÖREV-16) its plan's share (the planner's and the critic's sessions, which have no tone and are
+        shared by every tone of the run) and each tone's share."""
         sessions = store.sessions(self.db, run_id)
-        cost = sum((s["metrics"] or {}).get("cost_usd") or 0 for s in sessions)
-        elapsed = sum((s["metrics"] or {}).get("elapsed_s") or 0 for s in sessions)
-        tokens = sum(sum(v for k, v in (((s["metrics"] or {}).get("tokens")) or {}).items() if isinstance(v, (int, float))) for s in sessions)
-        by_status = {}
+        tones = {}
         for s in sessions:
-            by_status[s["status"]] = by_status.get(s["status"], 0) + 1
-        return {"oturum": len(sessions), "durumlar": by_status, "maliyet_usd": round(cost, 4), "sure_s": round(elapsed, 1), "token": tokens}
+            if s["tone"]:
+                tones.setdefault(s["tone"], []).append(s)
+        return {**usage(sessions), "plan": usage([s for s in sessions if not s["tone"]]),
+                "tonlar": {tone: usage(items) for tone, items in tones.items()}}
 
     def actions(self, run):
         active = run["status"] in store.ACTIVE
@@ -66,10 +67,12 @@ class TextViews:
 
     def run_summary(self, run):
         versions = store.versions(self.db, text_run_id=run["id"])
+        selection = self.selection(run["video_id"])
+        chosen = next((v for v in versions if selection and selection["version_id"] == v["id"]), None)
         return {k: run[k] for k in ("id", "video_id", "status", "status_label", "tones", "reason", "reason_text", "wait_until", "created_at",
                                     "updated_at", "finished_at", "replan_of", "pack_id")} | {
             "kullanim": self.usage_of(run["id"]), "surumler": [self.version_summary(v) for v in versions], "eylemler": self.actions(run),
-            "plan_var": bool(run.get("plan"))}
+            "plan_var": bool(run.get("plan")), "secildi": chosen["tone_name"] if chosen else None}
 
     def runs(self, video_id):
         return [self.run_summary(r) for r in store.runs(self.db, video_id)]
@@ -157,7 +160,13 @@ class TextViews:
                     order.append(key)
             columns.append({**self.version_summary(version), "parcalar": parts})
         order.sort(key=lambda key: row_rank(key))
-        return {"video_id": video_id, "metin_calismasi": run_id, "satirlar": order, "sutunlar": columns,
+        plans = []                                   # GÖREV-16: each plan's usage once, above the columns (a column shows its tone's usage)
+        for run_key in dict.fromkeys(v["text_run_id"] for v in items):
+            run = store.run(self.db, run_key)
+            plans.append({"metin_calismasi": run_key, "tarih": run["created_at"] if run else None,
+                          "surumler": [v["number"] for v in items if v["text_run_id"] == run_key],
+                          "kullanim": usage([s for s in store.sessions(self.db, run_key) if not s["tone"]])})
+        return {"video_id": video_id, "metin_calismasi": run_id, "satirlar": order, "sutunlar": columns, "planlar": plans,
                 "secim": self.selection(video_id), "not": NOTE_LATER}
 
     def selection(self, video_id):
@@ -173,6 +182,17 @@ class TextViews:
             raise KeyError(version_id)
         store.select(self.db, version["video_id"], version_id, (note or "").strip() or None)
         return {"secim": self.selection(version["video_id"]), "secimler": store.selections(self.db, version["video_id"])}
+
+
+def usage(sessions):
+    """Sessions, time, tokens and cost equivalent of some sessions (every status counts: a failed session was used too)."""
+    cost = sum((s["metrics"] or {}).get("cost_usd") or 0 for s in sessions)
+    elapsed = sum((s["metrics"] or {}).get("elapsed_s") or 0 for s in sessions)
+    tokens = sum(sum(v for k, v in (((s["metrics"] or {}).get("tokens")) or {}).items() if isinstance(v, (int, float))) for s in sessions)
+    by_status = {}
+    for s in sessions:
+        by_status[s["status"]] = by_status.get(s["status"], 0) + 1
+    return {"oturum": len(sessions), "durumlar": by_status, "maliyet_usd": round(cost, 4), "sure_s": round(elapsed, 1), "token": tokens}
 
 
 def row_rank(key):
