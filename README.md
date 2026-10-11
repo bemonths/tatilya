@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.16.0 (geliştirme dalı `gorev-14-masaustu-eklenti`) — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlığını değerlendirme, içerik planından video paketi ve tarayıcı eklentisi** · son stable etiket ve main: v0.15.0 (programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi).
+30A veri ve içerik üretim uygulaması · **v0.17.0 (geliştirme dalı `gorev-15-video-metni`) — video metni: yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, tonların ve sürümlerin karşılaştırılması** · son stable etiket ve main: v0.16.0 (masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi).
 
 ## Açılış
 
@@ -55,6 +55,7 @@ v0.1–v0.12 veritabanı açılırken önce `data/backups/` içine SQLite yedeğ
 - [Kanıt paketi](docs/M14-KANIT-PAKETI.md)
 - [Claude adımları ve Videolar](docs/M15-CLAUDE-ADIMLARI.md)
 - [Tarayıcı eklentisi](docs/M16-TARAYICI-EKLENTISI.md) · [kurulum rehberi](eklenti/KURULUM.md)
+- [Video metni: yazım zinciri, tonlar ve program denetimi](docs/M17-VIDEO-METNI.md)
 
 ## Geliştirme
 
@@ -156,6 +157,14 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 **Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model, efor ve en fazla tur. Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
+
+## Video metni ve tonlar · v0.17.0
+
+İş akışının **Video metni** adımında (4. adım) bir ya da birkaç **ton** seçip **Metni yaz**'a basın. Program, seçilen başlık ve video paketiyle Claude'u adım adım çağırır: önce videonun planı yazılır ve eleştirilir, sonra her ton için bölümler yan yana yazılır, birleştirilir, giriş ve kapanış eklenir, son okumadan geçer ve cümle cümle Türkçeye çevrilir. Plan bir kez yapılır; bütün tonlar aynı planı kullanır. İlerleme İşler panelinde görünür. Claude kullanım sınırına yaklaşılırsa çalışma bekler ve sıfırlanınca kendiliğinden sürer ("Claude kullanım sınırı: <saat>'te kendiliğinden sürecek."). **Durdur** çalışmayı durdurur, **Devam** biten adımları yeniden yapmadan kalanları çalıştırır; program kapanırsa da çalışma "yarıda kaldı" olarak bekler. Metin çalışması sürerken başka bir Claude çalışması başlatılmaz.
+
+Her ton bitince bir **sürüm** kaydedilir: İngilizce metin, Türkçesi, seslendirme metni ve program denetiminin raporu. Program metni kendi kurallarıyla denetler (yürüme mesafesi ya da "bir hafta şu kadar tutar" gibi verinin söylemediği iddialar, kanıtıyla tutmayan sayılar kırmızı; abartılı ifadeler ve uzunluk sarı) ve bulguları cümlenin yanında gösterir. **Karşılaştır** ekranında tonlar yan yana durur (Türkçe önde, İngilizce düğmeyle); beğendiğiniz tonda **Bu tonla devam et**'e basın. **Bu tonla da yaz** aynı planla bir ton daha yazdırır; **Planı yeniden yap** yeni bir çalışma açar, eskisi saklanır.
+
+**Ayarlar → Tonlar**: anlatıcının tonlarını programın içinden yönetin: yeni ton ekleyin (ad ve birkaç cümlelik metin), düzenleyin, önceki sürümüne dönün, silin (silinen ton arşive gider, "Geri al" ile döner), varsayılan tonu seçin. Bölümün altındaki **Denetim: uyarı ifadeleri** kutusunda denetimin sarı işaretlediği ifadeler durur. Tonlar ve uyarı ifadeleri, talimatlar gibi depodaki dosyalardır: eklediğiniz ya da değiştirdiğiniz bir ton git'te kaydedilmemiş değişiklik olarak görünür; bu bilerek böyledir ve bir sonraki görevin başında kaydedilir. **Ayarlar → Claude**'da metnin yedi adımının modeli ve eforu, aynı anda en çok kaç Claude oturumu açılacağı, kullanım eşikleri ve "Plandan sonra dur" ayarı vardır. Ayrıntılar: [M17](docs/M17-VIDEO-METNI.md).
 
 ## Masaüstü, iş akışı, Claude kullanımı ve kendi başlığın · v0.16.0
 

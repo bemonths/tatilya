@@ -1,6 +1,6 @@
 # M15 — Programın içinde Claude: çalıştırıcı, ayarlar, adım çerçevesi, onay ekranı, video kaydı, konu ve başlık adımı
 
-Tarih: 10 Ekim 2026 · Görev: GÖREV-13; GÖREV-14 (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, model takma adları, başlık eki, başlık değerlendirme, seçmeden önce düzenleme) · Dal: `gorev-14-masaustu-eklenti` · Şema `16` · Uygulama `0.16.0`
+Tarih: 11 Ekim 2026 · Görev: GÖREV-13; GÖREV-14 (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, model takma adları, başlık eki, başlık değerlendirme, seçmeden önce düzenleme); GÖREV-15 (video metninin yedi adımı, oturum sınırı, kullanım eşikleri) · Dal: `gorev-15-video-metni` · Şema `17` · Uygulama `0.17.0`
 
 ## Amaç
 
@@ -90,7 +90,7 @@ kapanırsa Claude durdurulur ve çalışma "hata: Uygulama kapanırken yarıda k
   — Claude Code'un o ailedeki en yeni modeli, GÖREV-14 —; Opus 5.5, Fable 5.1, Sonnet 5.5 (GÖREV-14), Sonnet 5, Haiku 4.5;
   `EFFORT_CHOICES`: Otomatik, Düşük, Orta, Yüksek, Çok yüksek, En yüksek). Doğrulanmamış tam model kimliği eklenmez.
 - Adımlar: "Konu ve başlık" ve "Başlık değerlendirme" (GÖREV-14); başlangıç ayarı ikisinde de Opus 5.5 (`claude-opus-5-5`), yüksek efor,
-  30 tur.
+  30 tur. GÖREV-15: video metninin yedi adımı ve "Video metni çalışması" ayarları (aşağıda).
 - Kullanım panelindeki "Yenile" çağrısı ve modeli (`haiku`, düşük efor) burada yazar.
 - Ayarlar kullanıcı verisidir: `<veri klasörü>/ayarlar.json`; gizli bilgi yoktur (Claude Code kendi girişini tutar).
 
@@ -242,6 +242,34 @@ yükleyip öyle kaydeder. Her kayıttan önce önceki hâl `<veri>/claude/talima
 listelenir, "Bu sürüme dön" eski hâli yeni bir kayıt olarak geri yazar (şimdiki hâl de sürümlere eklenir). Dosyanın satır sonları korunur.
 Claude çalışmasının ekranında çalışmanın kullandığı talimat sürümleri (dosya, karma, tarih) görünür.
 
+## Video metninin adımları ve ayarları (GÖREV-15)
+
+Yedi yeni Claude adımı aynı çerçevede çalışır (`studio/ai/text_steps.py`; zincir `studio/text/engine.py`, ayrıntı
+`docs/M17-VIDEO-METNI.md`): `metin_plan` (plan), `metin_plan_elestiri` (plan eleştirisi), `metin_bolum` (bölüm), `metin_birlestirme`
+(birleştirme), `metin_giris_kapanis` (giriş ve kapanış), `metin_son_okuma` (son okuma), `metin_ceviri` (çeviri). Çerçeveye iki şey
+eklendi: adımın `voice` bayrağı (yazım adımlarında birleşik talimata ortak dosyadan sonra anlatıcının sesi `ses_ortak.md` ve seçilen
+ton girer) ve oturumun tonu ile ek bilgileri (`RunContext.tone`, `RunContext.extra`). Çalışma kaydı tonun dosyasını, adını ve
+SHA-256'sını tutar. Şema denetimine `minimum` ve `maximum` eklendi.
+
+Ayarlar → Claude:
+- yedi adımın modeli, eforu ve tur sınırı; başlangıç değerleri: plan opus/high, plan eleştirisi opus/medium, bölüm opus/high,
+  birleştirme opus/medium, giriş ve kapanış opus/high, son okuma opus/medium, çeviri sonnet/medium (aile takma adları), 30 tur;
+- "Video metni çalışması" bölümü: "Aynı anda en çok Claude oturumu" (`claude_max_sessions`, 1–6, varsayılan 3), "5 saatlik pencere
+  eşiği" (`claude_limit_five_hour`, varsayılan %90), "Haftalık pencere eşiği" (`claude_limit_week`, varsayılan %95), "Plandan sonra dur"
+  (`claude_stop_after_plan`, kapalı).
+
+Ayarlar → Talimatlar listesine "Anlatıcının sesi (bütün tonlarda aynı)" ve yedi `metin_*.md` dosyası eklendi; adımların sırası
+`settings.CLAUDE_STEPS`'ten gelir (modüllerin yüklenme sırasından bağımsız). Tonlar bu listede değil, Ayarlar → Tonlar'dadır; uyarı
+ifadeleri dosyası da (`uyari_ifadeleri.txt`) Tonlar bölümünün altındaki "Denetim: uyarı ifadeleri" kutusundan, talimatların kayıt ve
+sürüm kurallarıyla düzenlenir.
+
+Tek işçi: metin çalışması kendi içinde paralel oturum açar; o sürerken başlık önerisi, başlık değerlendirmesi ve "Yenile" çalışmaz
+("Bir video metni çalışması sürüyor; bitmesini bekleyin."), başlık çalışması sürerken de metin çalışması başlamaz. Kullanım panelindeki
+haftalık çalışma sayısına metnin oturumları da girer.
+
+Adaysız başlık değerlendirmesi ("veriyle dolmuyor") artık iş akışında "onay bekliyor" sayılmaz; çalışma listesinde "başlık adayı yok"
+diye bilgi olarak görünür (GÖREV-14 karar 1).
+
 ## Yeni adım nasıl eklenir
 
 1. Talimat dosyasını destinasyonun Claude klasörüne koyun (ör. `thirty_a_claude/metin.md`); ortak dosya aynı kalır. Talimat metni kullanıcının
@@ -268,7 +296,5 @@ başlık listesi ve ayrıntı, video kaydı, Ayarlar → Claude). GÖREV-14: `te
 
 - Testler gerçek Claude'u çağırmaz; sahte claude (`tests/fake_claude.py`) kullanılır.
 - Claude soru soramaz; çıktısı şemaya ve anlam denetimlerine uymazsa kullanıcı "Düzeltme iste" ile yeni bir çalışma açar.
-- Video metni, metnin kontrolü ve yeni şablonlar sonraki görevlerdedir.
-- İş akışı paneli adaysız bir değerlendirme çalışmasını da "onay bekliyor" sayar (kullanıcı "Reddet" ile kapatabilir); bu yöneticinin
-  kararına bırakıldı (GÖREV-14 raporu).
+- Video metni GÖREV-15'te geldi (M17); metnin Kontrol adımı, Türkçe düzeltme ekranı ve yeni şablonlar sonraki görevlerdedir.
 - Kullanım yüzdesi Claude Code'un bildirdiğidir; ölçüm yalnız bir Claude çağrısından sonra güncellenir.

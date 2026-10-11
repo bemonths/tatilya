@@ -4,7 +4,7 @@
 >
 > Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M10`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 10 Ekim 2026'da GÖREV-14 (v0.15.0 yayını, masaüstü programı, iş akışı paneli, Claude kullanım paneli ve talimat düzenleyici, kullanıcının kendi başlığını değerlendirme, içerik planından video paketi, tarayıcı eklentisi, toplulukların plaj erişimi) ile güncellenmiştir.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 11 Ekim 2026'da GÖREV-15 (v0.16.0 yayını, video metninin yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, tonların ve sürümlerin karşılaştırılması) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
@@ -13,17 +13,17 @@
 | Repo | `bemonths/tatilya` |
 | Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
 | Başlatma | Masaüstündeki "30A Studio" kısayolu (`kisayol-olustur.ps1`; konsolsuz `pythonw -X utf8 -m studio`, uygulama kipi pencere, tek kopya, kapanma bekçisi) ya da `baslat.bat` (ilk seferde kurar, sonra aynı şekilde başlatır) |
-| Stable branch | `main` @ `a59ec652525bdccf753c8ce763e1757b9c767b69` (GÖREV-13: programın içinde Claude; 10 Ekim 2026'da GÖREV-14 Adım 1 ile fast-forward; uygulama 0.15.0, şema 15) |
-| Stable tag | `v0.15.0` → `a59ec65` — **v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi** (önceki: `v0.14.0` → `9adc235`, `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.15.0` / `15` (main ve `v0.15.0`) |
-| Aktif geliştirme dalı | `gorev-14-masaustu-eklenti` — masaüstü programı (Housing Atlas'ın başlatıcısı: konsolsuz açılış, uygulama kipi pencere, tek kopya, kapanma bekçisi, kurulum damgası, masaüstü kısayolu ve simge), sol menüde videonun iş akışı (8 adım, durumlar kayıtlardan), Claude kullanım paneli ve aşamalı ilerleme çubuğu, Ayarlar → Talimatlar, model takma adları, başlık eki ayarı, kullanıcının kendi başlığını değerlendirme ve seçmeden önce düzenleme, seçilen adayın içerik planından video paketi, özet tablolarında hafta tarihleri, "30A Studio Yardımcısı" Chrome eklentisi, toplulukların plaj erişimi referansları |
-| Aktif dal durumu | Uygulama `0.16.0`, şema `16`; geçiş gerçek veri kopyasında denendi; gerçek veride iki küçük gerçek Claude çalıştırması yapıldı (kullanım ölçümü ve bir başlık değerlendirmesi); eklentiyi kullanıcı kendi Chrome'una kuracak, gerçek sitelerden eklentiyle veri çekilmedi; başlık seçimi kullanıcının; main'e alınmadı |
+| Stable branch | `main` @ `984ca72a6d3a784146125a1a2146c6c7eabd2139` (GÖREV-14: masaüstü programı ve tarayıcı eklentisi; 11 Ekim 2026'da GÖREV-15 Adım 1 ile fast-forward; uygulama 0.16.0, şema 16) |
+| Stable tag | `v0.16.0` → `984ca72` — **v0.16.0 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi** (önceki: `v0.15.0` → `a59ec65`, `v0.14.0` → `9adc235`, `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
+| Stable uygulama sürümü / şema | `0.16.0` / `16` (main ve `v0.16.0`) |
+| Aktif geliştirme dalı | `gorev-15-video-metni` — video metni (iş akışının 4. adımı): yazım zinciri (planlayıcı, plan eleştirmeni, yan yana bölüm yazıcıları, birleştirici, giriş ve kapanış, son okuyucu, çevirmen), anlatıcının sesi ve beş seçilebilir ton, Ayarlar → Tonlar (ekleme, düzenleme, sürümler, arşiv, varsayılan), program denetimi (kırmızı ve sarı kurallar, sayıların kanıtla karşılaştırılması, uyarı ifadeleri), tonların yan yana karşılaştırılması ve seçim, kullanım sınırında bekleyip kendiliğinden sürme, Durdur ve Devam |
+| Aktif dal durumu | Uygulama `0.17.0`, şema `17`; geçiş gerçek veri kopyasında denendi ve gerçek veride normal kullanımla yapıldı; gerçek Claude ile metin yazılmadı (deneme geçici klasörde sahte claude ile); başlık seçimi ve ilk gerçek metin kullanıcının; main'e alınmadı |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main ve etiket `v0.15.0` @ a59ec65 (38077344443, 38077345949) başarılı; görev dalının sonucu `docs/gorevler/GOREV-14/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 889 Python testi + 81 frontend testi (main: 768 + 64) |
+| Son CI | main ve etiket `v0.16.0` @ 984ca72 (38089912314, 38089918781) başarılı; görev dalının sonucu `docs/gorevler/GOREV-15/RAPOR.md` içinde |
+| Test tabanı | Görev dalında 1031 Python testi + 90 frontend testi (main: 889 + 81) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
-| Gerçek veritabanı | 10 Ekim 2026'da (GÖREV-14) tam yedekten (`work/yedek/20261010-2330/`) sonra masaüstü kısayoluyla açılıp normal kullanımla şema 16'ya yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v15-*`); bir kullanım ölçümü ve bir başlık değerlendirme çalışması (Rosemary Beach'e köpekle gitme fikri; "dolmuyor"), veri özetleri için iki kanıt paketi; toplayıcı çalışmadı, başlık seçilmedi. Şema 16 dosyasını main'deki 0.15.0 açmaz; program bu dal main'e alınana kadar `gorev-14-masaustu-eklenti` dalından çalıştırılır. Önceki: GÖREV-13'te şema 15 ve iki konu ve başlık çalışması (ikisi de onay bekliyor). |
+| Gerçek veritabanı | 11 Ekim 2026'da (GÖREV-15) tam yedekten (`work/yedek/20261011-0211/`) sonra masaüstü kısayoluyla açılıp normal kullanımla şema 17'ye yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v16-*`); dört yeni tablo boş, eski satırlar aynı; Claude çalışmadı, başlık seçilmedi, video kaydı yok. Şema 17 dosyasını main'deki 0.16.0 açmaz; program bu dal main'e alınana kadar `gorev-15-video-metni` dalından çalıştırılır. Önceki: 10 Ekim 2026'da (GÖREV-14) tam yedekten (`work/yedek/20261010-2330/`) sonra masaüstü kısayoluyla açılıp normal kullanımla şema 16'ya yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v15-*`); bir kullanım ölçümü ve bir başlık değerlendirme çalışması (Rosemary Beach'e köpekle gitme fikri; "dolmuyor"), veri özetleri için iki kanıt paketi; toplayıcı çalışmadı, başlık seçilmedi. GÖREV-13'te şema 15 ve iki konu ve başlık çalışması (ikisi de onay bekliyor). |
 | Mevcut production destinasyonu | 30A / South Walton, Florida |
 | Konaklama durumu | Tarihli arama anlık görüntüleri, aylık pencere kuralıyla (çekim ayından sonraki 12 ayın 15'ini içeren hafta); kiralama şirketlerinin kendi sitelerinden fiyat (24 şirket): 10 Ekim 2026 aylık çekiminde 1.131 ilan şirket sitesinde bulundu, 1.080 ilana en az bir ayda fiyat alındı; Alys Beach'in kendi envanterinden 73 ev (hepsi fiyatlı); 12/13 mahallede Book>Direct ilanlarıyla fiyat. Ayrıntı `docs/M10-KONAKLAMA-PROFILI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md` |
 | Restoran bilgileri | Görev dalında işletmelerin kendi sitelerinden: 138 restoranın 113'ünde site çalışıyor; 66 restoranda fiyat seviyesi (GÖREV-09'da 33), seviyesi olmayan her restoranın tek satırlık nedeni; 91 restoranda saat, 94'ünde menü, 46'sında rezervasyon bilgisi. Günlük ihtiyaç (GÖREV-11 çekimi): OpenStreetMap'ten 42 nokta + zincirin sitesinden 1 + kurumların sitelerinden 4; acil servis ve acil bakım yalnız resmî kaynaklı. Ayrıntı `docs/M12-RESTORAN-BILGILERI.md`, `docs/M13-GUNLUK-IHTIYAC.md` |
@@ -345,6 +345,30 @@ yalnız eşleşmiş eklentinin kökenine açıktır. Engel görülen alan adlar�
 tarayıcısı → atla ve kaydet; `browser_hosts.method` hangi yöntemin işe yaradığını tutar. Eklenti yalnız yerel deneme sayfalarında
 sınandı; gerçek sitelerden ilk çekimi kullanıcı başlatır. Ayrıntı: `docs/M16-TARAYICI-EKLENTISI.md`, kurulum `eklenti/KURULUM.md`.
 
+### 9.13e Video metni: yazım zinciri, tonlar ve program denetimi (GÖREV-15, şema 17)
+
+İş akışının 4. adımı "Video metni" çalışıyor (`studio/text/`, `studio/ai/text_steps.py`, `studio/ai/tones.py`, `studio/web/text.js`,
+`studio/web/tones.js`). Seçilen başlık ve video paketiyle program Claude'u adım adım çağırır: planlayıcı → program plan denetimi
+(pakette olmayan kimlik planı bir kez geri gönderir) → plan eleştirmeni (bir kez geri gönderebilir) → her seçilen ton için bölüm
+yazıcıları yan yana (Ayarlar → Claude'daki oturum sınırıyla; varsayılan 3) → birleştirici → giriş ve kapanış → program birleştirir ve
+cümleleri numaralar → son okuyucu (düzeltmeleri program uygular; kanıt işaretini kaybeden düzeltme uygulanmaz) → program denetimi →
+çevirmen (Türkçe, cümle cümle) → iki dilde rakam karşılaştırması → sürüm. Plan bir kez yapılır, bütün tonlar aynı planı kullanır; "Bu
+tonla da yaz" aynı planla bir ton daha yazdırır, "Planı yeniden yap" yeni çalışma açar. Talimat birleşimi: `ortak.md` + (yazım
+adımlarında) anlatıcının sesi `ses_ortak.md` ve seçilen ton + adımın dosyası + şema; talimat ve ton metinleri GÖREV-15'in eklerinden
+aynen. Beş ton (Araştırmacı dost varsayılan, Belgesel anlatıcı, Hikâye anlatıcısı, Pratik planlayıcı, Vlogger) Ayarlar → Tonlar'dan
+programın içinde yönetilir: ekleme, düzenleme, sürümler, arşive taşıyarak silme ve geri alma, varsayılan ton; ton dosyaları depodaki
+`studio/destinations/thirty_a_claude/tonlar/` klasöründedir ve kullanıcının değişiklikleri git'te commit edilmemiş değişiklik olarak
+görünür (her görevin başında commit edilir). Geçersiz cevap bir kez yeniden istenir; geçici hatada 1, 5, 15 dakika beklenir; kullanım
+eşiğinde (5 saatlik %90, haftalık %95) ya da Claude sınır derse yeni oturum açılmaz ve çalışma sıfırlanmayı bekleyip kendiliğinden
+sürer; "Durdur" ve programın kapanması çalışmayı durdurur, "Devam" biten oturumları yeniden çalıştırmaz. Metin çalışması sürerken başka
+Claude çalışması başlamaz. Program denetimi Claude'a verilmez: kanıt bloklarının kullanım notlarından kırmızı kurallar (mesafe, fiyat,
+envanter, iklim, restoran, trafik, doğrulanamayan kaynak, pakette olmayan kimlik, kanıtla tutmayan sayı) ve sarı uyarılar (küçük örnekte
+mahalle karşılaştırması, kaynaksız "no public beach access", `uyari_ifadeleri.txt`'deki ifadeler, uzunluk); denetim kimseyi durdurmaz.
+Sürüm dosyaları `<veri>/metin/<video>/surumler/<n>/` (`metin.json` Housing Atlas `makale.json`'a yakın, İngilizce, Türkçe, seslendirme,
+kanıtlı İngilizce, denetim raporu). Karşılaştırma ekranında tonlar yan yana (Türkçe önde), "Bu tonla devam et" seçimi yapar. Şema 17:
+`text_runs`, `text_sessions`, `text_versions`, `text_selections`. Gerçek Claude ile henüz metin yazılmadı (GÖREV-15'te yalnız sahte
+claude); Türkçe düzeltme ekranı sonraki görevde. Ayrıntı: `docs/M17-VIDEO-METNI.md`.
+
 ### 9.14 Referans tablosu genişlemesi ve trafik (GÖREV-11)
 
 Referans tablosu 152 satır: plaj erişimi hukuku (anayasa, 2016 ilçe kararı, 2018 kanunu, dava, 2025'te kanunun kaldırılması, 18 Şubat 2026 temyiz kararı; "yeni yasa, özel plaj kalmadı" iddiası doğrulanamadı), erişilebilirlik, ziyaretçi kökeni ve beş okul bölgesinin 2026–27 tatilleri, 13 tekrarlayan etkinlik, kasabaların tarihçesi; her satırın Türkçe ifadesi `thirty_a_references_tr.csv`. FDOT 2025 AADT ve Walton mevsim faktörleri `thirty_a_traffic.csv` (aylık oran bizim hesabımız). GÖREV-14'te `plaj-erisimi` konusuna toplulukların kendi plaj erişimi için 13 satır eklendi (Seaside, WaterColor, Alys Beach, Rosemary Beach, Watersound; topluluğun ya da resmî kiralama şirketinin sitesinden, kısa alıntı ve belgenin SHA-256'sıyla); tablo 165 satır. Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
@@ -443,12 +467,17 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve etiket `v0.15.0` @ `a59ec652525bdccf753c8ce763e1757b9c767b69` (GÖREV-13; 10 Ekim 2026'da GÖREV-14 Adım 1 ile fast-forward ve açıklamalı etiket "v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi"; uygulama 0.15.0, şema 15; main CI 38077344443, etiket CI 38077345949 başarılı).
+Stable: main ve etiket `v0.16.0` @ `984ca72a6d3a784146125a1a2146c6c7eabd2139` (GÖREV-14; 11 Ekim 2026'da GÖREV-15 Adım 1 ile fast-forward ve açıklamalı etiket "v0.16.0 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi"; uygulama 0.16.0, şema 16; main CI 38089912314, etiket CI 38089918781 başarılı).
 
-Aktif dal `gorev-14-masaustu-eklenti`:
+Aktif dal `gorev-15-video-metni`:
+- 1031 Python testi ve 90 frontend testi geçti (tam takım art arda en az 3 kez; testler gerçek Claude'u çağırmaz, sahte claude kullanılır)
+- video metninin yazım zinciri, anlatıcının sesi ve beş ton, Ayarlar → Tonlar, program denetimi, karşılaştırma ve seçim (M17); Ayarlar → Claude'da yedi yeni adım, oturum sınırı, kullanım eşikleri ve "Plandan sonra dur" (M15); şema 17, uygulama 0.17.0; gerçek Claude ile metin yazılmadı
+- main'e alınmadı
+
+Önceki aktif dal `gorev-14-masaustu-eklenti` (v0.16.0 olarak main'e alındı):
 - 889 Python testi ve 81 frontend testi geçti (tam takım art arda en az 3 kez; testler gerçek Claude'u çağırmaz, sahte claude kullanılır); eklentinin uçtan uca denemesi ayrı (`STUDIO_EKLENTI_E2E=1`, yalnız yerel sayfalar)
 - masaüstü programı, iş akışı paneli, Claude kullanım paneli ve ilerleme, talimat düzenleyici, başlık eki ve değerlendirme, içerik planından video paketi (M14, M15), tarayıcı eklentisi (M16), toplulukların plaj erişimi (M9); şema 16, uygulama 0.16.0; gerçek veride iki küçük gerçek Claude çalıştırması
-- main'e alınmadı
+- 11 Ekim 2026'da main'e alındı (`v0.16.0`)
 
 Önceki aktif dal `gorev-13-claude-baslik` (v0.15.0 olarak main'e alındı):
 - 768 Python testi ve 64 frontend testi geçti
@@ -529,6 +558,8 @@ v0.11 (şema 10 → 11) migration denemesi 8 Ekim 2026'da gerçek DB'nin `work/`
 
 v0.16 (şema 15 → 16) migration denemesi 10 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: 165.250 satır önce ve sonra aynı; yalnız iki yeni boş tablo (`claude_usage`, `job_progress`), `browser_hosts.method` ve `videos`'a önerilen başlık ve "kullanıcı düzenledi" sütunları; `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-14) `data/` tam yedeği (`work/yedek/20261010-2330/`, 45.465 dosya) alındı, program masaüstü kısayoluyla gerçek veriyle açıldı (uygulama yedeği `data/backups/studio-v15-214465b2fb1a477cb2a9c3c599af43de.sqlite3`), bir kullanım ölçümü ("Yenile") ve bir başlık değerlendirme çalışması yapıldı; başlık seçilmedi, video kaydı açılmadı, toplayıcı çalışmadı. Sonra `claude_runs` 3 → 4, `claude_usage` 0 → 2, `evidence_packs` 6 → 8 (veri özetleri yeniden üretildi), `jobs` 36 → 37, `job_progress` 0 → 1; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-14/RAPOR.md`.
 
+v0.17 (şema 16 → 17) migration denemesi 11 Ekim 2026'da gerçek DB'nin `work/` kopyasında yapıldı: 165.257 satır önce ve sonra aynı; yalnız dört yeni boş tablo (`text_runs`, `text_sessions`, `text_versions`, `text_selections`); `integrity_check` ok, `foreign_key_check` boş. Ardından (GÖREV-15) `data/` tam yedeği (`work/yedek/20261011-0211/`, 45.495 dosya, 1,44 GB) alındı, program masaüstü kısayoluyla gerçek veriyle açıldı ve geçiş çalıştı (uygulama yedeği `data/backups/studio-v16-*.sqlite3`); Ayarlar → Tonlar'da beş ton ve varsayılan "Araştırmacı dost", Ayarlar → Claude'da yedi yeni adım görüldü; Claude çalıştırılmadı, başlık seçilmedi, video kaydı açılmadı, toplayıcı çalışmadı. Program kapatıldıktan sonra bütün eski tabloların satırları aynı (toplam 165.257), dört yeni tablo boş; `integrity_check` ok, `foreign_key_check` boş; ayrıntı `docs/gorevler/GOREV-15/RAPOR.md`.
+
 ## 13. Geliştirme çalışma biçimi
 
 1. Proje yöneticisi (ayrı bir Claude sohbeti) görevi `GÖREV-NN` numarasıyla yazar.
@@ -560,8 +591,8 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 - Scheduler (bilinçli olarak yok: kullanıcı kararı, 9 Ekim 2026; yerine ana ekrandaki güncelleme zamanı göstergesi ve düğmesi)
 - Otomatik entity matching
 - Mahalle sınırı poligonları (plaj–mahalle eşlemesi ilçe alt bölüm poligonları, komşuluk ve boylam yöntemleriyle ayrı katmandadır; mahalle sınırı yoktur)
-- AI evidence-pack / konu seçimi
-- Makale/senaryo
+- Metnin Türkçe düzeltme ve İngilizceye uyarlama ekranı (Housing Atlas MS1'den sonraki görevde; video metni GÖREV-15'te var)
+- Kontrol adımı (iş akışının 5. adımı)
 - Görsel plan
 - Video render
 - Yayın paketi
@@ -611,9 +642,10 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M14-KANIT-PAKETI.md`
 - `docs/M15-CLAUDE-ADIMLARI.md`
 - `docs/M16-TARAYICI-EKLENTISI.md`
+- `docs/M17-VIDEO-METNI.md`
 
 ---
 
-**Son güncelleme:** 10 Ekim 2026  
-**Stable:** main ve etiket v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi (`a59ec65`, uygulama 0.15.0)  
-**Aktif geliştirme:** `gorev-14-masaustu-eklenti` — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlık, içerik planından video paketi, tarayıcı eklentisi; uygulama 0.16.0, şema 16 (yönetici incelemesinde)
+**Son güncelleme:** 11 Ekim 2026  
+**Stable:** main ve etiket v0.16.0 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi (`984ca72`, uygulama 0.16.0)  
+**Aktif geliştirme:** `gorev-15-video-metni` — video metni: yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, tonların ve sürümlerin karşılaştırılması; uygulama 0.17.0, şema 17 (yönetici incelemesinde)

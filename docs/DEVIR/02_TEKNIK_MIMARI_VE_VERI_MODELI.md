@@ -384,6 +384,20 @@ eklenti bekleyen işte `{"tur": "eklenti", "bekliyor": true}`); `jobs` satırlar
 `<veri>/eklenti.json`. Video kaydında (`videos`) önerilen başlık ve "kullanıcı düzenledi" işareti. Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md`,
 `docs/M16-TARAYICI-EKLENTISI.md`.
 
+### Video metni (şema 17; `gorev-15-video-metni` dalı)
+
+`text_runs` (videonun metin çalışması: durum running / waiting_limit / paused / interrupted / awaiting_comparison / error, tonlar JSON,
+paket, kesin plan JSON, zincirin durumu `state` JSON — plan turları ve tonların ilerlemesi —, sebep ve metni, bekleme sonu, "Planı
+yeniden yap"ta önceki çalışma; iş kimliği). `text_sessions` (zincirin her Claude oturumu: adım, ton, parça, tur, deneme, durum running /
+done / invalid / failed / transient / limit / canceled, klasör, model, efor, Claude Code sürümü, ölçüm ve sorunlar JSON; "Devam" biten
+oturumu adım, ton, parça ve turla bulur). `text_versions` (bir tonun yazılmış metni: video başına numara, ton dosyası, adı ve SHA-256'sı,
+klasör, kelime, cümle, kırmızı ve sarı bulgu, bedel karşılığı, token JSON, süre, `metin.json` SHA-256'sı, paket). `text_selections`
+("Bu tonla devam et"; en yeni satır güncel seçim). Çekirdek `studio/text/` (zincir, belge, denetim, sayılar, işaretler; Housing Atlas'tan
+`split.py` ve `digits.py`) ve `studio/ai/text_steps.py`, `studio/ai/tones.py`; talimatlar, ses, tonlar ve uyarı ifadeleri destinasyonda
+(`studio/destinations/thirty_a_claude/`); oturum klasörleri `<veri>/claude/<video>/<adım>/<oturum>/`, çalışma ve sürüm dosyaları
+`<veri>/metin/<video>/`; ton geçmişi `<veri>/claude/ton_gecmisi/`, arşiv `<veri>/claude/ton_arsivi/`, varsayılan ton `<veri>/ayarlar.json`
+→ `varsayilan_ton`. Ayrıntı: `docs/M17-VIDEO-METNI.md`.
+
 ### Günlük ihtiyaç ve kanıt paketi (şema 14; `gorev-11-kanit-paketi` dalı)
 
 `destination_poi_categories` + `brands` (JSON marka listesi; büyük süpermarket), `verified_only` (acil servis, acil bakım: yalnız resmî kaynakla doğrulanan nokta sayılır). `poi_points.source` + `kurumun kendi sitesi`. `poi_chain_checks` + `category_key` (birincil anahtar `run_id, category_key, chain, store`), sonuç + `osm_dogrulanamadi`. `evidence_packs` (kimlik, destinasyon, şablon anahtarı ve sürümü, başlık, parametreler JSON, üretim zamanı, Markdown ve JSON dosya yolu ve SHA-256'sı, bölüm/satır/sayı/"veri yok" sayısı). Kanıt paketi çekirdeği `studio/evidence/` (generic); şablonlar `studio/destinations/thirty_a_evidence/*.json`. GÖREV-12 (`gorev-12-yazar-ozeti`, şema değişmedi): `summary.py` yazar özetini aynı paket nesnesinden yazar; her üretim dört dosya (Markdown, JSON, `-yazar-ozeti.md`, `-sayilar.csv`); eklerin adı ve SHA-256'sı JSON'un `dosyalar` alanında (JSON'un SHA-256'sı `evidence_packs`'te); satırlarda `ek_degerler` (`tur`: alt_ceyrek, ust_ceyrek, orneklem, pay, aralik_alt, aralik_ust, donusum), `tablo`, `kucuk_ornek`, `celiski_notu`; sayı listesi yalnız bu alanlardan; şablonda `oynak_konular`. Ayrıntı: `docs/M13-GUNLUK-IHTIYAC.md`, `docs/M14-KANIT-PAKETI.md`.
@@ -409,7 +423,7 @@ GÖREV-10 (`gorev-10-aylik-gunluk`, şema `13`, `studio/migration_v13.py`): v12 
 
 GÖREV-11 (`gorev-11-kanit-paketi`, şema `14`, `studio/migration_v14.py`): v13 → v14 kategori yapılandırmasına `brands` ve `verified_only` sütunlarını ekler, `poi_points` ve `poi_chain_checks`'i genişleyen CHECK listeleri ve kategori anahtarıyla yeniden kurar (eski satırlar korunur, eski kontrol satırlarına `supermarket` yazılır), `evidence_packs` tablosunu ekler ve destinasyonun günlük ihtiyaç kategorilerini profildeki yeni listeyle değiştirir. Gerçek DB kopyasında denendi: yalnız `destination_poi_categories` 5 → 7 ve yeni boş `evidence_packs`; `integrity_check` ok, `foreign_key_check` boş.
 
-GÖREV-13 (`gorev-13-claude-baslik`, şema `15`): v14 → v15 `claude_runs`, `videos` ve `evidence_packs.video_id`'yi ekler. GÖREV-14 (`gorev-14-masaustu-eklenti`, şema `16`, `studio/migration_v16.py`): v15 → v16 `claude_usage` ve `job_progress` tablolarını, `browser_hosts.method` sütununu ve video kaydına önerilen başlık ve "kullanıcı düzenledi" alanlarını ekler; eski satırlar değişmez. Gerçek DB kopyasında denendi: 165.250 satır önce ve sonra aynı; `integrity_check` ok, `foreign_key_check` boş.
+GÖREV-13 (`gorev-13-claude-baslik`, şema `15`): v14 → v15 `claude_runs`, `videos` ve `evidence_packs.video_id`'yi ekler. GÖREV-14 (`gorev-14-masaustu-eklenti`, şema `16`, `studio/migration_v16.py`): v15 → v16 `claude_usage` ve `job_progress` tablolarını, `browser_hosts.method` sütununu ve video kaydına önerilen başlık ve "kullanıcı düzenledi" alanlarını ekler; eski satırlar değişmez. Gerçek DB kopyasında denendi: 165.250 satır önce ve sonra aynı; `integrity_check` ok, `foreign_key_check` boş. GÖREV-15 (`gorev-15-video-metni`, şema `17`, `studio/migration_v17.py`): v16 → v17 `text_runs`, `text_sessions`, `text_versions` ve `text_selections` tablolarını ekler; var olan hiçbir şey değişmez. Gerçek DB kopyasında ve 11 Ekim 2026'da gerçek DB'de normal kullanımla: 165.257 satır önce ve sonra aynı, dört yeni tablo boş; `integrity_check` ok, `foreign_key_check` boş.
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
@@ -441,6 +455,8 @@ Domain:
 - `/api/settings/claude` (GET, PUT: Claude Code'un yolu ve sürümü, API anahtarı uyarısı, model, efor, tur sınırı), `/api/claude/options`, `/api/claude/runs`, `POST /api/claude/title-runs` (bölge, aile, not), `/api/claude/runs/{id}` (onay görünümü), `POST /api/claude/runs/{id}/select|reject|correct`, `/api/claude/runs/{id}/files/{ad}`, `/api/videos`, `POST /api/videos/{id}/evidence-pack` (v0.15.0, GÖREV-13)
 - `/api/workflow?video_id=` (iş akışının 8 adımı ve durumları), `POST /api/heartbeat` (kapanma bekçisi), `/api/claude/usage`, `POST /api/claude/usage/refresh`, `/api/claude/instructions`, `/api/claude/instructions/{key}` (GET, PUT `base_sha256` ile; değiştiyse 409), `/api/claude/instructions/{key}/versions/{sürüm}` ve `…/restore`, `/api/settings/title-suffix` (GET, PUT), `POST /api/claude/review-runs` (bölge, başlık, not), `POST /api/claude/runs/{id}/translate` (aday, düzenlenmiş Türkçe başlık), `select` gövdesinde düzenlenmiş `baslik_en` / `baslik_tr`; `POST /api/videos/{id}/evidence-pack` artık içerik planından paket kurar (v0.16.0, GÖREV-14)
 - Eklenti (yalnız eşleşmiş eklentinin kökeni ve `X-Studio-Eklenti` kodu): `POST /api/eklenti/eslestir`, `/api/eklenti/sor`, `/api/eklenti/is/{oturum}/sonraki|sonuc|durum|bitti`; programın ekranı için `/api/tarayici-eklentisi` (GET), `…/kod-yenile`, `…/ayarlar` (PUT), `…/deneme`, `…/sorunlu-siteler`, `…/devret/{iş}`, `/eklenti-deneme` (yerel deneme sayfası), `/eklenti-kurulum/{resim}` (v0.16.0, GÖREV-14)
+
+- Video metni (GÖREV-15): `/api/videos/{id}/metin` (GET ekranın verisi; POST `{"tonlar": [...]}` çalışma başlatır), `/api/videos/{id}/metin/karsilastirma?calisma=`, `/api/metin/calismalar/{id}` ve `…/devam`, `…/durdur`, `…/ton` ("Bu tonla da yaz"), `…/yeniden-planla`; `/api/metin/surumler/{id}`, `…/dosya/{en|tr|seslendirme|kanitli|denetim}`, `…/sec`; tonlar `/api/tonlar` (GET, POST), `/api/tonlar/{dosya}` (GET, PUT `base_sha256` ile, DELETE: arşive), `…/varsayilan`, `…/surumler/{s}`, `…/surumler/{s}/geri-don`, `/api/ton-arsivi/{id}/geri-al`. Metin çalışması sürerken başlık çalışması ve `POST /api/claude/usage/refresh` 409 döner.
 
 Liste endpoint'leri destination-filtered'dır.
 

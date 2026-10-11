@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.15.0 -> a59ec652525bdccf753c8ce763e1757b9c767b69
-main -> a59ec652525bdccf753c8ce763e1757b9c767b69
-app 0.15.0
-schema 15
+tag v0.16.0 -> 984ca72a6d3a784146125a1a2146c6c7eabd2139
+main -> 984ca72a6d3a784146125a1a2146c6c7eabd2139
+app 0.16.0
+schema 16
 ```
+
+11 Ekim 2026'da GÖREV-15 Adım 1 ile main `984ca72`'ye (GÖREV-14) fast-forward edildi (`a59ec65..984ca72`) ve bu commit'e açıklamalı `v0.16.0` etiketi konuldu ("v0.16.0 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi"). Görev dalı CI (38085832280), main CI (38089912314) ve etiket CI (38089918781) başarılı.
 
 10 Ekim 2026'da GÖREV-14 Adım 1 ile main `a59ec65`'e (GÖREV-13) fast-forward edildi ve bu commit'e açıklamalı `v0.15.0` etiketi konuldu ("v0.15.0 — programın içinde Claude: çalıştırıcı, Claude ayarları, Videolar ekranı ve konu ve başlık önerisi"). main CI (38077344443) ve etiket CI (38077345949) başarılı.
 
@@ -32,19 +34,34 @@ schema 15
 ## Aktif branch
 
 ```text
-gorev-14-masaustu-eklenti
-app 0.16.0
-schema 16
+gorev-15-video-metni
+app 0.17.0
+schema 17
 ```
 
 Bu dal:
+- iş akışının 4. adımı "Video metni": yazım zinciri (planlayıcı, program plan denetimi, plan eleştirmeni, yan yana bölüm yazıcıları, birleştirici, giriş ve kapanış, son okuyucu, program denetimi, çevirmen, iki dilde rakam karşılaştırması), aynı planla her ton için ayrı metin, "Bu tonla da yaz", "Planı yeniden yap",
+- anlatıcının sesi (`ses_ortak.md`) ve beş ton; Ayarlar → Tonlar (ekleme, düzenleme, sürümler, arşive taşıyarak silme ve geri alma, varsayılan ton); talimat ve ton metinleri görevin eklerinden aynen,
+- program denetimi (kırmızı kurallar kanıt bloklarının kullanım notlarından, sayıların kanıtla toleranslı karşılaştırılması, `dogrulanamadi`, küçük örnek, uyarı ifadeleri, uzunluk, plan denetimi),
+- karşılaştırma ekranı (tonlar yan yana, Türkçe önde), sürüm görünümü (numaralı cümleler, iki dil, denetim işaretleri, indirmeler), seçim,
+- oturum sınırı, geçici hata beklemeleri, kullanım eşiğinde bekleyip kendiliğinden sürme, Durdur / Devam, programın kapanmasında yarıda kalma; metin çalışması sürerken başka Claude çalışması yok,
+- şema 17 (`text_runs`, `text_sessions`, `text_versions`, `text_selections`); adaysız başlık değerlendirmesi iş akışında "onay bekliyor" sayılmaz (GÖREV-14 karar 1),
+- gerçek veride yalnız geçiş (normal kullanımla); gerçek Claude ile metin yazılmadı; main'e alınmadı.
+
+Test:
+- 1031 Python
+- 90 frontend
+
+---
+
+Önceki aktif dal `gorev-14-masaustu-eklenti` (v0.16.0 olarak main'e alındı):
 - masaüstü programı: Housing Atlas'ın başlatıcısı (konsolsuz `pythonw`, uygulama kipi pencere, tek kopya, 8830–8849 portları, kapanma bekçisi — iş sürerken bekler —, Türkçe hata kutusu, kurulum damgası), `baslat.bat`, masaüstü kısayolu ve simgesi,
 - sol menüde videonun iş akışı: video seçici, 8 adım ve kayıtlardan hesaplanan durumlar, "Sıradaki iş" satırı, VERİ grubu,
 - Claude: kullanım paneli ve "Yenile", aşamalı ilerleme çubuğu, Ayarlar → Talimatlar (sürümler, diskteki değişiklik uyarısı), model takma adları ve `claude-sonnet-5-5`, başlık eki ayarı; yeni adım "Başlık değerlendirme" ve seçmeden önce başlık düzenleme,
 - video paketi seçilen adayın içerik planından; yazar özetinde pencere sütunları tarihli; restoran mahalle toplamı notu,
 - "30A Studio Yardımcısı" Chrome eklentisi (eşleşme, köken denetimi, okuma sırası doğrudan → eklenti → programın tarayıcısı → atla), programın API'sinde başka kökenden gelen durum değiştiren isteklerin reddi,
 - toplulukların plaj erişimi için 13 referans satırı,
-- gerçek veride iki küçük gerçek Claude çalıştırması (kullanım ölçümü; Rosemary Beach köpek fikri "dolmuyor"); main'e alınmadı.
+- gerçek veride iki küçük gerçek Claude çalıştırması (kullanım ölçümü; Rosemary Beach köpek fikri "dolmuyor"); 11 Ekim 2026'da main'e alındı (`v0.16.0`).
 
 Test:
 - 889 Python
@@ -412,7 +429,18 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
 
-## GÖREV-14 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlık, içerik planından video paketi, tarayıcı eklentisi (dal)
+## GÖREV-15 — video metni: yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, karşılaştırma (dal)
+
+Dal: `gorev-15-video-metni`, uygulama 0.17.0, şema 17 (`text_runs`, `text_sessions`, `text_versions`, `text_selections`).
+
+- Geçici klasörde gerçek verinin kopyası ve sahte claude ile deneme (11 Ekim 2026): Rosemary Beach çalışmasının (0d773a0c) ilk adayından geçici video kaydı ve paketi; "Araştırmacı dost" ve "Hikâye anlatıcısı", "Bu tonla da yaz" ile "Pratik planlayıcı" ve "Belgesel anlatıcı"; kullanım sınırı beklemesi, Durdur / Devam, programın kapanıp açılmasında "yarıda kaldı" ve Devam; Ayarlar → Tonlar'da ekle, düzenle, sil, geri al.
+- Gerçek DB: `data/` tam yedeği (`work/yedek/20261011-0211/`), program masaüstü kısayoluyla açıldı, v16 → v17; eski tabloların satırları aynı (165.257), dört yeni tablo boş; `integrity_check` ok, `foreign_key_check` boş. Claude çalışmadı, başlık seçilmedi, video kaydı açılmadı, toplayıcı çalışmadı.
+
+## v0.16.0 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi
+
+11 Ekim 2026'da main'e alındı ve etiketlendi (`v0.16.0` → `984ca72`). İçerik aşağıdaki GÖREV-14 bölümünde.
+
+## GÖREV-14 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlık, içerik planından video paketi, tarayıcı eklentisi (main'e alındı)
 
 Dal: `gorev-14-masaustu-eklenti`, uygulama 0.16.0, şema 16 (`claude_usage`, `job_progress`, `browser_hosts.method`).
 
