@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.17.0 (geliştirme dalı `gorev-15-video-metni`) — video metni: yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, tonların ve sürümlerin karşılaştırılması** · son stable etiket ve main: v0.16.0 (masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi).
+30A veri ve içerik üretim uygulaması · **v0.18.0 (geliştirme dalı `gorev-16-eklenti-proxy`) — tarayıcı eklentisinin düzeltilmesi, ABD dışı erişim engeli için kendi ABD proxy'niz, video metninin küçük düzeltmeleri** · son stable etiket ve main: v0.17.0 (video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi).
 
 ## Açılış
 
@@ -56,6 +56,7 @@ v0.1–v0.12 veritabanı açılırken önce `data/backups/` içine SQLite yedeğ
 - [Claude adımları ve Videolar](docs/M15-CLAUDE-ADIMLARI.md)
 - [Tarayıcı eklentisi](docs/M16-TARAYICI-EKLENTISI.md) · [kurulum rehberi](eklenti/KURULUM.md)
 - [Video metni: yazım zinciri, tonlar ve program denetimi](docs/M17-VIDEO-METNI.md)
+- [ABD proxy'si ve sayfa türleri: bölge engeli](docs/M18-ABD-PROXY-BOLGE-ENGELI.md)
 
 ## Geliştirme
 
@@ -157,6 +158,12 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 **Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model, efor ve en fazla tur. Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
+
+## Tarayıcı eklentisi düzeltmeleri ve ABD proxy'si · v0.18.0
+
+**Eklenti:** iş sürerken programa birkaç saniyede bir ne yaptığını bildirir; Ayarlar → Tarayıcı eklentisi ve İşler paneli "Eklenti çalışıyor: <site> · <durum>" der; "Bağlı değil (Chrome kapalı olabilir)" yalnız eklentiden gerçekten haber alınamıyorsa yazar. Kimsenin geçemeyeceği engel sayfası ("Access Denied") ve ABD dışı erişim engeli artık beklenmez, hemen atlanır; doğrulama sayfasında eklenti penceresinde ve İşler panelinde **Bu sayfayı atla** düğmesi vardır. Deneme tablosunda her sitenin türü yazar: tamam, doğrulama, erişim reddedildi, bölge engeli, başka siteye yönlendi. Eklenti güncellendi: Chrome'da `chrome://extensions` sayfasında "30A Studio Yardımcısı"nın yenile düğmesine bir kez basın (eski sürüm takılıysa Ayarlar bunu söyler).
+
+**ABD proxy'si (bölge engeli için):** CVS, Publix ve HCA gibi bazı siteler yalnız ABD içinden gelen ziyaretçiye hizmet veriyor. Kendi ABD proxy'nizi **Ayarlar → ABD proxy'si (bölge engeli için)** bölümüne girin: proxy adresi (ör. `http://sunucu:8080`), kullanıcı adı ve parola. Parola Windows Kimlik Bilgisi Yöneticisi'ne kaydedilir; hiçbir dosyaya yazılmaz, ekranda yalnız "kayıtlı" görünür. **Proxy'yi dene** çıkış adresini ve ülkesini gösterir (ABD değilse uyarır). Proxy yalnız aynı bölümdeki **bölge engelli alan adları** listesindeki siteler için kullanılır; öbür bütün istekler doğrudan gider. Program bir sitede bu engeli görünce alan adını listeye kendisi ekler; siz de ekleyip çıkarabilirsiniz. Proxy bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz. Proxy girilmemişse bu siteler atlanır ve "bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)" diye kaydedilir. Ayrıntılar: [M18](docs/M18-ABD-PROXY-BOLGE-ENGELI.md), [M16](docs/M16-TARAYICI-EKLENTISI.md).
 
 ## Video metni ve tonlar · v0.17.0
 

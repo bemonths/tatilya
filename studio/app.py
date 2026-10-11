@@ -339,11 +339,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                         record = bridge().save_raw(result, f"sorunlu site · {domain}")
                         row = trial_row(domain, note, result, record)
                         if result["durum"] == "bolge_engeli":
-                            region.mark(domain, title=result.get("baslik") or None, url=url,
+                            added = region.mark(domain, title=result.get("baslik") or None, url=url,
                                         evidence=page_kinds.evidence((result.get("html") or b"").decode("utf-8", errors="replace"),
                                                                      result.get("baslik"), result.get("son_adres") or url) or result.get("not"))
                             if region.proxy is not None:
-                                row = {**through_proxy(reader, domain, url, note), "eklenti": "bölge engeli gördü; alan adı listeye eklendi"}
+                                row = {**through_proxy(reader, domain, url, note),
+                                       "eklenti": "bölge engeli gördü" + ("; alan adı listeye eklendi" if added else "")}
                             else:
                                 row["not"] = proxy_mod.NO_PROXY_SKIP
                 except Exception as exc:
@@ -362,7 +363,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
 
     def trial_row(domain, note, result, record):
         state = result["durum"]
-        return {"alan_adi": domain, "aciklama": note, "durum": state, "tur": state, "yontem": result.get("yontem") or "eklenti",
+        return {"alan_adi": domain, "aciklama": note, "durum": state, "tur": {"atlandi": "dogrulama"}.get(state, state),     # a skipped page was a verification
+                "yontem": result.get("yontem") or "eklenti",
                 "baslik": result.get("baslik"), "http_durumu": result.get("http_durumu"), "bayt": record["bayt"], "sha256": record["sha256"],
                 "dosya": record["dosya"], "not": result.get("not")}
 
@@ -372,7 +374,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             return {"alan_adi": domain, "aciklama": note, "durum": "bolge_engeli", "tur": "bolge_engeli", "yontem": None, "baslik": None,
                     "http_durumu": None, "not": result["not"]}
         record = bridge().save_raw(result, f"sorunlu site · {domain}")
-        return {**trial_row(domain, note, result, record), "proxy": True}
+        return {**trial_row(domain, note, result, record), "tur": "bolge_engeli", "proxy": True}     # the kind seen; read through the proxy
 
     @app.post("/api/tarayici-eklentisi/devret/{job_id}")
     def extension_hand_over(job_id: str):

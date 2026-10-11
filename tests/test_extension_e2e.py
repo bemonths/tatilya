@@ -31,7 +31,12 @@ PAGES = {
     "/dogrulama-kalici": "<!doctype html><html><head><title>Just a moment...</title></head><body>cf_chl_opt</body></html>",
     "/giris": ("<!doctype html><html><head><title>Sign in</title></head><body><form><input name='u'><input type='password' name='p'>"
                "</form></body></html>"),
+    # GÖREV-16: pages nobody passes and a region block are not waited for
+    "/erisim": ("<HTML><HEAD><TITLE>Access Denied</TITLE></HEAD><BODY><H1>Access Denied</H1>You don't have permission to access "
+                "this server.</BODY></HTML>"),
+    "/bolge": ("<html><body><p>Example.com is not available to customers who are located outside of the United States.</p></body></html>"),
 }
+REDIRECTS = {"/yonlen": "http://baska-site.test/giris", "/yonlen-geo": "http://geo-blocked-site.test/"}
 
 
 def free_port():
@@ -43,6 +48,11 @@ def free_port():
 def trial_site():
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
+            if self.path in REDIRECTS:
+                self.send_response(302)
+                self.send_header("Location", REDIRECTS[self.path])
+                self.end_headers()
+                return
             if self.path == "/api/veri":
                 body, kind = b'{"ok": true, "kaynak": "yerel"}', "application/json"
             elif self.path in PAGES:
@@ -95,16 +105,22 @@ def test_the_extension_reads_local_pages_in_its_own_window(program, tmp_path):
                                                                 args=[f"--disable-extensions-except={EXTENSION}", f"--load-extension={EXTENSION}"],
                                                                 viewport={"width": 1100, "height": 760})
         try:
-            worker = context.service_workers[0] if context.service_workers else context.wait_for_event("serviceworker", timeout=20000)
+            worker = next((w for w in context.service_workers if w.url.endswith("/background.js")), None)
+            while worker is None:                    # Chromium's own service workers may come first (GÖREV-16)
+                found = context.wait_for_event("serviceworker", timeout=20000)
+                worker = found if found.url.endswith("/background.js") else None
             extension_id = worker.url.split("/")[2]
             user = context.pages[0] if context.pages else context.new_page()
             user.goto(f"{base}/normal")
-            worker.evaluate(f"chrome.storage.local.set({{port: {port}}})")
             popup = context.new_page()
             popup.goto(f"chrome-extension://{extension_id}/popup.html")
+            popup.evaluate(f"chrome.storage.local.set({{port: {port}}})")     # an extension page has the extension's APIs
             popup.fill("#kod", bridge.code())
             popup.click("button[type=submit]")
-            popup.wait_for_function("document.querySelector('#eslesme-sonuc').textContent.startsWith('Eşleşti')", timeout=20000)
+            deadline = time.monotonic() + 20                # the popup forbids eval: the pairing is waited for from here
+            while not (popup.locator("#eslesme-sonuc").text_content() or "").startswith("Eşleşti"):
+                assert time.monotonic() < deadline, popup.locator("#eslesme-sonuc").text_content()
+                popup.wait_for_timeout(300)
             deadline = time.monotonic() + 20
             while not bridge.connected:
                 assert time.monotonic() < deadline, "Eklenti programa bağlanmadı."
@@ -128,6 +144,12 @@ def test_the_extension_reads_local_pages_in_its_own_window(program, tmp_path):
             cleared = session.page(f"{base}/dogrulama", {"saniye": 1})
             stuck = session.page(f"{base}/dogrulama-kalici", {"saniye": 1})
             login = session.page(f"{base}/giris")
+            started = time.monotonic()
+            denied = session.page(f"{base}/erisim", {"saniye": 1})
+            region = session.page(f"{base}/bolge", {"saniye": 1})
+            elsewhere = session.page(f"{base}/yonlen", {"saniye": 1})
+            geo = session.page(f"{base}/yonlen-geo", {"saniye": 1})
+            quick = time.monotonic() - started
             status, final, headers, body = session.request("GET", f"{base}/api/veri")
             session.close()
             assert normal["durum"] == "tamam" and "Normal içerik" in normal["html"].decode("utf-8") and normal["baslik"] == "Normal sayfa"
@@ -136,6 +158,10 @@ def test_the_extension_reads_local_pages_in_its_own_window(program, tmp_path):
             assert cleared["durum"] == "tamam" and "Doğrulama sonrası içerik" in cleared["html"].decode("utf-8")
             assert stuck["durum"] == "dogrulama" and "atlandı" in (stuck["not"] or "")
             assert login["durum"] == "giris" and login["html"] is None
+            assert denied["durum"] == "erisim_reddedildi" and region["durum"] == "bolge_engeli" and b"outside" in region["html"]
+            assert elsewhere["durum"] == "yonlendi" and elsewhere["not"] == "başka siteye yönlendi: baska-site.test"
+            assert geo["durum"] == "bolge_engeli" and geo["not"] == "bölge engeli: geo-blocked-site.test adresine yönlendi"
+            assert quick < 60                                                          # none of them was waited for (8 s apart at most)
             assert (status, body) == (200, b'{"ok": true, "kaynak": "yerel"}') and "application/json" in headers.get("content-type", "")
             assert user.url == f"{base}/normal"                                         # the user's tab was not touched
             deadline = time.monotonic() + 10

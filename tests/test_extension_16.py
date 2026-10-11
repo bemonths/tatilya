@@ -210,7 +210,7 @@ def test_with_a_proxy_the_region_blocked_sites_are_read_through_it(client, monke
     client.app.state.region_access = lambda: ProxyRegion(db, client.data, handler)
     job, fake = run_trial(client, monkeypatch, SITES[:2])
     rows = {r["alan_adi"]: r for r in job["result"]["siteler"]}
-    assert rows["publix.com"]["tur"] == "tamam" and rows["publix.com"]["yontem"] == "proxy" and rows["publix.com"]["proxy"] is True
+    assert (rows["publix.com"]["tur"], rows["publix.com"]["durum"], rows["publix.com"]["yontem"]) == ("bolge_engeli", "tamam", "proxy") and rows["publix.com"]["proxy"] is True
     assert rows["publix.com"]["eklenti"] == "bölge engeli gördü; alan adı listeye eklendi" and seen == ["https://www.publix.com/locations"]
     record = json.loads((client.data / rows["publix.com"]["dosya"]).with_suffix(".json").read_text(encoding="utf-8"))
     assert record["yontem"] == "proxy" and record["proxy"] is True

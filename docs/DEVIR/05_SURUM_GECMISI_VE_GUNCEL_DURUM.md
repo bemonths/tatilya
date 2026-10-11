@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.16.0 -> 984ca72a6d3a784146125a1a2146c6c7eabd2139
-main -> 984ca72a6d3a784146125a1a2146c6c7eabd2139
-app 0.16.0
-schema 16
+tag v0.17.0 -> 6cfab845c88ebb81e4ef7ae021ba3bb795e7a9f9
+main -> 6cfab845c88ebb81e4ef7ae021ba3bb795e7a9f9
+app 0.17.0
+schema 17
 ```
+
+11 Ekim 2026'da GÖREV-16 Adım 1 ile main `6cfab84`'e (GÖREV-15) fast-forward edildi (`984ca72..6cfab84`) ve bu commit'e açıklamalı `v0.17.0` etiketi konuldu ("v0.17.0 — video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi"). Görev dalı CI (38097203607), main CI (38138844974) ve etiket CI (38138846294) başarılı.
 
 11 Ekim 2026'da GÖREV-15 Adım 1 ile main `984ca72`'ye (GÖREV-14) fast-forward edildi (`a59ec65..984ca72`) ve bu commit'e açıklamalı `v0.16.0` etiketi konuldu ("v0.16.0 — masaüstü programı, iş akışı paneli, Claude kullanımı ve talimat düzenleyici, kullanıcının kendi başlığı, içerik planından video paketi, tarayıcı eklentisi"). Görev dalı CI (38085832280), main CI (38089912314) ve etiket CI (38089918781) başarılı.
 
@@ -34,6 +36,28 @@ schema 16
 ## Aktif branch
 
 ```text
+gorev-16-eklenti-proxy
+app 0.18.0
+schema 18
+```
+
+Bu dal:
+- eklenti: iş sürerken ≤5 sn'de bir canlılık ve durum (sayfa açılıyor, sayfa okunuyor, doğrulama bekleniyor ve kalan süre, bekleme); programa her çağrı "görüldü"; "Bağlı değil" iş sürerken 60 sn, iş yokken 20 sn; Ayarlar ve İşler panelinde "Eklenti çalışıyor: <site> · <durum>"; "Son iş" takılı işi söyler; izinsiz başka siteye yönlenen sayfa "başka siteye yönlendi" (geo-block adresi: bölge engeli); "Bu sayfayı atla" (eklenti penceresi ve İşler paneli); deneme tablosunda sayfa türü; realjoy.com için 30A ilan listesi sayfası; eklenti sürümü 0.18.0,
+- sayfa türleri tek Python kaynağında (`studio/sources/page_kinds.py`, eklentideki kopyası testle denetlenir): doğrulama, erişim reddedildi ("access denied" artık beklenmez), bölge engeli; programın kendi tarayıcısı da erişim reddedildi ve bölge engelini kullanıcıya göndermez,
+- ABD dışı erişim engeli için kullanıcının ABD proxy'si: Ayarlar (adres ve kullanıcı adı `ayarlar.json`'da, parola Windows Kimlik Bilgisi Yöneticisi'nde, günlükte maskeli), "Proxy'yi dene" (çıkış adresi ve ülke), bölge engelli alan adları (şema 18, `region_blocked_hosts`; ilk 3 satır ham kayıtlardan), okuma sırası proxy → programın tarayıcısı + proxy (ayrı profil, PAC, CDP `Fetch` kimlik) → atla; proxy yoksa atla ve kaydet; restoran ve kiralama toplayıcıları ve deneme işi bu sıraya uyar,
+- video metni: sürümün kullanımı yalnız kendi tonunun oturumları, plan ayrı satırda ve karşılaştırmanın üstünde; seçilen çalışma "seçildi: <ton>"; "I" uyarısı I-10 gibi yol adlarında çıkmaz,
+- iki zamanlamaya bağlı test kararlı hâle getirildi (GÖREV-15'te bir kez görülen),
+- gerçek veride yalnız geçiş (normal kullanımla); gerçek proxy ve gerçek siteyle denenmedi; main'e alınmadı.
+
+Test:
+- 1078 Python
+- 95 frontend
+
+---
+
+Önceki aktif dal `gorev-15-video-metni` (v0.17.0 olarak main'e alındı):
+
+```text
 gorev-15-video-metni
 app 0.17.0
 schema 17
@@ -46,7 +70,7 @@ Bu dal:
 - karşılaştırma ekranı (tonlar yan yana, Türkçe önde), sürüm görünümü (numaralı cümleler, iki dil, denetim işaretleri, indirmeler), seçim,
 - oturum sınırı, geçici hata beklemeleri, kullanım eşiğinde bekleyip kendiliğinden sürme, Durdur / Devam, programın kapanmasında yarıda kalma; metin çalışması sürerken başka Claude çalışması yok,
 - şema 17 (`text_runs`, `text_sessions`, `text_versions`, `text_selections`); adaysız başlık değerlendirmesi iş akışında "onay bekliyor" sayılmaz (GÖREV-14 karar 1),
-- gerçek veride yalnız geçiş (normal kullanımla); gerçek Claude ile metin yazılmadı; main'e alınmadı.
+- gerçek veride yalnız geçiş (normal kullanımla); gerçek Claude ile metin yazılmadı; 11 Ekim 2026'da main'e alındı (`v0.17.0`).
 
 Test:
 - 1031 Python
@@ -429,7 +453,18 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
 
-## GÖREV-15 — video metni: yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, karşılaştırma (dal)
+## GÖREV-16 — eklentinin düzeltilmesi, ABD dışı erişim engeli için kullanıcının ABD proxy'si, GÖREV-15'in küçük düzeltmeleri (dal)
+
+Dal: `gorev-16-eklenti-proxy`, uygulama 0.18.0, şema 18 (`region_blocked_hosts`).
+
+- Geçici klasörde deneme (11 Ekim 2026; gerçek verinin kopyası, yerel sayfalar, kimlik isteyen ve hiçbir isteği dışarı iletmeyen yerel sahte proxy, Playwright'in Chromium'unda geçici profille eklenti): sıradan sayfa, geçmeyen doğrulama ("Bu sayfayı atla" ile atlandı), erişim reddedildi, bölge engeli (proxy'yle okundu), geo-block yönlenmesi, başka siteye yönlenme, listedeki bir site proxy'yle doğrudan, JavaScript'le çizilen listedeki bir site programın tarayıcısı + proxy (PAC ve CDP kimlik) ile okundu. Sahte proxy yalnız bölge engelli adresleri ve IP servisini gördü. Parola hiçbir dosyada, günlükte ve proxy tarayıcısının profilinde yok; ham kayıtlarda yalnız `proxy: true`.
+- Gerçek DB: `data/` tam yedeği (`work/yedek/20261011-1621/`), program masaüstü kısayoluyla açıldı, v17 → v18; eski tabloların satırları aynı, `region_blocked_hosts` 3 satır (cvs.com, hcafloridahealthcare.com, publix.com); `integrity_check` ok, `foreign_key_check` boş. Proxy girilmedi, gerçek siteye gidilmedi, toplayıcı çalışmadı.
+
+## v0.17.0 — video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi
+
+11 Ekim 2026'da main'e alındı ve etiketlendi (`v0.17.0` → `6cfab84`). İçerik aşağıdaki GÖREV-15 bölümünde.
+
+## GÖREV-15 — video metni: yazım zinciri, seçilebilir anlatıcı tonları ve ton yönetimi, program denetimi, karşılaştırma (main'e alındı)
 
 Dal: `gorev-15-video-metni`, uygulama 0.17.0, şema 17 (`text_runs`, `text_sessions`, `text_versions`, `text_selections`).
 

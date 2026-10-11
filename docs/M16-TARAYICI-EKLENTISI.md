@@ -1,4 +1,4 @@
-# M16 — Tarayıcı eklentisi: "30A Studio Yardımcısı" (GÖREV-14, v0.16.0)
+# M16 — Tarayıcı eklentisi: "30A Studio Yardımcısı" (GÖREV-14, v0.16.0; GÖREV-16 düzeltmeleri, v0.18.0)
 
 ## Neden
 
@@ -55,6 +55,31 @@ Engel görülen alan adları için: 1. doğrudan istek, 2. engel varsa ve eklent
 - **Eklenti bekleniyor:** eşleşmiş ama sessiz eklenti için iş "Eklenti bekleniyor: … Chrome'u açın" der (`job_progress`:
   `{"tur": "eklenti", "bekliyor": true}`); İşler panelinde "Programın tarayıcısına devret" düğmesi çıkar.
 
+## GÖREV-16 düzeltmeleri (v0.18.0)
+
+Kullanıcının 11 Ekim 2026 denemesinde iki sorun çıktı: eklenti Akamai'nin "Access Denied" sayfasını geçilebilir bir doğrulama sanıp 15 dk
+bekledi (Winn-Dixie) ve iş sürerken programa hiç haber vermediği için program 20 sn sonra "Bağlı değil (Chrome kapalı olabilir)" dedi.
+
+- **İş sürerken canlılık.** Eklenti bir iş sürerken en çok 4–5 sn arayla programa ne yaptığını bildirir (`/api/eklenti/is/<oturum>/durum`,
+  `{asama: {asama, adres, kalan_s}}`): sayfa açılıyor, sayfa okunuyor, doğrulama bekleniyor (kalan süreyle), bekleme (hız kuralı). Program
+  eklentiden gelen her yetkili çağrıyı "görüldü" sayar. "Bağlı değil" yalnız eklentiden gerçekten haber alınamıyorsa yazar: iş sürerken
+  60 sn, iş yokken 20 sn. Ayarlar → Tarayıcı eklentisi (5 sn'de bir yenilenir) ve İşler paneli iş sürerken "Eklenti çalışıyor: <site> ·
+  <durum>" der. Eklenti penceresindeki "Son iş" satırı takılı bir işi en son ne zaman ilerlediğiyle söyler.
+- **Sayfa türleri.** Doğrulama (kullanıcı geçer), erişim reddedildi (beklenmez) ve bölge engeli (beklenmez; alan adı bölge engelli listeye
+  girer) ayrıldı; işaretler `studio/sources/page_kinds.py`'de, eklentideki kopyası testle denetlenir; ayrıntı ve tablo
+  `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`. "access denied" başlığı artık doğrulama sayılmaz.
+- **Başka siteye yönlenme.** Sayfa izin verilmemiş başka bir alan adına yönlenirse eklenti sekmenin adresini okur ve sonucu "başka siteye
+  yönlendi: <alan adı>" diye verir; adres "geo-block" içeriyorsa sonuç bölge engelidir. Chrome'un izin hata metni sonuç olarak yazılmaz.
+- **"Bu sayfayı atla".** Doğrulama beklenirken eklenti penceresinde ve İşler panelinde düğme vardır; basılınca sayfa "kullanıcı atladı"
+  (`atlandi`) diye kaydedilir ve iş sürer. İşler panelindeki düğme programa söyler, eklenti bunu bir sonraki bildiriminin cevabında öğrenir.
+- **Yeni sonuçlar.** `erisim_reddedildi`, `bolge_engeli` (sayfa kanıt olarak saklanır), `yonlendi`, `atlandi`.
+- **Deneme listesi ve tablosu.** realjoy.com için kalkmış ilan adresi yerine kalıcı 30A ilan listesi sayfası
+  (`https://www.realjoy.com/beach-rentals/30a-vacation-rentals`, 11 Ekim ham kaydının bağlantılarından). Tabloda her sitenin türü ve
+  okuma yöntemi (eklenti, proxy, tarayıcı + proxy) yazar. Bölge engelli listedeki siteler eklentiye verilmez; ABD proxy'si varsa onunla
+  denenir.
+- **Sürüm.** Eklenti 0.18.0 oldu; Chrome'da eski sürüm takılıysa Ayarlar bunu söyler: `chrome://extensions` sayfasında eklentinin yenile
+  düğmesine basılır. Eklenti proxy kullanmaz, Chrome'un proxy ayarına dokunmaz; `proxy` izni yoktur.
+
 ## İzinler (manifest)
 
 | İzin | Neden |
@@ -78,13 +103,14 @@ Yok: `cookies`, `history`, `bookmarks`, `downloads`, `debugger` (CDP), `webReque
   gönderir. Programın API'si başka kökenlere CORS açmaz; `TrustedHostMiddleware` yalnız 127.0.0.1/localhost'u kabul eder.
 - Program kullanıcının Chrome profiline, çerezlerine, parolalarına ve geçmişine erişmez; eklenti de bu izinleri istemez.
 - Eklenti tıklamaz, yazı yazmaz, form doldurmaz; giriş ve ödeme sayfalarını okumadan atlar; doğrulamayı kullanıcı yapar (çözme servisi,
-  gizlenme, parmak izi sahteciliği, proxy, IP değiştirme yoktur).
+  gizlenme, parmak izi sahteciliği ve IP değiştirme yoktur; eklenti proxy kullanmaz, Chrome'un proxy ayarına dokunmaz). Programın ABD
+  proxy'si yalnız bölge engelli alan adları içindir ve eklentiyle ilgisi yoktur (`docs/M18-ABD-PROXY-BOLGE-ENGELI.md`).
 
 ## Hız ve doğrulama
 
 - Aynı alan adında iki sayfa arası en az 8 sn (Ayarlar'dan 3–120 sn); bir anda tek sayfa.
-- Doğrulama sayfası programın işaretleriyle tanınır (`CHALLENGE`, `BLOCKED`; `eklenti/logic.js` aynı metni taşır, bir Python testi
-  denetler). Görülürse eklenti pencereyi öne getirir, bildirim gösterir, programa bildirir (iş panelinde "Kullanıcı doğrulaması
+- Doğrulama sayfası programın işaretleriyle tanınır (`studio/sources/page_kinds.py`; `eklenti/logic.js` aynı metni taşır, bir Python
+  testi denetler ve iki taraf aynı fikstürleri sınar). Erişim reddedildi ve bölge engeli beklenmez (GÖREV-16). Görülürse eklenti pencereyi öne getirir, bildirim gösterir, programa bildirir (iş panelinde "Kullanıcı doğrulaması
   bekleniyor"), 3 sn'de bir bakar; 15 dk içinde geçilmezse sayfa atlanır ve kayda yazılır. Toplayıcılar bu siteler için sonda ikinci kez
   beklemez.
 

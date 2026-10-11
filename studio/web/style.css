@@ -49,3 +49,5 @@
 .checkbox-label{display:flex!important;flex-wrap:wrap;gap:8px;align-items:center}.checkbox-label input{width:auto;min-height:0;margin:0!important}.checkbox-label .form-note{flex-basis:100%}.text-settings label .form-note{display:block;margin-top:4px}
 @media(max-width:700px){.tone-choice{grid-template-columns:1fr}.run-actions{flex-direction:column;align-items:flex-start}}
 .text-plan th:first-child,.text-plan td:first-child{width:46px}.text-plan td:nth-child(2){min-width:260px}.text-plan td:nth-child(3){min-width:220px}
+/* GÖREV-16: ABD proxy'si, bölge engelli liste, plan kullanımı */
+.proxy-settings{grid-column:1/-1}.proxy-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px 16px;align-items:start}.proxy-form .decision-actions{grid-column:1/-1}.proxy-test-result{margin:12px 0;padding:10px 14px;border:1px solid var(--line);border-radius:9px}.proxy-test-result ul{margin:6px 0 0;padding-left:18px;font-size:12px}.region-table td{vertical-align:top}.region-table td:nth-child(4){max-width:420px}.compare-plan-usage{margin:0 0 10px;font-size:12px}

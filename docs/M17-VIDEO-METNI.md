@@ -186,7 +186,7 @@ Karşılaştırma ekranındaki "Bu tonla devam et" sürümü videonun seçilmiş
 |---|---|
 | `text_runs` | Videonun metin çalışması: durum (running, waiting_limit, paused, interrupted, awaiting_comparison, error), tonlar, paket, kesin plan, zincirin durumu (`state`), sebep ve metni, bekleme sonu, "Planı yeniden yap"ta önceki çalışma |
 | `text_sessions` | Zincirin her Claude oturumu: adım, ton, parça, tur, deneme, durum (running, done, invalid, failed, transient, limit, canceled), klasör, model, efor, ölçümler, sorunlar |
-| `text_versions` | Bir tonun yazılmış metni: video başına numara, ton dosyası, adı ve SHA-256'sı, klasör, kelime ve cümle sayısı, kırmızı ve sarı bulgu, bedel karşılığı, token, süre, `metin.json`'un SHA-256'sı, paket |
+| `text_versions` | Bir tonun yazılmış metni: video başına numara, ton dosyası, adı ve SHA-256'sı, klasör, kelime ve cümle sayısı, kırmızı ve sarı bulgu, bedel karşılığı, token, süre (GÖREV-16'dan beri yalnız o tonun oturumları), `metin.json`'un SHA-256'sı, paket |
 | `text_selections` | "Bu tonla devam et" kayıtları |
 
 Geçiş yalnız ekler; var olan hiçbir şey değişmez. Uygulama geçişten önce kendi yedeğini alır (`data/backups/studio-v16-*.sqlite3`).
@@ -252,7 +252,8 @@ bulgu sayısı karşılaştırma ekranında görünür.
 **Sarı (dikkat ister).**
 - küçük örnek: işaret küçük örneklemli bir hücreyi gösteriyor ve cümle iki mahalleyi karşılaştırıyor;
 - kaynak sorusu: "no public beach access" o cümlede ya da bir önceki cümlede kaynak adı olmadan (son okuyucuya ve Kontrol adımına not);
-- ses: `uyari_ifadeleri.txt`'deki ifadeler (büyük-küçük harfe duyarsız, kelime sınırında; "I" yalnız büyük harfle ve tek kelime olarak);
+- ses: `uyari_ifadeleri.txt`'deki ifadeler (büyük-küçük harfe duyarsız, kelime sınırında; "I" yalnız büyük harfle ve tek kelime olarak;
+  GÖREV-16'dan beri ardından tire ve rakam gelen "I" — "I-10", "I-65" gibi yol adları — sayılmaz);
 - uzunluk: bütün metin 2.000 kelimeden az ya da 2.800'den çok (hedef 2.200–2.500); bir bölüm bütçesinden %25'ten fazla sapıyor.
 
 **Rakam ve yuvarlama** (`studio/text/numbers.py`). Rakamla yazılmış sayılar ve kelimeyle yazılan yaygın sayılar ("seven thousand",
@@ -278,7 +279,8 @@ Ayarlar → Tonlar'ın altındaki "Denetim: uyarı ifadeleri" kutusundan düzenl
 **Video metni adımı** (`#adim/metin`). En üstte "Sıradaki iş" satırı. Altında:
 - ton seçimi: onay kutuları, varsayılan ton işaretli, her tonun yanında metninin ilk cümlesi, "Tonları yönet" bağlantısı;
 - "Metni yaz" düğmesi; paket yoksa ya da eskiyse altında "Paket önce yeniden üretilecek" yazar;
-- metin çalışmaları: tarih, tonlar, durum (ve sebebi), kullanım (oturum, süre, token, bedel karşılığı), sürümler; duraklatılmış ya da
+- metin çalışmaları: tarih, tonlar, durum (ve sebebi; GÖREV-16'dan beri seçilmiş sürümün çalışmasında "seçildi: <ton adı>"), kullanım
+  (oturum, süre, token, bedel karşılığı; altında planın payı "plan: …": planlayıcının ve eleştirmenin tonsuz oturumları), sürümler; duraklatılmış ya da
   yarıda kalmış çalışmada "Devam", çalışan ya da bekleyen çalışmada "Durdur"; "Planı göster", "Karşılaştır", "Bu tonla da yaz" (ton
   listesiyle) ve "Planı yeniden yap";
 - Türkçe düzeltme ekranının bu görevde olmadığını söyleyen kısa not.
@@ -289,7 +291,8 @@ kontrolü, program uyarıları ve eleştirmenin notları; salt okunur.
 **Karşılaştırma** (`#adim/metin/karsilastirma[/<çalışma>]`; çalışma verilmezse videonun bütün sürümleri): tonlar yan yana sütunlarda, satırlar parçalar (giriş, bölümler, geçişler, kapanış);
 sütun çoksa yatay kaydırma. Türkçe önde; "İngilizce" düğmesi sütunları İngilizceye çevirir, "Alt alta" ikisini birlikte gösterir.
 Sütun başında tonun adı, kelime sayısı, tahmini süre (kelime/150 dakika), kırmızı ve sarı bulgu sayısı, harcanan kullanım (token,
-bedel karşılığı) ve süre. Düğmeler: "Bu tonla devam et", "Tek göster"; üstte "Bu tonla da yaz".
+bedel karşılığı) ve süre; GÖREV-16'dan beri bu kullanım yalnız o tonun oturumlarıdır, planın kullanımı (bütün tonlar için bir kez)
+ekranın üstünde yazar. "Bu tonla da yaz" sürümü yeniden yapılmamış planın bedelini taşımaz. Düğmeler: "Bu tonla devam et", "Tek göster"; üstte "Bu tonla da yaz".
 
 **Sürüm** (`#adim/metin/surum/<sürüm>`): numaralı cümleler, İngilizce ve Türkçe yan yana; kanıt kimlikleri cümlenin üzerine gelince
 görünür; denetim bulguları ve çevirmen uyarıları cümlenin yanında; terim listesi ve denetim raporunun tamamı; İngilizce, Türkçe,
