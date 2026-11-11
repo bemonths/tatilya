@@ -403,6 +403,19 @@ satırı, günlüğü ve sonucu değişmez; satır yalnız panelin o işi göste
 anahtarında durur (`program`, `proxy`; eklentinin penceresi `tur: "eklenti"` ve `asama`'dan okunur). `studio/migration_v19.py`
 yalnız tabloyu ekler; hiçbir satır değişmez ve hiçbir iş gizlenmez.
 
+### Claude adımlarında tek çağrı, tahmin ve harcama (GÖREV-18; şema değişmedi, 19)
+
+Bütün Claude adımları araçsız ve tek turludur (`--tools ""`, `--max-turns 1`). `studio/ai/single.py`: görev metni = önsöz + adımın görev satırları +
+girdi dosyaları (`<<<DOSYA ad>>>` … `<<<DOSYA SONU ad>>>`), cevaptan JSON ayıklama, kesik cevap (`stop_reason: max_tokens`), token tahmini
+(karakter ÷ 1,85 + 4.500), harcama ve karşılaştırma. `studio/ai/budget.py`: adımın önceki çağrılarından yazılan ve okunan ortancası, Claude Code'un yan
+çağrısı payı, işin tahmin özeti ve sınırlar, adım başına harcama tablosu, son işin harcaması. `studio/text/estimate.py`: video metninin plan ve ton
+satırları. `studio/text/businesses.py`: işletme adı listesi (her denetimde veriden) ve eşleştirici; `studio/ai/title_marks.py`: başlık ve kapak
+uyarıları. Kayıt yeni tablo istemez: `claude_runs.metrics` ve `text_sessions.metrics` içinde `duzen: "tek_cagri"`, `cagri`, `tahmin`, `side_tokens`;
+`text_runs.state` içinde `tahmin` (işin tahmini, iş kimliğiyle) ve `harcamalar`; işin `result.harcama` ve `job_progress.info.harcama`. Ayarlar
+(`ayarlar.json` → `claude`): `claude_call_limit`, `claude_job_limit`, `claude_output_guess_<adım>`, `ayar_surumu`; `claude_max_turns_<adım>` artık
+okunmaz; `claude_max_sessions` 1–8 (başlangıç 6). Destinasyon tarafında `isletme_adlari.txt` (`TEXT["business_names"]`). Ayrıntı:
+`docs/M15-CLAUDE-ADIMLARI.md`, `docs/M17-VIDEO-METNI.md`.
+
 ### Video metni (şema 17; `gorev-15-video-metni` dalı)
 
 `text_runs` (videonun metin çalışması: durum running / waiting_limit / paused / interrupted / awaiting_comparison / error, tonlar JSON,

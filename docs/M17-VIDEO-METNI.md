@@ -12,6 +12,34 @@ Yöntem The Housing Atlas Stüdyo'nun yazım zincirinden (TASARIM 21) 30A'ya uya
 Türkçe düzeltme ve İngilizceye uyarlama ekranı bu görevde yok. Housing Atlas'taki MS1 ekranı orada oturduktan sonra ayrı bir görevde
 taşınacak. Metnin veri biçimi bu yüzden Housing Atlas'ın `makale.json`'una yakın kuruldu.
 
+## Tek çağrılı zincir, tahmin ve token sınırı (GÖREV-18)
+
+GÖREV-15'te kurulan zincir gerçek Claude ile hiç çalışmadan önce GÖREV-18'de tek çağrı düzenine geçti (ayrıntı `docs/M15-CLAUDE-ADIMLARI.md`
+"Tek çağrı düzeni, tahmin ve sınırlar"). Eski düzende her oturum dosyalarını `Read` ile açıp çıktısını `Write` ile yazıyordu; iki tonlu bir metin
+1,5–2 milyon token tutardı.
+
+- **Her oturum tek çağrıdır**: araç yok, tek tur. Oturumun girdi dosyaları (aşağıdaki tablo) klasöre eskisi gibi yazılır ve görev metninin içinde
+  `<<<DOSYA ad>>>` bölümleri olarak verilir; Claude'un cevabı JSON'dur, çıktı dosyasını (`plan.json`, `bolum.json` …) program yazar. Görev satırları
+  "Verilen dosyalar (hepsi aşağıda):" der; "oku/yaz" demez. Talimatlar değişmedi.
+- **Geçersiz cevap** (JSON yok, şema ya da anlam denetimi): bir kez daha istenir (tek tur; "DÖNÜŞ SEBEBİ" ve `onceki_cikti.json` bölümüyle; JSON
+  olmayan cevap metin olarak verilir); yine olmazsa çalışma duraklar. **Kesik cevap** ayrı tanınır ("cevap uzunluk sınırında kesildi"), kabul
+  edilmez ve geri verilmez. **Tek çağrı sınırını** aşan bir oturum açılmaz: çalışma "cagri_siniri" sebebiyle duraklar.
+- **Paralel oturum**: "Aynı anda en çok Claude oturumu" 1–8, başlangıç 6 (bölüm yazıcıları).
+- **Tahmin**: "Metni yaz", "Bu tonla da yaz" ve "Planı yeniden yap" önce tahmini gösterir ve "Başlat" ister: plan (2 çağrı) ve seçilen her ton
+  (bölüm sayısı + birleştirme + giriş-kapanış + son okuma + çeviri dilimleri) ayrı satırda, toplamla ("Plan: 2 çağrı, yaklaşık 107 bin token ·
+  Araştırmacı dost: 10 çağrı, yaklaşık 274 bin token · Toplam: yaklaşık 381 bin token"). Tahmin bir sınırı aşıyorsa başlatılmaz (409). Tahmin işin
+  günlüğüne ("Tahmin: …") ve çalışmanın `state.tahmin`'ine yazılır.
+- **Token sınırı**: zincir her çağrıdan sonra gerçek toplamı günceller. İşin başından (ya da son "Devam"dan) beri harcanan Ayarlar'daki iş başına
+  sınıra ulaşınca yeni çağrı açılmaz; çalışma "token_siniri" sebebiyle duraklar ("Token sınırına ulaşıldı: …"). Biten oturumlar kalır; "Devam"
+  kalanları çalıştırır ve sınırı o andan yeniden sayar.
+- **Bitince**: iş kartında ve metin çalışmaları tablosunda "Harcama: tahmin X · gerçek Y token (N çağrı)"; gerçek tahminin 1,5 katını geçerse kırmızı
+  "Beklenenden fazla harcandı". Kayıt: `metin/<video>/calismalar/<çalışma>/harcama.json` (işler ve çalışmanın toplamı) ve `state.harcamalar`.
+- **İki eski hata düzeldi** (tek çağrı düzeninin testleri buldu): ikinci ve sonraki çeviri diliminde önceki dilimlerin terimleri yanlış birleştiriliyordu
+  (`merge_terms(terms)`; çalışma "Beklenmedik hata" ile duraklardı); bölüm yazıcısının okunur Markdown'ı girdi dosyasıyla aynı adı taşıyordu
+  (`bolum.md`) ve kayıt için saklanan girdiyi siliyordu; artık `bolum_cikti.md`.
+- Sahte claude ile uçtan uca iki ton: 22 çağrı (plan 2, ton başına 6 bölüm + 3 + 1 dilim), her biri araçsız ve tek turlu; istemlerin gerçek boyutu
+  432 bin token, tahminin okuma kısmı 465 bin (fark %8).
+
 ## Yapı
 
 | Dosya | Ne yapar |
@@ -236,6 +264,17 @@ dosyası görünür. Uyarı ifadeleri dosyası da talimat listesinde değil, Ton
 Denetim Claude'a verilmez. Yazılan her sürüm denetlenir; rapor sürümle saklanır (`denetim.md`, `denetim.json`). Bulgular cümlelere
 bağlanır ve ekranda cümlenin yanında kırmızı ya da sarı işaret olarak görünür. Denetim kimseyi durdurmaz: sürüm kaydedilir, kırmızı
 bulgu sayısı karşılaştırma ekranında görünür.
+
+- **İşletme adı** (GÖREV-18; kullanıcının 11 Kasım 2026 kararı: videolarda marka, restoran, otel ve benzeri işletme adları geçmez, onlardan genel
+  olarak söz edilir): cümlede verideki bir işletmenin adı geçerse kırmızı "işletme adı: <ad>". Liste her denetimde veriden yeniden kurulur
+  (`studio/text/businesses.py`): restoranlar, kiralama şirketleri (destinasyonun şirket siteleri ve fiyat çekimlerinin şirketleri), otel, B&B inn ve
+  kiralama acentesi kategorisindeki konaklama ilanları, günlük ihtiyaç noktalarının adları ve markaları (market, eczane, özel sağlık kuruluşu …).
+  Girmeyenler: yer adları (bölgeler, mahalle kayıtları, destinasyonun adı, 30A, South Walton), kamu kurumları ve resmî kaynaklar (County, State Park,
+  Department, Sheriff, NOAA, FDOT, Visit South Walton …), parklar ve plaj erişimleri. Bir işletmenin adı bir yer adıyla aynıysa ("Rosemary Beach®")
+  alınmaz; yer adı hiçbir zaman işaretlenmez. Yer adını içeren bir işletme ("Rosemary Beach Realty") yalnız tam adıyla işaretlenir. Biçimler: ® ve ™
+  olmadan, baştaki "The" olmadan, " - " ve " at "ten önceki kısım. Dört harften kısa adlar alınmaz; tek kelimelik adlar ("Target", "Lookout") yalnız
+  verideki büyük harfle eşleşir. Ayarlar → Uyarı ifadeleri → "İşletme adları: ekle / hariç tut" (`isletme_adlari.txt`: "+ Ad", "- Ad"). Gerçek
+  veride (11 Kasım) 256 ad.
 
 **Kırmızı (bilgiyi yanlış söyler).** Bloklarla ilgili kurallar kanıt bloklarının kullanım notlarından gelir (`studio/evidence/blocks.py`
 `USAGE`); her biri kodda tanımlı ve testli:

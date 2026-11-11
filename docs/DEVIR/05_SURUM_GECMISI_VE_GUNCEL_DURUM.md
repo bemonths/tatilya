@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.18.0 -> 988ca8d72a1b9af0aa18274ee9979705fdf2c731
-main -> 988ca8d72a1b9af0aa18274ee9979705fdf2c731
-app 0.18.0
-schema 18
+tag v0.19.0 -> a49c6d0
+main -> a49c6d0
+app 0.19.0
+schema 19
 ```
+
+11 Kasım 2026'da GÖREV-18 Adım 1 ile main `a49c6d0`'a (GÖREV-17) fast-forward edildi (`988ca8d..a49c6d0`) ve bu commit'e açıklamalı `v0.19.0` etiketi konuldu ("v0.19.0 — arayüz düzeltmeleri: İşler panelinde temizleme, Ayarlar düzeni, tek pencere"). main CI (43053256607) başarılı; etiket CI (43053261163) ve görev dalı CI (43032939565) takıldı (aynı commit'in main çalışması 4 dakikada geçti; ayrıntı GÖREV-18 RAPOR).
 
 11 Kasım 2026'da GÖREV-17 Adım 1 ile main `988ca8d`'ye (GÖREV-16) fast-forward edildi (`6cfab84..988ca8d`) ve bu commit'e açıklamalı `v0.18.0` etiketi konuldu ("v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si"). Görev dalı CI (38144739045) ve etiket CI (43011754490) başarılı.
 
@@ -36,6 +38,28 @@ schema 18
 7 Ekim 2026'da GÖREV-04 Adım 1 ile main `7f25e3c`'ye fast-forward edildi ve bu commit'e açıklamalı `v0.7.0` etiketi konuldu ("v0.7.0 — mahalle verisi ve plaj–mahalle eşlemesi"). Aynı gün GÖREV-05 Adım 1 ile main `a7e38f2`'ye (GÖREV-04: eşleme v2, test bekleme düzeltmesi, gerçek veri güncelleme kuralı) fast-forward edildi; yeni etiket konmadı; main CI: success. Önceki stable `v0.6.0` → `a938367`.
 
 ## Aktif branch
+
+```text
+gorev-18-token-kontrolu
+app 0.20.0
+schema 19
+```
+
+Bu dal (kullanıcının "Token kontrolü ve çalışma düzeni" kuralı):
+- bütün Claude adımları tek çağrılı ve araçsız: malzeme istemin içinde (`<<<DOSYA ad>>>` bölümleri), cevap JSON, çıktı dosyasını program yazar; geçersiz cevapta bir kez yeniden; kesik cevap ayrı tanınır; malzeme kırpılmaz, tek çağrı sınırını aşan istem gönderilmez; tur sınırı ayarı kalktı,
+- başlamadan önce tahmin ve "Başlat" (başlık adımları, düzeltme, "İngilizcesini Claude yazsın", video metni: plan ve her ton ayrı satırda); Ayarlar → Claude'da tek çağrı (250 bin) ve iş başına (1,5 milyon) sınır; video metni sınıra gelince durur, "Devam" sınırı yeniden sayar; iş kartında tahmin ile gerçek, 1,5 katı geçince kırmızı uyarı; sol menüde son işin harcaması; adım başına ortanca ve en yüksek harcama tablosu; Claude Code'un yan çağrısı harcamaya sayılır,
+- paralel oturum 1–8, başlangıç 6; model ve efor değişmedi,
+- işletme adı denetimi (kırmızı; video metninde ve başlık adaylarında; liste veriden, Ayarlar'dan ekle / hariç tut); başlık ve kapak uyarıları (sarı),
+- iki eski hata: ikinci çeviri dilimi; bölüm yazıcısının Markdown'ının girdisinin üstüne yazılması,
+- tek gerçek ölçüm geçici kopyada (Opus 111 bin okudu, eskiden 416 bin; yan Haiku çağrısı 105 bin); gerçek veride yalnız açılış; main'e alınmadı.
+
+Test:
+- 1115 Python
+- 120 frontend
+
+---
+
+Önceki aktif dal `gorev-17-arayuz` (v0.19.0 olarak main'e alındı):
 
 ```text
 gorev-17-arayuz
@@ -476,7 +500,13 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
 
-## GÖREV-17 — arayüz düzeltmeleri: İşler paneli, Ayarlar düzeni, açılan pencereler (dal)
+## GÖREV-18 — Claude adımlarında token kontrolü, işletme adı ve başlık denetimleri (dal)
+
+Tek çağrılı ve araçsız Claude adımları, tahmin ve onay, token sınırları, tahmin ile gerçek, adım başına harcama; işletme adı ve başlık-kapak denetimleri;
+iki eski hatanın düzeltilmesi. Uygulama 0.20.0, şema 19. 1115 Python + 120 frontend testi. Tek gerçek ölçüm geçici kopyada. Rapor:
+`docs/gorevler/GOREV-18/RAPOR.md`.
+
+## GÖREV-17 — arayüz düzeltmeleri: İşler paneli, Ayarlar düzeni, açılan pencereler (main, v0.19.0)
 
 Dal: `gorev-17-arayuz`, uygulama 0.19.0, şema 19 (`job_hidden`), eklenti 0.19.0.
 

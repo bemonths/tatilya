@@ -1,0 +1,973 @@
+{
+ "baslik": [
+  {
+   "durum": "baslik_30a",
+   "eski": {
+    "ad": "Konu ve başlık · 30A geneli (10 Ekim)",
+    "okunan": 370731,
+    "yazilan": 65455,
+    "tur": 5,
+    "arac": 9,
+    "usd": 2.55
+   },
+   "yeni": {
+    "cagri": 1,
+    "okunan": 92472,
+    "yazilan": 54382,
+    "toplam": 146854,
+    "dayanak": "okunan: istemin boyutu; yazılan: önceki 3 başarılı çalışmanın ortancası"
+   },
+   "parcalar": [
+    {
+     "parca": "talimat.md",
+     "karakter": 8819,
+     "token": 4768
+    },
+    {
+     "parca": "görev metni (önsöz ve adımın satırları)",
+     "karakter": 1989,
+     "token": 1076
+    },
+    {
+     "parca": "kanal_plani.md",
+     "karakter": 13853,
+     "token": 7489
+    },
+    {
+     "parca": "kanal_arastirmasi.md",
+     "karakter": 13434,
+     "token": 7262
+    },
+    {
+     "parca": "secim.md",
+     "karakter": 291,
+     "token": 158
+    },
+    {
+     "parca": "veri_ozeti_30a.md",
+     "karakter": 113557,
+     "token": 61383
+    },
+    {
+     "parca": "sablonlar.md",
+     "karakter": 3276,
+     "token": 1771
+    },
+    {
+     "parca": "onceki_oneriler.md",
+     "karakter": 6930,
+     "token": 3746
+    },
+    {
+     "parca": "Claude Code'un kendi sistem metni (ölçülen, yaklaşık)",
+     "karakter": null,
+     "token": 4500
+    }
+   ]
+  },
+  {
+   "durum": "baslik_rb",
+   "eski": {
+    "ad": "Konu ve başlık · Rosemary Beach (10 Ekim, iki çalışmanın ortalaması)",
+    "okunan": 452314,
+    "yazilan": 53690,
+    "tur": 5.5,
+    "arac": 10,
+    "usd": 2.39
+   },
+   "yeni": {
+    "cagri": 1,
+    "okunan": 108256,
+    "yazilan": 54382,
+    "toplam": 162638,
+    "dayanak": "okunan: istemin boyutu; yazılan: önceki 3 başarılı çalışmanın ortancası"
+   },
+   "parcalar": [
+    {
+     "parca": "talimat.md",
+     "karakter": 8850,
+     "token": 4784
+    },
+    {
+     "parca": "görev metni (önsöz ve adımın satırları)",
+     "karakter": 2121,
+     "token": 1147
+    },
+    {
+     "parca": "kanal_plani.md",
+     "karakter": 13853,
+     "token": 7489
+    },
+    {
+     "parca": "kanal_arastirmasi.md",
+     "karakter": 13434,
+     "token": 7262
+    },
+    {
+     "parca": "secim.md",
+     "karakter": 342,
+     "token": 185
+    },
+    {
+     "parca": "veri_ozeti_30a.md",
+     "karakter": 113557,
+     "token": 61383
+    },
+    {
+     "parca": "veri_ozeti_mahalle.md",
+     "karakter": 28913,
+     "token": 15629
+    },
+    {
+     "parca": "sablonlar.md",
+     "karakter": 3276,
+     "token": 1771
+    },
+    {
+     "parca": "onceki_oneriler.md",
+     "karakter": 6930,
+     "token": 3746
+    },
+    {
+     "parca": "Claude Code'un kendi sistem metni (ölçülen, yaklaşık)",
+     "karakter": null,
+     "token": 4500
+    }
+   ]
+  },
+  {
+   "durum": "degerlendirme",
+   "eski": {
+    "ad": "Başlık değerlendirme · köpek fikri (10 Ekim)",
+    "okunan": 416056,
+    "yazilan": 7618,
+    "tur": 6,
+    "arac": 13,
+    "usd": 1.18
+   },
+   "yeni": {
+    "cagri": 1,
+    "okunan": 110132,
+    "yazilan": 7618,
+    "toplam": 117750,
+    "dayanak": "okunan: istemin boyutu; yazılan: önceki 1 başarılı çalışmanın ortancası"
+   },
+   "parcalar": [
+    {
+     "parca": "talimat.md",
+     "karakter": 7646,
+     "token": 4133
+    },
+    {
+     "parca": "görev metni (önsöz ve adımın satırları)",
+     "karakter": 2804,
+     "token": 1516
+    },
+    {
+     "parca": "kanal_plani.md",
+     "karakter": 13853,
+     "token": 7489
+    },
+    {
+     "parca": "kanal_arastirmasi.md",
+     "karakter": 13434,
+     "token": 7262
+    },
+    {
+     "parca": "secim.md",
+     "karakter": 342,
+     "token": 185
+    },
+    {
+     "parca": "veri_ozeti_30a.md",
+     "karakter": 113557,
+     "token": 61383
+    },
+    {
+     "parca": "veri_ozeti_mahalle.md",
+     "karakter": 28913,
+     "token": 15629
+    },
+    {
+     "parca": "sablonlar.md",
+     "karakter": 3276,
+     "token": 1771
+    },
+    {
+     "parca": "onceki_oneriler.md",
+     "karakter": 6930,
+     "token": 3746
+    },
+    {
+     "parca": "kullanici_basligi.md",
+     "karakter": 282,
+     "token": 153
+    },
+    {
+     "parca": "baslik_olculeri.md",
+     "karakter": 3569,
+     "token": 1930
+    },
+    {
+     "parca": "Claude Code'un kendi sistem metni (ölçülen, yaklaşık)",
+     "karakter": null,
+     "token": 4500
+    }
+   ]
+  }
+ ],
+ "metin": {
+  "video": {
+   "baslik": "Rosemary Beach for Couples: Is It the Right Town for Two? | 30A Florida Vacation",
+   "bolge": "Rosemary Beach",
+   "plan_bolumleri": 6
+  },
+  "bir_ton": {
+   "satirlar": [
+    {
+     "baslik": "Plan",
+     "ton": null,
+     "cagri": 2,
+     "okunan": 80846,
+     "yazilan": 26000,
+     "toplam": 106846,
+     "en_buyuk_cagri": 62763,
+     "cagrilar": [
+      {
+       "adim": "metin_plan",
+       "okunan": 42763,
+       "yazilan": 20000,
+       "toplam": 62763,
+       "yan": 0,
+       "dayanak": "okunan: istemin boyutu; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_plan_elestiri",
+       "okunan": 38083,
+       "yazilan": 6000,
+       "toplam": 44083,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      }
+     ],
+     "modeller": [
+      {
+       "adim": "metin_plan",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_plan_elestiri",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      }
+     ],
+     "model_adi": "Opus (en yeni sürüm)"
+    },
+    {
+     "baslik": "Araştırmacı dost",
+     "ton": "arastirmaci_dost",
+     "cagri": 10,
+     "okunan": 192403,
+     "yazilan": 82000,
+     "toplam": 274403,
+     "en_buyuk_cagri": 43276,
+     "cagrilar": [
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_birlestirme",
+       "okunan": 16873,
+       "yazilan": 6000,
+       "toplam": 22873,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_giris_kapanis",
+       "okunan": 13663,
+       "yazilan": 6000,
+       "toplam": 19663,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_son_okuma",
+       "okunan": 33276,
+       "yazilan": 10000,
+       "toplam": 43276,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_ceviri",
+       "okunan": 12707,
+       "yazilan": 12000,
+       "toplam": 24707,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      }
+     ],
+     "modeller": [
+      {
+       "adim": "metin_bolum",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_birlestirme",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      },
+      {
+       "adim": "metin_giris_kapanis",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_son_okuma",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      },
+      {
+       "adim": "metin_ceviri",
+       "model": "sonnet",
+       "efor": "medium",
+       "model_adi": "Sonnet (en yeni sürüm)",
+       "efor_adi": "Orta"
+      }
+     ],
+     "model_adi": "Opus (en yeni sürüm), Sonnet (en yeni sürüm)"
+    }
+   ],
+   "toplam": {
+    "cagri": 12,
+    "okunan": 273249,
+    "yazilan": 108000,
+    "toplam": 381249
+   },
+   "sinirlar": {
+    "cagri": 250000,
+    "is": 1500000
+   },
+   "asiyor": [],
+   "baslatilabilir": true,
+   "metin": "Plan: 2 çağrı, yaklaşık 107 bin token · Araştırmacı dost: 10 çağrı, yaklaşık 274 bin token · Toplam: yaklaşık 381 bin token",
+   "yeniden_deneme": 1
+  },
+  "iki_ton": {
+   "satirlar": [
+    {
+     "baslik": "Plan",
+     "ton": null,
+     "cagri": 2,
+     "okunan": 80846,
+     "yazilan": 26000,
+     "toplam": 106846,
+     "en_buyuk_cagri": 62763,
+     "cagrilar": [
+      {
+       "adim": "metin_plan",
+       "okunan": 42763,
+       "yazilan": 20000,
+       "toplam": 62763,
+       "yan": 0,
+       "dayanak": "okunan: istemin boyutu; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_plan_elestiri",
+       "okunan": 38083,
+       "yazilan": 6000,
+       "toplam": 44083,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      }
+     ],
+     "modeller": [
+      {
+       "adim": "metin_plan",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_plan_elestiri",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      }
+     ],
+     "model_adi": "Opus (en yeni sürüm)"
+    },
+    {
+     "baslik": "Araştırmacı dost",
+     "ton": "arastirmaci_dost",
+     "cagri": 10,
+     "okunan": 192403,
+     "yazilan": 82000,
+     "toplam": 274403,
+     "en_buyuk_cagri": 43276,
+     "cagrilar": [
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19314,
+       "yazilan": 8000,
+       "toplam": 27314,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_birlestirme",
+       "okunan": 16873,
+       "yazilan": 6000,
+       "toplam": 22873,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_giris_kapanis",
+       "okunan": 13663,
+       "yazilan": 6000,
+       "toplam": 19663,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_son_okuma",
+       "okunan": 33276,
+       "yazilan": 10000,
+       "toplam": 43276,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_ceviri",
+       "okunan": 12707,
+       "yazilan": 12000,
+       "toplam": 24707,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      }
+     ],
+     "modeller": [
+      {
+       "adim": "metin_bolum",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_birlestirme",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      },
+      {
+       "adim": "metin_giris_kapanis",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_son_okuma",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      },
+      {
+       "adim": "metin_ceviri",
+       "model": "sonnet",
+       "efor": "medium",
+       "model_adi": "Sonnet (en yeni sürüm)",
+       "efor_adi": "Orta"
+      }
+     ],
+     "model_adi": "Opus (en yeni sürüm), Sonnet (en yeni sürüm)"
+    },
+    {
+     "baslik": "Belgesel anlatıcı",
+     "ton": "belgesel",
+     "cagri": 10,
+     "okunan": 192091,
+     "yazilan": 82000,
+     "toplam": 274091,
+     "en_buyuk_cagri": 43244,
+     "cagrilar": [
+      {
+       "adim": "metin_bolum",
+       "okunan": 19283,
+       "yazilan": 8000,
+       "toplam": 27283,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19283,
+       "yazilan": 8000,
+       "toplam": 27283,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19283,
+       "yazilan": 8000,
+       "toplam": 27283,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19283,
+       "yazilan": 8000,
+       "toplam": 27283,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19283,
+       "yazilan": 8000,
+       "toplam": 27283,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_bolum",
+       "okunan": 19283,
+       "yazilan": 8000,
+       "toplam": 27283,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_birlestirme",
+       "okunan": 16841,
+       "yazilan": 6000,
+       "toplam": 22841,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_giris_kapanis",
+       "okunan": 13632,
+       "yazilan": 6000,
+       "toplam": 19632,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_son_okuma",
+       "okunan": 33244,
+       "yazilan": 10000,
+       "toplam": 43244,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      },
+      {
+       "adim": "metin_ceviri",
+       "okunan": 12676,
+       "yazilan": 12000,
+       "toplam": 24676,
+       "yan": 0,
+       "dayanak": "okunan: istemin bilinen kısmı ve boyut tahmini; yazılan: önceki çalışma yok; Ayarlar'daki çıktı varsayımı"
+      }
+     ],
+     "modeller": [
+      {
+       "adim": "metin_bolum",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_birlestirme",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      },
+      {
+       "adim": "metin_giris_kapanis",
+       "model": "opus",
+       "efor": "high",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Yüksek"
+      },
+      {
+       "adim": "metin_son_okuma",
+       "model": "opus",
+       "efor": "medium",
+       "model_adi": "Opus (en yeni sürüm)",
+       "efor_adi": "Orta"
+      },
+      {
+       "adim": "metin_ceviri",
+       "model": "sonnet",
+       "efor": "medium",
+       "model_adi": "Sonnet (en yeni sürüm)",
+       "efor_adi": "Orta"
+      }
+     ],
+     "model_adi": "Opus (en yeni sürüm), Sonnet (en yeni sürüm)"
+    }
+   ],
+   "toplam": {
+    "cagri": 22,
+    "okunan": 465340,
+    "yazilan": 190000,
+    "toplam": 655340
+   },
+   "sinirlar": {
+    "cagri": 250000,
+    "is": 1500000
+   },
+   "asiyor": [],
+   "baslatilabilir": true,
+   "metin": "Plan: 2 çağrı, yaklaşık 107 bin token · Araştırmacı dost: 10 çağrı, yaklaşık 274 bin token · Belgesel anlatıcı: 10 çağrı, yaklaşık 274 bin token · Toplam: yaklaşık 655 bin token",
+   "yeniden_deneme": 1
+  },
+  "plan_girdileri": [
+   {
+    "parca": "baslik_analizi.md",
+    "karakter": 3354,
+    "token": 1813
+   },
+   {
+    "parca": "paket_ozeti.md",
+    "karakter": 38502,
+    "token": 20812
+   },
+   {
+    "parca": "sayilar.csv",
+    "karakter": 7164,
+    "token": 3873
+   },
+   {
+    "parca": "kanal_plani.md",
+    "karakter": 13853,
+    "token": 7489
+   }
+  ],
+  "bir_ton_eski_hesap": {
+   "okunan": 1089181,
+   "yazilan": 108000
+  },
+  "iki_ton_eski_hesap": {
+   "okunan": 1854864,
+   "yazilan": 190000
+  }
+ },
+ "talimat_parcalari": {
+  "baslik": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "baslik.md",
+    "karakter": 3569,
+    "token": 1930
+   },
+   {
+    "parca": "şema baslik.schema.json",
+    "karakter": 2672,
+    "token": 1445
+   }
+  ],
+  "baslik_degerlendirme": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "baslik_degerlendirme.md",
+    "karakter": 1680,
+    "token": 909
+   },
+   {
+    "parca": "şema baslik_degerlendirme.schema.json",
+    "karakter": 4598,
+    "token": 2486
+   }
+  ],
+  "metin_plan": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "metin_plan.md",
+    "karakter": 1687,
+    "token": 912
+   },
+   {
+    "parca": "şema metin_plan.schema.json",
+    "karakter": 3197,
+    "token": 1729
+   }
+  ],
+  "metin_plan_elestiri": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "metin_plan_elestiri.md",
+    "karakter": 947,
+    "token": 512
+   },
+   {
+    "parca": "şema metin_plan_elestiri.schema.json",
+    "karakter": 533,
+    "token": 289
+   }
+  ],
+  "metin_bolum": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "ses_ortak.md",
+    "karakter": 1087,
+    "token": 588
+   },
+   {
+    "parca": "ton: arastirmaci_dost.md",
+    "karakter": 520,
+    "token": 282
+   },
+   {
+    "parca": "metin_bolum.md",
+    "karakter": 980,
+    "token": 530
+   },
+   {
+    "parca": "şema metin_bolum.schema.json",
+    "karakter": 718,
+    "token": 389
+   }
+  ],
+  "metin_birlestirme": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "ses_ortak.md",
+    "karakter": 1087,
+    "token": 588
+   },
+   {
+    "parca": "ton: arastirmaci_dost.md",
+    "karakter": 520,
+    "token": 282
+   },
+   {
+    "parca": "metin_birlestirme.md",
+    "karakter": 823,
+    "token": 445
+   },
+   {
+    "parca": "şema metin_birlestirme.schema.json",
+    "karakter": 1424,
+    "token": 770
+   }
+  ],
+  "metin_giris_kapanis": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "ses_ortak.md",
+    "karakter": 1087,
+    "token": 588
+   },
+   {
+    "parca": "ton: arastirmaci_dost.md",
+    "karakter": 520,
+    "token": 282
+   },
+   {
+    "parca": "metin_giris_kapanis.md",
+    "karakter": 909,
+    "token": 492
+   },
+   {
+    "parca": "şema metin_giris_kapanis.schema.json",
+    "karakter": 720,
+    "token": 390
+   }
+  ],
+  "metin_son_okuma": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "ses_ortak.md",
+    "karakter": 1087,
+    "token": 588
+   },
+   {
+    "parca": "ton: arastirmaci_dost.md",
+    "karakter": 520,
+    "token": 282
+   },
+   {
+    "parca": "metin_son_okuma.md",
+    "karakter": 920,
+    "token": 498
+   },
+   {
+    "parca": "şema metin_son_okuma.schema.json",
+    "karakter": 857,
+    "token": 464
+   }
+  ],
+  "metin_ceviri": [
+   {
+    "parca": "ortak.md",
+    "karakter": 1476,
+    "token": 798
+   },
+   {
+    "parca": "ses_ortak.md",
+    "karakter": 1087,
+    "token": 588
+   },
+   {
+    "parca": "ton: arastirmaci_dost.md",
+    "karakter": 520,
+    "token": 282
+   },
+   {
+    "parca": "metin_ceviri.md",
+    "karakter": 1051,
+    "token": 569
+   },
+   {
+    "parca": "şema metin_ceviri.schema.json",
+    "karakter": 1288,
+    "token": 697
+   }
+  ]
+ },
+ "eski_kat": 3.99
+}

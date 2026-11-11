@@ -36,6 +36,10 @@ Kaynağın söylemediği şey yazılmaz. Eksik alan NULL kalır; kaynakta listel
 
 Generic çekirdek (kaynak → job → source_run → ham dosya → atomik yazım akışı, `jobs.py`, `database.py`, NWS connector'ı ve iklim connector'ları `ncei-climate-normals`, `ndbc-water-temperature`, `hurdat2-storm-proximity`; konaklama connector'ı `bookdirect-lodging`) destinasyondan bağımsızdır; iklim istasyonları, kıyı koridoru, yarıçaplar, Book>Direct clone adresi, konum filtresi eşlemesi ve konaklama tarih pencereleri SQLite'taki destinasyon yapılandırmasından gelir. 30A'ya özel davranış `studio/destinations/thirty_a.py` profilinde (ve yanındaki profil dosyalarında, ör. plaj–mahalle eşlemesi) veya 30A'ya bağlı connector'larda (`south-walton-beaches`, `south-walton-restaurants`, `south-walton-neighborhoods`) kalır; generic çekirdeğe gömülmez. Yeni bir davranış eklerken önce "bu generic mi, yoksa destinasyona özel mi?" diye sor.
 
+## Programın Claude adımları
+
+Programın Claude adımları araçsız ve tek turludur (GÖREV-18, kullanıcının "Token kontrolü ve çalışma düzeni" kuralı): malzeme görev metninin içinde verilir, Claude JSON ile cevap verir, çıktı dosyasını program yazar; Claude'a dosya açtırılmaz ve çok turlu iş verilmez. Yeni bir adım eklenirken malzeme istemin içinde verilir, adımın tahmini (çağrı sayısı, okunan ve yazılan token, model) başlamadan önce ekranda gösterilir ve tek çağrı ile iş başına sınırlar uygulanır; malzeme sessizce kırpılmaz. Testler sahte claude'la yapılır; gerçek Claude yalnız görev metni ve kullanıcı açıkça izin verdiğinde çalıştırılır. Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md` "Tek çağrı düzeni, tahmin ve sınırlar".
+
 ## Ortam
 
 Bu bilgisayarda Windows kod sayfası 936'dır. Python'u `.venv` içinden ve `-X utf8` ile çalıştır (`baslat.bat` da böyle yapar); aksi halde çıktı dosyaya yönlendirildiğinde Türkçe karakterler `UnicodeEncodeError` verir ve uygulama açılışta kapanır.

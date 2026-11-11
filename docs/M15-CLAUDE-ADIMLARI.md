@@ -1,11 +1,11 @@
 # M15 — Programın içinde Claude: çalıştırıcı, ayarlar, adım çerçevesi, onay ekranı, video kaydı, konu ve başlık adımı
 
-Tarih: 11 Ekim 2026 · Görev: GÖREV-13; GÖREV-14 (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, model takma adları, başlık eki, başlık değerlendirme, seçmeden önce düzenleme); GÖREV-15 (video metninin yedi adımı, oturum sınırı, kullanım eşikleri) · Dal: `gorev-15-video-metni` · Şema `17` · Uygulama `0.17.0`
+Tarih: 11 Kasım 2026 · Görev: GÖREV-13; GÖREV-14 (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, model takma adları, başlık eki, başlık değerlendirme, seçmeden önce düzenleme); GÖREV-15 (video metninin yedi adımı, oturum sınırı, kullanım eşikleri); GÖREV-18 (tek çağrı düzeni, tahmin, sınırlar, işletme adı ve başlık uyarıları) · Dal: `gorev-18-token-kontrolu` · Şema `19` · Uygulama `0.20.0`
 
 ## Amaç
 
 Video için yapılacak her şey programın içinden yapılır (kullanıcı kararı, 10 Ekim 2026). Program arka planda bilgisayardaki Claude Code'u çağırır;
-Claude programın verdiği talimatla tek bir işi yapar ve tek bir JSON dosyası yazar. Claude burada kod yazan bir ajan değildir. Akış:
+Claude programın verdiği talimatla tek bir işi yapar ve tek bir JSON cevabı verir (GÖREV-18: araçsız, tek tur; çıktı dosyasını program yazar). Claude burada kod yazan bir ajan değildir. Akış:
 
 1. Program verilerden kanal konseptine uygun konu ve başlık önerileri çıkarır (bu görev).
 2. Kullanıcı uygulamada birini seçer; seçilen başlık bir video kaydı olur (bu görev).
@@ -16,6 +16,91 @@ Claude programın verdiği talimatla tek bir işi yapar ve tek bir JSON dosyası
 Davranış The Housing Atlas Stüdyo'dan (`C:\Users\1\source\repos\housing-atlas`) taşındı: `atlas/ai/runner.py`, `atlas/claude_info.py`,
 `atlas/config.py`, `atlas/ai/stages.py`, `atlas/ai/validate.py`, `tests/fake_claude.py`; gerekçeleri o projenin `docs/KARARLAR.md` M5 ve M5b
 bölümlerinde ve `docs/TASARIM.md` Bölüm 6 ve 10'da.
+
+## Tek çağrı düzeni, tahmin ve sınırlar (GÖREV-18)
+
+GÖREV-18'e kadar her Claude adımı araçlı ve çok turluydu: Claude çalışma klasöründeki dosyaları `Read` ile tek tek açıyor, çıktıyı `Write` ile
+yazıyordu (tur sınırı 30). Her tur önceki konuşmanın tamamını yeniden okuduğu için bir başlık çalışmasının ~90 bin tokenlik malzemesi 5–6 kez
+okunuyor, toplam 370–460 bin tokene çıkıyordu (10 Ekim ölçümleri). Kullanıcının "Token kontrolü ve çalışma düzeni" kuralıyla bu düzen kalktı.
+Aşağıdaki bölümlerde "Tur 3/30 · Okuyor", araçlar, izin kuralları ve tur sınırı anlatılan yerler GÖREV-18 öncesinin kaydıdır.
+
+**Çağırma** (Housing Atlas'ın makale sistemindeki yöntem: `atlas/article/service.py` `_session`/`_ask`, `prompts.py` `parse_json`; TASARIM 21,
+KARARLAR "Çeviri" ve "Uzun metin ve kesik cevap"):
+
+```
+claude -p --output-format stream-json --verbose --append-system-prompt-file talimat.md --tools "" --permission-mode dontAsk --max-turns 1
+  --setting-sources "" --strict-mcp-config --disable-slash-commands [--model <model>] [--effort <efor>]
+```
+
+- Araç yok (`--tools ""`), izin kuralı yok (`--allowedTools` verilmez), tek tur. Birleşik talimat (ortak, ses ve ton, adımın talimatı, doldurulmuş
+  şema) sistem talimatıdır; değişmedi.
+- **Görev metni** (`gorev.md`, standart girdi) = programın önsözü + adımın görev satırları + adımın hazırladığı her girdi dosyası, kendi adıyla:
+  `<<<DOSYA secim.md>>>` … `<<<DOSYA SONU secim.md>>>`. Önsöz (görev metninin parçası, talimat dosyası değil): "Talimatta adı geçen dosyalar
+  aşağıda, her biri kendi adıyla verilmiştir; başka dosya yoktur ve dosya açman gerekmez. Çıktını bir dosyaya yazma: cevabın yalnızca şemaya
+  uyan JSON olsun, başına ya da sonuna başka bir şey ekleme." Talimatlar "plan.json dosyasında" gibi dosya adlarıyla konuşmaya devam eder; bölüm
+  adları aynı adlardır.
+- Girdi dosyaları eskisi gibi çalışma klasörüne aynı adla ve aynı içerikle yazılır (kayıt ve denetim için); Claude onları açmaz. Bölümlerin içeriği
+  dosyalarla bire bir aynıdır (`tests/test_gorev18.py` her adım için denetler). Malzeme hiçbir yerde kırpılmaz ya da özetlenmez.
+- **Cevap**: Claude'un cevabı (`cevap.txt`) programca JSON'a çevrilir: çıplak JSON, kod çiti içinde ya da önünde/arkasında metinle (Housing
+  Atlas'ın kuralı). Ayıklanamazsa "geçersiz cevap". JSON şemadan geçerse program çıktı dosyasını (`baslik.json`, `plan.json` …) kendisi yazar;
+  anlam denetimi ve Markdown eskisi gibidir.
+- **Geçersiz cevap** (JSON yok, şemaya uymuyor; video metninde ayrıca anlam denetimi hatası) bir kez yeniden istenir. İkinci çağrı da tek
+  turludur; görev metninin sonunda "DÖNÜŞ SEBEBİ", hatalar ve önceki cevap (`onceki_cevap.txt` bölümü; video metninde eskisi gibi
+  `onceki_cikti.json`) vardır. İkincisi de olmazsa başlık çalışması hata verir, video metni duraklar. İkinci çağrının dosyaları `gorev-2.md`,
+  `akis-2.jsonl`, `cevap-2.txt`.
+- **Kesik cevap**: sonuç zarfının `stop_reason`'ı `max_tokens` ya da Claude Code'un çıktı sınırı iletisi. "Geçersiz JSON" sayılmaz; iş günlüğüne
+  "Cevap uzunluk sınırında kesildi; kabul edilmedi." yazılır, kesik cevap kullanılmaz ve geri verilmez; "daha kısa yaz" notuyla bir kez yeniden
+  istenir. Çıktı sınırı yükseltilmedi: Claude Code'un sonuç zarfı (`modelUsage.<model>.maxOutputTokens`) Opus 5.5 ve Sonnet 5.5 için zaten
+  128.000 bildiriyor (10 Ekim'in Opus çalışmaları ve Housing Atlas'ın yakaladığı istek); en büyük ölçülen başlık çıktısı düşünmeyle 65 bin.
+  Her çağrının kaydında `cikti_siniri` durur.
+- **Canlı izleme**: "Tur … · Okuyor …" satırları yok. İş günlüğü çağrının aşamalarını yazar: "İstem hazırlandı: 9 dosya istemin içinde; tahmin:
+  yaklaşık 89 bin token okunacak, 8 bin yazılacak.", "Claude düşünüyor; cevap tek seferde gelecek.", "Claude düşünüyor (16 sn)", "Cevap geldi:
+  111 bin token okundu, 4 bin token yazıldı · 41 sn.", "Cevap doğrulandı (JSON ve şema); program çıktıyı yazdı.", "Harcama: tahmin 97 bin, gerçek
+  114 bin token."
+- **Büyük malzeme**: tek çağrının tahmini (okunan + yazılan) Ayarlar'daki tek çağrı sınırını aşıyorsa çağrı yapılmaz: başlık çalışması "…tek çağrı
+  sınırı … Program malzemeyi kendiliğinden kısaltmaz; çalışma başlatılmadı." hatasıyla biter, video metni "cagri_siniri" sebebiyle duraklar.
+- **Eski düzen** kaldırıldı ve ayar olarak sunulmaz. Çalıştırıcı araç ve kural verebilir (Housing Atlas'tan gelen yetenek), hiçbir adım
+  kullanmaz. Tur sınırı ayarı kalktı (`claude_max_turns_<adım>` anahtarları eski ayar dosyalarında yok sayılır).
+- **Claude Code'un yan çağrısı** (gerçek ölçümde görüldü): Claude Code 2.1.318 tek çağrıda ana modelin yanında kendi kendine bir Haiku 5.5
+  çağrısı daha yaptı ve görev metninin tamamını bir kez daha okudu (105 bin token, 24 token yazdı, 0,05 $). Sonuç zarfının `usage`'ında
+  görünmez, yalnız `modelUsage`'da. Program onu harcamaya sayar (`metrics.side_tokens`; iş günlüğünde "…bunun 105 bin token'ını Claude Code'un
+  kendi yan çağrısı (claude-haiku-5-5) okudu") ve tahmin, önceki tek çağrılardaki oranın ortancasını okunana ekler.
+
+**Tahmin** (`studio/ai/budget.py`, `single.py`, video metni için `studio/text/estimate.py`):
+
+- Okunan: sistem talimatı + görev metni karakterleri ÷ 1,85 + Claude Code'un kendi sistem metni (~4.500 token; kullanım panelinin araçsız tek
+  turlu çağrıları 4.038–4.166 ölçtü). 1,85 tek gerçek çağrıdan ölçüldü (195.412 karakter → 110.694 token).
+- Yazılan: adımın son başarılı çalışmalarının (en çok 9) yazılan token ortancası; yoksa Ayarlar → Claude'daki adımın "çıktı varsayımı".
+- Video metninde çalışma başlamadan var olan girdiler (başlık analizi, paket özeti, sayılar, kanal planı, yayınlanmış videolar; plan biliniyorsa
+  plan ve bölüm dosyaları) tam ölçülür; çalışma sırasında yazılacak girdiler için adımın önceki tek çağrılı oturumlarının okunan ortancası, yoksa
+  planın kelime bütçesinden bir boyut (`estimate.py`: 2.200 kelime gövde, 350 giriş ve kapanış, kelime başına 1,9 token, plan JSON'u 9.000
+  karakter). Çağrı sayısı: plan 2 (planlayıcı, eleştirmen); ton başına bölüm sayısı (plan biliniyorsa onun, yoksa başlık analizindeki içerik
+  planının, 5–7) + birleştirme + giriş ve kapanış + son okuma + çeviri dilimleri. Yeniden deneme ve plana dönüşler sayılmaz (ekran söyler).
+- Başlamadan önce ekran tahmini gösterir ve "Başlat" ister: başlık önerisi, değerlendirme, "İngilizcesini Claude yazsın", "Düzeltme iste", "Metni
+  yaz", "Bu tonla da yaz", "Planı yeniden yap". "Devam" tahmin göstermez. Tahmin bir sınırı aşıyorsa "Başlat" yoktur ve sunucu da başlatmaz.
+  Uçlar: `POST /api/claude/title-runs/tahmin`, `/api/claude/review-runs/tahmin`, `/api/claude/runs/{id}/correct/tahmin`,
+  `/api/claude/runs/{id}/translate/tahmin`, `/api/videos/{id}/metin/tahmin`, `/api/metin/calismalar/{id}/ton/tahmin`,
+  `/api/metin/calismalar/{id}/yeniden-planla/tahmin`. Tahmin hiçbir şey başlatmaz (başlık adımlarında girdiler geçici bir klasörde hazırlanır;
+  video metninde paket yoksa bellekte kurulur, kaydedilmez).
+
+**Sınırlar** (Ayarlar → Claude → Token sınırları): tek çağrı sınırı (başlangıç 250 bin; okunan ve yazılan toplam) ve iş başına toplam sınır
+(başlangıç 1,5 milyon). Video metni zinciri her çağrıdan sonra gerçek toplamı günceller; işin başından (ya da son "Devam"dan) beri harcanan sınıra
+ulaşınca yeni çağrı açılmaz ve çalışma "Token sınırına ulaşıldı" ile duraklar; biten adımlar kalır, "Devam" kalanları çalıştırır ve sınırı o andan
+yeniden sayar. Başlık çalışmasında sınıra ulaşılmışsa ikinci çağrı yapılmaz.
+
+**Gerçek harcama**: iş kartında ve çalışma ekranında "Harcama: tahmin X · gerçek Y token (N çağrı)"; gerçek tahminin 1,5 katını geçerse kırmızı
+"Beklenenden fazla harcandı: tahmin X, gerçek Y". Kayıt: başlık çalışmasında `calisma.json` → `harcama`, `cagrilar`, `tahmin`; metriklerde
+`duzen: "tek_cagri"`, `cagri`, `tahmin`, `side_tokens`; video metninde her oturumun kaydı ve `metin/<video>/calismalar/<çalışma>/harcama.json`
+(işler ve çalışmanın toplamı). Sol menüdeki Claude kullanımı kutusu son işin gerçek harcamasını gösterir. Ayarlar → Claude kullanımı: adım başına
+ortanca ve en yüksek harcama tablosu (tek çağrılı çalışmalar ve eski çok turlu çalışmalar ayrı sütunda); Ayarlar → Claude model tablosunda her
+adımın yanında son çalışmalarının ortancası.
+
+**Paralel oturum**: "Aynı anda en çok Claude oturumu" 1–8, başlangıç 6. GÖREV-18'den önce kaydedilen ayar dosyalarında eski başlangıç değeri 3
+(program bütün alanları kaydettiği için kullanıcının seçimi değildir) yeni başlangıç değerine döner; başka bir değer kalır. Bundan sonra kaydedilen
+dosya `ayar_surumu: 18` taşır ve ne yazıyorsa o geçerlidir.
+
+**Model ve efor** bu görevde değişmedi (başlık adımları Opus 5.5 yüksek; plan, bölüm, giriş-kapanış Opus yüksek; eleştiri, birleştirme, son okuma
+Opus orta; çeviri Sonnet orta).
 
 ## Yapı
 
@@ -280,6 +365,10 @@ diye bilgi olarak görünür (GÖREV-14 karar 1).
 4. `studio/ai/settings.py` → `CLAUDE_STEPS` ve `STEP_DEFAULTS`'a adımı ekleyin (Ayarlar'daki satırı buradan gelir).
 5. Onay kararının ne yapacağını `service.py`'de tanımlayın (konu ve başlık adımında seçim video kaydı açar).
 6. Sahte claude'a (`tests/fake_claude.py`) adımın çıktısını ekleyin ve testleri yazın; testler gerçek Claude'u çağırmaz.
+7. (GÖREV-18) Adım araçsız ve tek turludur: `prepare`'in yazdığı her dosya görev metninin içinde verilir (`single.task_text`); görev
+   satırları dosyaları "- `ad` — açıklama" biçiminde sayar ve "oku"/"yaz" demez; cevap JSON'dur. `settings.OUTPUT_GUESS_DEFAULTS`'a adımın
+   çıktı varsayımını ekleyin; tahmin (`budget.call_estimate`) ve sınırlar kendiliğinden işler. Çok çağrılı bir iş için tahmin satırlarını
+   kurun (`text/estimate.py` örnek) ve başlamadan önce ekranda gösterin. Girdi dosyası adı çıktının Markdown adıyla çakışmasın.
 
 ## Testler
 

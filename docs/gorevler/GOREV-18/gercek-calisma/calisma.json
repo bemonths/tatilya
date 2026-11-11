@@ -1,0 +1,456 @@
+{
+ "calisma": "60543cdfca154d78b849f06567baf9d3",
+ "adim": "baslik_degerlendirme",
+ "hazirlik": "60543cdfca15",
+ "destinasyon": "30a",
+ "secim": {
+  "bolge": "Rosemary Beach",
+  "bolge_id": "rosemary-beach",
+  "aile": "hepsi",
+  "not": "",
+  "kullanici_basligi": "Rosemary Beach'e köpeğimizle gitsek nasıl olur?",
+  "baslik_eki": {
+   "en": " | 30A Florida Vacation",
+   "tr": " | 30A Florida Tatili"
+  }
+ },
+ "duzeltme": null,
+ "talimat_surumu": {
+  "commit": "3afae7ce08f17b987eab78ac1930f4471d76bf3e",
+  "files": [
+   {
+    "path": "studio/destinations/thirty_a_claude/ortak.md",
+    "sha256": "816a75669e9ecbaf0fa4ad74e71797e8855c4eea72ee50badade46bff3c40476",
+    "modified_at": "2026-11-11T15:44:27+00:00"
+   },
+   {
+    "path": "studio/destinations/thirty_a_claude/baslik_degerlendirme.md",
+    "sha256": "d0abd9a720fefc73c07829785d95ec557ebcb2902e577bf3712cc04f16092261",
+    "modified_at": "2026-10-10T22:02:24+00:00"
+   },
+   {
+    "path": "studio/ai/schemas/baslik_degerlendirme.schema.json",
+    "sha256": "1994be297a2cd28e1bdf1ac86400a0dca81b16f1a9dced1e3736a2a0729777a4",
+    "modified_at": "2026-10-10T22:02:24+00:00"
+   }
+  ],
+  "birlesik_talimat": "d2d70612424e58640d63a6d40e55458550d7487fd1567480b9058a91520dee64",
+  "calisma_semasi": "eccbe9c94fa13ba92f960e6c685ab30a2632d08bd6fe54203fde30a249641df2"
+ },
+ "girdiler": [
+  {
+   "dosya": "kanal_plani.md",
+   "aciklama": "kanal planı",
+   "sha256": "d57d8a06e5b089dd84274083f66e3b736c5c1363edc4efb4f135e82f735323c2"
+  },
+  {
+   "dosya": "kanal_arastirmasi.md",
+   "aciklama": "kanal araştırması",
+   "sha256": "4cfab131b2c9e4647a3430e2c5c0d41a22db698f582a10af16e7259296004689"
+  },
+  {
+   "dosya": "secim.md",
+   "aciklama": "kullanıcının seçimi",
+   "sha256": "c0445195d570e6ab5e5dbd01e5edd687c54d7f1083508c6e4018b955754c682d"
+  },
+  {
+   "dosya": "veri_ozeti_30a.md",
+   "aciklama": "30A verisinin yazar özeti",
+   "paket_id": "43fcaea737d0402b9d4a4b3c1578e0ad",
+   "paket_uretildi": null,
+   "sha256": "b14e29abac1e34400ad97cbfc3c4ede398e29f93a7b321f1fa9a0163bd5b8071"
+  },
+  {
+   "dosya": "veri_ozeti_mahalle.md",
+   "aciklama": "Rosemary Beach yazar özeti",
+   "paket_id": "1b5d311a358044449dfb226c879bc220",
+   "paket_uretildi": null,
+   "sha256": "0d69cec2fe33794feeb6126256399f1dab5941557cfb7e3fd4de80b2fa0a3f5b"
+  },
+  {
+   "dosya": "sablonlar.md",
+   "aciklama": "şablonlar",
+   "sha256": "0d8eb4d791573d85e2304a6e038ba220015a8bb6a9aca2898570f9872fd0469c"
+  },
+  {
+   "dosya": "onceki_oneriler.md",
+   "aciklama": "önceki öneriler (30 başlık)",
+   "sha256": "acb8f4c0701fab3df8ec38d281e596ec66f5d54b1a6c74c17a5118228a72c9d2"
+  },
+  {
+   "dosya": "kullanici_basligi.md",
+   "aciklama": "kullanıcının başlığı ya da fikri",
+   "sha256": "8b3b9bb6ecae708b3f98ff9664cbf8406cf74bbb2c09271920571efbcb06dee4"
+  },
+  {
+   "dosya": "baslik_olculeri.md",
+   "aciklama": "başlığın ölçüleri (başlık önerisi talimatının kopyası)",
+   "sha256": "0483aaeb4ecf2a6b687c1055f8aa17a885c3cc314fcbe1ad07d9270b24fbdb9a"
+  }
+ ],
+ "model": "claude-opus-5-5",
+ "efor": "high",
+ "duzen": "tek_cagri",
+ "tur_siniri": 1,
+ "araclar": [],
+ "izinler": [],
+ "tahmin": {
+  "adim": "baslik_degerlendirme",
+  "okunan": 89462,
+  "yazilan": 7618,
+  "toplam": 97080,
+  "dayanak": "okunan: istemin boyutu; yazılan: önceki 1 başarılı çalışmanın ortancası"
+ },
+ "sinirlar": {
+  "cagri": 250000,
+  "is": 1500000
+ },
+ "istem_parcalari": [
+  {
+   "parca": "talimat.md",
+   "karakter": 7646,
+   "token": 3325
+  },
+  {
+   "parca": "görev metni (önsöz ve adımın satırları)",
+   "karakter": 2804,
+   "token": 1220
+  },
+  {
+   "parca": "kanal_plani.md",
+   "karakter": 13853,
+   "token": 6024
+  },
+  {
+   "parca": "kanal_arastirmasi.md",
+   "karakter": 13434,
+   "token": 5841
+  },
+  {
+   "parca": "secim.md",
+   "karakter": 342,
+   "token": 149
+  },
+  {
+   "parca": "veri_ozeti_30a.md",
+   "karakter": 113557,
+   "token": 49373
+  },
+  {
+   "parca": "veri_ozeti_mahalle.md",
+   "karakter": 28913,
+   "token": 12571
+  },
+  {
+   "parca": "sablonlar.md",
+   "karakter": 3276,
+   "token": 1425
+  },
+  {
+   "parca": "onceki_oneriler.md",
+   "karakter": 6924,
+   "token": 3011
+  },
+  {
+   "parca": "kullanici_basligi.md",
+   "karakter": 282,
+   "token": 123
+  },
+  {
+   "parca": "baslik_olculeri.md",
+   "karakter": 3569,
+   "token": 1552
+  },
+  {
+   "parca": "Claude Code'un kendi sistem metni (ölçülen, yaklaşık)",
+   "karakter": null,
+   "token": 4500
+  }
+ ],
+ "ilerleme_tahmini": {
+  "beklenen_s": 78.2,
+  "dayanak": "önceki 1 başarılı çalışmanın ortancası (1 dk)"
+ },
+ "calisma_sonucu": {
+  "command": "claude.exe -p --output-format stream-json --verbose --append-system-prompt-file \"C:\\Users\\1\\source\\Repos\\30A Studio\\outputs\\30a-studio\\work\\gorev-18\\temp-gercek\\claude\\60543cdfca15\\baslik_degerlendirme\\60543cdfca154d78b849f06567baf9d3\\talimat.md\" --tools \"\" --permission-mode dontAsk --max-turns 1 --setting-sources \"\" --strict-mcp-config --disable-slash-commands --model claude-opus-5-5 --effort high",
+  "started_at": "2026-11-11T16:52:26+00:00",
+  "finished_at": "2026-11-11T16:53:07+00:00",
+  "session_id": "fccf57ac-7ab4-40cf-9671-d4e04c3eeaa4",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "num_turns": 1,
+  "tool_calls": 0,
+  "cc_num_turns": 1,
+  "duration_ms": 39273,
+  "duration_api_ms": 40287,
+  "total_cost_usd": 1.0042471,
+  "usage": {
+   "input_tokens": 2,
+   "cache_creation_input_tokens": 110034,
+   "cache_read_input_tokens": 658,
+   "output_tokens": 3556,
+   "output_tokens_details": {
+    "thinking_tokens": 1182
+   },
+   "server_tool_use": {
+    "web_search_requests": 0,
+    "web_fetch_requests": 0
+   },
+   "service_tier": "standard",
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 110034,
+    "ephemeral_5m_input_tokens": 0
+   },
+   "inference_geo": "global",
+   "iterations": [
+    {
+     "input_tokens": 2,
+     "output_tokens": 3556,
+     "cache_read_input_tokens": 658,
+     "cache_creation_input_tokens": 110034,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 110034
+     },
+     "type": "message"
+    }
+   ],
+   "speed": "standard",
+   "fallback_credit": null
+  },
+  "model_usage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 105311,
+    "outputTokens": 24,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0527155,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 0,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 2,
+    "outputTokens": 3556,
+    "cacheReadInputTokens": 658,
+    "cacheCreationInputTokens": 110034,
+    "webSearchRequests": 0,
+    "costUSD": 0.9515316,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 1182,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 110034,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "permission_denials": [],
+  "denied": [],
+  "stop_reason": "end_turn",
+  "result": "{\n  \"surum\": 1,\n  \"adim\": \"baslik_degerlendirme\",\n  \"notlar\": [\n    \"Fikir elimizdeki veriyle dolmuyor. Bu yüzden aday başlık yazılmadı.\",\n    \"Köpekle ilgili kanıt yalnız iki satır. Birincisi, ilçenin halka açık plajlarında hayvanların yasak olduğunu söylüyor; hizmet hayvanları ve ilçe izni olan köpekler bu yasağın dışında (veri_ozeti_30a.md K0097). İkincisi, ilçe köpek izninin yalnız Walton County mülk sahiplerine ve daimi sakinlere verildiğini söylüyor (K0098). Rosemary Beach'e özgü köpek bilgisi hiç yok.\",\n    \"En önemli eksikler şunlar: Rosemary Beach topluluğunun köpek kuralları, evcil hayvan kabul eden kiralık evler ve bunların ücretleri, restoranların köpek kabulü, yakındaki parkların ve parkurların köpek kuralları, veteriner mesafeleri.\",\n    \"Bu eksikler kapanırsa fikir ayrı bir video olabilir. O zamana kadar köpek kuralı, Rosemary Beach rehberinin ya da plaj kuralları videosunun içinde kısa bir bölüm olarak kullanılabilir.\"\n  ],\n  \"kullanici_fikri\": \"Rosemary Beach'e köpeğimizle gitsek nasıl olur?\",\n  \"doluluk\": {\n    \"dolar_mi\": false,\n    \"aciklama\": \"Köpekle Rosemary Beach tatili için 15–17 dakikalık bir videonun bölümleri kurulamıyor. Elimizde köpekle ilgili yalnız ilçe plaj yönetmeliğinin iki satırı var. İlçenin halka açık plajlarında hayvan yasak; istisnalar hizmet hayvanları ve ilçe izni olan köpekler (veri_ozeti_30a.md K0097). İlçe köpek izni yalnız Walton County mülk sahiplerine ve daimi sakinlere veriliyor ve tasmalı köpeğe yalnız 15:30–08:30 arasında izin tanıyor (K0098). Buradan çıkan bilgi şu: kiracı bir tatilci bu izni alamaz ve ilçenin halka açık plajlarına köpeğini götüremez. Bu güçlü ve işe yarar bir bilgi, ama tek başına bir dakikalık bir bölümü doldurur. Rosemary Beach'e özgü köpek verisi hiç yok. Topluluğun kuralları, evcil hayvan kabul eden evler, restoranlar ve parklar hakkında kaynak bulunmuyor. Mahalle özetindeki plaj, konaklama, yemek ve sezon verisi köpek sorusuna cevap vermiyor. Bu veriyle kurulacak bir video, köpek başlığı taşıyan genel bir Rosemary Beach rehberi olurdu. Bu da başlığın vaat ettiğini vermemek demek. Kanal planına göre bir video kendi konusunu taşıyamıyorsa o konu ilgili bölge rehberinin içinde kalır.\",\n    \"eksik_veri\": [\n      \"Rosemary Beach topluluğunun (RBPOA) köpek kuralları: kasaba içindeki yeşil alanlarda, yürüyüş yollarında ve topluluğun 9 özel plaj geçidinde köpeğe izin var mı (K0007 geçitlerin varlığını söylüyor, kurallarını söylemiyor). Topluluğun özel kumsalına ilçe kuralı mı uygulanıyor, kendi kuralı mı, bunu da bilmiyoruz.\",\n      \"Rosemary Beach'te evcil hayvan kabul eden kiralık evlerin sayısı ve payı. Kaynak olarak Book>Direct'in ya da kiralama şirketlerinin evcil hayvan filtresi kullanılabilir. Evcil hayvan ücreti, depozito, köpek sayısı ve kilo sınırı da gerekiyor.\",\n      \"Köpek kabul eden oteller ve otel ücretleri.\",\n      \"Restoranların köpek kabulü, örneğin köpek kabul eden açık oturma alanları. Kanal araştırmasında bu bilginin GÖREV-09'da toplandığı yazıyor, ama yazar özetinde bu alan yok.\",\n      \"Yakındaki eyalet parklarının ve Point Washington Eyalet Ormanı'nın köpek kuralları (tasma, hangi alanlar). Timpoochee Trail gibi çok amaçlı yollarda köpek ve tasma kuralı.\",\n      \"Ziyaretçinin köpeğiyle girebileceği en yakın plaj ya da köpek parkı, bunun resmî kaynağı ve Rosemary Beach'e uzaklığı.\",\n      \"En yakın veteriner ve acil veteriner kliniklerinin kuş uçuşu mesafesi (OpenStreetMap ya da kurumların kendi siteleri).\",\n      \"İlçe köpek yasağının uygulanması ve cezası: ihlalde ilçe plaj kurallarının genel 500 dolar üst sınırı mı geçerli (K0119), yoksa köpeğe özgü bir ceza mı var.\"\n    ]\n  },\n  \"sorunlar\": [\n    \"Fikir bir başlık değil, açık uçlu bir soru. Başlık olacaksa İngilizce yazılmalı ve ' | 30A Florida Vacation' ekiyle bitmeli.\",\n    \"'Nasıl olur' sorusu, verinin cevaplayabildiğinden geniş bir deneyim vaat ediyor. Kanıtın söylediği tek şey ilçenin halka açık plajlarındaki köpek yasağı ve iznin yalnız mülk sahiplerine ve daimi sakinlere verildiği. Başlık ya da metin 'köpeğinizle plaja gidebilirsiniz' anlamına gelecek bir şey söylememeli. Rosemary Beach'in kendi özel kumsalı için de 'köpek yasak' ya da 'köpek serbest' denemez, çünkü topluluğun kuralını bilmiyoruz.\",\n    \"Köpek kuralları daha önce önerilen '30A Beach Rules That Can Cost You $500: Flags, Tents, Dogs, Bonfires and More' başlığının içinde zaten geçiyor. Eldeki veriyle yapılacak bir köpek videosu, o videonun köpek bölümüyle büyük ölçüde örtüşür.\"\n  ],\n  \"adaylar\": []\n}",
+  "errors": [],
+  "returncode": 0,
+  "elapsed_s": 41.1,
+  "stderr": "",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "model_used": "claude-opus-5-5",
+  "claude_version": "2.1.318",
+  "stream_file": "akis.jsonl",
+  "thinking_s": 16.4,
+  "metrics": {
+   "elapsed_s": 41.1,
+   "api_s": 40.3,
+   "thinking_s": 16.4,
+   "turns": 1,
+   "tool_calls": 0,
+   "tools": {
+    "okuma": 0,
+    "yazma": 0,
+    "web": 0,
+    "diger": 0
+   },
+   "tool_s": {
+    "okuma": 0.0,
+    "yazma": 0.0,
+    "web": 0.0,
+    "diger": 0.0
+   },
+   "tokens": {
+    "input": 2,
+    "cache_creation": 110034,
+    "cache_read": 658,
+    "output": 3556,
+    "source": "result"
+   },
+   "cost_usd": 1.0042471
+  },
+  "failure": null
+ },
+ "cagrilar": [
+  {
+   "command": "claude.exe -p --output-format stream-json --verbose --append-system-prompt-file \"C:\\Users\\1\\source\\Repos\\30A Studio\\outputs\\30a-studio\\work\\gorev-18\\temp-gercek\\claude\\60543cdfca15\\baslik_degerlendirme\\60543cdfca154d78b849f06567baf9d3\\talimat.md\" --tools \"\" --permission-mode dontAsk --max-turns 1 --setting-sources \"\" --strict-mcp-config --disable-slash-commands --model claude-opus-5-5 --effort high",
+   "started_at": "2026-11-11T16:52:26+00:00",
+   "finished_at": "2026-11-11T16:53:07+00:00",
+   "session_id": "fccf57ac-7ab4-40cf-9671-d4e04c3eeaa4",
+   "subtype": "success",
+   "is_error": false,
+   "api_error_status": null,
+   "num_turns": 1,
+   "tool_calls": 0,
+   "cc_num_turns": 1,
+   "duration_ms": 39273,
+   "duration_api_ms": 40287,
+   "total_cost_usd": 1.0042471,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 110034,
+    "cache_read_input_tokens": 658,
+    "output_tokens": 3556,
+    "output_tokens_details": {
+     "thinking_tokens": 1182
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 110034,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 3556,
+      "cache_read_input_tokens": 658,
+      "cache_creation_input_tokens": 110034,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 110034
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "model_usage": {
+    "claude-haiku-5-5": {
+     "inputTokens": 105311,
+     "outputTokens": 24,
+     "cacheReadInputTokens": 0,
+     "cacheCreationInputTokens": 0,
+     "webSearchRequests": 0,
+     "costUSD": 0.0527155,
+     "contextWindow": 1000000,
+     "maxOutputTokens": 128000,
+     "thinkingTokens": 0,
+     "cacheCreationEphemeral5mInputTokens": 0,
+     "cacheCreationEphemeral1hInputTokens": 0,
+     "canonicalModel": "claude-haiku-5-5",
+     "provider": "firstParty",
+     "costBasis": "list"
+    },
+    "claude-opus-5-5": {
+     "inputTokens": 2,
+     "outputTokens": 3556,
+     "cacheReadInputTokens": 658,
+     "cacheCreationInputTokens": 110034,
+     "webSearchRequests": 0,
+     "costUSD": 0.9515316,
+     "contextWindow": 1000000,
+     "maxOutputTokens": 128000,
+     "thinkingTokens": 1182,
+     "cacheCreationEphemeral5mInputTokens": 0,
+     "cacheCreationEphemeral1hInputTokens": 110034,
+     "canonicalModel": "claude-opus-5-5",
+     "provider": "firstParty",
+     "costBasis": "list"
+    }
+   },
+   "permission_denials": [],
+   "denied": [],
+   "stop_reason": "end_turn",
+   "result": "{\n  \"surum\": 1,\n  \"adim\": \"baslik_degerlendirme\",\n  \"notlar\": [\n    \"Fikir elimizdeki veriyle dolmuyor. Bu yüzden aday başlık yazılmadı.\",\n    \"Köpekle ilgili kanıt yalnız iki satır. Birincisi, ilçenin halka açık plajlarında hayvanların yasak olduğunu söylüyor; hizmet hayvanları ve ilçe izni olan köpekler bu yasağın dışında (veri_ozeti_30a.md K0097). İkincisi, ilçe köpek izninin yalnız Walton County mülk sahiplerine ve daimi sakinlere verildiğini söylüyor (K0098). Rosemary Beach'e özgü köpek bilgisi hiç yok.\",\n    \"En önemli eksikler şunlar: Rosemary Beach topluluğunun köpek kuralları, evcil hayvan kabul eden kiralık evler ve bunların ücretleri, restoranların köpek kabulü, yakındaki parkların ve parkurların köpek kuralları, veteriner mesafeleri.\",\n    \"Bu eksikler kapanırsa fikir ayrı bir video olabilir. O zamana kadar köpek kuralı, Rosemary Beach rehberinin ya da plaj kuralları videosunun içinde kısa bir bölüm olarak kullanılabilir.\"\n  ],\n  \"kullanici_fikri\": \"Rosemary Beach'e köpeğimizle gitsek nasıl olur?\",\n  \"doluluk\": {\n    \"dolar_mi\": false,\n    \"aciklama\": \"Köpekle Rosemary Beach tatili için 15–17 dakikalık bir videonun bölümleri kurulamıyor. Elimizde köpekle ilgili yalnız ilçe plaj yönetmeliğinin iki satırı var. İlçenin halka açık plajlarında hayvan yasak; istisnalar hizmet hayvanları ve ilçe izni olan köpekler (veri_ozeti_30a.md K0097). İlçe köpek izni yalnız Walton County mülk sahiplerine ve daimi sakinlere veriliyor ve tasmalı köpeğe yalnız 15:30–08:30 arasında izin tanıyor (K0098). Buradan çıkan bilgi şu: kiracı bir tatilci bu izni alamaz ve ilçenin halka açık plajlarına köpeğini götüremez. Bu güçlü ve işe yarar bir bilgi, ama tek başına bir dakikalık bir bölümü doldurur. Rosemary Beach'e özgü köpek verisi hiç yok. Topluluğun kuralları, evcil hayvan kabul eden evler, restoranlar ve parklar hakkında kaynak bulunmuyor. Mahalle özetindeki plaj, konaklama, yemek ve sezon verisi köpek sorusuna cevap vermiyor. Bu veriyle kurulacak bir video, köpek başlığı taşıyan genel bir Rosemary Beach rehberi olurdu. Bu da başlığın vaat ettiğini vermemek demek. Kanal planına göre bir video kendi konusunu taşıyamıyorsa o konu ilgili bölge rehberinin içinde kalır.\",\n    \"eksik_veri\": [\n      \"Rosemary Beach topluluğunun (RBPOA) köpek kuralları: kasaba içindeki yeşil alanlarda, yürüyüş yollarında ve topluluğun 9 özel plaj geçidinde köpeğe izin var mı (K0007 geçitlerin varlığını söylüyor, kurallarını söylemiyor). Topluluğun özel kumsalına ilçe kuralı mı uygulanıyor, kendi kuralı mı, bunu da bilmiyoruz.\",\n      \"Rosemary Beach'te evcil hayvan kabul eden kiralık evlerin sayısı ve payı. Kaynak olarak Book>Direct'in ya da kiralama şirketlerinin evcil hayvan filtresi kullanılabilir. Evcil hayvan ücreti, depozito, köpek sayısı ve kilo sınırı da gerekiyor.\",\n      \"Köpek kabul eden oteller ve otel ücretleri.\",\n      \"Restoranların köpek kabulü, örneğin köpek kabul eden açık oturma alanları. Kanal araştırmasında bu bilginin GÖREV-09'da toplandığı yazıyor, ama yazar özetinde bu alan yok.\",\n      \"Yakındaki eyalet parklarının ve Point Washington Eyalet Ormanı'nın köpek kuralları (tasma, hangi alanlar). Timpoochee Trail gibi çok amaçlı yollarda köpek ve tasma kuralı.\",\n      \"Ziyaretçinin köpeğiyle girebileceği en yakın plaj ya da köpek parkı, bunun resmî kaynağı ve Rosemary Beach'e uzaklığı.\",\n      \"En yakın veteriner ve acil veteriner kliniklerinin kuş uçuşu mesafesi (OpenStreetMap ya da kurumların kendi siteleri).\",\n      \"İlçe köpek yasağının uygulanması ve cezası: ihlalde ilçe plaj kurallarının genel 500 dolar üst sınırı mı geçerli (K0119), yoksa köpeğe özgü bir ceza mı var.\"\n    ]\n  },\n  \"sorunlar\": [\n    \"Fikir bir başlık değil, açık uçlu bir soru. Başlık olacaksa İngilizce yazılmalı ve ' | 30A Florida Vacation' ekiyle bitmeli.\",\n    \"'Nasıl olur' sorusu, verinin cevaplayabildiğinden geniş bir deneyim vaat ediyor. Kanıtın söylediği tek şey ilçenin halka açık plajlarındaki köpek yasağı ve iznin yalnız mülk sahiplerine ve daimi sakinlere verildiği. Başlık ya da metin 'köpeğinizle plaja gidebilirsiniz' anlamına gelecek bir şey söylememeli. Rosemary Beach'in kendi özel kumsalı için de 'köpek yasak' ya da 'köpek serbest' denemez, çünkü topluluğun kuralını bilmiyoruz.\",\n    \"Köpek kuralları daha önce önerilen '30A Beach Rules That Can Cost You $500: Flags, Tents, Dogs, Bonfires and More' başlığının içinde zaten geçiyor. Eldeki veriyle yapılacak bir köpek videosu, o videonun köpek bölümüyle büyük ölçüde örtüşür.\"\n  ],\n  \"adaylar\": []\n}",
+   "errors": [],
+   "returncode": 0,
+   "elapsed_s": 41.1,
+   "stderr": "",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "model_used": "claude-opus-5-5",
+   "claude_version": "2.1.318",
+   "stream_file": "akis.jsonl",
+   "thinking_s": 16.4,
+   "metrics": {
+    "elapsed_s": 41.1,
+    "api_s": 40.3,
+    "thinking_s": 16.4,
+    "turns": 1,
+    "tool_calls": 0,
+    "tools": {
+     "okuma": 0,
+     "yazma": 0,
+     "web": 0,
+     "diger": 0
+    },
+    "tool_s": {
+     "okuma": 0.0,
+     "yazma": 0.0,
+     "web": 0.0,
+     "diger": 0.0
+    },
+    "tokens": {
+     "input": 2,
+     "cache_creation": 110034,
+     "cache_read": 658,
+     "output": 3556,
+     "source": "result"
+    },
+    "cost_usd": 1.0042471
+   },
+   "failure": null
+  }
+ ],
+ "cikti_siniri": 128000,
+ "harcama": {
+  "tahmin": {
+   "adim": "baslik_degerlendirme",
+   "okunan": 89462,
+   "yazilan": 7618,
+   "toplam": 97080,
+   "dayanak": "okunan: istemin boyutu; yazılan: önceki 1 başarılı çalışmanın ortancası"
+  },
+  "gercek": {
+   "okunan": 110694,
+   "yazilan": 3556,
+   "toplam": 114250,
+   "cagri": 1,
+   "maliyet_usd": 1.0042
+  },
+  "karsilastirma": {
+   "tahmin": 97080,
+   "gercek": 114250,
+   "fazla": false,
+   "metin": "tahmin 97 bin, gerçek 114 bin token",
+   "uyari": null
+  }
+ },
+ "durum": "awaiting_approval",
+ "sorunlar": [],
+ "paketler": {
+  "veri_ozeti_30a.md": "43fcaea737d0402b9d4a4b3c1578e0ad",
+  "veri_ozeti_mahalle.md": "1b5d311a358044449dfb226c879bc220"
+ }
+}
