@@ -23,14 +23,18 @@ Tarih: 11 Kasım 2026 · Dal: `gorev-18-token-kontrolu` · Uygulama `0.20.0` · 
 | Talimat commit'i (dalın ilk commit'i) | `a7d414c` — "talimat: işletme adları geçmez (ortak.md); mahalle konu evreninde 'yeme içme' (baslik.md)" | — |
 | main | `a49c6d0` (fast-forward `988ca8d..a49c6d0`, itildi) | main çalışması 43053256607: **başarılı** (4 dk 24 sn) |
 | Etiket `v0.19.0` (açıklamalı, itildi) | `a49c6d0` — "v0.19.0 — arayüz düzeltmeleri: İşler panelinde temizleme, Ayarlar düzeni, tek pencere" | 43053261163: rapor yazılırken "sürüyor" (takıldı, aşağıda) |
-| Dal `gorev-18-token-kontrolu` | güncel main'den | ⟨DAL_CI⟩ |
+| Dal `gorev-18-token-kontrolu` | güncel main'den | `49fa9db`: 43068491888 takıldı, yeni 20 dakikalık sınırla "zaman aşımı" bitti · `82f29d7`: 43071944301 **başarılı** (test adımı 4 dk 50 sn) · son commit: aşağıda |
 
 **CI'daki takılma.** `a49c6d0`'ın görev dalı çalışması (43032939565, 13:51'de başladı) ve GÖREV-17 raporunda "sürüyor" görünen main çalışması
 (43011750701, 988ca8d, 11:24'te başladı) saatlerdir "Test" adımında "sürüyor". Aynı commit'lerin öbür çalışmaları (988ca8d'nin etiket çalışması,
 a49c6d0'ın main çalışması) 4–5 dakikada başarıyla bitti; yani aynı kod bir çalışmada geçiyor, öbüründe bir test takılıyor. Günlükler GitHub'a girişsiz
 okunamadığı için hangi testin takıldığı görülemedi; yerelde hiçbir turda takılma olmadı. Bu dalda: iş akışına zaman sınırı (iş 30 dk, test adımı
 20 dk; takılan çalışma 6 saat yerine yarım saatte biter) ve pytest'e `faulthandler_timeout = 600` (10 dakikadan uzun süren bir test bütün
-iş parçacıklarının yığınını günlüğe basar) eklendi. Bir sonraki takılmada günlükten hangi testin beklediği okunabilir.
+iş parçacıklarının yığınını günlüğe basar) eklendi. Bu dalın ilk itişinde de (49fa9db) aynı takılma oldu ve sınır işe yaradı (20. dakikada "The action
+'Test' has timed out after 20 minutes."). Günlük girişsiz okunamadığı için iş akışı bir adım daha kazandı: test adımı başarısız olur ya da durdurulursa
+günlüğün son 120 satırı (çalışan testin adı; 10 dakikadan sonra yığınlar) GitHub'da bir "annotation" olarak yazılır ve girişsiz API ile okunur
+(`https://api.github.com/repos/bemonths/tatilya/check-runs/<iş kimliği>/annotations`); testler `-v` ile çalışır ve 16 dakikada kesilir. Bu hâliyle ilk
+çalışma (82f29d7) takılmadan geçti; bir sonraki takılmada hangi testin beklediği bu yoldan okunabilir. Kök neden bulunmadı.
 
 ## Adım 2 — Bütün Claude adımları tek çağrılı ve araçsız
 
