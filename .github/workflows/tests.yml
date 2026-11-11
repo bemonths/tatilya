@@ -17,9 +17,22 @@ jobs:
           python-version: '3.12'
       - name: Install
         run: python -m pip install -e ".[test]"
+      # GÖREV-18: some runs hang in this step (the same commit passes in another run). The log needs a sign-in to read, so when the step
+      # fails or is stopped, the end of the log (the running test's name; after 10 minutes faulthandler's stacks) becomes an annotation,
+      # which the public API shows (`check-runs/<job>/annotations`).
       - name: Test
-        run: python -m pytest -q
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 960 python -m pytest -v -p no:cacheprovider 2>&1 | tee pytest.log
         timeout-minutes: 20
+      - name: Where the tests stopped
+        if: failure()
+        shell: bash
+        run: |
+          tail -n 120 pytest.log | cut -c1-300 > tail.txt
+          body=$(sed -e 's/%/%25/g' -e 's/\r/%0D/g' tail.txt | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=pytest log tail::${body}"
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
