@@ -312,3 +312,19 @@ def test_budget_comparison_and_thousands():
     assert single.comparison(estimate, {"toplam": 150_001})["fazla"] is True
     assert budget.summary([{"baslik": "A", "cagri": 1, "okunan": 10, "yazilan": 5, "toplam": 15, "en_buyuk_cagri": 15}],
                           {"claude_call_limit": 20_000, "claude_job_limit": 100_000})["baslatilabilir"]
+
+
+def test_claude_codes_side_call_is_counted_and_learned_by_the_estimate(app, monkeypatch):
+    """The real one-call run showed Claude Code calling Haiku besides Opus with the whole task text: it is spent, so it is counted, shown
+    in the job log, and later estimates add the measured share."""
+    before = app.post("/api/claude/title-runs/tahmin", json={"bolge": "30A geneli"}).json()["satirlar"][0]
+    assert before["yan"] == 0
+    monkeypatch.setenv("FAKE_CLAUDE_TOKENS", "100000,4000")
+    monkeypatch.setenv("FAKE_CLAUDE_SIDE", "claude-haiku-5-5,95000")
+    view = start(app)
+    assert view["metrics"]["side_tokens"] == {"models": ["claude-haiku-5-5"], "read": 95_000, "written": 24}
+    assert view["harcama"]["gercek"]["okunan"] == 195_000 and view["harcama"]["gercek"]["yazilan"] == 4_024
+    job = next(j for j in app.get("/api/jobs").json() if j["kind"] == "claude_run")
+    assert any("95 bin token'ını Claude Code'un kendi yan çağrısı (claude-haiku-5-5) okudu" in e["text"] for e in job["log"])
+    after = app.post("/api/claude/title-runs/tahmin", json={"bolge": "30A geneli"}).json()["satirlar"][0]
+    assert after["yan"] == int((after["okunan"] - after["yan"]) * 0.95) and "yan çağrısı için okunanın %95'i eklendi" in after["dayanak"]

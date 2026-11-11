@@ -13,7 +13,10 @@ for the call limit is not sent (the step says why).
 
 Token estimate: characters ÷ `CHARS_PER_TOKEN` plus Claude Code's own system text (`OVERHEAD_TOKENS`; the usage panel's tool-less one-turn
 calls on this computer read 4,038–4,166 input tokens for a two-line instruction and a one-line task). The divisor is calibrated on the one
-real call of GÖREV-18 (see the report); it is a rough figure for the screens, the real count comes from Claude's answer.
+real call of GÖREV-18 (11 November 2026, the evaluation of "Rosemary Beach'e köpeğimizle gitsek nasıl olur?" on a copy of the real data):
+195,412 characters of instructions and task text, 110,694 tokens read by Opus 5.5: (110,694 − 4,100) ÷ 195,412 → 1.83 characters a token
+(Turkish text, tables and numbers; Housing Atlas's English-heavy articles measured 2.8). It is a rough figure for the screens; the real
+count comes from Claude's answer.
 """
 import json
 import math
@@ -25,7 +28,7 @@ OPEN, CLOSE = "<<<DOSYA {name}>>>", "<<<DOSYA SONU {name}>>>"
 SECTION = re.compile(r"^<<<DOSYA (?P<name>[^>\n]+)>>>\n(?P<body>.*?)\n<<<DOSYA SONU (?P=name)>>>$", re.S | re.M)
 RETRY_HEADER = "DÖNÜŞ SEBEBİ"
 PREVIOUS_ANSWER = "onceki_cevap.txt"
-CHARS_PER_TOKEN = 2.3
+CHARS_PER_TOKEN = 1.85
 OVERHEAD_TOKENS = 4_500
 TRUNCATED = re.compile(r"output token maximum|exceeded the \d+ output token|max_output_tokens", re.I)
 TRUNCATED_TEXT = "cevap uzunluk sınırında kesildi"
@@ -182,10 +185,20 @@ def max_output(result):
 # ------------------------------------------------------------------------------------------------------------------- spending
 
 def token_total(metrics):
-    """Read (input, cache creation, cache read) and written tokens of one call's metrics: (read, written)."""
+    """Read (input, cache creation, cache read) and written tokens of one call's metrics: (read, written). Claude Code's side calls to
+    other models (`side_tokens`; GÖREV-18: a Haiku call that reads the whole task text once more) are counted too: they are spent."""
     tokens = (metrics or {}).get("tokens") or {}
-    read = sum(int(tokens.get(k) or 0) for k in ("input", "cache_creation", "cache_read"))
-    return read, int(tokens.get("output") or 0)
+    side = (metrics or {}).get("side_tokens") or {}
+    read = sum(int(tokens.get(k) or 0) for k in ("input", "cache_creation", "cache_read")) + int(side.get("read") or 0)
+    return read, int(tokens.get("output") or 0) + int(side.get("written") or 0)
+
+
+def side_text(metrics):
+    """", Claude Code'un yan çağrısı (claude-haiku-5-5) 105 bin okudu" for the job log, or ""."""
+    side = (metrics or {}).get("side_tokens") or {}
+    if not side.get("read") and not side.get("written"):
+        return ""
+    return f"; bunun {thousands(side.get('read'))} token'ını Claude Code'un kendi yan çağrısı ({', '.join(side.get('models') or [])}) okudu"
 
 
 def spent(metrics_list):

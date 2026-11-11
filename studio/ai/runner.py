@@ -569,6 +569,27 @@ def tokens_text(tokens):
     return f"{shown} token" if shown else ""
 
 
+def side_tokens(model_usage):
+    """GÖREV-18: tokens of the models Claude Code called besides the answering one, from the envelope's `modelUsage` (the answering model
+    is the one that wrote the most; the envelope's `usage` counts it alone). In the first real one-call run Claude Code 2.1.318 also called
+    Haiku 5.5 with the whole task text (105 thousand tokens read, 24 written). {"models": [...], "read", "written"} or None."""
+    if not isinstance(model_usage, dict) or len(model_usage) < 2:
+        return None
+    items = [(name, data) for name, data in model_usage.items() if isinstance(data, dict)]
+    if len(items) < 2:
+        return None
+    main = max(items, key=lambda item: count(item[1].get("outputTokens")) or 0)[0]
+    read = written = 0
+    names = []
+    for name, data in items:
+        if name == main:
+            continue
+        names.append(name)
+        read += sum(count(data.get(k)) or 0 for k in ("inputTokens", "cacheReadInputTokens", "cacheCreationInputTokens"))
+        written += count(data.get("outputTokens")) or 0
+    return {"models": names, "read": read, "written": written}
+
+
 @dataclass(frozen=True)
 class LiveProgress:
     turn: int
@@ -880,6 +901,7 @@ class RunResult:
                 "tools": {k: int(self.tool_kinds.get(k, 0)) for k in TOOL_KINDS},
                 "tool_s": {k: whole(self.tool_seconds.get(k, 0.0), 1) for k in TOOL_KINDS},
                 "tokens": {**tokens, "source": source} if tokens else None,
+                "side_tokens": side_tokens(env.get("modelUsage")),
                 "cost_usd": cost if isinstance(cost, (int, float)) and not isinstance(cost, bool) else None}
 
     def summary(self):

@@ -33,7 +33,9 @@ task text's `<<<DOSYA name>>>` sections (standard input), and the output is the 
 `result` envelope), never a file. Scenarios: invalid_json (the answer is "{") · missing_file / no_json (an answer without JSON) ·
 prose (the JSON with a sentence before and after) · fenced (the JSON in a ```json fence) · truncated (the answer is cut: `stop_reason`
 "max_tokens", half of the JSON) · truncated_once / invalid_once (only the first call of a run folder; the second is ok).
-FAKE_CLAUDE_TOKENS="read,written" sets the answer's usage (default: read = the task text's and the instructions' characters ÷ 2.3 plus
+FAKE_CLAUDE_TITLE_BUSINESS="<name>": candidate 1's title names that business and its cover idea has a long big text (the marks of
+GÖREV-18 Adım 6). FAKE_CLAUDE_SIDE="model,read" adds Claude Code's side call to `modelUsage` (as the real one-call run showed: Haiku reading the task text).
+FAKE_CLAUDE_TOKENS="read,written" sets the answer's usage (default: read = the task text's and the instructions' characters ÷ 1.85 plus
 4,500, written 800); the per-step override FAKE_CLAUDE_TOKENS_<STEP> (e.g. FAKE_CLAUDE_TOKENS_METIN_BOLUM) wins.
 """
 import json
@@ -180,6 +182,10 @@ def build(cwd, system_text, scenario, prompt):
         if previous.get("adaylar"):
             candidates = previous["adaylar"]
             candidates[0] = {**candidates[0], "baslik_en": candidates[0]["baslik_en"] + " (revised)"}
+    business = os.environ.get("FAKE_CLAUDE_TITLE_BUSINESS")
+    if business and candidates:
+        candidates[0]["baslik_en"] = f"Is {business} Worth the Drive? A Long Look at What {region} Offers{suffix['en']}"[:100]
+        candidates[0]["kapak_fikri"] = f"{business} vitrini; büyük yazı 'IS IT WORTH THE DRIVE?'"
     note = re.search(r"--- not başı ---\n(.*?)\n--- not sonu ---", prompt, re.S)
     data = {"surum": 1, "adim": "baslik", "notlar": [f"Düzeltme notu: {note.group(1)}"] if note else [], "adaylar": candidates}
     if scenario == "schema_error":
@@ -261,7 +267,7 @@ def usage_of(prompt, step=None):
     if wanted:
         read, written = (int(v) for v in wanted.split(","))
     else:
-        read, written = int((len(prompt) + SYSTEM_CHARS[0]) / 2.3) + 4500, 800
+        read, written = int((len(prompt) + SYSTEM_CHARS[0]) / 1.85) + 4500, 800
     return {"input_tokens": 10, "cache_creation_input_tokens": max(0, read - 10), "cache_read_input_tokens": 0, "output_tokens": written}
 
 
@@ -287,9 +293,15 @@ def answer(text, session, prompt, *, step=None, scenario="ok"):
     usage = usage_of(prompt, step)
     emit({"type": "assistant", "message": {"id": "msg_1", "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": text}],
           "usage": usage}})
+    models = {"claude-fake": {"inputTokens": usage["input_tokens"], "cacheCreationInputTokens": usage["cache_creation_input_tokens"],
+                              "cacheReadInputTokens": 0, "outputTokens": usage["output_tokens"], "maxOutputTokens": 128000}}
+    side = os.environ.get("FAKE_CLAUDE_SIDE")
+    if side:
+        name, read = side.split(",")
+        models[name] = {"inputTokens": int(read), "cacheCreationInputTokens": 0, "cacheReadInputTokens": 0, "outputTokens": 24}
     emit({"type": "result", "subtype": "success", "is_error": False, "result": text, "session_id": session, "num_turns": 1,
           "stop_reason": stop, "duration_ms": 900, "duration_api_ms": 700, "total_cost_usd": 0.0071, "usage": usage,
-          "modelUsage": {"claude-fake": {"maxOutputTokens": 128000}}, "permission_denials": []})
+          "modelUsage": models, "permission_denials": []})
 
 
 def main():

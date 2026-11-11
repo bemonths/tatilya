@@ -675,7 +675,8 @@ class TextService(TextViews):
             return {"sinir": "limit", "gecici": "transient"}.get(kind, "failed"), None, result.failure.message, result
         self.add_spent(ctx, metrics)
         read, written = single.token_total(metrics)
-        self.log(ctx, f"{label}: cevap geldi ({single.thousands(read)} token okundu, {single.thousands(written)} yazıldı).")
+        self.log(ctx, f"{label}: cevap geldi ({single.thousands(read)} token okundu{single.side_text(metrics)}, {single.thousands(written)} "
+                      "yazıldı).")
         data, problems = None, []
         if cut:
             problems = [f"Cevap uzunluk sınırında kesildi ({single.thousands(written)} token yazılmıştı); kesik cevap kabul edilmez. Daha kısa yaz."]

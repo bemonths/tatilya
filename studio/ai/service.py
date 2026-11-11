@@ -73,6 +73,9 @@ def combined_metrics(calls, estimate):
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 tokens[key] = tokens.get(key, 0) + value
     last = dict(items[-1]) if items else {}
+    sides = [m.get("side_tokens") for m in items if m.get("side_tokens")]
+    last["side_tokens"] = ({"models": sorted({n for s in sides for n in s.get("models") or []}), "read": sum(s.get("read") or 0 for s in sides),
+                            "written": sum(s.get("written") or 0 for s in sides)} if sides else None)
     last.update({"elapsed_s": round(sum(m.get("elapsed_s") or 0 for m in items), 1), "turns": len(items), "cagri": len(items),
                  "tool_calls": sum(m.get("tool_calls") or 0 for m in items), "duzen": budget.ONE_CALL, "tahmin": estimate,
                  "tokens": {**tokens, "source": (last.get("tokens") or {}).get("source", "result")} if tokens else None,
@@ -383,8 +386,8 @@ class ClaudeService:
                     closed = result.failure.kind == runner.CANCELED and self.closing
                     return fail(store.INTERRUPTED if closed else result.failure.message, extra=base)
                 read, written = single.token_total(result.metrics())
-                log(f"Cevap geldi: {single.thousands(read)} token okundu, {single.thousands(written)} token yazıldı · "
-                    f"{runner.duration_text(result.elapsed_s)}.")
+                log(f"Cevap geldi: {single.thousands(read)} token okundu{single.side_text(result.metrics())}, {single.thousands(written)} token "
+                    f"yazıldı · {runner.duration_text(result.elapsed_s)}.")
                 problem, previous_answer = None, answer
                 if cut:
                     problem, previous_answer = (f"Cevap uzunluk sınırında kesildi ({single.thousands(written)} token yazılmıştı); kesik cevap kabul "

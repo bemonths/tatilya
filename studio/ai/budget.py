@@ -63,15 +63,32 @@ def output_estimate(db, settings, step):
 
 def read_median(db, step):
     """Median read tokens of the step's earlier one-call sessions (None without any)."""
-    values = [single.token_total(m)[0] / max(1, int(m.get("cagri") or 1)) for m, _ in step_calls(db, step, new_only=True, limit=MEDIAN_OF)]
+    values = [sum(int((m.get("tokens") or {}).get(k) or 0) for k in ("input", "cache_creation", "cache_read")) / max(1, int(m.get("cagri") or 1))
+              for m, _ in step_calls(db, step, new_only=True, limit=MEDIAN_OF)]          # the answering model's read only (the side call is added)
     values = [v for v in values if v > 0]
     return int(statistics.median(values)) if values else None
 
 
+def side_share(db):
+    """GÖREV-18: Claude Code's own side call (another model reading the task text once more) as a share of the answering model's read
+    tokens: the median over the last one-call calls of every step (0 without any). The estimate adds it to the read side."""
+    shares = []
+    for step, _ in claude_settings.CLAUDE_STEPS:
+        for metrics, _ in step_calls(db, step, new_only=True, limit=MEDIAN_OF):
+            tokens = metrics.get("tokens") or {}
+            main = sum(int(tokens.get(k) or 0) for k in ("input", "cache_creation", "cache_read"))
+            if main > 0:
+                shares.append(int((metrics.get("side_tokens") or {}).get("read") or 0) / main)
+    return float(statistics.median(shares)) if shares else 0.0
+
+
 def call_estimate(db, settings, step, read, *, read_basis="istemin boyutu"):
     written, basis = output_estimate(db, settings, step)
-    return {"adim": step, "okunan": int(read), "yazilan": int(written), "toplam": int(read) + int(written),
-            "dayanak": f"okunan: {read_basis}; yazılan: {basis}"}
+    share = side_share(db)
+    side = int(read * share)
+    note = f"; Claude Code'un yan çağrısı için okunanın %{round(share * 100)}'i eklendi (önceki tek çağrıların ortancası)" if side else ""
+    return {"adim": step, "okunan": int(read) + side, "yazilan": int(written), "toplam": int(read) + side + int(written), "yan": side,
+            "dayanak": f"okunan: {read_basis}{note}; yazılan: {basis}"}
 
 
 def model_text(settings, step):

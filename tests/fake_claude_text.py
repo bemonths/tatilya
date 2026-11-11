@@ -111,6 +111,8 @@ def section(cwd, prompt):
         sentences.append(f"It is an amazing place to start the story [{ids[0]}].")
     if number == 3:
         sentences.append(f"Most homes sit within walking distance of the sand [{ids[0]}].")
+    if number == 2 and os.environ.get("FAKE_CLAUDE_BUSINESS"):           # GÖREV-18: a business name for the check's red finding
+        sentences.append(f"Lunch at {os.environ['FAKE_CLAUDE_BUSINESS']} is the easy choice here [{ids[0]}].")
     while words < budget - 12:
         mark = ids[index % len(ids)]
         sentence = f"{FILLER[index % len(FILLER)]} in this part [{mark}]."

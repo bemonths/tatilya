@@ -25,3 +25,5 @@ studio = ["web/*", "web/img/*", "destinations/*.csv", "sources/*.csv"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+# GÖREV-18: a test still running after 10 minutes prints every thread's stack (CI runs hung for hours without a word on 11 November 2026)
+faulthandler_timeout = 600

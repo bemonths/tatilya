@@ -1343,3 +1343,68 @@ test('GÖREV-17 eklenti: one window for a job, opened without the focus and not 
   assert.equal(E.keepWindow('job-7',undefined),false);             // an older program: the window closes after each piece of work
   assert.equal(E.keepWindow('',['']),false);
 });
+// --- GÖREV-18: the estimate before a job, estimate beside actual, title marks, business names, the usage box, the About card ------------
+import {estimateBox as estimateBox18, spendingLine as spendingLine18, tokens as tokens18} from '../studio/web/estimate.js';
+import {markList as markList18, metricsText as metricsText18} from '../studio/web/videos.js';
+import {businessBox as businessBox18} from '../studio/web/tones.js';
+import {usageHtml as usageHtml18} from '../studio/web/usage.js';
+import {jobCard as jobCard18} from '../studio/web/jobs.js';
+import {aboutCard as aboutCard18, spendingTable as spendingTable18} from '../studio/web/settings.js';
+
+const estimate18={satirlar:[{baslik:'Plan',cagri:2,okunan:70000,yazilan:26000,toplam:96000,en_buyuk_cagri:60000,modeller:[{adim:'metin_plan',model_adi:'Opus (en yeni sürüm)',efor_adi:'Yüksek'}]},
+  {baslik:'Araştırmacı dost',cagri:10,okunan:150000,yazilan:70000,toplam:220000,en_buyuk_cagri:40000,modeller:[{adim:'metin_bolum',model_adi:'Opus (en yeni sürüm)',efor_adi:'Yüksek'},{adim:'metin_ceviri',model_adi:'Sonnet (en yeni sürüm)',efor_adi:'Orta'}]}],
+  toplam:{cagri:12,okunan:220000,yazilan:96000,toplam:316000},sinirlar:{cagri:250000,is:1500000},asiyor:[],baslatilabilir:true,
+  metin:'Plan: 2 çağrı, yaklaşık 96 bin token · Araştırmacı dost: 10 çağrı, yaklaşık 220 bin token · Toplam: yaklaşık 316 bin token'};
+
+test('GÖREV-18 tahmin: lines per part, the total, models, the limits and Başlat; over a limit there is no Başlat', () => {
+  const box=estimateBox18(estimate18,{id:'text-estimate',startLabel:'Metni yaz: başlat'});
+  assert.match(box,/Başlamadan önce: tahmin/);
+  assert.match(box,/Plan: 2 çağrı, yaklaşık 96 bin token · Araştırmacı dost: 10 çağrı/);
+  assert.match(box,/<td>Araştırmacı dost<\/td><td>10<\/td><td>150 bin<\/td><td>70 bin<\/td>.*Opus \(en yeni sürüm\) · Yüksek; Sonnet \(en yeni sürüm\) · Orta/s);
+  assert.match(box,/<tfoot><tr><td>Toplam<\/td><td>12<\/td>.*316 bin/s);
+  assert.match(box,/tek çağrı 250 bin, iş başına 1,5 milyon token/);
+  assert.match(box,/data-estimate-start>Metni yaz: başlat<\/button>/);
+  const over=estimateBox18({...estimate18,baslatilabilir:false,asiyor:['İşin toplam tahmini yaklaşık 2 milyon token; iş başına sınır 1,5 milyon.']});
+  assert.doesNotMatch(over,/data-estimate-start/);
+  assert.match(over,/problem-error">İşin toplam tahmini yaklaşık 2 milyon token/);
+  assert.match(over,/Tahmin bir sınırı aşıyor; iş başlatılmaz/);
+  assert.equal(tokens18(1200000),'1,2 milyon');assert.equal(tokens18(85400),'85 bin');assert.equal(tokens18(800),'800');
+});
+
+test('GÖREV-18 harcama: estimate beside actual on the job card; the red warning over 1.5 × the estimate', () => {
+  const fine={tahmin:{toplam:90000},gercek:{toplam:85000,cagri:1},karsilastirma:{fazla:false,uyari:null}};
+  assert.match(spendingLine18(fine),/Harcama<\/span> tahmin 90 bin · gerçek 85 bin token \(1 çağrı\)/);
+  assert.doesNotMatch(spendingLine18(fine),/Beklenenden fazla/);
+  const over={tahmin:316000,gercek:{toplam:602000,cagri:12},karsilastirma:{fazla:true,uyari:'Beklenenden fazla harcandı: tahmin 316 bin, gerçek 602 bin token.'}};
+  assert.match(spendingLine18(over),/spend-line over/);
+  assert.match(spendingLine18(over),/tag error">Beklenenden fazla<\/span> Beklenenden fazla harcandı: tahmin 316 bin, gerçek 602 bin token\./);
+  const job={id:'j1',kind:'claude_metin',status:'done',title:'Video metni',created_at:'2026-11-11T10:00:00+00:00',progress:100,log:[],result:{harcama:over}};
+  assert.match(jobCard18(job),/Beklenenden fazla harcandı/);
+  assert.equal(spendingLine18(null),'');
+});
+
+test('GÖREV-18 kullanım kutusu: the last job’s actual spending, red when over', () => {
+  const view={measured:false,son_is:{baslik:'Claude · Başlık',gercek:{toplam:602000},karsilastirma:{tahmin:316000,fazla:true}}};
+  assert.match(usageHtml18(view),/Son iş: 602 bin token · tahmin 316 bin <span class="tag error">fazla<\/span>/);
+  assert.doesNotMatch(usageHtml18({measured:false}),/Son iş/);
+});
+
+test('GÖREV-18 başlık işaretleri and the call count of a run (old runs keep their turns)', () => {
+  const marks=markList18([{seviye:'kirmizi',kod:'isletme',metin:'İngilizce başlıkta işletme adı: Modica Market'},{seviye:'sari',kod:'ilk_40',metin:'Telefonda yalnız ilk yaklaşık 40 karakter görünür; konu orada olmalı'}]);
+  assert.match(marks,/mark-red.*İngilizce başlıkta işletme adı: Modica Market.*mark-yellow.*Telefonda yalnız ilk yaklaşık 40 karakter/s);
+  assert.equal(markList18([]),'');
+  assert.match(metricsText18({metrics:{duzen:'tek_cagri',cagri:2,elapsed_s:61}}),/^2 çağrı · 61 sn/);
+  assert.match(metricsText18({metrics:{turns:6,elapsed_s:78}}),/^6 tur \(eski düzen\)/);
+});
+
+test('GÖREV-18 Ayarlar: business names beside the warning phrases, the spending table, the About card', () => {
+  const box=businessBox18({name:'isletme_adlari.txt',sha256:'c'.repeat(64),modified_at:'2026-11-11T00:00:00+00:00',text:'+ Örnek Kafe\n'},{sayi:2,adlar:['Modica Market','Target']});
+  assert.match(box,/İşletme adları: ekle \/ hariç tut/);
+  assert.match(box,/Şu an veriden kurulan liste: 2 ad — Modica Market · Target/);
+  assert.match(box,/id="business-save">Kaydet</);
+  const table=spendingTable18([{adim:'baslik',baslik:'Konu ve başlık',yeni:{sayi:2,ortanca:120000,en_yuksek:140000,okunan_ortanca:90000,yazilan_ortanca:30000},eski:{sayi:3,ortanca:460000,en_yuksek:470000}}]);
+  assert.match(table,/Adım başına harcama.*<td>Konu ve başlık<\/td><td>120 bin · en çok 140 bin \(2\)<\/td><td>90 bin \/ 30 bin<\/td><td>460 bin · en çok 470 bin \(3\)<\/td>/s);
+  const about=aboutCard18('0.20.0');
+  assert.doesNotMatch(about,/Sonraki aşama<\/span><p style="margin-top:12px">Claude ile video metni/);
+  assert.match(about,/video metni, Türkçe karşılığı ve programın denetimi kullanılabilir/);
+});
