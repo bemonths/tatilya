@@ -97,6 +97,8 @@ TEXT = {
     "tones": CLAUDE_INSTRUCTIONS / "tonlar",
     "default_tone": "arastirmaci_dost",
     "warning_phrases": CLAUDE_INSTRUCTIONS / "uyari_ifadeleri.txt",
+    # GÖREV-18 (6a): names the business-name check adds ("+ Ad") or leaves out ("- Ad"); the list itself is built from the data every time
+    "business_names": CLAUDE_INSTRUCTIONS / "isletme_adlari.txt",
     "published_videos": (),             # the publishing step will fill it (title, topic, address); empty until then
 }
 

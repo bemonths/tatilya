@@ -993,8 +993,9 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def claude_settings_view():
         values = claude_settings.load(db.path.parent)
         from .ai import claude_info
+        from .ai import budget
         return {"settings": {k: v for k, v in values.items() if k != "notes"}, "notes": values["notes"], "options": claude_settings.options(),
-                "info": claude_info.info(values["claude_path"])}
+                "info": claude_info.info(values["claude_path"]), "harcama": budget.spending(db)}
 
     @app.put("/api/settings/claude")
     async def claude_settings_save(request: Request):
@@ -1114,6 +1115,28 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         destination_id = body.destination_id or DEFAULT_DESTINATION_ID
         selected(destination_id)
         return claude().estimate_review(destination_id, body.bolge, body.baslik, body.not_)
+
+    @app.get("/api/claude/business-names")
+    def claude_business_names(destination_id: str = DEFAULT_DESTINATION_ID):
+        """GÖREV-18 Adım 6a: the business names the check looks for, built from the data now (with the added and left-out names)."""
+        selected(destination_id)
+        from .text import businesses
+        found = businesses.names(db, destination_id, (getattr(PROFILES.get(destination_id), "TEXT", None) or {}).get("business_names"))
+        names = sorted(set(found.values()), key=str.casefold)
+        return {"sayi": len(names), "adlar": names}
+
+    @app.post("/api/claude/title-check")
+    async def claude_title_check(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
+        """GÖREV-18 Adım 6: the marks of a title the user edits (business names, the phone's 40 characters, the cover text, capitals)."""
+        selected(destination_id)
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "İstek okunamadı.") from None
+        if not isinstance(body, dict) or not isinstance(body.get("baslik_en", ""), str):
+            raise HTTPException(422, "Başlık metin olmalı.")
+        return claude().check_title(destination_id, body.get("baslik_en", "")[:300], str(body.get("kapak_fikri") or "")[:2000],
+                                    str(body.get("bolge") or "") or None)
 
     @app.post("/api/claude/review-runs", status_code=201)
     def start_review_run(body: ReviewRunInput):

@@ -3,6 +3,7 @@ import {claudeBar} from "./usage.js";
 import {textBar} from "./text.js";
 import {skipButton} from "./extension.js";
 import {linkSettingsMentions} from "./settings.js";
+import {spendingLine} from "./estimate.js";
 
 // GÖREV-17 (Adım 2 and 4): the job panel. Finished jobs can be taken off the panel one by one ("Kaldır") or all at once ("Bitenleri
 // kaldır"); removing only hides (the record, the log and the result stay in the database) and "Gizlenen işleri göster (N)" at the
@@ -42,11 +43,12 @@ export function jobCard(job, {resultLink=""}={}) {
   const waiting=job.waiting_for?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor</span> ${esc(job.waiting_for)}</p>`:"";
   const message=job.message && job.message===job.progress_info?.bekleme?.metin?"":`<p>${linkSettingsMentions(esc(job.message))}</p>`;
   const windows=windowLines(job).map(line=>`<p class="job-window"><span class="tag">Açık pencere</span> ${esc(line)}</p>`).join("");
+  const spending=spendingLine(job.result?.harcama || job.progress_info?.harcama);   // GÖREV-18: estimate and actual
   const handover=running && job.progress_info?.tur==="eklenti" && job.progress_info.bekliyor?`<button data-handover-job="${esc(job.id)}">Programın tarayıcısına devret</button> `:"";
   const buttons=running?`${handover}${skipButton(job)}<button class="quiet" data-cancel-job="${esc(job.id)}">İptal et</button>`
     :`<button class="quiet job-remove" data-hide-job="${esc(job.id)}" title="İşi panelden kaldırır; kaydı ve günlüğü silinmez.">Kaldır</button>`;
   return `<article class="job" data-job="${esc(job.id)}"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(STATUS_LABELS[job.status] || job.status)}</span>${job.awaiting_approval?'<span class="tag warm">Onay bekliyor</span>':""}<time>${esc(date(job.created_at))}</time></div>
-    <h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${bar}${waiting}${windows}${message}${buttons}
+    <h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${bar}${spending}${waiting}${windows}${message}${buttons}
     <details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${resultLink}</article>`;
 }
 

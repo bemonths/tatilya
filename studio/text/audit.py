@@ -16,6 +16,8 @@ Red, from the usage notes of the evidence blocks (`studio/evidence/blocks.py` `U
 - source status (M9, `references`): a mark points at a reference row whose status is "doğrulanamadı";
 - a mark points at an id the pack does not have;
 - numbers: a sentence with a number has no mark, or the number holds against none of its marks' values (`numbers.py`).
+- business names (GÖREV-18, the user's decision of 11 November 2026): a restaurant, rental company, hotel or inn, market, pharmacy or
+  private health point of the data named in the sentence ("işletme adı: <ad>"; `businesses.py`);
 Yellow:
 - small sample: a mark points at a small-sample cell and the sentence names two neighborhoods (a comparison);
 - source question: "no public beach access" without a source named in that sentence or the one before (a note for the final reader and
@@ -120,7 +122,7 @@ def sentences_of(document):
                 yield part, sentence
 
 
-def check(document, pack, *, regions=(), phrases=(), plan=None):
+def check(document, pack, *, regions=(), phrases=(), plan=None, businesses=None):
     """Findings of a written text (`document`: the version's metin.json) against its pack (the video pack's JSON)."""
     pack = pack if isinstance(pack, Pack) else Pack(pack)
     found = []
@@ -129,6 +131,8 @@ def check(document, pack, *, regions=(), phrases=(), plan=None):
     previous_en = ""
     for part, sentence in sentences_of(document):
         no, en, ids = sentence["no"], sentence["en"], sentence.get("kanitlar") or []
+        for name in (businesses.find(en) if businesses is not None else []):
+            found.append(finding(RED, "isletme", f"işletme adı: {name} (videoda işletme adı geçmez; genel olarak söylenir).", no))
         for code, block, doc, title, pattern in RED_RULES:
             match = pattern.search(en)
             if match:

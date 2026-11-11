@@ -24,6 +24,7 @@ from ..evidence import plan as plan_pack
 from . import budget, claude_info, instructions, runner, settings as claude_settings, single, steps, store, usage
 from . import title  # noqa: F401  (registers the title step)
 from . import title_review  # noqa: F401  (registers the evaluation step, GÖREV-14)
+from . import title_marks
 
 RUN_RECORD, STREAM, INSTRUCTIONS, TASK, RUN_SCHEMA = "calisma.json", "akis.jsonl", "talimat.md", "gorev.md", "sema.json"
 JOB_KIND = "claude_run"
@@ -434,7 +435,8 @@ class ClaudeService:
     # ------------------------------------------------------------------------------------------------------------- usage panel
 
     def usage(self):
-        return usage.view(self.db)
+        """The usage panel; GÖREV-18: with the last Claude job's spending (estimate and actual)."""
+        return {**usage.view(self.db), "son_is": budget.last_job(self.db), "adimlar": budget.spending(self.db)}
 
     def refresh_usage(self):
         """The panel's "Yenile": the smallest Claude call (no tools, one turn, haiku, low effort). Its usage reports are stored."""
@@ -474,7 +476,7 @@ class ClaudeService:
             if not any(stored):
                 raise Conflict("Claude bu çağrıda kullanım bilgisi vermedi; kullanım yenilenemedi.")
             cost = (result.envelope or {}).get("total_cost_usd")
-            return {**usage.view(self.db), "last_refresh": {"model": usage.REFRESH_MODEL, "effort": effort or None,
+            return {**self.usage(), "last_refresh": {"model": usage.REFRESH_MODEL, "effort": effort or None,
                                                             "model_used": result.model_used, "elapsed_s": result.elapsed_s,
                                                             "cost_usd": cost if isinstance(cost, (int, float)) else None}}
         finally:
@@ -575,22 +577,39 @@ class ClaudeService:
         problems = record["problems"]
         candidates = []
         if data and record["status"] != "error":
+            check = self.title_checker(record["destination_id"])
+            suffix = record["params"].get("baslik_eki") or self.suffixes(record["destination_id"])
             for index, item in enumerate(data.get("adaylar") or []):
                 own = [p for p in problems if p["aday"] == index]
                 candidates.append({**title.resolve_candidate(ctx, item), "sira": index, "sorunlar": own, "video_id": chosen.get(index),
-                                   "secilebilir": not any(p["seviye"] == title.ERROR for p in own) and index not in chosen})
+                                   "secilebilir": not any(p["seviye"] == title.ERROR for p in own) and index not in chosen,
+                                   "isaretler": check(item.get("baslik_en"), item.get("kapak_fikri"), item.get("bolge"), suffix)})
         markdown = (folder / step.markdown).read_text(encoding="utf-8") if (folder / step.markdown).is_file() else None
         result = saved.get("calisma_sonucu") or {}
         review = title_review.summary(data) if data and step.key == title_review.STEP.key else None
         return {**self.with_outcome(record), "step_title": step.title, "candidates": candidates,
                 "general_problems": [p for p in problems if p["aday"] is None],
-                "review": review, "output_file": step.output, "markdown_file": step.markdown,
+                "review": review, "output_file": step.output, "markdown_file": step.markdown, "harcama": saved.get("harcama"),
                 "notes": (data or {}).get("notlar") or [], "markdown": markdown, "inputs": saved.get("girdiler") or [],
                 "instructions": saved.get("talimat_surumu"),
                 "instruction_versions": instructions.used_versions(saved.get("talimat_surumu"), PROFILES.get(record["destination_id"])),
                 "summary": {k: result.get(k) for k in ("num_turns", "tool_calls", "total_cost_usd",
                                                                                                     "elapsed_s", "denied", "result")},
                 "actions": self.actions(record)}
+
+    def title_checker(self, destination_id):
+        """GÖREV-18 Adım 6: the marks of a title (business names red; the phone's 40 characters, the cover text, capitals yellow). The
+        business list is built from the data now."""
+        from ..text import businesses
+        profile = PROFILES.get(destination_id)
+        names = businesses.matcher(self.db, destination_id, profile)
+        whole = (getattr(profile, "CHANNEL", None) or {}).get("whole_region")
+        return lambda title_en, cover, region, suffix: title_marks.marks(title_en, cover, region=region, whole_region=whole, suffix=suffix,
+                                                                          businesses=names)
+
+    def check_title(self, destination_id, title_en, cover=None, region=None):
+        """The marks of a title the user writes or edits (the edit box asks while the user types)."""
+        return {"isaretler": self.title_checker(destination_id)(title_en or "", cover or "", region, self.suffixes(destination_id))}
 
     @staticmethod
     def actions(record):

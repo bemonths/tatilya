@@ -1,5 +1,6 @@
 import {api, esc, date, destinationPath} from "./api.js";
 import {linkSettingsMentions} from "./settings.js";
+import {estimateBox, spendingLine} from "./estimate.js";
 
 // GÖREV-13: the "Videolar" screen: topic and title proposals from Claude, the approval view (list of titles, then the chosen title's
 // details), video records and their evidence packs.
@@ -26,7 +27,8 @@ export function warnings(options) {
 export function metricsText(run) {
   const m=run.metrics || {};
   const tokens=m.tokens?Math.round(((m.tokens.input||0)+(m.tokens.cache_creation||0)+(m.tokens.cache_read||0))/1000)+" bin girdi / "+Math.round((m.tokens.output||0)/1000)+" bin çıktı token":"";
-  const parts=[m.turns!=null?`${m.turns} tur`:"", m.elapsed_s!=null?`${Math.round(m.elapsed_s)} sn`:"", tokens];
+  const calls=m.duzen==="tek_cagri"?`${m.cagri || 1} çağrı`:m.turns!=null?`${m.turns} tur (eski düzen)`:"";   // GÖREV-18: one call, no turns
+  const parts=[calls, m.elapsed_s!=null?`${Math.round(m.elapsed_s)} sn`:"", tokens];
   return parts.filter(Boolean).join(" · ");
 }
 
@@ -60,6 +62,12 @@ export function evidenceItem(item) {
     ${item.deger_metni && item.deger_metni!=="—"?`<strong>— ${esc(item.deger_metni)}</strong>`:""}<small class="source-host">${esc(item.dosya)} · paket ${esc(String(item.paket_id || "").slice(0,8))}</small></li>`;
 }
 
+/** GÖREV-18 Adım 6: a title's marks — business names red, the phone's 40 characters, the cover text and capitals yellow. Information only. */
+export function markList(marks) {
+  if(!marks || !marks.length) return "";
+  return `<ul class="mark-list">${marks.map(m=>`<li class="${m.seviye==="kirmizi"?"mark-red":"mark-yellow"}"><span class="sentence-mark ${m.seviye==="kirmizi"?"red":"yellow"}">●</span> ${esc(m.metin)}</li>`).join("")}</ul>`;
+}
+
 export function problemList(problems) {
   if(!problems || !problems.length) return "";
   return `<ul class="problem-list">${problems.map(p=>`<li class="${p.seviye==="hata"?"problem-error":"problem-warning"}">${p.seviye==="hata"?"Hata":"Uyarı"}: ${esc(p.metin)}</li>`).join("")}</ul>`;
@@ -68,7 +76,7 @@ export function problemList(problems) {
 export function candidateList(view, open, edit=null) {
   return `<ol class="candidate-list">${view.candidates.map(c=>`<li class="${c.sira===open?"open":""}"><button class="candidate-title" data-open-candidate="${c.sira}" aria-expanded="${c.sira===open}">
     <span class="title-en">${esc(c.baslik_en)}</span><span class="title-tr">${esc(c.baslik_tr)}</span>
-    <span class="candidate-tags"><span class="tag">${esc(c.aile)}</span>${c.bolge!==view.params?.bolge?`<span class="tag">${esc(c.bolge)}</span>`:""}${c.video_id?'<span class="tag green">seçildi</span>':""}${c.sorunlar.some(p=>p.seviye==="hata")?'<span class="tag warm">doğrulama hatası</span>':""}</span></button>
+    <span class="candidate-tags"><span class="tag">${esc(c.aile)}</span>${c.bolge!==view.params?.bolge?`<span class="tag">${esc(c.bolge)}</span>`:""}${c.video_id?'<span class="tag green">seçildi</span>':""}${c.sorunlar.some(p=>p.seviye==="hata")?'<span class="tag warm">doğrulama hatası</span>':""}${(c.isaretler||[]).some(m=>m.seviye==="kirmizi")?'<span class="tag error">işletme adı</span>':""}${(c.isaretler||[]).some(m=>m.seviye==="sari")?'<span class="tag warm">başlık uyarısı</span>':""}</span></button>
     ${c.sira===open?candidateDetail(c, view, edit && edit.index===c.sira?edit:null):""}</li>`).join("")}</ol>`;
 }
 
@@ -92,6 +100,7 @@ export function editForm(c, edit, suffix={}) {
     <label>Türkçe karşılığı<input id="edit-tr" value="${esc(edit.tr)}" maxlength="300"></label>
     <p class="muted form-note">İngilizce başlık "${esc(suffix?.en || "")}" ekiyle, Türkçe karşılığı "${esc(suffix?.tr || "")}" ekiyle biter; İngilizce başlık en çok 100 karakter. <span id="edit-count">${edit.en.length}</span>/100</p>
     <ul class="problem-list" id="edit-problems">${problems.map(p=>`<li class="problem-error">${esc(p)}</li>`).join("")}</ul>
+    <div id="edit-marks">${markList(edit.marks)}</div>
     <div class="decision-actions"><button class="primary" id="edit-select" ${problems.length?"disabled":""}>Düzenlenmiş başlığı seç</button>
       <button id="edit-translate" ${onlyTurkish?"":"hidden"}>İngilizcesini Claude yazsın</button>
       <button class="quiet" id="edit-cancel">Vazgeç</button></div>
@@ -103,7 +112,7 @@ export function candidateDetail(c, view, edit=null) {
   const params=Object.entries(c.parametreler || {}).map(([k,v])=>`${k} = ${v}`).join(", ") || "yok";
   const canSelect=view.actions.select && c.secilebilir;
   return `<div class="candidate-detail">
-    ${problemList(c.sorunlar)}
+    ${problemList(c.sorunlar)}${markList(c.isaretler)}
     <h3>Neden önerildi</h3><p>${esc(c.neden_onerildi)}</p>
     <h3>İzleyicinin sorusu</h3><p>${esc(c.izleyici_sorusu)}</p>
     <h3>Kanca</h3><p>${esc(c.kanca?.metin)}</p><ul class="evidence-list">${(c.kanca?.kanitlar||[]).map(evidenceItem).join("") || "<li>kanıt yok</li>"}</ul>
@@ -139,6 +148,7 @@ export function runView(view, open, message="", busy=false, edit=null) {
     <div class="run-meta">${esc(view.model_label || "—")} · efor: ${esc(view.effort_label || "—")}${view.claude_version?` · Claude Code ${esc(view.claude_version)}`:""} · ${esc(metricsText(view))}${summary.total_cost_usd?` · maliyet karşılığı ${summary.total_cost_usd.toFixed(2).replace(".",",")} $`:""}
       ${params.not?`<br>Not: ${esc(params.not)}`:""}${params.duzeltme_notu?`<br>Düzeltme notu: ${esc(params.duzeltme_notu)}`:""}</div>
     ${instructionLine(view)}
+    ${spendingLine(view.harcama)}
     ${view.error?`<p class="stage-note claude-warning" role="alert"><span class="note-mark">!</span><span>${esc(view.error)}</span></p>`:""}
     ${view.general_problems?.length?`<div class="run-problems"><h3>Doğrulama sorunları</h3>${problemList(view.general_problems)}</div>`:""}
     ${view.status==="error" && (view.problems||[]).length?`<div class="run-problems"><h3>Doğrulama sorunları</h3>${problemList(view.problems)}</div>`:""}
@@ -168,7 +178,17 @@ export function videoCard(video) {
 }
 
 export class VideosScreen {
-  constructor() {this.options=null;this.runs=null;this.videos=null;this.view=null;this.open=null;this.busy=false;this.message="";this.form={bolge:"",aile:"hepsi",not:""};this.review={bolge:"",baslik:"",not:""};this.edit=null;this.sequence=0;this.runId=null;}
+  constructor() {this.options=null;this.runs=null;this.videos=null;this.view=null;this.open=null;this.busy=false;this.message="";this.form={bolge:"",aile:"hepsi",not:""};this.review={bolge:"",baslik:"",not:""};this.edit=null;this.sequence=0;this.runId=null;this.pending=null;this.markTimer=null;}
+  /** GÖREV-18: the estimate first; the job starts only after "Başlat". */
+  async confirm(main, estimateCall, startCall) {
+    this.busy=true;this.message="";this.pending=null;this.draw(main);
+    try {
+      const estimate=await estimateCall();
+      this.pending={estimate, start:startCall};
+    } catch(error) {if(error.stale) return;this.message=error.message;}
+    finally {this.busy=false;this.draw(main);}
+    main.querySelector("#title-estimate")?.scrollIntoView?.({block:"nearest"});
+  }
   invalidate() {this.sequence++;}
   runFromHash() { return location.hash.startsWith("#videos/run/") ? decodeURIComponent(location.hash.slice("#videos/run/".length)) : null; }
   render(main, data, heading) {
@@ -205,7 +225,10 @@ export class VideosScreen {
       ${(this.runs||[]).length?`<div class="table-scroll"><table class="reference-table"><thead><tr><th>BÖLGE · AİLE</th><th>ZAMAN</th><th>DURUM</th><th>MODEL · ÖLÇÜM</th></tr></thead><tbody>${this.runs.map(runRow).join("")}</tbody></table></div>`:'<p class="muted run-empty">Henüz öneri çalışması yok.</p>'}</section>`;
     const videos=`<section class="library"><div class="library-title"><h2>Video kayıtları</h2><small>${(this.videos||[]).length} video</small></div>
       ${(this.videos||[]).length?`<div class="video-list">${this.videos.map(videoCard).join("")}</div>`:'<p class="muted run-empty">Henüz seçilmiş başlık yok.</p>'}</section>`;
-    body.innerHTML=this.view?`<a href="#videos" class="return-link">← Konu ve başlık</a>${runView(this.view,this.open,this.message,this.busy,this.edit)}${videos}`:`${form}${own}${runs}${videos}`;
+    const pending=this.pending?estimateBox(this.pending.estimate,{id:"title-estimate"}):"";
+    body.innerHTML=this.view?`<a href="#videos" class="return-link">← Konu ve başlık</a>${pending}${runView(this.view,this.open,this.message,this.busy,this.edit)}${videos}`:`${form}${pending}${own}${runs}${videos}`;
+    body.querySelector("[data-estimate-start]")?.addEventListener("click",()=>{const job=this.pending;this.pending=null;job.start();});
+    body.querySelector("[data-estimate-cancel]")?.addEventListener("click",()=>{this.pending=null;this.message="Vazgeçildi; Claude çalıştırılmadı.";this.draw(main);});
     body.querySelector("#review-title")?.addEventListener("input",e=>{this.review.baslik=e.target.value;});
     body.querySelector("#review-region")?.addEventListener("change",e=>{this.review.bolge=e.target.value;});
     body.querySelector("#review-note")?.addEventListener("input",e=>{this.review.not=e.target.value;});
@@ -221,7 +244,7 @@ export class VideosScreen {
         editBox.querySelector("#edit-select").disabled=problems.length>0 || this.busy;
         editBox.querySelector("#edit-translate").hidden=!(this.edit.en===c.baslik_en && this.edit.tr.trim()!==c.baslik_tr.trim());
       };
-      editBox.querySelector("#edit-en").addEventListener("input",e=>{this.edit.en=e.target.value;update();});
+      editBox.querySelector("#edit-en").addEventListener("input",e=>{this.edit.en=e.target.value;update();this.checkMarks(main,c);});
       editBox.querySelector("#edit-tr").addEventListener("input",e=>{this.edit.tr=e.target.value;update();});
       editBox.querySelector("#edit-cancel").addEventListener("click",()=>{this.edit=null;this.draw(main);});
       editBox.querySelector("#edit-select").addEventListener("click",()=>this.decide(main,"select",this.edit.index,{baslik_en:this.edit.en,baslik_tr:this.edit.tr}));
@@ -237,9 +260,26 @@ export class VideosScreen {
     body.querySelector("#run-reject")?.addEventListener("click",()=>this.decide(main,"reject"));
     body.querySelectorAll("[data-video-pack]").forEach(b=>b.addEventListener("click",()=>this.pack(main,b.dataset.videoPack)));
   }
+  /** GÖREV-18: the marks of the edited English title, asked from the server while the user types (the business list is the data's). */
+  checkMarks(main, c) {
+    clearTimeout(this.markTimer);
+    this.markTimer=setTimeout(async()=>{
+      try {
+        const found=await api("claude/title-check",{method:"POST",body:JSON.stringify({baslik_en:this.edit.en,kapak_fikri:c.kapak_fikri,bolge:c.bolge})});
+        if(!this.edit) return;
+        this.edit.marks=found.isaretler;
+        const box=main.querySelector("#edit-marks");
+        if(box) box.innerHTML=markList(found.isaretler);
+      } catch(error) {/* the next keystroke asks again */}
+    },300);
+  }
   async start(main) {
     if(!this.form.bolge) {this.message="Önce bölge seçin.";this.draw(main);return;}
     if(this.options?.claude?.api_key_warning && !globalThis.confirm?.(this.options.claude.api_key_warning+" Yine de çalıştırılsın mı?")) return;
+    const body=JSON.stringify({bolge:this.form.bolge,aile:this.form.aile,not:this.form.not});
+    return this.confirm(main,()=>api("claude/title-runs/tahmin",{method:"POST",body}),()=>this.startNow(main));
+  }
+  async startNow(main) {
     this.busy=true;this.message="";this.draw(main);
     try {
       await api("claude/title-runs",{method:"POST",body:JSON.stringify({bolge:this.form.bolge,aile:this.form.aile,not:this.form.not})});
@@ -252,6 +292,10 @@ export class VideosScreen {
     if(!this.review.baslik.trim()) {this.message="Önce başlığı ya da fikri yazın.";this.draw(main);return;}
     if(!this.review.bolge) {this.message="Önce bölge seçin.";this.draw(main);return;}
     if(this.options?.claude?.api_key_warning && !globalThis.confirm?.(this.options.claude.api_key_warning+" Yine de çalıştırılsın mı?")) return;
+    const body=JSON.stringify({bolge:this.review.bolge,baslik:this.review.baslik,not:this.review.not});
+    return this.confirm(main,()=>api("claude/review-runs/tahmin",{method:"POST",body}),()=>this.startReviewNow(main));
+  }
+  async startReviewNow(main) {
     this.busy=true;this.message="";this.draw(main);
     try {
       const run=await api("claude/review-runs",{method:"POST",body:JSON.stringify({bolge:this.review.bolge,baslik:this.review.baslik,not:this.review.not})});
@@ -263,6 +307,10 @@ export class VideosScreen {
     finally {this.busy=false;this.draw(main);}
   }
   async translate(main) {
+    const id=this.view.id, body=JSON.stringify({aday:this.edit.index,baslik_tr:this.edit.tr});
+    return this.confirm(main,()=>api(`claude/runs/${encodeURIComponent(id)}/translate/tahmin`,{method:"POST",body}),()=>this.translateNow(main));
+  }
+  async translateNow(main) {
     const id=this.view.id;
     this.busy=true;this.draw(main);
     try {
@@ -271,12 +319,17 @@ export class VideosScreen {
       location.hash=`#videos/run/${run.id}`;
     } catch(error) {if(error.stale) return;this.message=error.message;this.busy=false;this.draw(main);}
   }
-  async decide(main, kind, index=null, edited=null) {
+  async decide(main, kind, index=null, edited=null, confirmed=false) {
     const note=main.querySelector("#decision-note")?.value || "";
     const id=this.view.id;
+    if(kind==="correct" && !confirmed && note.trim()) {
+      return this.confirm(main,()=>api(`claude/runs/${encodeURIComponent(id)}/correct/tahmin`,{method:"POST",body:JSON.stringify({not:note})}),
+        ()=>{this.correctNote=note;return this.decide(main,"correct",null,null,true);});
+    }
     this.busy=true;this.draw(main);
     try {
-      const result=await api(`claude/runs/${encodeURIComponent(id)}/${kind}`,{method:"POST",body:JSON.stringify(kind==="select"?{aday:index,not:note,...(edited||{})}:{not:note})});
+      const sent=kind==="correct" && confirmed?(this.correctNote ?? note):note;
+      const result=await api(`claude/runs/${encodeURIComponent(id)}/${kind}`,{method:"POST",body:JSON.stringify(kind==="select"?{aday:index,not:sent,...(edited||{})}:{not:sent})});
       if(kind==="select") this.edit=null;
       this.message=kind==="select"?`Video kaydı oluşturuldu: ${result.title_en}${result.user_edited?" (düzenlenmiş başlık)":""}`:kind==="reject"?"Çalışma reddedildi.":"Düzeltme için yeni bir Claude çalışması başladı; ilerleme İşler panelinde.";
       if(kind==="correct") {location.hash=`#videos/run/${result.id}`;return;}

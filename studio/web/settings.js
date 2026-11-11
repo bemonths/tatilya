@@ -58,13 +58,24 @@ export function folderCard(dataPath) {
 }
 
 export function aboutCard(version) {
-  return `<div class="info-card"><span class="eyebrow about-version">SÜRÜM ${esc(version)}</span><h2 style="margin-top:12px">Veri, kanıt paketi ve konu önerisi hazır</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Videolar ekranında Claude ile konu ve başlık önerisi ve video kaydı kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Claude ile video metni ve metnin kontrolü. Görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></div>`;
+  return `<div class="info-card"><span class="eyebrow about-version">SÜRÜM ${esc(version)}</span><h2 style="margin-top:12px">Veriden video metnine</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Claude ile konu ve başlık önerisi, kendi başlığınızın değerlendirilmesi ve video kaydı; seçilen tonlarla İngilizce video metni, Türkçe karşılığı ve programın denetimi kullanılabilir. Her Claude adımı tek çağrıdır; iş başlamadan önce tahmini harcama gösterilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">İlk gerçek video metinleri ve onların ölçümü; sonra görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></div>`;
+}
+
+const thousand=value=>value==null?"—":Number(value)>=1000?`${Math.round(Number(value)/1000)} bin`:String(value);
+
+/** GÖREV-18 (Adım 4.5): per step, the median and highest spending of its calls (read + written tokens); the old multi-turn runs apart. */
+export function spendingTable(rows) {
+  if(!rows || !rows.length) return "";
+  const cell=part=>part?.sayi?`${thousand(part.ortanca)} · en çok ${thousand(part.en_yuksek)} (${part.sayi})`:"—";
+  return `<h3 style="margin-top:16px">Adım başına harcama</h3><div class="table-scroll"><table class="reference-table spending-table"><thead><tr><th>ADIM</th><th>TEK ÇAĞRI: ORTANCA · EN ÇOK (SAYI)</th><th>OKUNAN / YAZILAN ORTANCA</th><th>ESKİ DÜZEN (ÇOK TURLU)</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.baslik)}</td><td>${esc(cell(r.yeni))}</td><td>${r.yeni?.sayi?`${esc(thousand(r.yeni.okunan_ortanca))} / ${esc(thousand(r.yeni.yazilan_ortanca))}`:"—"}</td><td>${esc(cell(r.eski))}</td></tr>`).join("")}</tbody></table></div>
+    <p class="muted form-note">Bir başlık çalışması bir satırdır (geçersiz cevapta ikinci çağrısıyla birlikte); video metninde her oturum bir satırdır. Sayılar token'dır: okunan (önbellekten okunan dahil) ve yazılan (düşünme dahil) toplamı.</p>`;
 }
 
 export function usageCard(view) {
   if(!view) return '<div class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p class="muted usage-settings-text">Yükleniyor…</p></div>';
   const effort=view.refresh.effort==="low"?"düşük":esc(view.refresh.effort);
-  return `<div class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p class="usage-settings-text">${esc(view.refresh.text)}</p><p class="muted">Model: <code>${esc(view.refresh.model)}</code> · efor: ${effort}</p></div>`;
+  return `<div class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p class="usage-settings-text">${esc(view.refresh.text)}</p><p class="muted">Model: <code>${esc(view.refresh.model)}</code> · efor: ${effort}</p>${spendingTable(view.adimlar)}</div>`;
 }
 
 /** The whole screen's frame: heading text, the buttons and one empty slot per section, in the order of SECTIONS. */

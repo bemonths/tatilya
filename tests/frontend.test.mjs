@@ -742,15 +742,23 @@ test('a video record without a template still produces its plan pack (GÖREV-14)
   const video={id:'v1',title_en:'T',title_tr:'B',family:'Deneyim',region_name:'Rosemary Beach',status:'baslik_secildi',status_label:'başlık seçildi',created_at:'',template_key:null,params:{},analysis:{},packs:[]};
   assert.match(videoCard(video),/yeni şablon gerekir \(bilgi\).*data-video-pack="v1">Kanıt paketi üret.*içerik planından kurulur/s);
   assert.match(videoCard({...video,template_key:'mahalle-rehberi',packs:[{id:'p1'}]}),/data-video-pack="v1">.*yazar-ozeti/s);
-  const section=claudeSection({settings:{claude_path:'',claude_model:'',claude_effort:'',claude_model_baslik:'claude-opus-5-5',claude_effort_baslik:'high',claude_max_turns_baslik:30},
+  const section=claudeSection({settings:{claude_path:'',claude_model:'',claude_effort:'',claude_model_baslik:'claude-opus-5-5',claude_effort_baslik:'high',claude_output_guess_baslik:60000,
+      claude_call_limit:250000,claude_job_limit:1500000},
     notes:[],info:{found:true,path:'D:/programs/claude.exe',version:'2.1.284',api_key_warning:'ANTHROPIC_API_KEY uyarısı'},
+    harcama:[{adim:'baslik',baslik:'Konu ve başlık',yeni:{sayi:0},eski:{sayi:3,ortanca:460000,en_yuksek:470000}}],
     options:{models:[{value:'',label:'Claude Code varsayılanı'},{value:'claude-opus-5-5',label:'Opus 5.5'}],efforts:[{value:'',label:'Otomatik'},{value:'high',label:'Yüksek'}],
-      inherit:{value:'inherit',label:'Genel varsayılan'},steps:[{key:'baslik',label:'Konu ve başlık',model_field:'claude_model_baslik',effort_field:'claude_effort_baslik',max_turns_field:'claude_max_turns_baslik'}],
-      max_turns:{min:1,max:200,help:'Tur'}}});
+      inherit:{value:'inherit',label:'Genel varsayılan'},steps:[{key:'baslik',label:'Konu ve başlık',model_field:'claude_model_baslik',effort_field:'claude_effort_baslik',output_guess_field:'claude_output_guess_baslik'}],
+      output_guess:{min:500,max:128000,help:'Çıktı varsayımı'},limits:[{field:'claude_call_limit',min:20000,max:1000000,default:250000,help:'tek'},{field:'claude_job_limit',min:100000,max:10000000,default:1500000,help:'iş'}]}});
   assert.ok(section.includes('Bulunan program: D:/programs/claude.exe<br>Sürüm: 2.1.284'));
   assert.match(section,/ANTHROPIC_API_KEY uyarısı/);
   assert.match(section,/data-field="claude_model_baslik".*<option value="inherit" >Genel varsayılan<\/option>.*<option value="claude-opus-5-5" selected>Opus 5.5/s);
-  assert.match(section,/data-field="claude_max_turns_baslik" min="1" max="200" value="30"/);
+  // GÖREV-18: no turn limit; the median spending of the step's runs (old ones marked) and the output guess; the two token limits
+  assert.doesNotMatch(section,/claude_max_turns|EN FAZLA TUR/);
+  assert.match(section,/SON ÇALIŞMALARIN ORTANCASI.*460 bin \(eski düzen, 3\)/s);
+  assert.match(section,/data-field="claude_output_guess_baslik" min="500" max="128000" step="500" value="60000"/);
+  assert.match(section,/Tek çağrı sınırı \(token\)<input type="number" data-field="claude_call_limit" min="20000" max="1000000" step="1000" value="250000"/);
+  assert.match(section,/İş başına toplam sınır \(token\)<input type="number" data-field="claude_job_limit"[^>]*value="1500000"/);
+  assert.match(section,/Her adım tek bir çağrıdır/);
 });
 
 // GÖREV-14: workflow sidebar helpers.
@@ -1218,7 +1226,7 @@ test('GÖREV-17 İşler: a running job names the browser window that is open for
 
 const view17={
   claude:{settings:{claude_path:'',claude_model:'',claude_effort:''},notes:[],info:{found:true,path:'c',version:'1'},
-    options:{models:[{value:'',label:'v'}],efforts:[{value:'',label:'o'}],inherit:{value:'inherit',label:'Genel varsayılan'},steps:[],max_turns:{min:1,max:200,help:'Tur'}}},
+    options:{models:[{value:'',label:'v'}],efforts:[{value:'',label:'o'}],inherit:{value:'inherit',label:'Genel varsayılan'},steps:[],output_guess:{min:500,max:128000,help:'Ç'},limits:[]}},
   suffix:{en:' | A',tr:' | B',defaults:{en:' | A',tr:' | B'}},
   usage:{refresh:{text:'Kullanım birkaç dakikada bir yenilenir.',model:'haiku',effort:'low'}},
   instructions:{files:[{key:'ortak',name:'ortak.md',kind:'talimat'}],file:{key:'ortak',name:'ortak.md',title:'Ortak',sha256:'1234567890ab',modified_at:'2026-10-10T18:00:00+00:00',size:1024,text:'x',versions:[]},message:'',viewing:null},

@@ -1,5 +1,6 @@
 import {api, esc, date} from "./api.js";
 import {durationText} from "./usage.js";
+import {estimateBox, spendingLine} from "./estimate.js";
 
 // GÖREV-15 (Adım 8): the Video metni step. Tone choice and "Metni yaz"; text runs (status, usage, versions, "Devam", "Durdur", "Bu tonla
 // da yaz", "Planı yeniden yap"); the plan (read only); the comparison of tones side by side (Turkish first, English, or both); a version
@@ -52,7 +53,7 @@ export function runRows(runs, tones=[]) {
       <td>${run.tones.map(t=>`<span class="tag ${written.has(t.dosya)?"green":""}">${esc(t.ad)}</span>`).join(" ")}</td>
       <td>${run.secildi?`<span class="tag green">seçildi: ${esc(run.secildi)}</span>`:`<span class="tag ${run.status==="error"?"error":["paused","interrupted"].includes(run.status)?"warm":run.status==="awaiting_comparison"?"green":"running"}">${esc(run.status_label)}</span>`}
         ${run.reason_text?`<small class="source-host">${esc(run.reason_text)}</small>`:""}</td>
-      <td>${usageText(u)}${plan&&plan.oturum?`<small class="source-host">plan: ${usageText(plan)}</small>`:""}</td>
+      <td>${usageText(u)}${plan&&plan.oturum?`<small class="source-host">plan: ${usageText(plan)}</small>`:""}${run.harcama?spendingLine(run.harcama):""}</td>
       <td>${run.surumler.map(v=>`<a href="#adim/metin/surum/${encodeURIComponent(v.id)}">${v.number}. ${esc(v.tone_name)}</a>`).join("<br>") || "—"}</td>
       <td class="run-actions">${run.eylemler.devam?`<button data-text-resume="${esc(run.id)}">Devam</button>`:""}${run.eylemler.durdur?`<button class="quiet" data-text-stop="${esc(run.id)}">Durdur</button>`:""}
         ${run.eylemler.plani_goster?`<a class="source-link" href="#adim/metin/plan/${encodeURIComponent(run.id)}">Planı göster</a>`:""}
@@ -149,7 +150,7 @@ export function textBar(job, now=Date.now()) {
 }
 
 export class TextScreen {
-  constructor() {this.options=null;this.chosen=null;this.videoId=null;this.message="";this.busy=false;this.sequence=0;this.lang="tr";this.lastJobs="";}
+  constructor() {this.options=null;this.chosen=null;this.videoId=null;this.message="";this.busy=false;this.sequence=0;this.lang="tr";this.lastJobs="";this.pending=null;}
   async render(main, ctx) {
     this.main=main;this.ctx=ctx;
     const route=routeOf(location.hash) || {view:"main"};
@@ -178,7 +179,7 @@ export class TextScreen {
         if(ticket!==this.sequence) return;
         body.innerHTML=`<a class="return-link" href="#adim/metin">← Video metni</a>${versionView(version)}`;
       } else {
-        body.innerHTML=writeBox(this.options,this.chosen,this.busy,this.message)+`<section class="library"><div class="library-title"><h2>Metin çalışmaları</h2><small>${this.options.calismalar.length} çalışma · ${this.options.surumler.length} sürüm</small></div>${runRows(this.options.calismalar,this.options.tonlar)}</section>
+        body.innerHTML=writeBox(this.options,this.chosen,this.busy,this.message)+(this.pending?estimateBox(this.pending.estimate,{id:"text-estimate",startLabel:this.pending.label}):"")+`<section class="library"><div class="library-title"><h2>Metin çalışmaları</h2><small>${this.options.calismalar.length} çalışma · ${this.options.surumler.length} sürüm</small></div>${runRows(this.options.calismalar,this.options.tonlar)}</section>
           ${this.options.surumler.length?`<p class="return-link"><a href="#adim/metin/karsilastirma">Bütün sürümleri karşılaştır →</a></p>`:""}<p class="stage-note">${esc(this.options.not)}</p>`;
       }
       this.bind(body);
@@ -187,17 +188,34 @@ export class TextScreen {
   rerender() {if(this.main) return this.render(this.main,this.ctx);}
   bind(body) {
     body.querySelectorAll("[data-tone]").forEach(box=>box.addEventListener("change",()=>{this.chosen=[...body.querySelectorAll("[data-tone]:checked")].map(b=>b.dataset.tone);body.querySelector("#text-start").disabled=!this.chosen.length || this.busy;}));
-    body.querySelector("#text-start")?.addEventListener("click",()=>this.act(()=>api(`videos/${encodeURIComponent(this.videoId)}/metin`,{method:"POST",body:JSON.stringify({tonlar:this.chosen})}),"Metin çalışması başladı; ilerlemesi İşler panelinde."));
+    body.querySelector("[data-estimate-start]")?.addEventListener("click",()=>{const job=this.pending;this.pending=null;job.start();});
+    body.querySelector("[data-estimate-cancel]")?.addEventListener("click",()=>{this.pending=null;this.message="Vazgeçildi; Claude çalıştırılmadı.";this.rerender();});
+    body.querySelector("#text-start")?.addEventListener("click",()=>{const tonlar=[...this.chosen];
+      this.ask(()=>api(`videos/${encodeURIComponent(this.videoId)}/metin/tahmin`,{method:"POST",body:JSON.stringify({tonlar})}),"Metni yaz",
+        ()=>this.act(()=>api(`videos/${encodeURIComponent(this.videoId)}/metin`,{method:"POST",body:JSON.stringify({tonlar})}),"Metin çalışması başladı; ilerlemesi İşler panelinde."));});
     body.querySelectorAll("[data-text-resume]").forEach(b=>b.addEventListener("click",()=>this.act(()=>api(`metin/calismalar/${encodeURIComponent(b.dataset.textResume)}/devam`,{method:"POST",body:"{}"}),"Çalışma sürüyor.")));
     body.querySelectorAll("[data-text-stop]").forEach(b=>b.addEventListener("click",()=>this.act(()=>api(`metin/calismalar/${encodeURIComponent(b.dataset.textStop)}/durdur`,{method:"POST",body:"{}"}),"Durduruluyor; biten adımlar saklanır.")));
     body.querySelectorAll("[data-add-tone]").forEach(b=>b.addEventListener("click",()=>{const tone=body.querySelector(`[data-add-tone-select="${CSS.escape(b.dataset.addTone)}"]`).value;
-      this.act(()=>api(`metin/calismalar/${encodeURIComponent(b.dataset.addTone)}/ton`,{method:"POST",body:JSON.stringify({ton:tone})}),"Aynı planla bir ton daha yazılıyor.");}));
+      const run=b.dataset.addTone;
+      this.ask(()=>api(`metin/calismalar/${encodeURIComponent(run)}/ton/tahmin`,{method:"POST",body:JSON.stringify({ton:tone})}),"Bu tonla da yaz",
+        ()=>this.act(()=>api(`metin/calismalar/${encodeURIComponent(run)}/ton`,{method:"POST",body:JSON.stringify({ton:tone})}),"Aynı planla bir ton daha yazılıyor."));}));
     body.querySelectorAll("[data-replan]").forEach(b=>b.addEventListener("click",()=>{if(!globalThis.confirm?.("Yeni bir metin çalışması açılır ve plan yeniden yapılır; eski çalışma ve sürümleri saklanır. Devam edilsin mi?")) return;
-      this.act(()=>api(`metin/calismalar/${encodeURIComponent(b.dataset.replan)}/yeniden-planla`,{method:"POST",body:"{}"}),"Plan yeniden yapılıyor (yeni çalışma).");}));
+      const run=b.dataset.replan;
+      this.ask(()=>api(`metin/calismalar/${encodeURIComponent(run)}/yeniden-planla/tahmin`,{method:"POST",body:"{}"}),"Planı yeniden yap",
+        ()=>this.act(()=>api(`metin/calismalar/${encodeURIComponent(run)}/yeniden-planla`,{method:"POST",body:"{}"}),"Plan yeniden yapılıyor (yeni çalışma)."));}));
     body.querySelectorAll("[data-choose]").forEach(b=>b.addEventListener("click",()=>this.act(()=>api(`metin/surumler/${encodeURIComponent(b.dataset.choose)}/sec`,{method:"POST",body:"{}"}),"Bu tonla devam ediliyor: seçilen metin videonun metni oldu.",true)));
     body.querySelectorAll("[data-lang]").forEach(b=>b.addEventListener("click",()=>{this.lang=b.dataset.lang;this.rerender();}));
     body.querySelector("#compare-add")?.addEventListener("click",event=>{const tone=body.querySelector("#compare-add-tone").value;
       this.act(()=>api(`metin/calismalar/${encodeURIComponent(event.currentTarget.dataset.run)}/ton`,{method:"POST",body:JSON.stringify({ton:tone})}),"Aynı planla bir ton daha yazılıyor; bitince karşılaştırmaya eklenir.");});
+  }
+  /** GÖREV-18: the estimate first (plan, every tone, total); the job starts only after its "Başlat". */
+  async ask(estimateCall, label, start) {
+    this.busy=true;this.pending=null;
+    try {this.pending={estimate:await estimateCall(), label:`${label}: başlat`, start};this.message="";}
+    catch(error) {if(error.stale) return;this.message=error.message;}
+    finally {this.busy=false;}
+    await this.rerender();
+    this.main?.querySelector("#text-estimate")?.scrollIntoView?.({block:"nearest"});
   }
   async act(call, message, reloadWorkflow=false) {
     this.busy=true;

@@ -72,7 +72,9 @@ class TextViews:
         return {k: run[k] for k in ("id", "video_id", "status", "status_label", "tones", "reason", "reason_text", "wait_until", "created_at",
                                     "updated_at", "finished_at", "replan_of", "pack_id")} | {
             "kullanim": self.usage_of(run["id"]), "surumler": [self.version_summary(v) for v in versions], "eylemler": self.actions(run),
-            "plan_var": bool(run.get("plan")), "secildi": chosen["tone_name"] if chosen else None}
+            "plan_var": bool(run.get("plan")), "secildi": chosen["tone_name"] if chosen else None,
+            # GÖREV-18: the last job's estimate and actual (none before the run's first job ended)
+            "harcama": ((run.get("state") or {}).get("harcamalar") or [None])[-1], "tahmin": (run.get("state") or {}).get("tahmin")}
 
     def runs(self, video_id):
         return [self.run_summary(r) for r in store.runs(self.db, video_id)]

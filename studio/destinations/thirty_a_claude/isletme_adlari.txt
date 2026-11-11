@@ -1,0 +1,10 @@
+# İşletme adı denetimi (GÖREV-18): program işletme adlarının listesini her denetimde veritabanından yeniden kurar
+# (restoranlar, kiralama şirketleri, otel ve inn'ler, market, eczane ve özel sağlık kuruluşları). Bu dosya yalnız
+# o listeye ekleme ve listeden çıkarma içindir; Claude'a verilmez.
+#
+# "+ Ad" satırı listeye bir ad ekler, "- Ad" satırı bir adı listeden çıkarır (o ad metinde geçse de işaretlenmez).
+# Büyük-küçük harf fark etmez. "#" ile başlayan satırlar açıklamadır.
+#
+# Örnekler:
+# + Örnek Kafe
+# - Grayton Beach

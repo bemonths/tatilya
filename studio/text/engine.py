@@ -49,7 +49,7 @@ from ..destinations import PROFILES
 from ..evidence import PackError, stored_file
 from ..evidence.pack import latest_done_run, moment
 from . import audit, document as D, store
-from . import estimate as text_estimate
+from . import businesses, estimate as text_estimate
 from .views import TextViews
 
 JOB_KIND = "claude_metin"
@@ -976,7 +976,8 @@ class TextService(TextViews):
         self.stage(ctx, "denetim")
         regions = [r["name"] for r in self.db.context(ctx.video["destination_id"]).canonical_regions]
         phrases = audit.read_phrases((getattr(ctx.profile, "TEXT", None) or {}).get("warning_phrases"))
-        findings = audit.check(document, ctx.pack, regions=regions, phrases=phrases, plan=plan)
+        findings = audit.check(document, ctx.pack, regions=regions, phrases=phrases, plan=plan,
+                               businesses=businesses.matcher(self.db, ctx.video["destination_id"], ctx.profile))
         self.stage(ctx, "metin_ceviri")
         answers, terms = {}, []
         chunks = D.chunks(document)
@@ -986,7 +987,7 @@ class TextService(TextViews):
             data = self.session(ctx, "metin_ceviri", tone=info, part=f"parca-{index}" if len(chunks) > 1 else None,
                                 files={"cumleler.md": D.numbered_english(part_doc)},
                                 extra={"expected_numbers": expected, "chunk": (index, len(chunks)) if len(chunks) > 1 else None,
-                                       "known_terms": D.merge_terms(terms)})
+                                       "known_terms": D.merge_terms(*terms)})
             answers.update({item["no"]: item for item in data["cumleler"]})
             terms.append(data.get("terimler") or [])
         document = D.apply_translation(document, answers, D.merge_terms(*terms))

@@ -151,9 +151,16 @@ def render_json(ctx, data, problems):
 CHECKS = {"metin_plan": check_plan, "metin_plan_elestiri": check_critique, "metin_bolum": check_section, "metin_birlestirme": check_merge,
           "metin_giris_kapanis": check_ends, "metin_son_okuma": check_final_read, "metin_ceviri": check_translation}
 
+def markdown_name(key):
+    """The readable Markdown of an output. GÖREV-18: the section writer's output bolum.json would give bolum.md, the name of its input
+    file, and the Markdown was written over the input kept for the record; it is bolum_cikti.md (the others keep their names)."""
+    name = OUTPUTS[key].replace(".json", ".md")
+    return name.replace(".md", "_cikti.md") if name in DESCRIPTIONS else name
+
+
 STEPS = {}
 for _key, _title in TITLES.items():
     STEPS[_key] = steps.register(steps.Step(
         key=_key, title=_title, instructions=("ortak.md", f"{_key}.md"), schema=f"{_key}.schema.json", output=OUTPUTS[_key],
-        markdown=OUTPUTS[_key].replace(".json", ".md"), prepare=prepare, task=(lambda key: lambda ctx: task_lines(key, ctx))(_key),
+        markdown=markdown_name(_key), prepare=prepare, task=(lambda key: lambda ctx: task_lines(key, ctx))(_key),
         fill_schema=no_fill, check=CHECKS[_key], render=render_json, voice=_key in VOICE_STEPS))

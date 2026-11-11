@@ -57,6 +57,20 @@ export function warningsBox(file, message="") {
       ${file.versions.map(v=>`<tr><td>${esc(date(v.saved_at))}</td><td><code>${esc(v.sha256.slice(0,8))}</code></td><td><button type="button" data-warning-version="${esc(v.id)}">Bu sürüme dön</button></td></tr>`).join("")}</tbody></table></div>`:""}</section>`;
 }
 
+/** GÖREV-18 (6a): "İşletme adları: ekle / hariç tut" beside the warning phrases. The list itself is built from the data at every check. */
+export function businessBox(file, names, message="") {
+  if(!file) return "";
+  const sample=(names?.adlar||[]).slice(0,40).map(n=>esc(n)).join(" · ");
+  return `<section class="info-card warnings-card business-card" id="business-names"><span class="eyebrow">PROGRAM DENETİMİ</span><h2 style="margin-top:12px">İşletme adları: ekle / hariç tut</h2>
+    <p>Videolarda ve başlıklarda işletme adı geçmez. Program işletme adlarının listesini her denetimde veriden yeniden kurar: restoranlar, kiralama şirketleri, otel ve inn'ler, market, eczane ve özel sağlık kuruluşları. Yer adları (mahalleler), kamu kurumları, parklar ve plaj erişimleri listeye girmez. Bulunan ad metindeki cümleye ve başlık adayına kırmızı işaret olarak düşer; kimseyi durdurmaz. Liste Claude'a verilmez.</p>
+    ${names?`<p class="muted form-note">Şu an veriden kurulan liste: ${names.sayi} ad${sample?` — ${sample}${names.sayi>40?" …":""}`:""}</p>`:""}
+    <p>Aşağıya <code>+ Ad</code> yazılan satır listeye bir ad ekler, <code>- Ad</code> yazılan satır bir adı listeden çıkarır.</p>
+    <p class="instruction-meta"><code>${esc(file.name)}</code> · karma <code>${esc(file.sha256.slice(0,8))}</code> · son değişiklik ${esc(date(file.modified_at))}</p>
+    <textarea id="business-text" class="instruction-text warnings-text" spellcheck="false" aria-label="İşletme adları: ekle / hariç tut">${esc(file.text)}</textarea>
+    ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
+    <div class="decision-actions"><button type="button" class="primary" id="business-save">Kaydet</button><button type="button" id="business-reload">Yeniden yükle</button></div></section>`;
+}
+
 export function tonesHtml(view) {
   const list=view.list||{tonlar:[],arsiv:[]};
   return `<section class="info-card tones-card" id="tonlar"><span class="eyebrow">TONLAR</span><h2 style="margin-top:12px">Tonlar</h2>
@@ -68,7 +82,7 @@ export function tonesHtml(view) {
 }
 
 export class ToneSettings {
-  constructor(container, warningsContainer) {this.container=container;this.warnings=warningsContainer;this.list=null;this.form={};this.message="";this.warningFile=null;this.warningMessage="";}
+  constructor(container, warningsContainer) {this.container=container;this.warnings=warningsContainer;this.list=null;this.form={};this.message="";this.warningFile=null;this.warningMessage="";this.businessFile=null;this.businessNames=null;this.businessMessage="";}
   draw() {
     this.container.innerHTML=tonesHtml(this);
     const box=this.container;
@@ -85,7 +99,9 @@ export class ToneSettings {
     if(this.warnings) this.drawWarnings();
   }
   drawWarnings() {
-    this.warnings.innerHTML=warningsBox(this.warningFile,this.warningMessage);
+    this.warnings.innerHTML=warningsBox(this.warningFile,this.warningMessage)+businessBox(this.businessFile,this.businessNames,this.businessMessage);
+    this.warnings.querySelector("#business-save")?.addEventListener("click",()=>this.saveBusiness());
+    this.warnings.querySelector("#business-reload")?.addEventListener("click",()=>this.loadWarnings("","Dosyanın diskteki güncel hâli yüklendi."));
     this.warnings.querySelector("#warnings-save")?.addEventListener("click",()=>this.saveWarnings());
     this.warnings.querySelector("#warnings-reload")?.addEventListener("click",()=>this.loadWarnings("Dosyanın diskteki güncel hâli yüklendi."));
     this.warnings.querySelectorAll("[data-warning-version]").forEach(b=>b.addEventListener("click",()=>this.restoreWarnings(b.dataset.warningVersion)));
@@ -95,9 +111,18 @@ export class ToneSettings {
     this.draw();
     if(this.warnings && !this.warningFile) this.loadWarnings();
   }
-  async loadWarnings(message="") {
+  async loadWarnings(message="", businessMessage="") {
     try {this.warningFile=await api("claude/instructions/uyari_ifadeleri");this.warningMessage=message;} catch(error) {if(error.stale) return;this.warningMessage=error.message;}
+    try {[this.businessFile,this.businessNames]=await Promise.all([api("claude/instructions/isletme_adlari"),api("claude/business-names")]);this.businessMessage=businessMessage;}
+    catch(error) {if(error.stale) return;this.businessMessage=error.message;}
     this.drawWarnings();
+  }
+  async saveBusiness() {
+    const text=this.warnings.querySelector("#business-text").value;
+    try {const saved=await api("claude/instructions/isletme_adlari",{method:"PUT",body:JSON.stringify({text,base_sha256:this.businessFile.sha256})});
+      this.businessFile=saved;this.businessNames=await api("claude/business-names");
+      this.businessMessage=saved.unchanged?"Değişiklik yok.":"Kaydedildi; bundan sonraki denetimler bu eklemeleri ve çıkarmaları kullanır.";this.drawWarnings();}
+    catch(error) {if(error.stale) return;this.businessMessage=error.message;this.drawWarnings();this.warnings.querySelector("#business-text").value=text;}
   }
   values() {return {ad:this.container.querySelector("#tone-name").value, metin:this.container.querySelector("#tone-text").value};}
   async save() {

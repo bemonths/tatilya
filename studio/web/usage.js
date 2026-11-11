@@ -1,4 +1,5 @@
 import {api, esc} from "./api.js";
+import {tokens} from "./estimate.js";
 
 // GÖREV-14 (Adım 4a): the Claude usage panel at the bottom of the sidebar, and (4b) the bar of a Claude run in the job panel.
 
@@ -30,9 +31,10 @@ export function usageHtml(view, busy=false, message="") {
   const head=`<div class="usage-head"><span class="eyebrow">CLAUDE KULLANIMI</span><button class="quiet usage-refresh" id="usage-refresh" ${busy?"disabled":""}>${busy?"Yenileniyor…":"Yenile"}</button></div>`;
   const week=view?.week?`<p class="usage-meta">Bu hafta ${view.week.count} çalışma · ${esc(durationText(view.week.total_s))}</p>`:"";
   const note=message?`<p class="usage-meta usage-message" role="status">${esc(message)}</p>`:"";
-  if(!view || !view.measured) return `${head}<p class="usage-empty">henüz ölçüm yok</p>${week}${note}`;
+  const last=view?.son_is?.gercek?`<p class="usage-meta usage-last ${view.son_is.karsilastirma?.fazla?"over":""}" title="${esc(view.son_is.baslik || "")}">Son iş: ${esc(tokens(view.son_is.gercek.toplam))} token${view.son_is.karsilastirma?` · tahmin ${esc(tokens(view.son_is.karsilastirma.tahmin))}`:""}${view.son_is.karsilastirma?.fazla?' <span class="tag error">fazla</span>':""}</p>`:"";
+  if(!view || !view.measured) return `${head}<p class="usage-empty">henüz ölçüm yok</p>${week}${last}${note}`;
   return `${head}<div class="usage-body ${view.stale?"stale":""}">${windowRow(view.windows.five_hour,"five_hour")}${windowRow(view.windows.seven_day,"seven_day")}
-    <p class="usage-meta">son ölçüm ${esc(time(view.measured_at))}${view.stale?' · <span class="tag warm">eski ölçüm</span>':""}</p></div>${week}${note}`;
+    <p class="usage-meta">son ölçüm ${esc(time(view.measured_at))}${view.stale?' · <span class="tag warm">eski ölçüm</span>':""}</p></div>${week}${last}${note}`;
 }
 
 export class UsagePanel {

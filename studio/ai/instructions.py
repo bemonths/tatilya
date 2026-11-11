@@ -8,7 +8,8 @@ listed and "bu sürüme dön" writes an old one back (as a new save, so the curr
 
 GÖREV-15: the narrator's voice (`ses_ortak.md`, "Anlatıcının sesi (bütün tonlarda aynı)") comes before the video text's step files. Tones are
 not in this list; Settings → Tonlar manages them (`tones.py`). The warning phrases of the program's check (`uyari_ifadeleri.txt`) are a hidden
-item (kind "denetim"): the Tonlar page edits them with the same save and version rules.
+item (kind "denetim"): the Tonlar page edits them with the same save and version rules. GÖREV-18: so are the business names the check adds
+or leaves out (`isletme_adlari.txt`, `studio/text/businesses.py`).
 """
 import hashlib
 import re
@@ -30,6 +31,7 @@ class InstructionError(ValueError):
 
 VOICE_TITLE = "Anlatıcının sesi (bütün tonlarda aynı)"
 WARNINGS_TITLE = "Denetim: uyarı ifadeleri (her satırda bir ifade; Claude'a verilmez)"
+BUSINESS_TITLE = "Denetim: işletme adları (elle eklenen ve hariç tutulan adlar; Claude'a verilmez)"
 
 
 def files(profile, hidden=False):
@@ -60,6 +62,8 @@ def files(profile, hidden=False):
         add(research, "Kanal araştırması (bilgi dosyası; başlık çalışmalarına girdi olarak verilir)", "bilgi")
     if hidden and text.get("warning_phrases"):
         add(text["warning_phrases"], WARNINGS_TITLE, "denetim")
+    if hidden and text.get("business_names"):
+        add(text["business_names"], BUSINESS_TITLE, "denetim")
     return found
 
 
