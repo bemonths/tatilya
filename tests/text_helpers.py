@@ -117,5 +117,12 @@ def sessions(view, step=None, tone=None):
     return [s for s in view["oturumlar"] if (step is None or s["step"] == step) and (tone is None or s["tone"] == tone)]
 
 
-def text_job(client):
-    return next(j for j in client.get("/api/jobs").json() if j["kind"] == "claude_metin")
+def text_job(client, settled=False, limit=15):
+    """The text run's job; settled=True waits until it has ended (the run changes its state a moment before its job's last message)."""
+    import time
+    end = time.monotonic() + limit
+    while True:
+        job = next(j for j in client.get("/api/jobs").json() if j["kind"] == "claude_metin")
+        if not settled or job["status"] not in ("queued", "running") or time.monotonic() >= end:
+            return job
+        time.sleep(0.05)

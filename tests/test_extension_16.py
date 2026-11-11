@@ -183,7 +183,7 @@ def test_the_trial_table_has_the_kinds_and_keeps_region_blocked_sites_away_from_
     listed = {h["host"]: h for h in client.get("/api/abd-proxy").json()["bolge_engelli"]}
     assert set(listed) == {"cvs.com", "publix.com"} and listed["publix.com"]["added_by"] == "program"
     assert listed["publix.com"]["title"] == "International | Publix Super Markets" and listed["cvs.com"]["added_by"] == "kullanici"
-    assert "bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)" in " ".join(e["text"] for e in job["log"])
+    assert "publix.com: bölge engeli · ABD proxy'si tanımlı değil (Ayarlar)" in " ".join(e["text"] for e in job["log"])     # GÖREV-17 wording
 
 
 class ProxyRegion(R.RegionAccess):

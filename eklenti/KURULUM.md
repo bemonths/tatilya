@@ -55,3 +55,7 @@ açar (gerçek bir site değildir) ve sonuç aynı ekranda görünür.
   "Programın tarayıcısına devret" düğmesiyle işi programın kendi tarayıcısına verebilirsiniz.
 - **Hız:** Aynı sitede iki sayfa arasında en az 8 saniye beklenir ve bir anda tek sayfa açılır (Ayarlar'dan değiştirilebilir).
 - **Kaldırmak:** `chrome://extensions` sayfasında karttaki **Kaldır** düğmesi.
+
+## Eklentinin penceresi (0.19.0)
+
+Eklenti, programın bir işi boyunca tek pencere kullanır: site site yeni pencere açıp kapatmaz, aynı pencerede sıradaki sayfaya gider. Pencere arka planda açılır ve çalıştığınız pencerenin önüne geçmez; yalnız sizin geçmeniz gereken bir doğrulama çıkınca öne gelir. İş bitince ya da iptal edilince pencere kendiliğinden kapanır. Pencereyi kapatırsanız eklenti sıradaki sayfa için yeniden açar. Program güncellendikten sonra `chrome://extensions` sayfasında "30A Studio Yardımcısı"nın yenile düğmesine bir kez basın.

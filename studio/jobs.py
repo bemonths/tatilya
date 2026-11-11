@@ -105,7 +105,13 @@ class JobQueue:
                     if not self.db.update_job(identifier, message=message, waiting_for=site or ""):
                         raise CollectionCanceled()
                 extra["waiting"] = waiting
-            batch = connector.collect(source, raw_path, progress, canceled, context=context, **extra)
+            if extra:
+                # GÖREV-17: a browser this job starts is closed when the job ends or is cancelled; the panel names the open window
+                from .sources.browser_verification import JobWindows
+                with JobWindows(lambda key, text: self.db.set_job_window(identifier, key, text)):
+                    batch = connector.collect(source, raw_path, progress, canceled, context=context, **extra)
+            else:
+                batch = connector.collect(source, raw_path, progress, canceled, context=context)
             self.db.record_raw_artifact(identifier, raw_path)
             self.db.complete_source_run(identifier, batch, connector)
         except CollectionCanceled:

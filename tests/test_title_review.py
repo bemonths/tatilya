@@ -1,5 +1,6 @@
 """GÖREV-14 Adım 5 with the fake Claude: the user's own title evaluated by Claude (inputs, schema, the idea that does not fill a video, 1–3
 candidates, suffix checks), editing a title before choosing it, and "İngilizcesini Claude yazsın" from an edited Turkish title."""
+import time
 import json
 
 from studio.ai import title, title_review
@@ -19,6 +20,16 @@ def review(client, idea=IDEA, bolge="Rosemary Beach", note=None):
 def errors(view, index=None):
     problems = view["general_problems"] if index is None else view["candidates"][index]["sorunlar"]
     return [p["metin"] for p in problems if p["seviye"] == "hata"]
+
+
+def claude_job(app, limit=15):
+    """The run's job once it has ended: the run turns "awaiting_approval" a moment before the job's last message is written."""
+    end = time.monotonic() + limit
+    while True:
+        job = next(j for j in app.get("/api/jobs").json() if j["kind"] == "claude_run")
+        if job["status"] not in ("queued", "running") or time.monotonic() >= end:
+            return job
+        time.sleep(0.05)
 
 
 def test_an_evaluation_gets_the_title_inputs_its_own_two_files_and_its_schema(app):
@@ -47,7 +58,7 @@ def test_an_evaluation_gets_the_title_inputs_its_own_two_files_and_its_schema(ap
     markdown = (folder(app, view) / "baslik_degerlendirme.md").read_text(encoding="utf-8")
     assert markdown.index("## Kullanıcının fikri") < markdown.index("## Değerlendirme") < markdown.index("## Adaylar") < markdown.index("## 1. ")
     assert calls(app, view)[-1]["model"] == "claude-opus-5-5"
-    job = next(j for j in app.get("/api/jobs").json() if j["kind"] == "claude_run")
+    job = claude_job(app)
     assert job["message"] == "Değerlendirme hazır: fikir veriyle doluyor; 2 aday onay bekliyor." and job["title"].startswith("Claude · Başlık değerlendirme")
 
 
@@ -58,7 +69,7 @@ def test_an_idea_that_does_not_fill_a_video_may_have_no_candidates_but_must_say_
     assert view["review"]["doluluk"] == {"dolar_mi": False, "aciklama": "Bu fikre özgü kural verisi yok.",
                                          "eksik_veri": ["Mahalleye özgü köpek kuralı kaydı yok."]}
     assert "Aday yok (fikir veriyle dolmuyor)." in (folder(app, view) / "baslik_degerlendirme.md").read_text(encoding="utf-8")
-    job = next(j for j in app.get("/api/jobs").json() if j["kind"] == "claude_run")
+    job = claude_job(app)
     assert job["message"] == "Değerlendirme hazır: fikir veriyle dolmuyor; başlık adayı yok."   # not "0 aday onay bekliyor" (real run)
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "no_missing")
     assert errors(review(app)) == ["Fikir dolmuyor denmiş ama eksik veri yazılmamış."]

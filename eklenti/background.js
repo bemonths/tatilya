@@ -2,7 +2,11 @@
 //
 // Ne yapar: bilgisayardaki 30A Studio programını 127.0.0.1 üzerinde 8830–8849 aralığında bulur, birkaç saniyede bir iş sorar; bir iş
 // gelirse kendi açtığı ayrı ve öne gelmeyen bir pencerede programın verdiği adresleri teker teker açar, sayfanın işlenmiş hâlini
-// (outerHTML, son adres, başlık, HTTP durumu) programa verir, sekmeyi ve pencereyi kapatır. Kullanıcının sekmelerine dokunmaz.
+// (outerHTML, son adres, başlık, HTTP durumu) programa verir. Kullanıcının sekmelerine dokunmaz.
+// Pencere (GÖREV-17): programın bir işi boyunca TEK pencere ve tek sekme kullanılır; site site yeniden açılıp kapanmaz, aynı sekmede
+// yeni adrese gidilir. Pencere odak almadan açılır (kullanıcının çalıştığı pencerenin önüne geçmez) ve yalnız kullanıcının geçmesi
+// gereken bir doğrulama çıkınca öne gelir. Program işin bittiğini (ya da iptal edildiğini) söyleyince pencere kapanır; program
+// kapanırsa da kapanır.
 // İş sürerken programa en çok 5 sn arayla ne yaptığını bildirir (sayfa açılıyor, sayfa okunuyor, doğrulama bekleniyor, bekleme).
 // Ne yapmaz: tıklamaz, yazı yazmaz, form doldurmaz, çerez/geçmiş/yer imi/indirme okumaz, CDP (debugger) kullanmaz, proxy kullanmaz ve
 // Chrome'un proxy ayarına dokunmaz. İzin verilmemiş bir siteye gitmez; giriş ve ödeme sayfalarını okumadan atlar. Doğrulama sayfasında
@@ -27,6 +31,44 @@ chrome.permissions.onAdded.addListener(() => loop());
 function start() {
   chrome.alarms.create("sor", {periodInMinutes: 0.5});
   loop();
+}
+
+// ---- The extension's one window (GÖREV-17) -----------------------------------------------------------------------------------
+// {id, tabId, key}: kept in session storage, so a service worker that was stopped and started again finds its window.
+
+async function storedWindow() {
+  const {pencere} = await chrome.storage.session.get("pencere");
+  if (!pencere) return null;
+  const tab = await chrome.tabs.get(pencere.tabId).catch(() => null);
+  if (!tab || tab.windowId !== pencere.id) { await chrome.storage.session.remove("pencere"); return null; }     // the user closed it
+  return pencere;
+}
+
+/** The window for a job: the one already open is used again (the same tab goes to the next address); otherwise a new one is
+ *  opened without taking the focus. `key` is the program's job (L.windowKey). */
+async function ensureWindow(key) {
+  const open = await storedWindow();
+  if (open) {
+    if (open.key !== key) await chrome.storage.session.set({pencere: {...open, key}});
+    return {...open, key};
+  }
+  const win = await chrome.windows.create({...L.WINDOW_OPTIONS});
+  const pencere = {id: win.id, tabId: win.tabs[0].id, key};
+  await chrome.storage.session.set({pencere});
+  return pencere;
+}
+
+async function closeWindow() {
+  const {pencere} = await chrome.storage.session.get("pencere");
+  if (!pencere) return;
+  await chrome.storage.session.remove("pencere");
+  await chrome.windows.remove(pencere.id).catch(() => {});
+}
+
+/** After every answer of the program: the window stays only while the program still has work for it (L.keepWindow). */
+async function syncWindow(openKeys) {
+  const {pencere} = await chrome.storage.session.get("pencere");
+  if (pencere && !L.keepWindow(pencere.key, openKeys)) await closeWindow();
 }
 
 async function settings() {
@@ -86,14 +128,14 @@ async function loop() {
 
 async function askOnce() {
   const {kod, port: remembered} = await settings();
-  if (!kod) { await note({program: "eslesmedi"}); return false; }
+  if (!kod) { await closeWindow(); await note({program: "eslesmedi"}); return false; }
   const port = await findProgram(remembered);
-  if (!port) { await note({program: "bulunamadi"}); return false; }
+  if (!port) { await closeWindow(); await note({program: "bulunamadi"}); return false; }     // the program closed: so does the window
   const origins = await grantedOrigins();
   const answer = await call(port, "/api/eklenti/sor", {surum: VERSION, izinli: L.permittedDomains(origins)}, kod);
   await chrome.storage.local.set({izinBekleyen: answer.izin_bekleyen || []});
   await note({program: "bagli", port});
-  if (!answer.is) return false;
+  if (!answer.is) { await syncWindow(answer.acik_pencereler); return false; }
   await runJob(port, kod, answer.is);
   return true;
 }
@@ -129,11 +171,8 @@ async function runJob(port, kod, job) {
   await setStage("aciliyor", null);
   const timer = setInterval(report, L.REPORT_EVERY_MS);
   const pacer = new L.Pacer(job.aralik_saniye);
-  let win = null;
   let failure = null;
   try {
-    win = await chrome.windows.create({url: "about:blank", focused: false, type: "normal", width: 1280, height: 900});
-    const tabId = win.tabs[0].id;
     for (;;) {
       const next = await call(port, `/api/eklenti/is/${job.id}/sonraki`, {}, kod);
       if (next.bitti) break;
@@ -142,7 +181,8 @@ async function runJob(port, kod, job) {
       current.skip = false;
       let result;
       try {
-        result = item.tur === "istek" ? await doRequest(tabId, item, pacer) : await doPage(port, kod, win.id, tabId, item, pacer, job);
+        const win = await ensureWindow(L.windowKey(job));      // the same window and tab through the whole job; opened again only if the user closed it
+        result = item.tur === "istek" ? await doRequest(win.tabId, item, pacer) : await doPage(port, kod, win.id, win.tabId, item, pacer, job);
       } catch (error) {
         result = {durum: "hata", not: String(error?.message || error).slice(0, 300)};
       }
@@ -151,8 +191,7 @@ async function runJob(port, kod, job) {
   } catch (error) {
     failure = String(error?.message || error).slice(0, 300);
   } finally {
-    clearInterval(timer);
-    if (win) await chrome.windows.remove(win.id).catch(() => {});
+    clearInterval(timer);       // the window stays: the next answer of the program says whether its job still needs it (syncWindow)
   }
   current = null;
   await call(port, `/api/eklenti/is/${job.id}/bitti`, failure ? {hata: failure} : {}, kod).catch(() => {});

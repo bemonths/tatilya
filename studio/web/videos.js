@@ -1,4 +1,5 @@
 import {api, esc, date, destinationPath} from "./api.js";
+import {linkSettingsMentions} from "./settings.js";
 
 // GÖREV-13: the "Videolar" screen: topic and title proposals from Claude, the approval view (list of titles, then the chosen title's
 // details), video records and their evidence packs.
@@ -19,7 +20,7 @@ export function warnings(options) {
   const lines=[];
   if(!claude.found) lines.push("Claude Code bulunamadı. Ayarlar → Claude bölümünden claude.exe'nin yolunu yazın.");
   if(claude.api_key_warning) lines.push(claude.api_key_warning);
-  return lines.map(text=>`<p class="stage-note claude-warning" role="alert"><span class="note-mark">!</span><span>${esc(text)}</span></p>`).join("");
+  return lines.map(text=>`<p class="stage-note claude-warning" role="alert"><span class="note-mark">!</span><span>${linkSettingsMentions(esc(text))}</span></p>`).join("");
 }
 
 export function metricsText(run) {

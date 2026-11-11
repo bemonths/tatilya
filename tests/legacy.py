@@ -42,6 +42,7 @@ V15_TABLES = {"claude_runs": 0, "videos": 0}
 V16_TABLES = {"claude_usage": 0, "job_progress": 0}
 V17_TABLES = {"text_runs": 0, "text_sessions": 0, "text_versions": 0, "text_selections": 0}
 V18_TABLES = {"region_blocked_hosts": 0}
+V19_TABLES = {"job_hidden": 0}
 
 
 def drop_v17(con):
@@ -54,8 +55,14 @@ def drop_v17(con):
         con.execute(f"DROP TABLE {table}")
 
 
+def drop_v19(con):
+    """A schema 18 file made from a fresh one: without the v19 table (GÖREV-17: jobs taken off the job panel)."""
+    con.execute("DROP TABLE job_hidden")
+
+
 def drop_v18(con):
-    """A schema 17 file made from a fresh one: without the v18 table (GÖREV-16: the region-blocked domains)."""
+    """A schema 17 file made from a fresh one: without the v18 table (GÖREV-16: the region-blocked domains) and the v19 table."""
+    drop_v19(con)
     con.execute("DROP TABLE region_blocked_hosts")
 
 

@@ -549,7 +549,7 @@ test('the lodging screen keeps drawing its price section after a destination res
 });
 test('jobs panel names the site waiting for the user verification',async()=>{
   const {readFileSync}=await import('node:fs');
-  const source=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  const source=readFileSync(new URL('../studio/web/jobs.js',import.meta.url),'utf8');     // GÖREV-17: the panel is drawn by jobs.js
   assert.match(source,/job\.waiting_for\?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor<\/span> \$\{esc\(job\.waiting_for\)\}/);
 });
 import {methodLine, ownLine, publishedLine, ownTable, publishedTag, publishedBreakdown, METHOD_LABELS} from '../studio/web/agency.js';
@@ -1161,4 +1161,177 @@ test('GÖREV-16 Video metni: "seçildi" in the runs, the plan line and the plan 
   assert.match(compare,/Planın kullanımı \(bütün tonlar için bir kez\): <span class="tag">plan: 2 oturum/);
   assert.match(compare,/title="Yalnız bu tonun oturumları; planın kullanımı yukarıda"/);
   assert.match(compareView({...COMPARE,planlar:[{surumler:[1],kullanim:{oturum:2,sure_s:60,token:1,maliyet_usd:0.1}},{surumler:[2],kullanim:{oturum:2,sure_s:60,token:1,maliyet_usd:0.1}}]},'tr'),/plan \(1\. sürüm\)/);
+});
+
+// ---- GÖREV-17: the job panel (hiding finished jobs), the Settings layout, one window for a job, the proxy words ----
+import {jobsPanel, jobCard, panelHead, hiddenSection, visibleJobs, removableJobs, windowLines, emptyPanel} from '../studio/web/jobs.js';
+import {SECTIONS, sectionOfHash, isSettingsHash, sectionId, settingsHref, settingsNav, sectionCard, settingsFrame, folderCard, aboutCard, usageCard, linkSettingsMentions} from '../studio/web/settings.js';
+import {kindText} from '../studio/web/extension.js';
+import {tonesHtml} from '../studio/web/tones.js';
+
+const job17=(id,status,extra={})=>({id,kind:'eklenti_deneme',title:`İş ${id}`,status,progress:status==='done'?100:40,message:'mesaj',created_at:'2026-11-11T10:00:00Z',
+  log:[{at:'2026-11-11T10:00:01Z',text:'satır 1'},{at:'2026-11-11T10:00:02Z',text:'satır 2'}],hidden_at:null,awaiting_approval:0,progress_info:null,waiting_for:null,...extra});
+
+test('GÖREV-17 İşler: a finished job has "Kaldır", a running one does not; the log comes closed',()=>{
+  const done=jobCard(job17('d1','done'));
+  assert.match(done,/data-job="d1"/);assert.match(done,/data-hide-job="d1"[^>]*>Kaldır<\/button>/);assert.doesNotMatch(done,/data-cancel-job/);
+  assert.match(done,/<details><summary>İş günlüğü \(2\)<\/summary>/);assert.doesNotMatch(done,/<details open/);
+  for(const status of ['failed','canceled','interrupted']) assert.match(jobCard(job17('x',status)),/data-hide-job="x"/);
+  for(const status of ['running','queued']) {
+    const card=jobCard(job17('r1',status));
+    assert.doesNotMatch(card,/data-hide-job/);assert.match(card,/data-cancel-job="r1">İptal et/);
+  }
+  assert.match(jobCard(job17('a1','done',{awaiting_approval:1})),/Onay bekliyor.*data-hide-job="a1"/s);
+  assert.match(jobCard(job17('w1','running',{waiting_for:'cvs.com'})),/Kullanıcı doğrulaması bekleniyor<\/span> cvs\.com/);
+});
+
+test('GÖREV-17 İşler: "Bitenleri kaldır" counts only finished jobs on the panel; hidden jobs leave it and are listed at the bottom',()=>{
+  const jobs=[job17('r1','running'),job17('q1','queued'),job17('d1','done'),job17('f1','failed'),job17('c1','canceled'),
+    job17('a1','done',{awaiting_approval:1}),job17('h1','done',{hidden_at:'2026-11-11T11:00:00Z'})];
+  assert.deepEqual(visibleJobs(jobs).map(j=>j.id),['r1','q1','d1','f1','c1','a1']);
+  assert.deepEqual(removableJobs(jobs).map(j=>j.id),['d1','f1','c1']);            // not the running, queued, awaiting or hidden ones
+  assert.match(panelHead(jobs),/data-hide-finished\s+title="[^"]*silinmez[^"]*">Bitenleri kaldır \(3\)</);
+  assert.match(panelHead([job17('r1','running')]),/data-hide-finished disabled/);
+  const hidden=[{id:'h1',title:'Gizli <iş>',status:'done',created_at:'2026-09-20T10:00:00Z',log_count:1480}];
+  const panel=jobsPanel(jobs,hidden,{open:false});
+  assert.ok(panel.indexOf('data-hide-finished')<panel.indexOf('data-job="r1"'));    // the button is at the head of the panel
+  assert.doesNotMatch(panel,/data-job="h1"/);
+  assert.match(panel,/data-toggle-hidden aria-expanded="false">Gizlenen işleri göster \(1\)</);assert.doesNotMatch(panel,/data-unhide-job/);
+  const opened=jobsPanel(jobs,hidden,{open:true});
+  assert.ok(opened.indexOf('data-toggle-hidden')>opened.indexOf('data-job="a1"'));  // at the bottom
+  assert.match(opened,/Gizli &lt;iş&gt;.*günlük 1480 satır.*data-unhide-job="h1">Geri getir<.*silinmedi/s);
+  assert.equal(hiddenSection([],true),'');
+  assert.match(jobsPanel([job17('h1','done',{hidden_at:'x'})],hidden),/Panelde iş yok.*Gizlenen işleri göster \(1\)/s);
+  assert.match(emptyPanel(0),/Henüz iş yok/);
+  assert.match(jobsPanel(jobs,[],{resultLink:job=>job.id==='d1'?'<a class="return-link">Aç →</a>':''}),/data-job="d1".*Aç →/s);
+});
+
+test('GÖREV-17 İşler: a running job names the browser window that is open for it',()=>{
+  const ext=job17('e1','running',{progress_info:{tur:'eklenti',bekliyor:false,asama:'realjoy.com · sayfa okunuyor',pencereler:{proxy:'cvs.com okunuyor'}}});
+  assert.deepEqual(windowLines(ext),['Eklentinin penceresi: realjoy.com · sayfa okunuyor','Programın proxy tarayıcısı: cvs.com okunuyor']);
+  assert.match(jobCard(ext),/Açık pencere<\/span> Eklentinin penceresi: realjoy\.com · sayfa okunuyor/);
+  assert.deepEqual(windowLines(job17('p1','running',{progress_info:{pencereler:{program:'oversee.us okunuyor'}}})),['Programın tarayıcısı: oversee.us okunuyor']);
+  assert.deepEqual(windowLines({...ext,status:'done'}),[]);                          // a finished job has no open window
+  assert.deepEqual(windowLines(job17('h1','running',{progress_info:{tur:'eklenti',devredildi:true,asama:'x'}})),[]);
+  assert.deepEqual(windowLines(job17('b1','running',{progress_info:{tur:'eklenti',bekliyor:true}})),[]);
+});
+
+const view17={
+  claude:{settings:{claude_path:'',claude_model:'',claude_effort:''},notes:[],info:{found:true,path:'c',version:'1'},
+    options:{models:[{value:'',label:'v'}],efforts:[{value:'',label:'o'}],inherit:{value:'inherit',label:'Genel varsayılan'},steps:[],max_turns:{min:1,max:200,help:'Tur'}}},
+  suffix:{en:' | A',tr:' | B',defaults:{en:' | A',tr:' | B'}},
+  usage:{refresh:{text:'Kullanım birkaç dakikada bir yenilenir.',model:'haiku',effort:'low'}},
+  instructions:{files:[{key:'ortak',name:'ortak.md',kind:'talimat'}],file:{key:'ortak',name:'ortak.md',title:'Ortak',sha256:'1234567890ab',modified_at:'2026-10-10T18:00:00+00:00',size:1024,text:'x',versions:[]},message:'',viewing:null},
+  warnings:{name:'uyari_ifadeleri.txt',sha256:'b'.repeat(64),modified_at:'2026-10-11T00:00:00+00:00',text:'amazing\n',versions:[]},
+  extension:{eslesti:true,bagli:true,surum:'0.19.0',son_gorulme:'2026-11-11T12:00:00+00:00',kod:'ABCD-EFGH',izinli_alan_adlari:[],izin_bekleyen_alan_adlari:[],aralik_saniye:8,aralik_sinirlari:[3,120],kurulum:[],klasor:'x',sorunlu_siteler:[{alan_adi:'cvs.com'}]},
+  proxy:{adres:'',kullanici:'',parola_kayitli:false,tanimli:false,notlar:[],bolge_engelli:[]},
+};
+// each section's own module draws it; `main` is the text of its main button (or, where it has none, its main line)
+const sectionHtml17={
+  'klasor':[folderCard('C:/veri/30a'),/class="path">C:\/veri\/30a</],
+  'claude':[claudeSection(view17.claude),/<button class="primary" type="submit">Claude ayarlarını kaydet<\/button>/],
+  'baslik-eki':[suffixSection(view17.suffix),/<button class="primary" type="submit">Başlık ekini kaydet<\/button>/],
+  'kullanim':[usageCard(view17.usage),/usage-settings-text">Kullanım birkaç dakikada bir yenilenir\./],
+  'talimatlar':[editorHtml(view17.instructions),/id="instruction-save">Kaydet</],
+  'tonlar':[tonesHtml({list:TONES,form:{},message:''}),/<button class="primary" type="submit">Tonu ekle<\/button>/],
+  'uyari-ifadeleri':[warningsBox(view17.warnings),/id="warnings-save">Kaydet</],
+  'eklenti':[extensionSection(view17.extension),/id="extension-trial">Deneme</],
+  'proxy':[proxySection(view17.proxy),/<button type="submit" class="primary">Kaydet<\/button>/],
+  'hakkinda':[aboutCard('0.19.0'),/about-version">SÜRÜM 0\.19\.0</],
+};
+
+test('GÖREV-17 Ayarlar: a button for every section; the address names the section',()=>{
+  assert.deepEqual(SECTIONS.map(s=>s.slug),['klasor','claude','baslik-eki','kullanim','talimatlar','tonlar','uyari-ifadeleri','eklenti','proxy','hakkinda']);
+  assert.deepEqual(Object.keys(sectionHtml17),SECTIONS.map(s=>s.slug));
+  const nav=settingsNav('tonlar');
+  for(const section of SECTIONS) {
+    assert.ok(nav.includes(`href="#settings/${section.slug}" data-settings-section="${section.slug}"`),section.slug);
+    assert.ok(nav.includes(`</span> ${section.title.replace("'","&#39;")}</a>`),section.title);
+    assert.equal(sectionOfHash(`#settings/${section.slug}`),section.slug);
+    assert.equal(sectionOfHash(`#ayarlar/${section.slug}`),section.slug);          // the Turkish address opens the same section
+    assert.equal(settingsHref(section.slug),`#settings/${section.slug}`);
+  }
+  assert.equal((nav.match(/class="section-nav-item active"/g)||[]).length,1);
+  assert.match(nav,/class="section-nav-item active" href="#settings\/tonlar"[^>]*aria-current="true"/);
+  assert.equal(sectionOfHash('#settings'),null);assert.equal(sectionOfHash('#settings/yok'),null);assert.equal(sectionOfHash('#collect/weather'),null);
+  assert.ok(isSettingsHash('#settings') && isSettingsHash('#settings/proxy') && isSettingsHash('#ayarlar') && !isSettingsHash('#sources') && !isSettingsHash(''));
+});
+
+for(const section of SECTIONS) {
+  test(`GÖREV-17 Ayarlar → ${section.title}: the button goes to its card and the section's main button is there`,()=>{
+    const [inner,main]=sectionHtml17[section.slug];
+    const frame=settingsFrame('C:/veri/30a','0.19.0',section.slug);
+    // the button's address and the card's anchor are the same section
+    assert.ok(frame.includes(`href="#settings/${section.slug}"`));
+    assert.equal((frame.match(new RegExp(`id="${sectionId(section.slug)}"`,'g'))||[]).length,1);
+    const card=sectionCard(section.slug,inner);
+    assert.match(card,new RegExp(`^<section class="settings-section" id="ayar-${section.slug}" data-section="${section.slug}"`));
+    assert.ok(card.includes(`--section-icon:'${section.icon}'`));                    // the card's title carries the section's icon
+    assert.match(card,/<h2[ >]/);                                                    // every section is a card with its own title
+    assert.match(card,main);                                                         // the main button (save, trial) is drawn as before
+  });
+}
+
+test('GÖREV-17 Ayarlar: the frame keeps every slot the section modules draw into, in the order of the buttons',()=>{
+  const frame=settingsFrame('C:/veri/30a','0.19.0');
+  const slots=['claude-settings-slot','suffix-settings-slot','usage-settings-slot','instructions-slot','tones-slot','warnings-slot','extension-slot','proxy-slot'];
+  let last=-1;
+  for(const slot of slots) {const at=frame.indexOf(`id="${slot}"`);assert.ok(at>last,slot);last=at;}
+  assert.ok(frame.indexOf('id="settings-nav-bar"')<frame.indexOf('id="ayar-klasor"'));
+  assert.match(frame,/^<div id="settings-screen">/);
+  const order=SECTIONS.map(s=>frame.indexOf(`id="ayar-${s.slug}"`));
+  assert.deepEqual([...order].sort((a,b)=>a-b),order);
+});
+
+test('GÖREV-17 Ayarlar: links on other screens open the section itself',()=>{
+  assert.match(toneChoice(OPTIONS.tonlar,[]),/href="#settings\/tonlar">Tonları yönet/);
+  assert.match(warnings({...titleOptions,claude:{found:false}}),/<a href="#settings\/claude">Ayarlar → Claude<\/a> bölümünden/);
+  assert.match(extensionSection(view17.extension),/<a href="#settings\/proxy">ABD proxy'si<\/a> tanımlıysa/);
+  assert.match(proxySection(view17.proxy),/<a href="#settings\/eklenti">tarayıcı eklentisiyle<\/a> okunmaz/);
+  assert.match(trialRows([{alan_adi:'cvs.com',durum:'bolge_engeli',tur:'bolge_engeli',not:"bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)"}]),/tanımlı değil \(<a href="#settings\/proxy">Ayarlar → ABD proxy'si<\/a>\)/);
+  assert.equal(linkSettingsMentions('Eşleşme kodu geçersiz; Ayarlar → Tarayıcı eklentisi ekranındaki kodu yazın.'),
+    'Eşleşme kodu geçersiz; <a href="#settings/eklenti">Ayarlar → Tarayıcı eklentisi</a> ekranındaki kodu yazın.');
+  assert.match(jobCard(job17('c1','failed',{message:"Ayarlar → Claude'dan tur sınırını artırın <b>"})),/<a href="#settings\/claude">Ayarlar → Claude<\/a>&#39;dan tur sınırını artırın &lt;b&gt;/);
+  assert.equal(linkSettingsMentions('düz metin'),'düz metin');
+});
+
+test('GÖREV-17 Ayarlar: the sidebar has one Settings item; an address change inside Settings does not draw the screen again',()=>{
+  const index=readFileSync(new URL('../studio/web/index.html',import.meta.url),'utf8');
+  assert.match(index,/<nav class="nav-footer" aria-label="Ayarlar"><a href="#settings" id="settings-nav"[^>]*><span class="step-no tool-no" aria-hidden="true">⚙<\/span><span class="nav-title">Ayarlar<\/span><\/a><\/nav>/);
+  assert.equal((index.match(/href="#settings"/g)||[]).length,1);assert.doesNotMatch(index,/class="settings-link"/);
+  assert.ok(index.indexOf('id="usage-panel"')<index.indexOf('id="settings-nav"'));       // the usage box stays where it was, above it
+  assert.doesNotMatch(index,/Yardım/);                                                   // the program has no help screen; none is invented
+  const app=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  assert.match(app,/if\(!document\.getElementById\("settings-screen"\)\) renderSettings\(\);\s*else if\(location\.hash!==lastSettingsHash\) goToSettingsSection\(sectionOfHash\(location\.hash\)\);/);
+  assert.match(app,/settings\.classList\.toggle\("active",state\.page==="settings"\)/);
+  const css=readFileSync(new URL('../studio/web/style.css',import.meta.url),'utf8');
+  const block=css.slice(css.indexOf('/* GÖREV-17'));
+  assert.ok(block.length>500);assert.doesNotMatch(block,/#[0-9a-fA-F]{3,8}\b/);          // colours only from the variables
+  assert.match(block,/\.nav-footer a\.active::before\{[^}]*background:var\(--accent\)/);assert.match(block,/\.settings-section \.info-card>h2::before\{content:var\(--section-icon\)/);
+});
+
+test('GÖREV-17 deneme tablosu: a region-blocked site says how it ended',()=>{
+  assert.equal(kindText({tur:'bolge_engeli',durum:'tamam',proxy:true}),"bölge engeli · proxy'yle okundu");
+  assert.equal(kindText({tur:'bolge_engeli',durum:'bolge_engeli',not:"bölge engeli: proxy'yle de okunamadı (HTTP 403)"}),"bölge engeli · proxy'yle de okunamadı");
+  assert.equal(kindText({tur:'bolge_engeli',durum:'bolge_engeli',not:"bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)"}),"bölge engeli · ABD proxy'si tanımlı değil");
+  assert.equal(kindText({tur:'bolge_engeli',durum:'bolge_engeli'}),'bölge engeli');assert.equal(kindText({durum:'tamam'}),'tamam');
+  const html=trialRows([{alan_adi:'publix.com',durum:'tamam',tur:'bolge_engeli',proxy:true,yontem:'proxy',bayt:2048}]);
+  assert.match(html,/<span class="tag green">bölge engeli · proxy&#39;yle okundu<\/span><small class="source-host">proxy<\/small>.*<span class="tag green">okundu</s);
+});
+
+test('GÖREV-17 eşleşme kodu: the screen shows a renewed code at once and refreshes a code changed elsewhere',()=>{
+  const source=readFileSync(new URL('../studio/web/extension.js',import.meta.url),'utf8');
+  assert.match(source,/if\(ticket!==this\.sequence\) return;/);                           // an older answer cannot bring the old code back
+  assert.match(source,/const code=this\.container\.querySelector\("#extension-code"\);[^\n]*\n\s*if\(code && code\.textContent!==this\.view\.kod\) code\.textContent=this\.view\.kod;/);
+  assert.match(source,/async renew\(\) \{[\s\S]*?this\.sequence\+\+;[\s\S]*?kod-yenile[\s\S]*?this\.sequence\+\+;\s*this\.draw\(\);/);
+  assert.match(source,/setInterval\(\(\)=>this\.refresh\(\),5000\)/);
+});
+
+test('GÖREV-17 eklenti: one window for a job, opened without the focus and not minimized',()=>{
+  assert.deepEqual({...E.WINDOW_OPTIONS},{url:'about:blank',focused:false,type:'normal',width:1280,height:900});
+  assert.equal(E.windowKey({id:'s1',pencere:'job-7'}),'job-7');assert.equal(E.windowKey({id:'s1'}),'s1');assert.equal(E.windowKey(null),'');
+  assert.equal(E.keepWindow('job-7',['job-7','job-8']),true);
+  assert.equal(E.keepWindow('job-7',[]),false);                    // the job ended or was cancelled
+  assert.equal(E.keepWindow('job-7',undefined),false);             // an older program: the window closes after each piece of work
+  assert.equal(E.keepWindow('',['']),false);
 });

@@ -25,6 +25,11 @@ say "Eklenti çalışıyor: <site> · <durum>". "Bağlı değil (Chrome kapalı 
 job runs (20 s otherwise). A refusal nobody can pass ("erisim_reddedildi") and a region block ("bolge_engeli") are not waited for; a
 page that went on to a site the extension may not open is "yonlendi" (or "bolge_engeli" for a geo-block address). "Bu sayfayı atla"
 (the extension's window or the job panel) skips a page waiting for verification ("atlandi").
+
+GÖREV-17 (Adım 4): one window for a whole job. Every session names the window it belongs to ("pencere": the program's job, or the
+session itself for a Settings trial) and every answer to the extension's question lists the windows that must stay open
+("acik_pencereler": the jobs still queued or running that used the extension). The extension keeps its window and tab from one site
+of a job to the next and closes it when the job is no longer listed (finished, cancelled, handed over) or the program is gone.
 """
 import base64
 import hashlib
@@ -43,7 +48,7 @@ from urllib.parse import urlsplit
 PAIRING_FILE = "eklenti.json"
 CONNECTED_S = 20.0
 CONNECTED_BUSY_S = 60.0            # while a job runs the extension may be busy with one page for a while; it reports every ≤5 s
-EXPECTED_VERSION = "0.18.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
+EXPECTED_VERSION = "0.19.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
 DEFAULT_GAP_S, MIN_GAP_S, MAX_GAP_S = 8, 3, 120
 VERIFY_WAIT_S = 15 * 60
 PAGE_TIMEOUT_S = VERIFY_WAIT_S + 240
@@ -118,6 +123,15 @@ class Session:
         self.stage = None                  # GÖREV-16: what the extension last said it does {asama, adres, bitis, zaman}
         self.skip = False                  # "Bu sayfayı atla" asked from the job panel; told to the extension in its next report
 
+    @property
+    def window_key(self):
+        """GÖREV-17: the extension keeps one window per program job; a session without a job (a Settings trial) has its own."""
+        return self.job_id or self.id
+
+    @property
+    def unfinished(self):
+        return self.state in ("bekliyor", "calisiyor") and not (self.closed and not self.queue and not self.in_flight)
+
     # ---- for collectors (their own thread) ----
 
     def page(self, url, wait=None, *, canceled=lambda: False, timeout=PAGE_TIMEOUT_S):
@@ -189,7 +203,7 @@ class Session:
 
     def view(self):
         return {"id": self.id, "alan_adi": self.domain, "aralik_saniye": self.bridge.gap(), "amac": self.purpose,
-                "dogrulama_bekleme_saniye": VERIFY_WAIT_S}
+                "dogrulama_bekleme_saniye": VERIFY_WAIT_S, "pencere": self.window_key}
 
 
 class ExtensionBridge:
@@ -202,6 +216,7 @@ class ExtensionBridge:
         self.last_seen, self.version, self.allowed = None, None, []
         self.pending = {}                      # domain -> first time a job waited for its permission
         self.handed_over = {}                  # job id -> reason
+        self.job_alive = None                  # GÖREV-17: job id -> is the job still queued or running? (the app gives it)
         self.config = self.load()
 
     # ---- pairing file ----
@@ -328,6 +343,25 @@ class ExtensionBridge:
                     "acik_oturumlar": [{"alan_adi": s.domain, "durum": s.state, "dogrulama": s.verifying,
                                         "asama": stage_text(s.stage, self.clock()) if s.stage else None} for s in active]}
 
+    def open_windows(self):
+        """GÖREV-17: the window keys the extension must keep open: a job that used the extension and is still queued or running (its
+        next site will use the same window), and a trial session that is not finished. A job handed over to the program's own
+        browser, a finished or a cancelled one is left out, so the extension closes its window."""
+        with self.lock:
+            jobs, keys = [], []
+            for session in self.sessions.values():
+                if session.job_id is None:
+                    if session.unfinished:
+                        keys.append(session.window_key)
+                elif session.job_id not in self.handed_over and session.job_id not in jobs:
+                    if self.job_alive is None:
+                        if session.unfinished and session.job_id not in keys:
+                            keys.append(session.job_id)
+                    else:
+                        jobs.append(session.job_id)
+        alive = self.job_alive
+        return keys + [job for job in jobs if alive(job)]
+
     # ---- sessions ----
 
     def open(self, domain, *, job_id=None, purpose="", notify=None):
@@ -450,8 +484,10 @@ class ExtensionBridge:
                 session.in_flight.clear()
                 session.queue.clear()
             session.state = "bitti" if session.closed else "bekliyor"
+            session.stage = None
             self.lock.notify_all()
-            return True
+        session.notify("bosta", None)          # GÖREV-17: the window may stay open for the job's next site; the panel says so
+        return True
 
     def hand_over(self, job_id, reason="Kullanıcı işi programın kendi tarayıcısına devretti."):
         with self.lock:
@@ -514,6 +550,10 @@ class JobAccess:
             "dogrulama_bitti": ("Doğrulama beklemesi bitti; okuma devam ediyor.", None),
             "asama": (f"Eklenti çalışıyor: {value}", {"tur": "eklenti", "bekliyor": False, "asama": value}),
         }
+        if kind == "bosta":                    # GÖREV-17: between two sites of the job the window waits; no log line for it
+            if self.db is not None and self.job_id is not None and self.job_id not in self.bridge.handed_over:
+                self.db.update_job(self.job_id, progress_info={"tur": "eklenti", "bekliyor": False, "asama": "sıradaki sayfa bekleniyor"})
+            return
         message, info = messages.get(kind, (None, None))
         if message is None or self.db is None or self.job_id is None:
             return

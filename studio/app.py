@@ -79,6 +79,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     app.state.db = db
     app.state.watchdog = watchdog or Watchdog.from_env(has_active_jobs=db.has_active_work, on_waiting=db.note_active_jobs)
     app.state.extension = ext.ExtensionBridge(db.path.parent)
+    app.state.extension.job_alive = lambda job_id: (db.job(job_id) or {}).get("status") in ("queued", "running")
     app.state.region_access = lambda: region_reader.RegionAccess(db, db.path.parent)     # GÖREV-16 (tests give another)
     app.state.proxy_test = proxy_mod.test
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
@@ -218,7 +219,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         body = await json_body(request)
         bridge().touch(body.get("surum"), body.get("izinli"))
         return {"is": bridge().take(), "aralik_saniye": bridge().gap(), "sorma_araligi_saniye": 3,
-                "izin_bekleyen": sorted(bridge().pending)}
+                "izin_bekleyen": sorted(bridge().pending), "acik_pencereler": bridge().open_windows()}      # GÖREV-17: one window per job
 
     @app.post("/api/eklenti/is/{session_id}/sonraki")
     def extension_next(session_id: str):
@@ -323,6 +324,9 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         reader = region.reader(canceled=canceled, waiting=waiting)
         rows = []
         db.update_job(job_id, status="running", progress=1, message=f"{len(sites)} site denenecek.")
+        from .sources.browser_verification import JobWindows
+        windows = JobWindows(lambda key, text: db.set_job_window(job_id, key, text))     # GÖREV-17: closes what the job started
+        windows.__enter__()
         try:
             for number, (domain, url, note) in enumerate(sites, 1):
                 if canceled():
@@ -350,13 +354,18 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                 except Exception as exc:
                     row = {"alan_adi": domain, "aciklama": note, "durum": "hata", "tur": "hata", "not": f"{type(exc).__name__}: {str(exc)[:160]}"}
                 rows.append(row)
-                label = ext_states.get(row.get("tur") or row["durum"], row["durum"])
-                tail = f" ({row['not']})" if row.get("tur") == "bolge_engeli" and row.get("not") else ""
-                db.update_job(job_id, progress=int(100 * number / len(sites)), message=f"{number}/{len(sites)} · {domain}: {label}{tail}")
+                if row.get("tur") == "bolge_engeli":      # GÖREV-17: "bölge engeli · proxy'yle okundu" / "… proxy'yle de okunamadı"
+                    label = proxy_mod.region_outcome(row["durum"], row.get("not"), bool(row.get("proxy")))
+                else:
+                    label = ext_states.get(row.get("tur") or row["durum"], row["durum"])
+                db.update_job(job_id, progress=int(100 * number / len(sites)), message=f"{number}/{len(sites)} · {domain}: {label}")
         finally:
             reader.close()
+            windows.__exit__(None, None, None)
+        read = sum(r["durum"] == "tamam" for r in rows)
+        proxied = sum(1 for r in rows if r["durum"] == "tamam" and r.get("proxy"))
         db.update_job(job_id, status="done", progress=100, result={"siteler": rows},
-                      message=f"{sum(r['durum'] == 'tamam' for r in rows)}/{len(rows)} site okundu.")
+                      message=f"{read}/{len(rows)} site okundu" + (f" ({proxied} bölge engelli site proxy'yle)." if proxied else "."))
 
     ext_states = {**page_kinds.LABELS, "giris": "giriş gerekiyor", "odeme": "ödeme sayfası", "izin_yok": "izin yok", "hata": "hata",
                   "atlandi": "kullanıcı atladı"}
@@ -549,6 +558,32 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         if result is None:
             raise HTTPException(404, "İş bulunamadı.")
         return result
+
+    # --- GÖREV-17: taking finished jobs off the job panel (hiding only; nothing is deleted) ---
+
+    @app.get("/api/jobs/gizlenen")
+    def hidden_jobs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return db.hidden_jobs(destination_id)
+
+    @app.post("/api/jobs/bitenleri-kaldir")
+    def hide_finished_jobs(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return {"kaldirilan": db.hide_finished_jobs(destination_id), "jobs": db.jobs(destination_id), "gizlenen": db.hidden_jobs(destination_id)}
+
+    def job_panel(identifier, done):
+        if done is None:
+            raise HTTPException(404, "İş bulunamadı.")
+        destination_id = (db.job(identifier) or {}).get("destination_id") or DEFAULT_DESTINATION_ID
+        return {"jobs": db.jobs(destination_id), "gizlenen": db.hidden_jobs(destination_id)}
+
+    @app.post("/api/jobs/{identifier}/kaldir")
+    def hide_job(identifier: str):
+        return job_panel(identifier, db.hide_job(identifier))
+
+    @app.post("/api/jobs/{identifier}/geri-getir")
+    def unhide_job(identifier: str):
+        return job_panel(identifier, db.unhide_job(identifier))
 
     @app.get("/api/collections")
     def collections(destination_id: str = DEFAULT_DESTINATION_ID):

@@ -1,4 +1,5 @@
 import {api, esc, date} from "./api.js";
+import {linkSettingsMentions, settingsHref} from "./settings.js";
 
 // GÖREV-14 (Adım 7): Settings → Tarayıcı eklentisi. The extension opens, in the user's own Chrome, the pages the program asks for and hands
 // back only their content; this section shows its connection, the pairing code, the sites it may open, the speed, the install steps,
@@ -9,6 +10,17 @@ const STATE_LABELS={tamam:"okundu",dogrulama:"doğrulama geçilmedi",giris:"giri
 // GÖREV-16: the page's kind in the trial table
 export const KIND_LABELS={tamam:"tamam",dogrulama:"doğrulama",erisim_reddedildi:"erişim reddedildi",bolge_engeli:"bölge engeli",yonlendi:"başka siteye yönlendi"};
 const METHOD_LABELS={eklenti:"eklenti",proxy:"proxy","tarayici+proxy":"tarayıcı + proxy"};
+
+/** GÖREV-17: the kind of a trial row in words. A region-blocked site says how it ended: "bölge engeli · proxy'yle okundu",
+ *  "bölge engeli · proxy'yle de okunamadı" or "bölge engeli · ABD proxy'si tanımlı değil" (the same words as the job log). */
+export function kindText(row) {
+  const kind=row.tur || row.durum;
+  if(kind!=="bolge_engeli") return KIND_LABELS[kind] || "—";
+  if(row.proxy && row.durum==="tamam") return "bölge engeli · proxy'yle okundu";
+  if(/tanımlı değil/.test(row.not || "")) return "bölge engeli · ABD proxy'si tanımlı değil";
+  if(/proxy'yle de okunamadı/.test(row.not || "")) return "bölge engeli · proxy'yle de okunamadı";
+  return "bölge engeli";
+}
 
 export function connectionText(view) {
   if(!view.eslesti) return {tone:"warm",text:"Eşleşmedi: eklentiyi kurup bu ekrandaki kodu eklentiye yazın."};
@@ -25,8 +37,8 @@ export function skipButton(job) {
 export function trialRows(rows) {
   if(!rows?.length) return "";
   return `<div class="table-scroll"><table class="reference-table"><thead><tr><th>SİTE</th><th>TÜR</th><th>DURUM</th><th>BAŞLIK</th><th>BOYUT</th><th>NOT</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td>${esc(r.alan_adi)}<small class="source-host">${esc(r.aciklama || "")}</small></td><td><span class="tag ${(r.tur||r.durum)==="tamam"?"green":"warm"}">${esc(KIND_LABELS[r.tur||r.durum] || "—")}</span>${r.yontem?`<small class="source-host">${esc(METHOD_LABELS[r.yontem] || r.yontem)}</small>`:""}</td><td><span class="tag ${r.durum==="tamam"?"green":"warm"}">${esc(STATE_LABELS[r.durum] || r.durum)}</span></td>
-      <td>${esc(r.baslik || "—")}</td><td>${r.bayt!=null?`${Math.round(r.bayt/1024)} KB`:"—"}</td><td>${esc(r.not || "")}${r.sha256?`<small class="source-host">SHA-256 ${esc(r.sha256.slice(0,12))}…</small>`:""}</td></tr>`).join("")}
+    ${rows.map(r=>`<tr><td>${esc(r.alan_adi)}<small class="source-host">${esc(r.aciklama || "")}</small></td><td><span class="tag ${(r.tur||r.durum)==="tamam" || (r.proxy && r.durum==="tamam")?"green":"warm"}">${esc(kindText(r))}</span>${r.yontem?`<small class="source-host">${esc(METHOD_LABELS[r.yontem] || r.yontem)}</small>`:""}</td><td><span class="tag ${r.durum==="tamam"?"green":"warm"}">${esc(STATE_LABELS[r.durum] || r.durum)}</span></td>
+      <td>${esc(r.baslik || "—")}</td><td>${r.bayt!=null?`${Math.round(r.bayt/1024)} KB`:"—"}</td><td>${linkSettingsMentions(esc(r.not || ""))}${r.sha256?`<small class="source-host">SHA-256 ${esc(r.sha256.slice(0,12))}…</small>`:""}</td></tr>`).join("")}
     </tbody></table></div>`;
 }
 
@@ -49,7 +61,7 @@ export function extensionSection(view, {message="", trial=null, problems=null}={
     <div class="decision-actions"><button class="primary" id="extension-trial">Deneme</button><small class="muted">Eklentiyle programın kendi yerel deneme sayfasını açar (gerçek bir site değildir).</small></div>
     ${trial?`<div class="extension-trial-result">${trial.error?`<p class="stage-note claude-warning">${esc(trial.error)}</p>`:`<p><span class="tag ${trial.durum==="tamam"?"green":"warm"}">${esc(STATE_LABELS[trial.durum] || trial.durum)}</span> ${esc(trial.baslik || "")} · ${Math.round((trial.bayt||0)/1024)} KB · SHA-256 <code>${esc((trial.sha256||"").slice(0,16))}</code><small class="source-host">${esc(trial.dosya || "")}</small></p>`}</div>`:""}
     <h3>Sorunlu siteler</h3>
-    <p class="muted">Raporlarda bu bilgisayardan okunamayan siteler: ${view.sorunlu_siteler.map(s=>esc(s.alan_adi)).join(", ")}. Düğme her siteden tek bir sayfayı eklentiyle okur ve sonucu tabloda gösterir; bölge engelli listedeki siteler eklentiyle değil, ABD proxy'si tanımlıysa onunla denenir. Bu düğmeye siz basarsınız.</p>
+    <p class="muted">Raporlarda bu bilgisayardan okunamayan siteler: ${view.sorunlu_siteler.map(s=>esc(s.alan_adi)).join(", ")}. Düğme her siteden tek bir sayfayı eklentiyle okur ve sonucu tabloda gösterir; bölge engelli listedeki siteler eklentiyle değil, <a href="${settingsHref("proxy")}">ABD proxy'si</a> tanımlıysa onunla denenir. Bu düğmeye siz basarsınız.</p>
     <div class="decision-actions"><button id="extension-problems">Sorunlu sitelerden birer sayfa dene</button></div>
     ${problems?trialRows(problems):""}
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
@@ -57,7 +69,7 @@ export function extensionSection(view, {message="", trial=null, problems=null}={
 }
 
 export class ExtensionSettings {
-  constructor(container) {this.container=container;this.view=null;this.message="";this.trial=null;this.problems=null;this.timer=null;}
+  constructor(container) {this.container=container;this.view=null;this.message="";this.trial=null;this.problems=null;this.timer=null;this.sequence=0;}
   async load(message="") {
     try {
       const [view,jobs]=await Promise.all([api("tarayici-eklentisi"),api("jobs")]);
@@ -77,22 +89,29 @@ export class ExtensionSettings {
   /** The connection line every 5 s ("Eklenti çalışıyor: <site> · <durum>" while a job runs); stops when the section is gone. */
   async refresh() {
     if(!this.container.isConnected) {clearInterval(this.timer);this.timer=null;return;}
+    const ticket=this.sequence;
     try {
-      this.view={...this.view,...await api("tarayici-eklentisi")};
+      const fresh=await api("tarayici-eklentisi");
+      if(ticket!==this.sequence) return;            // GÖREV-17: an answer that set out before "Kodu yenile" must not bring the old code back
+      this.view={...this.view,...fresh};
       const tag=this.container.querySelector("#extension-connection");
       const state=connectionText(this.view);
       if(tag) {tag.textContent=state.text;tag.className=`tag ${state.tone}`;}
+      const code=this.container.querySelector("#extension-code");       // a code renewed elsewhere shows here within seconds
+      if(code && code.textContent!==this.view.kod) code.textContent=this.view.kod;
     } catch(error) { /* the next refresh tries again */ }
   }
   async renew() {
     if(!globalThis.confirm?.("Eşleşme kodu yenilensin mi? Eklentiye yeni kodu yeniden yazmanız gerekecek.")) return;
-    try {this.view=await api("tarayici-eklentisi/kod-yenile",{method:"POST",body:"{}"});this.message="Yeni kod üretildi; eklentiye bu kodu yazın.";}
+    this.sequence++;
+    try {this.view={...this.view,...await api("tarayici-eklentisi/kod-yenile",{method:"POST",body:"{}"})};this.message="Yeni kod üretildi; eklentiye bu kodu yazın.";}
     catch(error) {if(error.stale) return;this.message=error.message;}
+    this.sequence++;
     this.draw();
   }
   async speed() {
     const value=Number(this.container.querySelector("#extension-gap").value);
-    try {this.view=await api("tarayici-eklentisi/ayarlar",{method:"PUT",body:JSON.stringify({aralik_saniye:value})});this.message="Hız kaydedildi.";}
+    try {this.view={...this.view,...await api("tarayici-eklentisi/ayarlar",{method:"PUT",body:JSON.stringify({aralik_saniye:value})})};this.message="Hız kaydedildi.";}
     catch(error) {if(error.stale) return;this.message=error.message;}
     this.draw();
   }

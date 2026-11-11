@@ -171,3 +171,91 @@ def test_the_extension_reads_local_pages_in_its_own_window(program, tmp_path):
         finally:
             context.close()
             site.shutdown()
+
+def extension_context(playwright, tmp_path):
+    executable = os.environ.get("STUDIO_EKLENTI_CHROMIUM")
+    browser = {"executable_path": executable} if executable else {"channel": "chromium"}
+    return playwright.chromium.launch_persistent_context(str(tmp_path / "gecici-profil"), headless=True, **browser,
+                                                         args=[f"--disable-extensions-except={EXTENSION}", f"--load-extension={EXTENSION}"],
+                                                         viewport={"width": 1100, "height": 760})
+
+
+def pair_extension(context, bridge, port):
+    worker = next((w for w in context.service_workers if w.url.endswith("/background.js")), None)
+    while worker is None:
+        found = context.wait_for_event("serviceworker", timeout=20000)
+        worker = found if found.url.endswith("/background.js") else None
+    extension_id = worker.url.split("/")[2]
+    popup = context.new_page()
+    popup.goto(f"chrome-extension://{extension_id}/popup.html")
+    popup.evaluate(f"chrome.storage.local.set({{port: {port}}})")
+    popup.fill("#kod", bridge.code())
+    popup.click("button[type=submit]")
+    deadline = time.monotonic() + 20
+    while not (popup.locator("#eslesme-sonuc").text_content() or "").startswith("Eşleşti"):
+        assert time.monotonic() < deadline, popup.locator("#eslesme-sonuc").text_content()
+        popup.wait_for_timeout(300)
+    deadline = time.monotonic() + 20
+    while not bridge.connected:
+        assert time.monotonic() < deadline, "Eklenti programa bağlanmadı."
+        time.sleep(0.2)
+    return popup            # an extension page: chrome.windows can be asked from it
+
+
+def window_ids(popup):
+    return popup.evaluate("chrome.windows.getAll({populate: false}).then(all => all.map(w => w.id))")
+
+
+def test_one_window_for_the_whole_job_and_it_closes_when_the_job_ends(program, tmp_path):
+    """GÖREV-17: two sites of one job are read in the same window and tab (never one window per site); the window is opened without
+    the focus, stays between the two sites and closes when the job is cancelled. Local pages only."""
+    from playwright.sync_api import sync_playwright
+    app, port = program
+    bridge, db = app.state.extension, app.state.db
+    site = trial_site()
+    base = f"http://127.0.0.1:{site.server_address[1]}"
+    other = base                                                    # the job's second "site": another session of the same job
+    with sync_playwright() as playwright:
+        context = extension_context(playwright, tmp_path)
+        try:
+            popup = pair_extension(context, bridge, port)
+            before = set(window_ids(popup))
+            job = db.add_job("eklenti_deneme", "Tek pencere denemesi")
+            db.update_job(job, status="running", message="başladı")
+            access = ext.JobAccess(bridge, db, job)
+            seen, stop = set(), threading.Event()
+
+            def watch():                                             # every window the extension has open during the job
+                while not stop.is_set():
+                    try:
+                        seen.update(set(window_ids(popup)) - before)
+                    except Exception:
+                        pass
+                    time.sleep(0.15)
+            first = access.open("127.0.0.1", purpose="tek pencere")
+            a = first.page(f"{base}/normal", {"saniye": 1})
+            seen.update(set(window_ids(popup)) - before)
+            first.close()
+            time.sleep(4)                                            # between two sites: the extension asks again and keeps its window
+            between = set(window_ids(popup)) - before
+            second = access.open("127.0.0.1", purpose="tek pencere")
+            b = second.page(f"{other}/js", {"oge": "#icerik"})
+            seen.update(set(window_ids(popup)) - before)
+            c = second.page(f"{other}/normal", {"saniye": 1})
+            seen.update(set(window_ids(popup)) - before)
+            second.close()
+            assert a["durum"] == b["durum"] == c["durum"] == "tamam" and "JavaScript ile çizildi" in b["html"].decode("utf-8")
+            assert len(seen) == 1 and between == seen                # one window for both sites, still open in between
+            window = popup.evaluate(f"chrome.windows.get({next(iter(seen))}, {{populate: true}}).then(w => ({{tabs: w.tabs.length, state: w.state}}))")
+            assert window == {"tabs": 1, "state": "normal"}          # one tab; not minimized
+            assert db.job(job)["progress_info"]["asama"] in ("sıradaki sayfa bekleniyor", "127.0.0.1 · sayfa okunuyor")
+            db.update_job(job, status="canceled", message="İş iptal edildi.")
+            deadline = time.monotonic() + 15
+            while set(window_ids(popup)) - before and time.monotonic() < deadline:
+                time.sleep(0.2)
+            assert not set(window_ids(popup)) - before                # the job ended: the window closed
+            stop.set()
+            _ = watch
+        finally:
+            context.close()
+            site.shutdown()

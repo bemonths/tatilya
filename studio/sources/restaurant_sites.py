@@ -1644,6 +1644,8 @@ class CdpPages:
         self.response = None
 
     def goto(self, url):
+        from .browser_verification import window_note
+        window_note("program", f"{host_key(url)} okunuyor")       # GÖREV-17: the job panel names the open window
         try:
             self.response = self.page.goto(url, wait_until="domcontentloaded", timeout=60_000)
         except Exception as exc:

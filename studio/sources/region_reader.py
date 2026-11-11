@@ -15,6 +15,10 @@ address is on the command line inside the PAC data address; the user name and pa
 question over CDP `Fetch` in the program's own tab (Housing Atlas `ProxyAuth`; a second question for the same request is cancelled so a
 wrong password cannot loop). When the list or the proxy changes, a browser started with the old PAC script is closed and started again.
 
+GÖREV-17: the proxy browser's window follows the same rules as the program's other browser (browser_verification): started without
+taking the focus, one tab for the whole job, forward only for a verification the user has to pass, and closed when the job that
+started it ends. The job panel shows "Programın proxy tarayıcısı: <site> okunuyor" while it is open.
+
 Raw copies carry `yontem` "proxy" or "tarayici+proxy" and `proxy: true`; never the proxy's address.
 """
 import hashlib
@@ -115,7 +119,7 @@ class ProxyBrowser:
         self.proxy, self.hosts, self.pac = proxy, sorted({P.host_key(h) for h in hosts}), P.pac_script(proxy, hosts)
         self.profile = Path(profile) if profile else proxy_profile_root()
         self.spawn, self.check, self.connect = spawn, check, connect
-        self.playwright = self.browser = self.page = self.auth = None
+        self.playwright = self.browser = self.page = self.auth = self.job = None
 
     def endpoint(self):
         self.profile.mkdir(parents=True, exist_ok=True)
@@ -138,34 +142,26 @@ class ProxyBrowser:
         if self.spawn is not None:
             self.spawn(command)
         else:
-            flags = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP) if sys.platform == "win32" else 0
-            subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True,
-                             creationflags=flags, start_new_session=sys.platform != "win32")
+            bv.start_browser(command)          # GÖREV-17: without taking the focus
         marker.write_text(json.dumps({"pac_sha256": digest}), encoding="utf-8")
         deadline = time.monotonic() + bv.START_SECONDS
         while time.monotonic() < deadline:
             endpoint = bv.running_endpoint(self.profile, self.check)
             if endpoint:
+                bv.browser_started(self.profile)       # the job that started it closes it when it ends
                 return endpoint
             time.sleep(0.5)
         raise bv.BrowserUnavailable("Proxy tarayıcısı açıldı ama hata ayıklama bağlantı noktası açılmadı.")
 
     def close_running(self, endpoint):
         """A proxy browser started with another PAC script (the list or the proxy changed): closed before a new start."""
-        try:
-            from playwright.sync_api import sync_playwright
-            with sync_playwright() as playwright:
-                browser = playwright.chromium.connect_over_cdp(endpoint)
-                browser.new_browser_cdp_session().send("Browser.close")
-        except Exception:
-            pass
-        deadline = time.monotonic() + 10
-        while time.monotonic() < deadline and bv.running_endpoint(self.profile, self.check):
-            time.sleep(0.5)
+        bv.close_browser(endpoint, self.profile, self.check)
 
     def start(self):
         if self.page is not None:
             return self.page
+        if self.job is None:
+            self.job = bv.window_opened("proxy")
         if self.connect is not None:
             self.page = self.connect(self)
             return self.page
@@ -185,6 +181,7 @@ class ProxyBrowser:
 
     def page_read(self, url, canceled=lambda: False, waiting=None, wait_s=VERIFY_WAIT_S):
         page = self.start()
+        bv.window_note("proxy", f"{bv.host_key(url)} okunuyor")
         response = page.goto(url, wait_until="domcontentloaded", timeout=90_000)
         try:
             page.wait_for_load_state("networkidle", timeout=5_000)
@@ -195,6 +192,8 @@ class ProxyBrowser:
         if kind == "dogrulama":
             if waiting:
                 waiting(bv.host_key(url))
+            bv.window_note("proxy", f"doğrulama bekleniyor: {bv.host_key(url)}")
+            bv.bring_forward(page)               # GÖREV-17: the only time the window comes forward
             deadline = time.monotonic() + wait_s
             try:
                 while kind == "dogrulama" and time.monotonic() < deadline:
@@ -222,6 +221,9 @@ class ProxyBrowser:
         except Exception:
             pass
         self.playwright = self.browser = None
+        if self.job is not None:
+            self.job.closed("proxy")
+            self.job = None
 
 
 class ProxyChromeSession:
@@ -240,6 +242,7 @@ class ProxyChromeSession:
             raise
         self.context = self.browser.contexts[0] if self.browser.contexts else self.browser.new_context()
         self.pages, self.auths = [], []
+        self.job = bv.window_opened("proxy")
 
     def new_page(self):
         page = self.context.new_page()
@@ -259,6 +262,9 @@ class ProxyChromeSession:
             self.playwright.stop()
         except Exception:
             pass
+        if self.job is not None:
+            self.job.closed("proxy")
+            self.job = None
 
 
 def proxy_verifier(proxy, hosts):

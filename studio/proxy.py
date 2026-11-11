@@ -46,6 +46,24 @@ NO_PASSWORD = "Proxy kullanıcı adı yazılmış ama parola kayıtlı değil. P
 NOT_US = "Proxy'nin çıkış adresi ABD'de görünmüyor"
 NO_PROXY_SKIP = "bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)"
 PROXY_FAILED_SKIP = "bölge engeli: proxy'yle de okunamadı"
+# GÖREV-17: how a region-blocked site ended, in the job log, the trial table and the job panel (the same words everywhere)
+REGION_READ = "bölge engeli · proxy'yle okundu"
+REGION_NOT_READ = "bölge engeli · proxy'yle de okunamadı"
+REGION_NO_PROXY = "bölge engeli · ABD proxy'si tanımlı değil (Ayarlar)"
+
+
+def region_outcome(state, note=None, through_proxy=False):
+    """The words for a region-blocked page: read through the proxy, not read even with it (with the reason), or no proxy set.
+    "bölge engeli" alone only when none of them is known (the block was seen and nothing else was tried)."""
+    note = str(note or "")
+    if through_proxy and state == "tamam":
+        return REGION_READ
+    if note.startswith(PROXY_FAILED_SKIP):
+        detail = note[len(PROXY_FAILED_SKIP):].strip()
+        return f"{REGION_NOT_READ} {detail}".strip()
+    if note.startswith(NO_PROXY_SKIP):
+        return REGION_NO_PROXY
+    return f"bölge engeli ({note})" if note else "bölge engeli"
 _COUNTRY = re.compile(r"^[A-Z]{2}$")
 _IP = re.compile(r"^[0-9A-Fa-f:.]{3,45}$")
 

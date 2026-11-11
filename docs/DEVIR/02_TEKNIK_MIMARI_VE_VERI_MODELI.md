@@ -384,7 +384,7 @@ eklenti bekleyen işte `{"tur": "eklenti", "bekliyor": true}`); `jobs` satırlar
 `<veri>/eklenti.json`. Video kaydında (`videos`) önerilen başlık ve "kullanıcı düzenledi" işareti. Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md`,
 `docs/M16-TARAYICI-EKLENTISI.md`.
 
-### Bölge engelli alan adları (şema 18; `gorev-16-eklenti-proxy` dalı)
+### Bölge engelli alan adları (şema 18; v0.18.0)
 
 `region_blocked_hosts` (alan adı, sayfa başlığı, adres, engeli gösteren söz ya da yönlenilen adres, ekleyen `program` / `kullanici`, ilk ve
 son görülme). Liste yalnız ABD dışı erişim engeli içindir: bu alan adları kullanıcının ABD proxy'siyle okunur (proxy → programın tarayıcısı
@@ -392,6 +392,16 @@ proxy'yle → atla), eklentiye verilmez; proxy yoksa atlanır. Ayar `<veri>/ayar
 Kimlik Bilgisi Yöneticisi'nde (`studio/credentials.py`, hizmet `30AStudio`). Çekirdek `studio/proxy.py` (doğrulama, mount'lar, PAC, deneme,
 liste), `studio/sources/region_reader.py` (okuma sırası, proxy tarayıcısı), `studio/sources/page_kinds.py` (sayfa türleri). Ayrıntı:
 `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`.
+
+### Panelden kaldırılan işler (şema 19; `gorev-17-arayuz` dalı)
+
+`job_hidden` (`job_id` → `jobs.id`, `hidden_at`): İşler panelinden kaldırılan (gizlenen) işler. Kaldırmak silmek değildir: `jobs`
+satırı, günlüğü ve sonucu değişmez; satır yalnız panelin o işi göstermemesini söyler ve "Geri getir" satırı siler. Yalnız bitmiş iş
+(done, failed, canceled, interrupted) gizlenebilir; toplu kaldırma, Claude çalışması kullanıcının kararını bekleyen işi
+(`claude_runs.status='awaiting_approval'`, `text_runs.status IN ('awaiting_comparison','paused')`) dışarıda bırakır. `jobs()` her işi
+`hidden_at` ve `awaiting_approval` ile verir. Süren işin açık tarayıcı pencereleri `job_progress.info` içindeki `pencereler`
+anahtarında durur (`program`, `proxy`; eklentinin penceresi `tur: "eklenti"` ve `asama`'dan okunur). `studio/migration_v19.py`
+yalnız tabloyu ekler; hiçbir satır değişmez ve hiçbir iş gizlenmez.
 
 ### Video metni (şema 17; `gorev-15-video-metni` dalı)
 
@@ -436,6 +446,8 @@ GÖREV-13 (`gorev-13-claude-baslik`, şema `15`): v14 → v15 `claude_runs`, `vi
 
 v0.7 lodging discovery sırasında schema 7 oluşturulmadı. Şema 7, GÖREV-03'te (`gorev-03-mahalleler`, v0.7.0) mahalle verisi için eklendi: `neighborhood_records` tablosu ve v6 → v7 migration'ı; konaklamayla ilgisi yoktur. Plaj–mahalle eşlemesi veritabanında değil, `studio/destinations/thirty_a_beach_neighborhoods.csv` dosyasındadır. Ayrıntı: `docs/M7-MAHALLE-VERISI.md`.
 
+GÖREV-17 (`gorev-17-arayuz`, şema `19`, `studio/migration_v19.py`): v18 → v19 yalnız `job_hidden` tablosunu ekler (panelden kaldırılan işler); mevcut hiçbir satır değişmez. Geçişten önce uygulama `backups/studio-v18-*.sqlite3` yedeğini alır.
+
 ## API'nin ana grupları
 
 Genel:
@@ -469,6 +481,8 @@ Domain:
 - Video metni (GÖREV-15): `/api/videos/{id}/metin` (GET ekranın verisi; POST `{"tonlar": [...]}` çalışma başlatır), `/api/videos/{id}/metin/karsilastirma?calisma=`, `/api/metin/calismalar/{id}` ve `…/devam`, `…/durdur`, `…/ton` ("Bu tonla da yaz"), `…/yeniden-planla`; `/api/metin/surumler/{id}`, `…/dosya/{en|tr|seslendirme|kanitli|denetim}`, `…/sec`; tonlar `/api/tonlar` (GET, POST), `/api/tonlar/{dosya}` (GET, PUT `base_sha256` ile, DELETE: arşive), `…/varsayilan`, `…/surumler/{s}`, `…/surumler/{s}/geri-don`, `/api/ton-arsivi/{id}/geri-al`. Metin çalışması sürerken başlık çalışması ve `POST /api/claude/usage/refresh` 409 döner.
 
 Liste endpoint'leri destination-filtered'dır.
+
+- İşler paneli (GÖREV-17): `POST /api/jobs/{id}/kaldir` (bitmiş işi gizler; süren iş 409), `POST /api/jobs/{id}/geri-getir`, `POST /api/jobs/bitenleri-kaldir` (`{kaldirilan, jobs, gizlenen}`), `GET /api/jobs/gizlenen` (günlüksüz liste). `/api/eklenti/sor` cevabı `acik_pencereler` listesini, oturum görünümü `pencere` anahtarını taşır (bir iş boyunca tek pencere).
 
 ## Frontend destination davranışı
 

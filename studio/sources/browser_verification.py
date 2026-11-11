@@ -17,6 +17,12 @@ reddedildi") and a region block ("bölge engeli": the site serves only visitors 
 verification; a region block raises RegionBlocked so the caller puts the domain on the region-blocked list (read only through the
 user's US proxy, studio/sources/region_reader.py).
 
+GÖREV-17: the browser's window during a job. The browser is started without taking the focus (the window is shown but not activated;
+it is not minimized, because a hidden page stops drawing and loading what comes into view). A browser the job itself started is closed
+when the job ends or is cancelled (JobWindows); one that was already running (the user's warm-up tabs) is left as it is and only the
+job's own tabs are closed. The window comes forward only for a verification the user has to pass (wait_for_user). The job panel shows
+which window is open and what it does ("Programın tarayıcısı: <site> okunuyor").
+
 Hosts that once showed a verification page are kept in browser_hosts ("read with the browser"): later runs go to them through the
 browser only, and a warm-up opens them all in tabs before a long run (python -m studio.sources.browser_verification isinma).
 """
@@ -26,6 +32,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,6 +63,137 @@ BROWSERS = (
     Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Microsoft" / "Edge" / "Application" / "msedge.exe",
     Path("/usr/bin/google-chrome"), Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
 )
+
+
+SW_SHOWNOACTIVATE = 4           # Windows: show the new window in its normal size without activating it
+
+
+def start_browser(command, popen=subprocess.Popen):
+    """The browser as an ordinary application, detached from this process, its window not taking the focus (GÖREV-17). The command
+    line stays as it is: the show state is the one Windows passes to any program started "without activation"."""
+    options = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "close_fds": True}
+    if sys.platform == "win32":
+        startup = subprocess.STARTUPINFO()
+        startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup.wShowWindow = SW_SHOWNOACTIVATE
+        options.update(creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP, startupinfo=startup)
+    else:
+        options["start_new_session"] = True
+    return popen(command, **options)
+
+
+def close_browser(endpoint, profile=None, check=None, wait=15):
+    """Close a browser the program started (CDP Browser.close); its profile, cookies and passed verifications stay on disk.
+    A browser that has only just started may ignore the first request (its first-run page is still opening), so the request is
+    repeated every few seconds until the browser is gone or `wait` seconds passed."""
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.connect_over_cdp(endpoint)
+                browser.new_browser_cdp_session().send("Browser.close")
+        except Exception:
+            pass
+        if profile is None:
+            return
+        pause = time.monotonic() + 3
+        while time.monotonic() < pause:
+            if not running_endpoint(profile, check or probe):
+                return
+            time.sleep(0.5)
+        if time.monotonic() >= deadline:
+            return
+
+
+class JobWindows:
+    """What the browsers of one job share (GÖREV-17): the job panel's line for each open window ("program": the program's own
+    browser, "proxy": its proxy browser) and the browsers the job itself started, which are closed when the job ends or is cancelled.
+    Used as a context manager around the job; without one (the warm-up command, a test) nothing is noted and nothing is closed."""
+
+    active = []                    # the jobs at work, newest last (collectors read pages in worker threads too)
+    lock = threading.Lock()
+
+    def __init__(self, note=None, close=close_browser):
+        self.note_job, self.close, self.launched, self.counts = note, close, [], {}
+
+    def __enter__(self):
+        with JobWindows.lock:
+            JobWindows.active.append(self)
+        return self
+
+    def __exit__(self, *exc):
+        with JobWindows.lock:
+            JobWindows.active.remove(self)
+            heir = JobWindows.active[-1] if JobWindows.active else None
+            launched, self.launched = self.launched, []
+            if heir is not None:               # another job still reads: it closes these browsers when it ends
+                heir.launched.extend(launched)
+                launched = []
+        for profile in launched:
+            try:
+                endpoint = running_endpoint(profile)
+                if endpoint:
+                    self.close(endpoint, profile)
+            except Exception:
+                pass
+        for key in list(self.counts):
+            self.tell(key, None)
+        return False
+
+    @classmethod
+    def current(cls):
+        with cls.lock:
+            return cls.active[-1] if cls.active else None
+
+    def tell(self, key, text):
+        if self.note_job is not None:
+            try:
+                self.note_job(key, text)
+            except Exception:
+                pass                           # the panel line is information only; reading goes on
+
+    def opened(self, key, text="açık"):
+        with JobWindows.lock:
+            self.counts[key] = self.counts.get(key, 0) + 1
+        self.tell(key, text)
+
+    def closed(self, key):
+        with JobWindows.lock:
+            left = self.counts[key] = max(0, self.counts.get(key, 0) - 1)
+        if not left:
+            self.tell(key, None)
+
+
+def window_opened(key, text="açık"):
+    job = JobWindows.current()
+    if job is not None:
+        job.opened(key, text)
+    return job
+
+
+def window_note(key, text):
+    """What the job's open window is doing now, for the job panel."""
+    job = JobWindows.current()
+    if job is not None:
+        job.tell(key, text)
+
+
+def browser_started(profile):
+    """A browser this job started: closed when the job ends."""
+    job = JobWindows.current()
+    if job is not None:
+        with JobWindows.lock:
+            if Path(profile) not in job.launched:
+                job.launched.append(Path(profile))
+
+
+def bring_forward(page):
+    """A verification the user has to pass: the page's tab and window come forward (the only time they do)."""
+    try:
+        page.bring_to_front()
+    except Exception:
+        pass                                   # a stand-in page in a test, or a window the user already closed
 
 
 class SiteBlocked(Exception):
@@ -139,13 +277,12 @@ def ensure_browser(profile=None, *, spawn=None, check=probe, wait=START_SECONDS)
     if spawn is not None:
         spawn(command)
     else:
-        flags = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP) if sys.platform == "win32" else 0
-        subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True,
-                         creationflags=flags, start_new_session=sys.platform != "win32")
+        start_browser(command)
     deadline = time.monotonic() + wait
     while time.monotonic() < deadline:
         endpoint = running_endpoint(profile, check)
         if endpoint:
+            browser_started(profile)           # GÖREV-17: the job that started it closes it when it ends
             return endpoint, True
         time.sleep(0.5)
     raise BrowserUnavailable("Tarayıcı açıldı ama hata ayıklama bağlantı noktası açılmadı (aynı profil hata ayıklamasız açık olabilir).")
@@ -167,6 +304,7 @@ class ChromeSession:
             raise
         self.context = self.browser.contexts[0] if self.browser.contexts else self.browser.new_context()
         self.pages = []
+        self.job = window_opened("program")    # GÖREV-17: the job panel names the open window
 
     def new_page(self):
         page = self.context.new_page()
@@ -180,6 +318,9 @@ class ChromeSession:
             except Exception:
                 pass                          # the window or tab may already be closed by the user
         self.pages = []
+        if self.job is not None:
+            self.job.closed("program")
+            self.job = None
         try:
             self.playwright.stop()            # disconnects; the browser and its profile stay as they are
         except Exception:
@@ -232,6 +373,10 @@ def wait_for_user(pages, canceled, timeout, waiting=None, sleep=time.sleep):
     pending, cleared = dict(pages), set()
     if waiting and pending:
         waiting(", ".join(sorted(pending)))
+    if pending:
+        window_note("program", f"doğrulama bekleniyor: {', '.join(sorted(pending))}")
+        for page in pending.values():          # GÖREV-17: the only time the window comes forward
+            bring_forward(page)
     deadline = time.monotonic() + timeout
     try:
         while pending:
@@ -249,6 +394,8 @@ def wait_for_user(pages, canceled, timeout, waiting=None, sleep=time.sleep):
     finally:
         if waiting and pages:
             waiting(None)
+        if pages:
+            window_note("program", "açık")
     return cleared
 
 
@@ -297,6 +444,7 @@ class BrowserVerifier:
         session = self.session_factory()
         try:
             page = session.new_page()
+            window_note("program", f"{host_key(domain)} okunuyor")
             page.goto(url, wait_until="domcontentloaded", timeout=90_000)
             state = watch(page, timeout, canceled)
             if state == "blocked":

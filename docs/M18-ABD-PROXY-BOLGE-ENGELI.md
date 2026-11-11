@@ -1,4 +1,4 @@
-# M18 — ABD dışı erişim engeli için kullanıcının ABD proxy'si ve sayfa türleri (GÖREV-16, v0.18.0, şema 18)
+# M18 — ABD dışı erişim engeli için kullanıcının ABD proxy'si ve sayfa türleri (GÖREV-16, v0.18.0, şema 18; GÖREV-17 pencereler)
 
 ## Neden
 
@@ -87,6 +87,20 @@ Toplayıcılarda:
   görürse alan adı listeye girer ve proxy varsa sayfa hemen proxy'yle denenir.
 
 Ham kayıtlarda `yontem` alanı `proxy` ya da `tarayici+proxy` olur ve `proxy: true` yazar; proxy'nin adresi yazılmaz.
+
+## GÖREV-17: pencereler ve günlük metni (v0.19.0)
+
+- **Programın proxy tarayıcısının penceresi.** Odak almadan başlatılır (`browser_verification.start_browser`: pencere gösterilir ama
+  etkinleştirilmez; komut satırı aynıdır, bayrak eklenmedi), bir iş boyunca tek sekme kullanır, yalnız proxy üzerinden çıkan ve
+  kullanıcının geçmesi gereken doğrulamada öne gelir (`bring_forward`) ve onu başlatan iş bitince ya da iptal edilince kapatılır
+  (`JobWindows`; CDP `Browser.close`, profil diskte kalır). Görünmez (headless) kip ve küçültülmüş pencere kullanılmaz. İşler panelinde
+  "Programın proxy tarayıcısı: <site> okunuyor" yazar. Programın proxy'siz kendi tarayıcısı da aynı kurallara uyar; iş başlamadan önce
+  zaten açık olan tarayıcı (kullanıcının ısınma sekmeleri) kapatılmaz, yalnız işin kendi sekmeleri kapanır.
+- **Günlük metni.** Bölge engelli sitenin sonucu deneme işinin günlüğünde, deneme tablosunda ve İşler panelinde aynı sözlerle yazar
+  (`proxy.region_outcome`): "bölge engeli · proxy'yle okundu", "bölge engeli · proxy'yle de okunamadı (neden)", "bölge engeli · ABD
+  proxy'si tanımlı değil (Ayarlar)". İşin son satırı kaç sitenin proxy'yle okunduğunu söyler. Ham kayıtlardaki `yontem` ve `proxy`
+  alanları ve toplayıcıların atlama notları (`NO_PROXY_SKIP`, `PROXY_FAILED_SKIP`) değişmedi.
+- Proxy'nin yalnız bölge engelli alan adlarında kullanılması, hız kuralı ve doğrulamayı kullanıcının geçmesi değişmedi.
 
 ## Gizli bilgi nerede durur
 

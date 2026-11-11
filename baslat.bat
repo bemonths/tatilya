@@ -1,6 +1,8 @@
 @echo off
 rem 30A Studio: gerekirse kurar, sonra programi konsol penceresi olmadan baslatir.
 rem "baslat.bat kur" kurulumu zorla yapar; program kurulum damgasi tutmazsa bunu kendisi cagirir.
+rem Program klasoru tasinmissa (sanal ortamin kayitlari eski yolu gosteriyorsa) kurulumu yeni klasore gore yeniler
+rem ve masaustu kisayolunu yeniden olusturur.
 rem Bu dosya yalnizca ASCII metin icerir ve CRLF satir sonlariyla kaydedilir (sistem kod sayfasi 936).
 setlocal
 set "ROOT=%~dp0"
@@ -15,10 +17,13 @@ set "VENV_PYW=%ROOT%.venv\Scripts\pythonw.exe"
 set "STAMP=%ROOT%.venv\studio-kurulum.txt"
 set "PYTHON="
 set "FIRST_INSTALL="
+set "MOVED="
 set "PYTHONUTF8=1"
 
 if /i "%~1"=="kur" goto install
 if not exist "%VENV_PYW%" goto install
+"%VENV_PY%" -m studio.install_stamp moved >nul 2>nul
+if %errorlevel% equ 0 goto moved
 "%VENV_PY%" -m studio.install_stamp check >nul 2>nul
 if %errorlevel% neq 0 goto install
 goto launch
@@ -30,6 +35,14 @@ rem Sanal ortamin Python'u calismiyorsa ya da 3.12'den eskiyse ortam yeniden kur
 "%VENV_PY%" -c "import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)" >nul 2>nul
 if %errorlevel% neq 0 goto create_venv
 if exist "%VENV_PYW%" goto packages
+
+rem Klasor tasinmis: sanal ortamin kayitlari ve betikleri yeni yola gore yenilenir (paketler silinmez), kisayol yeniden olusturulur.
+:moved
+echo Program klasoru tasinmis. Kurulum yeni klasore gore yenileniyor...
+set "MOVED=1"
+call :find_python
+if defined PYTHON %PYTHON% -m venv "%ROOT%.venv" >nul 2>nul
+goto packages
 
 :create_venv
 call :find_python
@@ -46,11 +59,12 @@ if %errorlevel% neq 0 goto pip_failed
 if %errorlevel% neq 0 goto stamp_failed
 echo Kurulum tamamlandi.
 if defined FIRST_INSTALL call :shortcut
+if defined MOVED call :shortcut
 
 :launch
 rem Masaustu kisayoluyla ayni komut: "-X utf8" Python'u UTF-8 kipinde calistirir.
 start "" "%VENV_PYW%" -X utf8 -m studio
-if not defined FIRST_INSTALL goto done
+if not defined FIRST_INSTALL if not defined MOVED goto done
 echo Program aciliyor. Bu pencere birkac saniye sonra kendiliginden kapanacak.
 timeout /t 8 >nul 2>nul
 

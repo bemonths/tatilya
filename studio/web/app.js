@@ -15,17 +15,17 @@ import {EvidenceScreen} from "./evidence.js";
 import {VideosScreen, videoCard} from "./videos.js";
 import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask, packHead} from "./workflow.js";
 import {renderClaudeSettings, renderSuffixSettings} from "./claude.js";
-import {UsagePanel, claudeBar, claudeProgress, progressText as claudeProgressText} from "./usage.js";
+import {UsagePanel, claudeProgress, progressText as claudeProgressText} from "./usage.js";
 import {InstructionEditor} from "./instructions.js";
-import {ExtensionSettings, skipButton} from "./extension.js";
+import {ExtensionSettings} from "./extension.js";
 import {ProxySettings} from "./proxy.js";
-import {TextScreen, textBar} from "./text.js";
+import {TextScreen} from "./text.js";
 import {ToneSettings} from "./tones.js";
+import {jobsPanel, active} from "./jobs.js";
+import {sectionOfHash, isSettingsHash, sectionId, settingsFrame, usageCard, SETTINGS_INTRO} from "./settings.js";
 
 const $ = selector => document.querySelector(selector);
-const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:""};
-const statusLabels = {queued:"Sırada", running:"Çalışıyor", done:"Tamamlandı", failed:"Hata", canceled:"İptal edildi", interrupted:"Yarıda kaldı"};
-const active = job => ["queued", "running"].includes(job.status);
+const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:"", hiddenJobs:[], showHidden:false};
 let toastTimer;
 let events=null;
 let lastCollectionId=null;
@@ -74,6 +74,9 @@ function options(values, selected="", empty=null) {
 // GÖREV-14: ADIMLAR (the selected video's eight steps with live statuses) and VERİ (the tool screens).
 function navigation() {
   $("#navigation").innerHTML = stepNav(state.workflow, stepOfHash(location.hash)) + toolNav(state.data.steps, state.page);
+  const settings=$("#settings-nav");             // GÖREV-17: the Settings item at the bottom of the sidebar is marked while its screen is open
+  settings.classList.toggle("active",state.page==="settings");
+  if(state.page==="settings") settings.setAttribute("aria-current","page"); else settings.removeAttribute("aria-current");
 }
 
 function currentStep() {
@@ -169,7 +172,7 @@ function pageHeading(title, description, actions="") {
 
 function render() {
   if (!state.data) return;
-  state.page = location.hash.slice(1).split("/")[0] || "sources";
+  state.page = isSettingsHash(location.hash) ? "settings" : (location.hash.slice(1).split("/")[0] || "sources");
   if (![...state.data.steps.map(step=>step.id),"settings","videos","adim"].includes(state.page)) state.page="sources";
   navigation();
   beachScreen.invalidate();
@@ -189,7 +192,13 @@ function render() {
   else if (state.page === "evidence") evidenceScreen.render($("#main"),state.data,pageHeading);
   else if (state.page === "videos") videosScreen.render($("#main"),state.data,(title,description,actions)=>pageHeading(title,description,actions)+nextTaskSlot(currentStep()));
   else if (state.page === "adim") renderStep();
-  else if (state.page === "settings") renderSettings();
+  else if (state.page === "settings") {
+    // GÖREV-17: an address change inside Settings (#settings/tonlar) only goes to the section; the screen is not drawn again, so
+    // nothing typed into a section is lost
+    if(!document.getElementById("settings-screen")) renderSettings();
+    else if(location.hash!==lastSettingsHash) goToSettingsSection(sectionOfHash(location.hash));
+    lastSettingsHash=location.hash;
+  }
   updateAuditButtons();
 }
 
@@ -260,22 +269,44 @@ function renderQuality() {
 }
 
 function renderSettings() {
-  $("#main").innerHTML = pageHeading("Ayarlar", "30A Studio’nun sürümü, kayıt konumu ve Claude ayarları.") +
-    `<div class="info-grid"><section class="info-card"><span class="eyebrow">BU BİLGİSAYARDA</span><h2 style="margin-top:12px">Destinasyonların kayıt alanı</h2><p>Kaynaklar, düzenleme geçmişi ve iş sonuçları aşağıdaki klasörde saklanır.</p><div class="path">${esc(state.data.data_path)}</div><p style="margin-top:15px">Uygulamayı kapatıp açınca kayıtların korunur. Yedek almak için uygulamayı kapattıktan sonra bu klasörün tamamını kopyalayabilirsin.</p></section>
-    <section class="info-card"><span class="eyebrow">SÜRÜM ${esc(state.data.version)}</span><h2 style="margin-top:12px">Veri, kanıt paketi ve konu önerisi hazır</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Videolar ekranında Claude ile konu ve başlık önerisi ve video kaydı kullanılabilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">Claude ile video metni ve metnin kontrolü. Görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></section></div><div class="info-grid claude-grid" id="claude-settings-slot"><p class="muted">Claude ayarları yükleniyor…</p></div>
-    <div class="info-grid claude-grid"><div id="suffix-settings-slot"><p class="muted">Başlık eki yükleniyor…</p></div><div id="usage-settings-slot"></div></div>
-    <div class="info-grid claude-grid" id="instructions-slot"><p class="muted">Talimatlar yükleniyor…</p></div>
-    <div class="info-grid claude-grid" id="tones-slot"><p class="muted">Tonlar yükleniyor…</p></div>
-    <div class="info-grid claude-grid" id="warnings-slot"></div>
-    <div class="info-grid claude-grid" id="extension-slot"><p class="muted">Tarayıcı eklentisi yükleniyor…</p></div>
-    <div class="info-grid claude-grid" id="proxy-slot"><p class="muted">ABD proxy'si yükleniyor…</p></div>`;
-  new ExtensionSettings($("#extension-slot")).load();
-  new ProxySettings($("#proxy-slot")).load().then(()=>{if(location.hash==="#settings/proxy") $("#abd-proxy")?.scrollIntoView({block:"start"});});
-  renderClaudeSettings($("#claude-settings-slot"));
-  renderSuffixSettings($("#suffix-settings-slot"));
-  api("claude/usage").then(view=>{const slot=$("#usage-settings-slot");if(slot) slot.innerHTML=`<section class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p>${esc(view.refresh.text)}</p><p class="muted">Model: <code>${esc(view.refresh.model)}</code> · efor: ${view.refresh.effort==="low"?"düşük":esc(view.refresh.effort)}</p></section>`;}).catch(()=>{});
-  new InstructionEditor($("#instructions-slot")).load();
-  new ToneSettings($("#tones-slot"),$("#warnings-slot")).load().then(()=>{if(location.hash==="#settings/tonlar") $("#tonlar")?.scrollIntoView({block:"start"});});
+  // GÖREV-17: section buttons, one card per section and section addresses (studio/web/settings.js); every section is still drawn
+  // by its own module, so its save, trial and version buttons work as before.
+  const ticket=++settingsSequence;
+  $("#main").innerHTML = pageHeading("Ayarlar", SETTINGS_INTRO) + settingsFrame(state.data.data_path,state.data.version,sectionOfHash(location.hash));
+  $("#settings-nav-bar").addEventListener("click",event=>{
+    const link=event.target.closest("[data-settings-section]");
+    if(link && link.getAttribute("href")===location.hash) {event.preventDefault();goToSettingsSection(link.dataset.settingsSection);}   // same address: no hashchange
+  });
+  const loads=[
+    new ExtensionSettings($("#extension-slot")).load(),
+    new ProxySettings($("#proxy-slot")).load(),
+    renderClaudeSettings($("#claude-settings-slot")),
+    renderSuffixSettings($("#suffix-settings-slot")),
+    api("claude/usage").then(view=>{const slot=$("#usage-settings-slot");if(slot) slot.innerHTML=usageCard(view);}).catch(()=>{}),
+    new InstructionEditor($("#instructions-slot")).load(),
+    new ToneSettings($("#tones-slot"),$("#warnings-slot")).load(),
+  ];
+  goToSettingsSection(sectionOfHash(location.hash),{smooth:false});
+  // the sections above the wanted one grow as they load: go to it again when they are all there
+  Promise.allSettled(loads).then(()=>{if(ticket===settingsSequence && state.page==="settings") goToSettingsSection(sectionOfHash(location.hash),{smooth:false,focus:false});});
+}
+
+let settingsSequence=0, lastSettingsHash="";
+
+/** Scroll to a Settings section and mark its button; with no section the screen stays where it is. */
+function goToSettingsSection(slug, {smooth=true, focus=true}={}) {
+  for(const link of document.querySelectorAll("#settings-nav-bar [data-settings-section]")) {
+    const current=link.dataset.settingsSection===slug;
+    link.classList.toggle("active",current);
+    if(current) link.setAttribute("aria-current","true"); else link.removeAttribute("aria-current");
+  }
+  const section=slug && document.getElementById(sectionId(slug));
+  if(!section) return;
+  const bar=document.getElementById("settings-nav-bar");               // the sticky button row and the top bar must not cover the title
+  const covered=bar.getBoundingClientRect().height+(parseFloat(getComputedStyle(bar).top) || 0)+12;
+  window.scrollTo({top:Math.max(0,section.getBoundingClientRect().top+window.scrollY-covered),behavior:smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches?"smooth":"auto"});
+  const heading=section.querySelector("h2");
+  if(heading && focus) {heading.tabIndex=-1;heading.focus({preventScroll:true});}     // keyboard users continue inside the section
 }
 
 function renderJobResultLink(job) {
@@ -286,9 +317,36 @@ function renderJobResultLink(job) {
 function renderJobs() {
   const jobs = state.data.jobs;
   $("#jobs-count").textContent = jobs.filter(active).length;
-  $("#jobs-content").innerHTML = jobs.length ? jobs.map(job=>`<article class="job"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(statusLabels[job.status] || job.status)}</span><time>${esc(date(job.created_at))}</time></div><h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${claudeBar(job) || textBar(job) || `<progress max="100" value="${job.progress}" aria-label="İş ilerlemesi"></progress>`}${job.waiting_for?`<p class="job-waiting"><span class="tag warm">Kullanıcı doğrulaması bekleniyor</span> ${esc(job.waiting_for)}</p>`:""}${job.message && job.message===job.progress_info?.bekleme?.metin?"":`<p>${esc(job.message)}</p>`}${active(job) && job.progress_info?.tur==="eklenti" && job.progress_info.bekliyor?`<button data-handover-job="${job.id}">Programın tarayıcısına devret</button> `:""}${active(job)?skipButton(job):""}${active(job)?`<button class="quiet" data-cancel-job="${job.id}">İptal et</button>`:""}<details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${renderJobResultLink(job)}</article>`).join("") :
-    '<div class="empty"><div class="empty-icon">⌁</div><h3>Henüz iş yok</h3><p>Kaynak ekranında “Kayıtları kontrol et” düğmesine bastığında işin durumu ve sonucu burada görünür.</p></div>';
+  // GÖREV-17: an opened log stays open and the panel keeps its place when a job event redraws it
+  const panel=$("#jobs-panel"), scroll=panel.scrollTop;
+  const opened=new Set([...document.querySelectorAll("#jobs-content article.job")].filter(card=>card.querySelector("details")?.open).map(card=>card.dataset.job));
+  $("#jobs-content").innerHTML = jobsPanel(jobs,state.hiddenJobs,{open:state.showHidden,resultLink:renderJobResultLink});
+  for(const card of document.querySelectorAll("#jobs-content article.job")) if(opened.has(card.dataset.job)) card.querySelector("details").open=true;
+  panel.scrollTop=scroll;
+  const hiddenKey=jobs.filter(job=>job.hidden_at).map(job=>job.id).join(",");
+  if(hiddenKey!==lastHiddenKey) {lastHiddenKey=hiddenKey;loadHiddenJobs().catch(()=>{});}     // hidden or brought back elsewhere
   updateAuditButtons();
+}
+
+let lastHiddenKey="";
+async function loadHiddenJobs() {
+  const ticket=destinationRevision();
+  const hidden=await api("jobs/gizlenen");
+  if(ticket!==destinationRevision()) return;
+  state.hiddenJobs=hidden;
+  if(!hidden.length) state.showHidden=false;
+  lastHiddenKey=state.data.jobs.filter(job=>job.hidden_at).map(job=>job.id).join(",");
+  renderJobs();
+}
+
+/** "Kaldır", "Bitenleri kaldır", "Geri getir": the answer carries the jobs and the hidden list as they are now. */
+async function changeJobPanel(path, done) {
+  const result=await api(path,{method:"POST",body:"{}"});
+  state.data.jobs=result.jobs;state.hiddenJobs=result.gizlenen;
+  if(!result.gizlenen.length) state.showHidden=false;
+  lastHiddenKey=result.jobs.filter(job=>job.hidden_at).map(job=>job.id).join(",");
+  renderJobs();
+  toast(done(result));
 }
 
 function updateAuditButtons() {
@@ -468,6 +526,29 @@ $("#jobs-content").addEventListener("click",async event=>{
     try {await api(`tarayici-eklentisi/devret/${handover.dataset.handoverJob}`,{method:"POST"});state.data.jobs=await api("jobs");renderJobs();toast("İş programın kendi tarayıcısına devredildi.");}
     catch(error){toast(error.message);handover.disabled=false;}
   }
+  // GÖREV-17: taking finished jobs off the panel (hiding only) and bringing them back
+  const hide=event.target.closest("[data-hide-job]");
+  if(hide) {
+    hide.disabled=true;
+    try {await changeJobPanel(`jobs/${encodeURIComponent(hide.dataset.hideJob)}/kaldir`,()=>"İş panelden kaldırıldı. Kaydı ve günlüğü duruyor; “Gizlenen işleri göster” ile geri getirebilirsin.");}
+    catch(error){if(!error.stale) toast(error.message);hide.disabled=false;}
+    return;
+  }
+  const hideAll=event.target.closest("[data-hide-finished]");
+  if(hideAll) {
+    hideAll.disabled=true;
+    try {await changeJobPanel("jobs/bitenleri-kaldir",result=>result.kaldirilan?`${result.kaldirilan} biten iş panelden kaldırıldı. Kayıtları ve günlükleri duruyor.`:"Kaldırılacak biten iş yok.");}
+    catch(error){if(!error.stale) toast(error.message);hideAll.disabled=false;}
+    return;
+  }
+  const unhide=event.target.closest("[data-unhide-job]");
+  if(unhide) {
+    unhide.disabled=true;
+    try {await changeJobPanel(`jobs/${encodeURIComponent(unhide.dataset.unhideJob)}/geri-getir`,()=>"İş panele geri getirildi.");}
+    catch(error){if(!error.stale) toast(error.message);unhide.disabled=false;}
+    return;
+  }
+  if(event.target.closest("[data-toggle-hidden]")) {state.showHidden=!state.showHidden;renderJobs();return;}
   if(event.target.closest("[data-view-report]")) toggleJobs(false);
 });
 
@@ -514,7 +595,9 @@ async function start(destinationId=storedDestination(localStorage)) {
     $("#app-version").textContent=`v${state.data.version}`;
     state.workflow=null;state.videoId=storedVideo(localStorage,data.selected_destination.id);lastWorkflowKey="";
     $("#video-select").innerHTML=videoOptions(null,"");$("#workflow-progress").textContent="";
+    state.hiddenJobs=[];state.showHidden=false;lastHiddenKey="";
     render();renderJobs();
+    loadHiddenJobs().catch(()=>{});
     loadWorkflow().catch(error=>{if(!error.stale) toast(error.message);});
     events=new EventSource(`/api/${destinationPath("events")}`);
     events.addEventListener("open",()=>{

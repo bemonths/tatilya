@@ -8,3 +8,5 @@ work/
 .env
 .env.*
 !.env.example
+# Kullanıcının kısayolları (kisayol-olustur.ps1 -Hedef <program klasörü>); depoya girmez
+*.lnk

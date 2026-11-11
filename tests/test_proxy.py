@@ -24,7 +24,7 @@ from studio.sources import agency_rates as ar
 from studio.sources import region_reader as R
 from studio.sources import restaurant_sites as rs
 from studio.sources.base import SourceError
-from tests.legacy import V18_TABLES, drop_v18
+from tests.legacy import V18_TABLES, V19_TABLES, drop_v18
 from tests.test_beaches import HEADERS
 
 FIXTURES = Path(__file__).parent / "fixtures" / "sayfa_turleri"
@@ -243,11 +243,11 @@ def test_the_first_rows_come_from_the_extensions_raw_copies_and_v17_files_upgrad
                   con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 19
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-    assert after == {**before, **V18_TABLES, "region_blocked_hosts": 2}
+    assert after == {**before, **V18_TABLES, **V19_TABLES, "region_blocked_hosts": 2}
     assert list((tmp_path / "backups").glob("studio-v17-*.sqlite3"))
 
 

@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.18.0 (geliştirme dalı `gorev-16-eklenti-proxy`) — tarayıcı eklentisinin düzeltilmesi, ABD dışı erişim engeli için kendi ABD proxy'niz, video metninin küçük düzeltmeleri** · son stable etiket ve main: v0.17.0 (video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi).
+30A veri ve içerik üretim uygulaması · **v0.19.0 (geliştirme dalı `gorev-17-arayuz`) — arayüz düzeltmeleri: İşler panelinde biten işleri kaldırma, Ayarlar'da bölüm düğmeleri, bir iş boyunca tek ve odak almayan tarayıcı penceresi** · son stable etiket ve main: v0.18.0 (eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si).
 
 ## Açılış
 
@@ -158,6 +158,16 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 **Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model, efor ve en fazla tur. Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
+
+## Arayüz düzeltmeleri · v0.19.0
+
+**İşler paneli:** panelin başındaki "Bitenleri kaldır" tamamlanan, hata veren ve iptal edilen işleri panelden kaldırır; her bitmiş işin kartında da "Kaldır" vardır. Kaldırmak silmek değildir: işin kaydı, günlüğü ve sonucu durur. Panelin altındaki "Gizlenen işleri göster (N)" bağlantısı gizlenenleri listeler; "Geri getir" işi panele döndürür. Çalışan, sırada bekleyen ve onayınızı bekleyen işler toplu kaldırmaya girmez.
+
+**Ayarlar:** sol menünün en altındaki "Ayarlar" öğesinden açılır. Ekranın üstündeki bölüm düğmeleri (Kayıt klasörü, Claude, Başlık eki, Claude kullanımı, Talimatlar, Tonlar, Uyarı ifadeleri, Tarayıcı eklentisi, ABD proxy'si, Hakkında) sayfayı doğrudan o bölüme götürür; adres de bölümü gösterir (`#settings/tonlar`). Başka ekranlardaki "Tonları yönet", "Ayarlar → Claude" gibi bağlantılar doğrudan o bölümü açar.
+
+**Açılan pencereler:** eklenti ve programın kendi tarayıcıları bir iş boyunca tek pencere kullanır; pencere odak almadan açılır, çalıştığınız pencerenin önüne geçmez, yalnız sizin geçmeniz gereken bir doğrulama çıkınca öne gelir ve iş bitince ya da iptal edilince kapanır. İşler panelinde süren işin kartında hangi pencerenin ne için açık olduğu yazar ("Eklentinin penceresi: realjoy.com · sayfa okunuyor"). Eklenti 0.19.0 oldu: Chrome'da `chrome://extensions` sayfasında "30A Studio Yardımcısı"nın yenile düğmesine bir kez basın.
+
+**Küçük düzeltmeler:** proxy'yle okunan bölge engelli site iş günlüğünde ve deneme tablosunda "bölge engeli · proxy'yle okundu" diye yazar. "Kodu yenile" yeni eşleşme kodunu hemen gösterir. Program klasörünü taşırsanız yeni klasördeki `baslat.bat` dosyasına bir kez çift tıklayın: kurulumu yeni klasöre göre yeniler ve masaüstü kısayolunu yeniden oluşturur.
 
 ## Tarayıcı eklentisi düzeltmeleri ve ABD proxy'si · v0.18.0
 

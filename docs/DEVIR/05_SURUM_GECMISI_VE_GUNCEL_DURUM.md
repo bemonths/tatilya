@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.17.0 -> 6cfab845c88ebb81e4ef7ae021ba3bb795e7a9f9
-main -> 6cfab845c88ebb81e4ef7ae021ba3bb795e7a9f9
-app 0.17.0
-schema 17
+tag v0.18.0 -> 988ca8d72a1b9af0aa18274ee9979705fdf2c731
+main -> 988ca8d72a1b9af0aa18274ee9979705fdf2c731
+app 0.18.0
+schema 18
 ```
+
+11 Kasım 2026'da GÖREV-17 Adım 1 ile main `988ca8d`'ye (GÖREV-16) fast-forward edildi (`6cfab84..988ca8d`) ve bu commit'e açıklamalı `v0.18.0` etiketi konuldu ("v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si"). Görev dalı CI (38144739045) ve etiket CI (43011754490) başarılı.
 
 11 Ekim 2026'da GÖREV-16 Adım 1 ile main `6cfab84`'e (GÖREV-15) fast-forward edildi (`984ca72..6cfab84`) ve bu commit'e açıklamalı `v0.17.0` etiketi konuldu ("v0.17.0 — video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi"). Görev dalı CI (38097203607), main CI (38138844974) ve etiket CI (38138846294) başarılı.
 
@@ -36,6 +38,27 @@ schema 17
 ## Aktif branch
 
 ```text
+gorev-17-arayuz
+app 0.19.0
+schema 19
+```
+
+Bu dal (yeni özellik yok; arayüz düzeltmeleri):
+- İşler paneli: "Bitenleri kaldır" ve kart başına "Kaldır"; kaldırma yalnız gizleme (`job_hidden`, şema 19), kayıt ve günlük yerinde; "Gizlenen işleri göster (N)" ve "Geri getir"; çalışan, bekleyen ve onay bekleyen işler toplu kaldırmaya girmez,
+- Ayarlar: sol menünün altında belirgin "Ayarlar" öğesi, bölüm düğmeleri, bölüm adresleri (`#settings/<bölüm>`), her bölüm başlıklı ve simgeli kart; başka ekranlardaki bağlantılar bölüme gider; hiçbir ayarın değeri değişmedi; yardım ekranı olmadığı için "Yardım" konmadı,
+- pencereler: eklenti bir iş boyunca tek pencere ve tek sekme (site site açıp kapatmaz), odak almadan; programın tarayıcıları odak almadan başlar ve işin başlattığı tarayıcı iş bitince kapanır; pencere yalnız doğrulamada öne gelir; İşler panelinde açık pencere satırı; eklenti 0.19.0,
+- küçük düzeltmeler: "bölge engeli · proxy'yle okundu" (iş günlüğü, deneme tablosu, panel), eşleşme kodunun ekranda tazelenmesi, taşınan klasörde `baslat.bat`'ın kurulumu ve kısayolu yenilemesi,
+- gerçek veride yalnız geçiş (normal kullanımla; hiçbir iş gizlenmedi); gerçek siteyle ve gerçek Claude'la denenmedi; main'e alınmadı.
+
+Test:
+- 1095 Python
+- 115 frontend
+
+---
+
+Önceki aktif dal `gorev-16-eklenti-proxy` (v0.18.0 olarak main'e alındı):
+
+```text
 gorev-16-eklenti-proxy
 app 0.18.0
 schema 18
@@ -47,7 +70,7 @@ Bu dal:
 - ABD dışı erişim engeli için kullanıcının ABD proxy'si: Ayarlar (adres ve kullanıcı adı `ayarlar.json`'da, parola Windows Kimlik Bilgisi Yöneticisi'nde, günlükte maskeli), "Proxy'yi dene" (çıkış adresi ve ülke), bölge engelli alan adları (şema 18, `region_blocked_hosts`; ilk 3 satır ham kayıtlardan), okuma sırası proxy → programın tarayıcısı + proxy (ayrı profil, PAC, CDP `Fetch` kimlik) → atla; proxy yoksa atla ve kaydet; restoran ve kiralama toplayıcıları ve deneme işi bu sıraya uyar,
 - video metni: sürümün kullanımı yalnız kendi tonunun oturumları, plan ayrı satırda ve karşılaştırmanın üstünde; seçilen çalışma "seçildi: <ton>"; "I" uyarısı I-10 gibi yol adlarında çıkmaz,
 - iki zamanlamaya bağlı test kararlı hâle getirildi (GÖREV-15'te bir kez görülen),
-- gerçek veride yalnız geçiş (normal kullanımla); gerçek proxy ve gerçek siteyle denenmedi; main'e alınmadı.
+- gerçek veride yalnız geçiş (normal kullanımla); kullanıcı 11 Kasım 2026'da proxy'yi girdi ve sorunlu sitelerin 7'sini de okudu; 11 Kasım 2026'da main'e alındı ve `v0.18.0` olarak etiketlendi.
 
 Test:
 - 1078 Python
@@ -453,7 +476,24 @@ Dal: `gorev-10-aylik-gunluk`, uygulama 0.13.0, şema 13.
 
 10 Ekim 2026'da main'e alındı ve etiketlendi (`v0.14.0` → `9adc235`). İçerik aşağıdaki GÖREV-11 bölümünde.
 
-## GÖREV-16 — eklentinin düzeltilmesi, ABD dışı erişim engeli için kullanıcının ABD proxy'si, GÖREV-15'in küçük düzeltmeleri (dal)
+## GÖREV-17 — arayüz düzeltmeleri: İşler paneli, Ayarlar düzeni, açılan pencereler (dal)
+
+Dal: `gorev-17-arayuz`, uygulama 0.19.0, şema 19 (`job_hidden`), eklenti 0.19.0.
+
+- Adım 1: `988ca8d`'nin CI'ı başarılıydı (38144739045); main fast-forward edildi (`6cfab84..988ca8d`) ve itildi; açıklamalı `v0.18.0`
+  etiketi kondu ("v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si") ve itildi (etiket CI 43011754490 başarılı). Çalışma ağacında kullanıcının talimat, ton ya da uyarı
+  ifadesi değişikliği yoktu; `30A Studio.lnk` `.gitignore`'a eklendi.
+- Geçici klasörde deneme (11 Kasım 2026; gerçek verinin kopyası, yerel sayfalar, sahte proxy istemcisi, Playwright'in Chromium'unda
+  geçici profille eklenti): Ayarlar'ın 10 bölümünün hepsine düğmeyle gidildi ve ana düğmesi göründü; yazılan değer bölüm değiştirince
+  korundu; 40 işten 36 biten iş panelden kaldırıldı (veritabanında 40 iş durdu), gizlenenler listelendi ve biri geri getirildi; deneme
+  işinde eklenti 4 site için 1 pencere açtı ve iş bitince kapattı; günlükte "bölge engeli · proxy'yle okundu"; yenilenen eşleşme kodu
+  hemen, başka yerden yenilenen 2 sn içinde göründü; işin başlattığı program tarayıcısı iş bitince kapandı.
+- Gerçek veritabanı (normal kullanımla, önce tam yedek): yalnız 18 → 19 geçişi; hiçbir iş gizlenmedi. Sayılar `docs/gorevler/GOREV-17/RAPOR.md` içinde.
+- Test: 1095 Python, 115 frontend (tam takım art arda 3 kez); eklentinin uçtan uca denemesi 2 test.
+
+Ayrıntı: `docs/gorevler/GOREV-17/RAPOR.md`.
+
+## GÖREV-16 — eklentinin düzeltilmesi, ABD dışı erişim engeli için kullanıcının ABD proxy'si, GÖREV-15'in küçük düzeltmeleri (main, v0.18.0)
 
 Dal: `gorev-16-eklenti-proxy`, uygulama 0.18.0, şema 18 (`region_blocked_hosts`).
 

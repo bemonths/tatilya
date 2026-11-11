@@ -1,4 +1,5 @@
 import {api, esc, date} from "./api.js";
+import {settingsHref} from "./settings.js";
 
 // GÖREV-16 (Adım 3): Settings → "ABD proxy'si (bölge engeli için)". The user's own US proxy is used only for the domains on the
 // region-blocked list (sites that serve only visitors inside the United States); never to get past bot protection, a rate limit or a
@@ -40,7 +41,7 @@ export function proxySection(view, {message="", test=null}={}) {
     ${notes}
     ${testResult(test)}
     <h3>Bölge engelli alan adları</h3>
-    <p class="muted">Program bir sitede ABD dışı erişim engeli görünce alan adını bu listeye kendisi ekler (tarih ve engel sayfasının başlığıyla). Bu alan adları eklentiyle okunmaz; ABD proxy'si tanımlıysa önce proxy üzerinden doğrudan, olmazsa programın kendi tarayıcısıyla proxy üzerinden okunur; proxy yoksa atlanır ve kaydedilir.</p>
+    <p class="muted">Program bir sitede ABD dışı erişim engeli görünce alan adını bu listeye kendisi ekler (tarih ve engel sayfasının başlığıyla). Bu alan adları <a href="${settingsHref("eklenti")}">tarayıcı eklentisiyle</a> okunmaz; ABD proxy'si tanımlıysa önce proxy üzerinden doğrudan, olmazsa programın kendi tarayıcısıyla proxy üzerinden okunur; proxy yoksa atlanır ve kaydedilir.</p>
     ${regionRows(view.bolge_engelli)}
     <form id="region-form" class="toolbar video-form"><label>Alan adı ekle<input id="region-host" placeholder="ör. winndixie.com" spellcheck="false"></label><button type="submit">Listeye ekle</button></form>
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}

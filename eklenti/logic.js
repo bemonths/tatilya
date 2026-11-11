@@ -175,6 +175,22 @@ export class Pacer {
   }
 }
 
+// ---- The extension's one window (GÖREV-17) ----
+// Opened without the focus and not minimized: a minimized (hidden) page stops drawing and loading what comes into view, so pages
+// would be read half drawn. It comes forward only for a verification the user has to pass.
+export const WINDOW_OPTIONS = Object.freeze({url: "about:blank", focused: false, type: "normal", width: 1280, height: 900});
+
+/** Which window a piece of work belongs to: the program's job ("pencere"), else the work itself. */
+export function windowKey(job) {
+  return String(job?.pencere || job?.id || "");
+}
+
+/** Does the window stay open? Only while the program lists its job among the ones still at work ("acik_pencereler"). An older
+ *  program that sends no list closes the window after each piece of work, as before. */
+export function keepWindow(key, openKeys) {
+  return Boolean(key) && Array.isArray(openKeys) && openKeys.includes(key);
+}
+
 /** The extension's own queue of jobs from the program: first come, first served; a job already queued or done is not taken twice. */
 export class JobQueue {
   constructor() { this.items = []; this.seen = new Set(); }

@@ -4,22 +4,22 @@
 >
 > Yeni bir geliştirici veya yapay zekâ projeye devam etmeden önce önce bu dosyayı, sonra `docs/DEVIR/` altındaki belgeleri okumalıdır. Domain belgeleri (`M2`–`M10`) ayrıntılı teknik kayıt niteliğindedir. Kod ile belge çelişirse gerçek kod ve güncel veritabanı davranışı incelenmeli, ardından bu belge aynı geliştirme turunda güncellenmelidir.
 >
-> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 11 Ekim 2026'da GÖREV-16 (v0.17.0 yayını, tarayıcı eklentisinin düzeltilmesi, sayfa türleri, ABD dışı erişim engeli için kullanıcının ABD proxy'si, video metninin küçük düzeltmeleri) ile güncellenmiştir.
+> Bu paket 3 Ekim 2026 itibarıyla `bemonths/tatilya` reposunun durumu esas alınarak hazırlanmış, en son 11 Ekim 2026'da GÖREV-16 (v0.17.0 yayını, tarayıcı eklentisinin düzeltilmesi, sayfa türleri, ABD dışı erişim engeli için kullanıcının ABD proxy'si, video metninin küçük düzeltmeleri), 11 Kasım 2026'da da GÖREV-17 (v0.18.0 yayını, İşler panelinde biten işleri kaldırma, Ayarlar'ın bölüm düzeni, açılan pencerelerin düzenlenmesi) ile güncellenmiştir.
 
 ## 1. Bir bakışta mevcut durum
 
 | Alan | Güncel durum |
 |---|---|
 | Repo | `bemonths/tatilya` |
-| Yerel çalışma klasörü | `C:\Users\1\Documents\Codex\2026-09-29\referenced-chatgpt-conversation-this-is-an\outputs\30a-studio` |
+| Yerel çalışma klasörü | `C:\Users\1\source\Repos\30A Studio\outputs\30a-studio` (11 Kasım 2026'da buraya taşındı) |
 | Başlatma | Masaüstündeki "30A Studio" kısayolu (`kisayol-olustur.ps1`; konsolsuz `pythonw -X utf8 -m studio`, uygulama kipi pencere, tek kopya, kapanma bekçisi) ya da `baslat.bat` (ilk seferde kurar, sonra aynı şekilde başlatır) |
-| Stable branch | `main` @ `6cfab845c88ebb81e4ef7ae021ba3bb795e7a9f9` (GÖREV-15: video metni; 11 Ekim 2026'da GÖREV-16 Adım 1 ile fast-forward; uygulama 0.17.0, şema 17) |
-| Stable tag | `v0.17.0` → `6cfab84` — **v0.17.0 — video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi** (önceki: `v0.16.0` → `984ca72`, `v0.15.0` → `a59ec65`, `v0.14.0` → `9adc235`, `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
-| Stable uygulama sürümü / şema | `0.17.0` / `17` (main ve `v0.17.0`) |
-| Aktif geliştirme dalı | `gorev-16-eklenti-proxy` — eklentinin düzeltilmesi (iş sürerken canlılık ve durum, "Eklenti çalışıyor", 60/20 sn eşiği, sayfa türleri: doğrulama / erişim reddedildi / bölge engeli, başka siteye yönlenme, "Bu sayfayı atla", realjoy.com'un 30A liste sayfası), ABD dışı erişim engeli için kullanıcının ABD proxy'si (Ayarlar, parola Windows Kimlik Bilgisi Yöneticisi'nde, "Proxy'yi dene", bölge engelli alan adları, proxy → tarayıcı + proxy → atla), video metninin küçük düzeltmeleri |
-| Aktif dal durumu | Uygulama `0.18.0`, şema `18`; geçiş gerçek veri kopyasında denendi ve gerçek veride normal kullanımla yapıldı; gerçek proxy ve gerçek siteyle denenmedi (deneme geçici klasörde yerel sayfalar ve yerel sahte proxy ile); proxy'yi kullanıcı Ayarlar'a girecek, Chrome'daki eklentiyi yeniden yükleyecek; main'e alınmadı |
+| Stable branch | `main` @ `988ca8d72a1b9af0aa18274ee9979705fdf2c731` (GÖREV-16: eklentinin düzeltilmesi ve ABD proxy'si; 11 Kasım 2026'da GÖREV-17 Adım 1 ile fast-forward; uygulama 0.18.0, şema 18) |
+| Stable tag | `v0.18.0` → `988ca8d` — **v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si** (önceki: `v0.17.0` → `6cfab84`, `v0.16.0` → `984ca72`, `v0.15.0` → `a59ec65`, `v0.14.0` → `9adc235`, `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
+| Stable uygulama sürümü / şema | `0.18.0` / `18` (main ve `v0.18.0`) |
+| Aktif geliştirme dalı | `gorev-17-arayuz` — arayüz düzeltmeleri: İşler panelinde biten işleri kaldırma (yalnız gizleme; şema 19 `job_hidden`), Ayarlar'da bölüm düğmeleri, bölüm adresleri ve sol menüde belirgin Ayarlar, bir iş boyunca tek ve odak almayan tarayıcı penceresi (eklenti ve programın tarayıcıları), iş günlüğünde "bölge engeli · proxy'yle okundu", eşleşme kodunun ekranda tazelenmesi, taşınan program klasörü |
+| Aktif dal durumu | Uygulama `0.19.0`, şema `19`; geçiş gerçek veri kopyasında denendi ve gerçek veride normal kullanımla yapıldı (hiçbir iş gizlenmedi); deneme geçici klasörde yerel sayfalarla yapıldı, gerçek siteye ve gerçek Claude'a gidilmedi; kullanıcı Chrome'daki eklentiyi yeniden yükleyecek; main'e alınmadı |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
-| Son CI | main ve etiket `v0.17.0` @ 6cfab84 (38138844974, 38138846294) başarılı; görev dalının sonucu `docs/gorevler/GOREV-16/RAPOR.md` içinde |
+| Son CI | main ve etiket `v0.18.0` @ 988ca8d: görev dalı CI 38144739045 ve etiket CI 43011754490 başarılı; görev dalının sonucu `docs/gorevler/GOREV-17/RAPOR.md` içinde |
 | Test tabanı | Görev dalında 1078 Python testi + 95 frontend testi (main: 1031 + 90) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
@@ -388,6 +388,41 @@ CDP `Fetch` ile) → atla; proxy yoksa "bölge engeli: ABD proxy'si tanımlı de
 satırda; seçilen çalışma "seçildi: <ton>"; "I" uyarısı I-10 gibi yol adlarında çıkmaz. Gerçek proxy ve gerçek siteyle denenmedi;
 proxy'yi kullanıcı Ayarlar'a girip kendisi deneyecek. Ayrıntı: `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`, `docs/M16-TARAYICI-EKLENTISI.md`.
 
+### 9.13g Arayüz düzeltmeleri: İşler paneli, Ayarlar düzeni, açılan pencereler (GÖREV-17, şema 19)
+
+Yeni özellik yoktur; kullanıcının 11 Kasım 2026'da gördüğü arayüz sorunları düzeltildi.
+
+- **İşler panelinde biten işleri kaldırma.** Panelin başında "Bitenleri kaldır" (tamamlanan, hata veren, iptal edilen ve yarıda kalan
+  işler; çalışan, sırada bekleyen ve Claude çalışması kullanıcının kararını bekleyen işler kalır), her bitmiş işin kartında "Kaldır".
+  Kaldırma yalnız gizlemedir: `job_hidden (job_id, hidden_at)` tablosuna bir satır yazılır (şema 19, `studio/migration_v19.py`); işin
+  `jobs` kaydı, günlüğü ve sonucu olduğu gibi durur ve bütün ekranlar onu görmeye devam eder (`/api/jobs` her işi `hidden_at` ile verir).
+  Panelin altında "Gizlenen işleri göster (N)" listesi ve "Geri getir". Uçlar: `POST /api/jobs/{id}/kaldir`, `POST /api/jobs/{id}/geri-getir`,
+  `POST /api/jobs/bitenleri-kaldir`, `GET /api/jobs/gizlenen`. Panel `studio/web/jobs.js` ile çizilir; açık bir günlük ve panelin
+  kaydırma yeri iş olayıyla yeniden çizimde korunur. Günlükler kartta kapalı gelir (değişmedi).
+- **Ayarlar düzeni (Housing Atlas örneği).** Sol menünün en altında, çizgiyle ayrılmış simgeli "Ayarlar" öğesi (ekran açıkken vurgulu ve
+  solunda turuncu işaret); Claude kullanımı kutusu yerinde, eski küçük bağlantı kalktı. Programda yardım ekranı olmadığı için "Yardım"
+  öğesi konmadı. Ayarlar ekranının üstünde bölüm düğmeleri: Kayıt klasörü, Claude, Başlık eki, Claude kullanımı, Talimatlar, Tonlar, Uyarı
+  ifadeleri, Tarayıcı eklentisi, ABD proxy'si, Hakkında. Düğme sayfayı o bölüme götürür ve adres bölümü gösterir (`#settings/tonlar`;
+  `#ayarlar/tonlar` da aynı bölümü açar). Adres Ayarlar içinde değişince ekran yeniden çizilmez; yazılan ama kaydedilmemiş değer
+  kaybolmaz. Her bölüm kendi başlığı ve simgesi olan bir karttır; içeriğini ve kaydetme, deneme, sürüm düğmelerini eskisi gibi kendi
+  modülü çizer, hiçbir ayarın değeri değişmedi. Başka ekranlardaki "Ayarlar → Claude", "Ayarlar → Tarayıcı eklentisi", "Tonları yönet"
+  ve proxy notları doğrudan bölüme bağlanır (`studio/web/settings.js`).
+- **Açılan pencereler.** Önce: eklenti her site (oturum) için yeni bir pencere açıp kapatıyordu; programın kendi tarayıcısı ve proxy
+  tarayıcısı iş bitince açık kalıyordu. Şimdi her kaynak bir iş boyunca tek pencere kullanır: eklenti aynı pencerede ve aynı sekmede
+  sıradaki adrese gider (oturum `pencere` anahtarını, `/api/eklenti/sor` cevabı `acik_pencereler` listesini taşır; iş bitince, iptal
+  edilince, devredilince ya da program kapanınca pencere kapanır); programın tarayıcıları odak almadan başlatılır (pencere gösterilir
+  ama etkinleştirilmez; komut satırı değişmedi), işin kendisinin başlattığı tarayıcı iş bitince kapatılır (`JobWindows`), önceden açık
+  olan tarayıcıya dokunulmaz. Pencere yalnız kullanıcının geçmesi gereken doğrulamada öne gelir. Küçültülmüş pencere seçilmedi: gizli
+  sayfa çizimi ve görünüme girince yüklenen bölümleri durdurur. İşler panelinde süren işin kartında açık pencere yazar ("Eklentinin
+  penceresi: realjoy.com · sayfa okunuyor", "Programın tarayıcısı: …", "Programın proxy tarayıcısı: …"). Hız kuralı, doğrulamayı
+  kullanıcının geçmesi ve proxy'nin yalnız bölge engelli alan adlarında kullanılması değişmedi. Ayrıntı: M16 ve M18.
+- **Küçük düzeltmeler.** Deneme işinin günlüğü, deneme tablosu ve İşler paneli bölge engelli sitenin nasıl bittiğini aynı sözlerle
+  yazar: "bölge engeli · proxy'yle okundu", "bölge engeli · proxy'yle de okunamadı (neden)", "bölge engeli · ABD proxy'si tanımlı değil
+  (Ayarlar)". "Kodu yenile" yeni kodu hemen gösterir; başka yerden değişen kod ekranda 5 sn içinde kendiliğinden tazelenir. Program
+  klasörü taşınırsa `baslat.bat` bunu anlar (`python -m studio.install_stamp moved`; `.venv/studio-konum.txt`, yoksa `pyvenv.cfg`),
+  sanal ortamın kayıtlarını yeni klasöre göre yeniler (paketler silinmez) ve masaüstü kısayolunu yeniden oluşturur.
+- Eklenti 0.19.0 oldu; Chrome'daki eklenti eski sürümse Ayarlar yeniden yüklemeye çağırır.
+
 ### 9.14 Referans tablosu genişlemesi ve trafik (GÖREV-11)
 
 Referans tablosu 152 satır: plaj erişimi hukuku (anayasa, 2016 ilçe kararı, 2018 kanunu, dava, 2025'te kanunun kaldırılması, 18 Şubat 2026 temyiz kararı; "yeni yasa, özel plaj kalmadı" iddiası doğrulanamadı), erişilebilirlik, ziyaretçi kökeni ve beş okul bölgesinin 2026–27 tatilleri, 13 tekrarlayan etkinlik, kasabaların tarihçesi; her satırın Türkçe ifadesi `thirty_a_references_tr.csv`. FDOT 2025 AADT ve Walton mevsim faktörleri `thirty_a_traffic.csv` (aylık oran bizim hesabımız). GÖREV-14'te `plaj-erisimi` konusuna toplulukların kendi plaj erişimi için 13 satır eklendi (Seaside, WaterColor, Alys Beach, Rosemary Beach, Watersound; topluluğun ya da resmî kiralama şirketinin sitesinden, kısa alıntı ve belgenin SHA-256'sıyla); tablo 165 satır. Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
@@ -486,11 +521,11 @@ Ayrıntı: `docs/M6-KONAKLAMA-KAYNAK-KEŞFİ.md`
 
 ## 11. Stable release ve test durumu
 
-Stable: main ve etiket `v0.17.0` @ `6cfab845c88ebb81e4ef7ae021ba3bb795e7a9f9` (GÖREV-15; 11 Ekim 2026'da GÖREV-16 Adım 1 ile fast-forward ve açıklamalı etiket "v0.17.0 — video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi"; uygulama 0.17.0, şema 17; main CI 38138844974, etiket CI 38138846294 başarılı).
+Stable: main ve etiket `v0.18.0` @ `988ca8d72a1b9af0aa18274ee9979705fdf2c731` (GÖREV-16; 11 Kasım 2026'da GÖREV-17 Adım 1 ile fast-forward ve açıklamalı etiket "v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si"; uygulama 0.18.0, şema 18; görev dalı CI 38144739045 ve etiket CI 43011754490 başarılı). Önceki stable: `v0.17.0` @ `6cfab84`.
 
-Aktif dal `gorev-16-eklenti-proxy`:
-- 1078 Python testi ve 95 frontend testi geçti (tam takım art arda en az 3 kez; testler gerçek siteye, gerçek proxy'ye ve Windows Kimlik Bilgisi Yöneticisi'ne gitmez: yerel sahte proxy, yerel sayfalar ve bellekte kasa); eklentinin uçtan uca denemesi ayrı (`STUDIO_EKLENTI_E2E=1`, yalnız yerel sayfalar)
-- eklentinin düzeltilmesi (M16), sayfa türleri ve ABD dışı erişim engeli için kullanıcının ABD proxy'si (M18), video metninin küçük düzeltmeleri (M17); şema 18, uygulama 0.18.0; gerçek proxy ve gerçek siteyle denenmedi
+Aktif dal `gorev-17-arayuz`:
+- 1095 Python testi ve 115 frontend testi geçti (tam takım art arda 3 kez; testler gerçek siteye, gerçek proxy'ye, gerçek Claude'a ve Windows Kimlik Bilgisi Yöneticisi'ne gitmez); eklentinin uçtan uca denemesi ayrı (`STUDIO_EKLENTI_E2E=1`, Playwright'in Chromium'u, yalnız yerel sayfalar; bir iş boyunca tek pencere ve iş bitince kapanması da sınanır)
+- arayüz düzeltmeleri (9.13g): İşler panelinde biten işleri kaldırma (yalnız gizleme; şema 19 `job_hidden`), Ayarlar'da bölüm düğmeleri, bölüm adresleri ve sol menüde belirgin Ayarlar, bir iş boyunca tek ve odak almayan tarayıcı penceresi (eklenti ve programın tarayıcıları), iş günlüğünde "bölge engeli · proxy'yle okundu", eşleşme kodunun ekranda tazelenmesi, taşınan program klasörü; şema 19, uygulama 0.19.0, eklenti 0.19.0
 - main'e alınmadı
 
 Önceki aktif dal `gorev-15-video-metni` (v0.17.0 olarak main'e alındı):
@@ -673,6 +708,6 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 
 ---
 
-**Son güncelleme:** 11 Ekim 2026  
-**Stable:** main ve etiket v0.17.0 — video metni: yazım zinciri, seçilebilir tonlar ve ton yönetimi, karşılaştırma ve program denetimi (`6cfab84`, uygulama 0.17.0)  
-**Aktif geliştirme:** `gorev-16-eklenti-proxy` — eklentinin düzeltilmesi, sayfa türleri, ABD dışı erişim engeli için kullanıcının ABD proxy'si, video metninin küçük düzeltmeleri; uygulama 0.18.0, şema 18 (yönetici incelemesinde)
+**Son güncelleme:** 11 Kasım 2026  
+**Stable:** main ve etiket v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si (`988ca8d`, uygulama 0.18.0)  
+**Aktif geliştirme:** `gorev-17-arayuz` — arayüz düzeltmeleri (İşler panelinde biten işleri kaldırma, Ayarlar'ın bölüm düzeni, bir iş boyunca tek pencere, küçük düzeltmeler); uygulama 0.19.0, şema 19 (yönetici incelemesinde)

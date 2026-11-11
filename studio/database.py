@@ -22,8 +22,9 @@ from .migration_v15 import upgrade_v15
 from .migration_v16 import upgrade_v16
 from .migration_v17 import upgrade_v17
 from .migration_v18 import upgrade_v18
+from .migration_v19 import upgrade_v19
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -64,14 +65,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -100,7 +101,9 @@ class Database:
                     upgrade_v16(con)
                 if version < 17:
                     upgrade_v17(con)
-                upgrade_v18(con, self.path.parent)
+                if version < 18:
+                    upgrade_v18(con, self.path.parent)
+                upgrade_v19(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -161,6 +164,7 @@ class Database:
             upgrade_v16(con)
             upgrade_v17(con)
             upgrade_v18(con, self.path.parent)
+            upgrade_v19(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -319,7 +323,53 @@ class Database:
 
     def jobs(self, destination_id=DEFAULT_DESTINATION_ID):
         with self.connect() as con:
-            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name, job_waits.site AS waiting_for, job_progress.info AS progress_info FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') LEFT JOIN job_progress ON job_progress.job_id=jobs.id WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
+            return [self.decode_job(row) for row in con.execute("SELECT jobs.*, sources.name AS source_name, job_waits.site AS waiting_for, job_progress.info AS progress_info, job_hidden.hidden_at AS hidden_at, (" + self.AWAITING + ") AS awaiting_approval FROM jobs LEFT JOIN sources ON sources.id=jobs.source_id LEFT JOIN job_waits ON job_waits.job_id=jobs.id AND jobs.status IN ('queued','running') LEFT JOIN job_progress ON job_progress.job_id=jobs.id LEFT JOIN job_hidden ON job_hidden.job_id=jobs.id WHERE (? IS NULL OR jobs.destination_id=?) ORDER BY jobs.rowid DESC LIMIT 100",(destination_id,destination_id))]
+
+    # --- GÖREV-17: jobs taken off the job panel. Hiding never deletes: the job's record, log and result stay as they are. ---
+
+    FINISHED = ("done", "failed", "canceled", "interrupted")
+    # a finished job whose Claude run still waits for the user's decision (a title to choose, tones to compare, "Devam")
+    AWAITING = ("EXISTS(SELECT 1 FROM claude_runs WHERE claude_runs.job_id=jobs.id AND claude_runs.status='awaiting_approval') OR "
+                "EXISTS(SELECT 1 FROM text_runs WHERE text_runs.job_id=jobs.id AND text_runs.status IN ('awaiting_comparison','paused'))")
+
+    def hide_job(self, identifier):
+        """"Kaldır": True when the job is hidden now (or already was); None for an unknown job; Conflict for a job still at work."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute("SELECT status FROM jobs WHERE id=?", (identifier,)).fetchone()
+            if not row:
+                return None
+            if row["status"] not in self.FINISHED:
+                raise Conflict("Süren ya da sırada bekleyen iş panelden kaldırılamaz; önce bitmesini bekleyin ya da iptal edin.")
+            con.execute("INSERT OR IGNORE INTO job_hidden (job_id,hidden_at) VALUES (?,?)", (identifier, now()))
+            return True
+
+    def hide_finished_jobs(self, destination_id=DEFAULT_DESTINATION_ID):
+        """"Bitenleri kaldır": every finished job of the destination that is still on the panel; running and queued ones and
+        the ones waiting for the user's approval stay.
+        Returns how many were hidden."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            marks = ",".join("?" * len(self.FINISHED))
+            return con.execute(f"""INSERT INTO job_hidden (job_id,hidden_at) SELECT id, ? FROM jobs
+                WHERE destination_id=? AND status IN ({marks}) AND id NOT IN (SELECT job_id FROM job_hidden) AND NOT ({self.AWAITING})""",
+                               (now(), destination_id, *self.FINISHED)).rowcount
+
+    def unhide_job(self, identifier):
+        """"Geri getir": None for an unknown job, else True (also when it was not hidden)."""
+        with self.connect() as con:
+            if not con.execute("SELECT 1 FROM jobs WHERE id=?", (identifier,)).fetchone():
+                return None
+            con.execute("DELETE FROM job_hidden WHERE job_id=?", (identifier,))
+            return True
+
+    def hidden_jobs(self, destination_id=DEFAULT_DESTINATION_ID):
+        """Every hidden job of the destination, newest first, without its log (the panel's "Gizlenen işleri göster" list)."""
+        with self.connect() as con:
+            return [dict(row) for row in con.execute("""SELECT jobs.id, jobs.kind, jobs.title, jobs.status, jobs.message, jobs.created_at,
+                jobs.finished_at, json_array_length(jobs.log) AS log_count, job_hidden.hidden_at, sources.name AS source_name
+                FROM job_hidden JOIN jobs ON jobs.id=job_hidden.job_id LEFT JOIN sources ON sources.id=jobs.source_id
+                WHERE jobs.destination_id=? ORDER BY jobs.rowid DESC""", (destination_id,))]
 
     def job(self, identifier):
         with self.connect() as con:
@@ -357,6 +407,11 @@ class Database:
             if diagnostic is not None:
                 con.execute("UPDATE jobs SET diagnostic=? WHERE id=?", (json.dumps(diagnostic), identifier))
             if progress_info is not None:
+                if "pencereler" not in progress_info:        # GÖREV-17: the open browser windows of the job stay with it
+                    kept = con.execute("SELECT info FROM job_progress WHERE job_id=?", (identifier,)).fetchone()
+                    windows = json.loads(kept["info"]).get("pencereler") if kept else None
+                    if windows:
+                        progress_info = {**progress_info, "pencereler": windows}
                 con.execute("INSERT OR REPLACE INTO job_progress (job_id,info) VALUES (?,?)", (identifier, json.dumps(progress_info, ensure_ascii=False)))
             if waiting_for:
                 con.execute("INSERT OR REPLACE INTO job_waits (job_id,site,since) VALUES (?,?,?)", (identifier, waiting_for, now()))
@@ -365,6 +420,26 @@ class Database:
                     finished_at=?, error_message=? WHERE job_id=?""", (status, status, now(), job["finished_at"],
                     message if status in ("failed", "canceled", "interrupted") else None, identifier))
             return True
+
+    def set_job_window(self, identifier, key, text):
+        """GÖREV-17: the browser window open for a job, shown on its card while it runs. key: "eklenti" (the extension's window in the
+        user's Chrome), "program" (the program's own browser) or "proxy" (the program's proxy browser); text: what the window is doing,
+        None when it closed."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            if not con.execute("SELECT 1 FROM jobs WHERE id=?", (identifier,)).fetchone():
+                return
+            row = con.execute("SELECT info FROM job_progress WHERE job_id=?", (identifier,)).fetchone()
+            info = json.loads(row["info"]) if row else {}
+            windows = dict(info.get("pencereler") or {})
+            if text:
+                windows[key] = str(text)[:200]
+            else:
+                windows.pop(key, None)
+            if windows == (info.get("pencereler") or {}):
+                return
+            info["pencereler"] = windows
+            con.execute("INSERT OR REPLACE INTO job_progress (job_id,info) VALUES (?,?)", (identifier, json.dumps(info, ensure_ascii=False)))
 
     def has_active_work(self):
         """Is any job (collector, audit, Claude run, extension work) or refresh batch still queued or running?

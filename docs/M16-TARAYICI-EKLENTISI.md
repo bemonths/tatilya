@@ -1,4 +1,4 @@
-# M16 — Tarayıcı eklentisi: "30A Studio Yardımcısı" (GÖREV-14, v0.16.0; GÖREV-16 düzeltmeleri, v0.18.0)
+# M16 — Tarayıcı eklentisi: "30A Studio Yardımcısı" (GÖREV-14, v0.16.0; GÖREV-16 düzeltmeleri, v0.18.0; GÖREV-17 tek pencere, v0.19.0)
 
 ## Neden
 
@@ -139,3 +139,32 @@ işi `eklenti_deneme`; bu düğmeye kullanıcı basar).
 - Uçtan uca (`tests/test_extension_e2e.py`, `STUDIO_EKLENTI_E2E=1`): Playwright'in Chromium'u geçici profille eklentiyi yükler; yerel
   deneme sunucusunda normal sayfa, JavaScript ile çizilen sayfa, kendiliğinden geçen ve geçmeyen doğrulama sayfası, giriş sayfası ve JSON
   ucu sınanır; kullanıcı sekmesine dokunulmadığı ve eklenti penceresinin kapandığı denetlenir. Gerçek siteye gidilmez.
+
+## GÖREV-17: bir iş boyunca tek pencere (eklenti 0.19.0)
+
+Kullanıcının 11 Kasım 2026 gözlemi: "Sürekli web sayfası açıyor." İnceleme: eklenti her oturum (bir işin bir sitesi) için
+`chrome.windows.create` ile yeni bir pencere açıyor, o sitenin sayfaları bitince pencereyi kapatıyordu; 7 sitelik deneme işinde ya da
+restoran sitelerinin ikinci okumasında bu, art arda açılıp kapanan pencereler demekti.
+
+- **Tek pencere.** Eklenti programın bir işi boyunca tek pencere ve tek sekme kullanır; aynı sekmede sıradaki adrese gider. Oturum
+  görünümü `pencere` anahtarını taşır (programın iş kimliği; Ayarlar'daki "Deneme" gibi işsiz oturumda oturumun kendisi). Pencerenin
+  kimliği `chrome.storage.session`'da durur; durdurulup yeniden başlayan service worker penceresini bulur. Kullanıcı pencereyi
+  kapatırsa sıradaki sayfada yeniden açılır.
+- **Ne zaman kapanır.** `/api/eklenti/sor` cevabı `acik_pencereler` listesini verir: eklentiyi kullanmış ve hâlâ sırada ya da
+  çalışan işler ile bitmemiş deneme oturumları. Eklentinin penceresinin anahtarı listede değilse (iş bitti, iptal edildi, programın
+  tarayıcısına devredildi) pencere kapanır. Program bulunamazsa ya da eşleşme düşerse de kapanır. Listeyi göndermeyen eski bir
+  programla eklenti eskisi gibi her oturumdan sonra kapatır.
+- **Arka planda.** Pencere `focused: false` ile, normal boyutta açılır; kullanıcının çalıştığı pencerenin önüne geçmez.
+  `state: "minimized"` seçilmedi: küçültülmüş (gizli) sayfada çizim (`requestAnimationFrame`) ve görünüme girince yüklenen bölümler
+  durur, sayfa yarım okunabilir. Gerçek Chrome'la yapılan denemede etkinleştirilmeden açılan pencere kullanıcının odağını değiştirmedi
+  ve sayfa normal çizildi.
+- **Öne gelme.** Yalnız kullanıcının geçmesi gereken doğrulamada (`chrome.windows.update(…, {focused: true, state: "normal"})` ve
+  bildirim). Doğrulama kuralları aynı: en çok 15 dk, "Bu sayfayı atla".
+- **İşler paneli.** Süren işin kartında "Açık pencere — Eklentinin penceresi: <site> · <durum>"; iki site arasında "sıradaki sayfa
+  bekleniyor".
+- **Sürüm.** Eklenti 0.19.0. Chrome'daki eklenti eski sürümse Ayarlar → Tarayıcı eklentisi bunu söyler; `chrome://extensions`
+  sayfasında eklentinin yenile düğmesine basılır.
+- **Test.** `tests/test_gorev17.py` (köprü: pencere anahtarı, açık pencereler listesi, devir; eklenti dosyalarında tek
+  `chrome.windows.create` ve iş içinde pencere kapatmama), `tests/frontend.test.mjs` (`windowKey`, `keepWindow`, `WINDOW_OPTIONS`),
+  uçtan uca `tests/test_extension_e2e.py` (Playwright'in Chromium'u, yerel sayfalar: bir işin iki oturumu aynı pencerede, pencere iki
+  site arasında açık, tek sekme, küçültülmemiş, iş iptal edilince kapanıyor).
