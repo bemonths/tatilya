@@ -1,5 +1,5 @@
 """Claude settings (GÖREV-13): Claude Code's path, the general default model and effort, and per step the model, the effort ("Genel varsayılan"
-inherits the general default) and the turn limit. The lists and the inheritance rule are The Housing Atlas Stüdyo's (`atlas/config.py`:
+inherits the general default) and (GÖREV-18) the output guess of the token estimate; the token limits of one call and of one job. The lists and the inheritance rule are The Housing Atlas Stüdyo's (`atlas/config.py`:
 `MODEL_CHOICES`, `EFFORT_CHOICES`, `resolve_model_effort`).
 
 Settings are the user's data, not the repository's: `<data folder>/ayarlar.json`, written atomically. Nothing secret is stored (no API key;
@@ -46,28 +46,43 @@ CLAUDE_STEPS = (("baslik", "Konu ve başlık"), ("baslik_degerlendirme", "Başl�
                 ("metin_bolum", "Video metni · bölüm"), ("metin_birlestirme", "Video metni · birleştirme"),
                 ("metin_giris_kapanis", "Video metni · giriş ve kapanış"), ("metin_son_okuma", "Video metni · son okuma"),
                 ("metin_ceviri", "Video metni · çeviri"))
-STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30},
-                 "baslik_degerlendirme": {"model": "claude-opus-5-5", "effort": "high", "max_turns": 30},
-                 "metin_plan": {"model": "opus", "effort": "high", "max_turns": 30},
-                 "metin_plan_elestiri": {"model": "opus", "effort": "medium", "max_turns": 30},
-                 "metin_bolum": {"model": "opus", "effort": "high", "max_turns": 30},
-                 "metin_birlestirme": {"model": "opus", "effort": "medium", "max_turns": 30},
-                 "metin_giris_kapanis": {"model": "opus", "effort": "high", "max_turns": 30},
-                 "metin_son_okuma": {"model": "opus", "effort": "medium", "max_turns": 30},
-                 "metin_ceviri": {"model": "sonnet", "effort": "medium", "max_turns": 30}}
+# GÖREV-18: every step is one call without tools (`--tools ""`, `--max-turns 1`); the turn limit is no longer a setting (old
+# `claude_max_turns_<step>` keys in a settings file are ignored). Model and effort are as before (GÖREV-18 Adım 5 keeps them).
+STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high"},
+                 "baslik_degerlendirme": {"model": "claude-opus-5-5", "effort": "high"},
+                 "metin_plan": {"model": "opus", "effort": "high"},
+                 "metin_plan_elestiri": {"model": "opus", "effort": "medium"},
+                 "metin_bolum": {"model": "opus", "effort": "high"},
+                 "metin_birlestirme": {"model": "opus", "effort": "medium"},
+                 "metin_giris_kapanis": {"model": "opus", "effort": "high"},
+                 "metin_son_okuma": {"model": "opus", "effort": "medium"},
+                 "metin_ceviri": {"model": "sonnet", "effort": "medium"}}
 # GÖREV-15 (Adım 5): the video text chain's own settings. Sessions at once (the section writers run side by side), the usage thresholds
 # at which no new session opens (5-hour and weekly window, percent) and "Plandan sonra dur" (the run stops after the plan for the user).
-TEXT_FIELDS = {"claude_max_sessions": (1, 6, 3), "claude_limit_five_hour": (1, 100, 90), "claude_limit_week": (1, 100, 95)}
+TEXT_FIELDS = {"claude_max_sessions": (1, 8, 6), "claude_limit_five_hour": (1, 100, 90), "claude_limit_week": (1, 100, 95)}
 STOP_AFTER_PLAN = "claude_stop_after_plan"
-TEXT_HELP = {"claude_max_sessions": "Video metninin bölüm yazıcıları aynı anda çalışır; aynı anda en çok bu kadar Claude oturumu açılır (1–6).",
+TEXT_HELP = {"claude_max_sessions": "Video metninin bölüm yazıcıları aynı anda çalışır; aynı anda en çok bu kadar Claude oturumu açılır (1–8).",
              "claude_limit_five_hour": "5 saatlik kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer.",
              "claude_limit_week": "Haftalık kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer.",
              STOP_AFTER_PLAN: "Açıksa video metni çalışması plandan sonra durur; planı görüp “Devam” ile sürdürürsünüz."}
-MAX_TURNS_MIN, MAX_TURNS_MAX, MAX_TURNS_DEFAULT = 1, 200, 30
-MAX_TURNS_HELP = ("Tur, Claude'un bir cevabıdır: Claude her turda düşünür ve bir ya da birkaç iş ister (dosya okur ya da dosya yazar). Bu "
-                  "sınır bir Claude çalışmasının en çok kaç cevap verebileceğidir; araç çağrılarını değil cevapları sayar. İş panelindeki "
-                  "\"Tur 12/30\" ve bitişteki \"30 tur\" aynı sayıdır. Sınıra ulaşan çalışma yarıda durur. "
-                  f"{MAX_TURNS_MIN} ile {MAX_TURNS_MAX} arasında bir sayı.")
+# GÖREV-18: token limits (Settings → Claude). A call is one step's single Claude call (read and written tokens together); the job limit
+# is the safety catch of one job (a title run, or a video text run with all its tones). The output guess is the estimate's written
+# tokens (thinking included) for a step with no earlier run to take a median from.
+LIMIT_FIELDS = {"claude_call_limit": (20_000, 1_000_000, 250_000), "claude_job_limit": (100_000, 10_000_000, 1_500_000)}
+LIMIT_HELP = {"claude_call_limit": "Tek bir Claude çağrısının en çok okuyup yazabileceği token (okunan ve yazılan toplam). Tahmini bunu aşan "
+                                   "çağrı başlatılmaz; program neyin büyük olduğunu söyler.",
+              "claude_job_limit": "Bir işin (başlık çalışması ya da bütün tonlarıyla bir video metni) en çok token'ı. Tahmin aşarsa iş "
+                                  "başlamaz; çalışırken gerçek toplam buraya gelirse zincir durur ve “Devam”ı bekler."}
+OUTPUT_GUESS_DEFAULTS = {"baslik": 60_000, "baslik_degerlendirme": 15_000, "metin_plan": 20_000, "metin_plan_elestiri": 6_000,
+                         "metin_bolum": 8_000, "metin_birlestirme": 6_000, "metin_giris_kapanis": 6_000, "metin_son_okuma": 10_000,
+                         "metin_ceviri": 12_000}
+OUTPUT_GUESS_RANGE = (500, 128_000)
+OUTPUT_GUESS_HELP = ("Çıktı varsayımı: adımın daha önce hiç başarılı çalışması yokken tahminde kullanılan yazılan token (düşünme dahil). "
+                     "Önceki çalışmalar varsa onların ortancası kullanılır.")
+# GÖREV-18: save() writes every field, so a value equal to an old default in a file saved before this version was not the user's choice;
+# it gives way to the new default. A file saved from now on carries `ayar_surumu` and keeps whatever it holds.
+SETTINGS_VERSION = 18
+OLD_DEFAULTS = {"claude_max_sessions": 3}
 
 
 class SettingsError(ValueError):
@@ -80,12 +95,13 @@ class SettingsError(ValueError):
 def defaults():
     values = {"claude_path": "", "claude_model": "", "claude_effort": ""}
     values.update({field: default for field, (_, _, default) in TEXT_FIELDS.items()})
+    values.update({field: default for field, (_, _, default) in LIMIT_FIELDS.items()})
     values[STOP_AFTER_PLAN] = False
     for key, _ in CLAUDE_STEPS:
         step = STEP_DEFAULTS.get(key, {})
         values[f"claude_model_{key}"] = step.get("model", INHERIT)
         values[f"claude_effort_{key}"] = step.get("effort", INHERIT)
-        values[f"claude_max_turns_{key}"] = step.get("max_turns", MAX_TURNS_DEFAULT)
+        values[f"claude_output_guess_{key}"] = OUTPUT_GUESS_DEFAULTS.get(key, 10_000)
     return values
 
 
@@ -110,9 +126,15 @@ def check(field, value):
         if not isinstance(value, bool):
             raise SettingsError(field, "Açık ya da kapalı olmalı.")
         return value
-    if field.startswith("claude_max_turns_"):
-        if isinstance(value, bool) or not isinstance(value, int) or not MAX_TURNS_MIN <= value <= MAX_TURNS_MAX:
-            raise SettingsError(field, f"Tur sınırı {MAX_TURNS_MIN} ile {MAX_TURNS_MAX} arasında bir tam sayı olmalı.")
+    if field in LIMIT_FIELDS:
+        low, high, _ = LIMIT_FIELDS[field]
+        if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+            raise SettingsError(field, f"{low:,} ile {high:,} arasında bir tam sayı olmalı.".replace(",", "."))
+        return value
+    if field.startswith("claude_output_guess_"):
+        low, high = OUTPUT_GUESS_RANGE
+        if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+            raise SettingsError(field, f"Çıktı varsayımı {low:,} ile {high:,} token arasında bir tam sayı olmalı.".replace(",", "."))
         return value
     raise SettingsError(field, "Bilinmeyen ayar.")
 
@@ -130,9 +152,14 @@ def load(data_dir):
             stored = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             stored, notes = {}, ["Ayar dosyası okunamadı; varsayılan ayarlar kullanılıyor."]
-        for field, value in (stored.get("claude") or {}).items() if isinstance(stored, dict) else ():
+        section = stored.get("claude") if isinstance(stored, dict) and isinstance(stored.get("claude"), dict) else {}
+        version = section.get("ayar_surumu")
+        before = not (isinstance(version, int) and version >= SETTINGS_VERSION)
+        for field, value in section.items():
             if field not in values:
-                continue
+                continue                                    # e.g. the old turn limits (GÖREV-18)
+            if before and field in OLD_DEFAULTS and value == OLD_DEFAULTS[field]:
+                continue                                    # an old default save() wrote, not a choice: the new default holds
             try:
                 values[field] = check(field, value)
             except SettingsError:
@@ -172,7 +199,7 @@ def save(data_dir, changes):
             raise SettingsError(field, "Bilinmeyen ayar.")
         current[field] = check(field, value)
     stored = stored_settings(data_dir)
-    stored["claude"] = current
+    stored["claude"] = {**current, "ayar_surumu": SETTINGS_VERSION}
     write_settings(data_dir, stored)
     return load(data_dir)
 
@@ -232,9 +259,17 @@ def resolve_model_effort(settings, step):
             settings.get("claude_effort", "") if effort == INHERIT else effort)
 
 
-def max_turns(settings, step):
-    value = settings.get(f"claude_max_turns_{step}")
-    return value if isinstance(value, int) and not isinstance(value, bool) else MAX_TURNS_DEFAULT
+def limits(settings):
+    """(call limit, job limit) in tokens (GÖREV-18)."""
+    call = settings.get("claude_call_limit")
+    job = settings.get("claude_job_limit")
+    return (call if isinstance(call, int) and not isinstance(call, bool) else LIMIT_FIELDS["claude_call_limit"][2],
+            job if isinstance(job, int) and not isinstance(job, bool) else LIMIT_FIELDS["claude_job_limit"][2])
+
+
+def output_guess(settings, step):
+    value = settings.get(f"claude_output_guess_{step}")
+    return value if isinstance(value, int) and not isinstance(value, bool) else OUTPUT_GUESS_DEFAULTS.get(step, 10_000)
 
 
 def model_label(model):
@@ -250,8 +285,10 @@ def options():
     return {"models": [{"value": v, "label": l} for v, l in MODEL_CHOICES], "efforts": [{"value": v, "label": l} for v, l in EFFORT_CHOICES],
             "inherit": {"value": INHERIT, "label": INHERIT_LABEL},
             "steps": [{"key": key, "label": title, "model_field": f"claude_model_{key}", "effort_field": f"claude_effort_{key}",
-                       "max_turns_field": f"claude_max_turns_{key}"} for key, title in CLAUDE_STEPS],
-            "max_turns": {"min": MAX_TURNS_MIN, "max": MAX_TURNS_MAX, "help": MAX_TURNS_HELP},
+                       "output_guess_field": f"claude_output_guess_{key}"} for key, title in CLAUDE_STEPS],
+            "output_guess": {"min": OUTPUT_GUESS_RANGE[0], "max": OUTPUT_GUESS_RANGE[1], "help": OUTPUT_GUESS_HELP},
+            "limits": [{"field": field, "min": low, "max": high, "default": default, "help": LIMIT_HELP[field]}
+                       for field, (low, high, default) in LIMIT_FIELDS.items()],
             "text": {"fields": [{"field": field, "min": low, "max": high, "default": default, "help": TEXT_HELP[field]}
                                 for field, (low, high, default) in TEXT_FIELDS.items()],
                      "stop_after_plan": {"field": STOP_AFTER_PLAN, "help": TEXT_HELP[STOP_AFTER_PLAN]}}}

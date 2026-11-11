@@ -267,6 +267,10 @@ def classify(returncode, envelope, stderr="", *, max_turns=0, api_key=False, mod
     error_text = "\n".join(str(e.get("text") or "") for e in api_errors if e.get("text"))
     if envelope is not None:
         subtype = envelope.get("subtype")
+        if subtype == "error_max_turns" and max_turns == 1:
+            return Failure(MAX_TURNS, "Claude cevabını tek turda vermedi (araçsız tek çağrıda bir iş istemeye çalıştı); çalışma durdu. Yeniden "
+                                      "deneyin ya da \"Düzeltme iste\" ile yeni bir çalışma açın.", retryable=True,
+                           detail=first_line(" ".join(map(str, envelope.get("errors") or []))))
         if subtype == "error_max_turns":
             limit = f"{max_turns} tur" if max_turns else f"{envelope.get('num_turns')} tur"
             return Failure(MAX_TURNS, f"Claude tur sınırına ulaştı ({limit}) ve işi bitirmeden durdu. Ayarlar → Claude'dan bu adımın en fazla tur "
@@ -622,7 +626,7 @@ class StreamParser:
         return {key: sum(u.get(key, 0) for u in self._usage.values()) for key in keys} or None
 
     def prefix(self):
-        if not self.turns:
+        if not self.turns or self.max_turns == 1:      # GÖREV-18: a one-turn call has no turn count to show
             return ""
         return f"Tur {self.turns}/{self.max_turns} · " if self.max_turns else f"Tur {self.turns} · "
 
@@ -717,7 +721,8 @@ class StreamParser:
                 seconds = gap or 0.0
                 self.thinking_s += seconds
                 if seconds >= 1:
-                    out.append((f"{self.prefix()}Düşünüyor ({duration_text(seconds)})", "info"))
+                    word = "Claude düşünüyor" if self.max_turns == 1 else "Düşünüyor"
+                    out.append((f"{self.prefix()}{word} ({duration_text(seconds)})", "info"))
             elif kind == "tool_use":
                 self.tool_calls += 1
                 name = str(block.get("name") or "")

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from studio.ai import store, title
+from studio.ai import single, store, title
 from studio.app import create_app
 from studio.database import Database
 from studio.destinations import thirty_a
@@ -85,11 +85,15 @@ def test_a_valid_proposal_waits_for_approval_with_its_inputs_record_and_markdown
                                "baslik_eki": {"en": " | 30A Florida Vacation", "tr": " | 30A Florida Tatili"}} and record["paketler"]["veri_ozeti_30a.md"]
     assert record["calisma_sonucu"]["session_id"] and record["calisma_sonucu"]["metrics"]["tokens"]["output"] == 800
     run = app.get("/api/claude/runs").json()[0]
-    assert run["session_id"] and run["metrics"]["turns"] == 3 and run["model"] == "claude-opus-5-5" and run["effort"] == "high"
+    assert run["session_id"] and run["metrics"]["turns"] == 1 and run["metrics"]["cagri"] == 1 and run["metrics"]["duzen"] == "tek_cagri"
+    assert run["model"] == "claude-opus-5-5" and run["effort"] == "high"
     job = next(j for j in app.get("/api/bootstrap").json()["jobs"] if j["kind"] == "claude_run")
     texts = [entry["text"] for entry in job["log"]]
-    assert job["status"] == "done" and any(t.startswith("Tur 1/30 · Okuyor: secim.md") for t in texts)
-    assert any(t.startswith("Claude bitti: 3 tur") for t in texts) and any("Veri özeti yeniden üretiliyor (ilk-video)" in t for t in texts)
+    # GÖREV-18: the job log speaks of the call's stages, not of turns and opened files
+    assert job["status"] == "done" and not any(t.startswith("Tur ") for t in texts)
+    assert any(t.startswith("İstem hazırlandı: 6 dosya istemin içinde; tahmin: yaklaşık ") for t in texts)
+    assert any(t.startswith("Cevap geldi: ") for t in texts) and any(t.startswith("Cevap doğrulandı") for t in texts)
+    assert any(t.startswith("Harcama: tahmin ") for t in texts) and any("Veri özeti yeniden üretiliyor (ilk-video)" in t for t in texts)
 
 
 def test_the_instructions_are_the_destination_files_verbatim_with_the_filled_schema(app):
@@ -110,31 +114,35 @@ def test_command_settings_isolation_and_environment(app, monkeypatch):
     view = start(app)
     call = calls(app, view)[0]
     argv = call["argv"]
-    assert (call["model"], call["effort"], call["tools"], call["max_turns"]) == ("claude-opus-5-5", "high", "Read,Glob,Grep,Write,Edit", "30")
-    assert call["allowed"] == ["Read(./**)", "Write(./baslik.json)", "Edit(./baslik.json)"] and call["setting_sources"] == ""
+    # GÖREV-18: no tools, no permission rules, one turn
+    assert (call["model"], call["effort"], call["tools"], call["max_turns"]) == ("claude-opus-5-5", "high", "", "1")
+    assert call["allowed"] is None and "--allowedTools" not in argv and call["setting_sources"] == ""
     assert "--strict-mcp-config" in argv and "--disable-slash-commands" in argv and argv[argv.index("--permission-mode") + 1] == "dontAsk"
     assert call["env"] == {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "ENABLE_CLAUDEAI_MCP_SERVERS": "0", "DISABLE_AUTOUPDATER": "1",
                            "CLAUDECODE": None, "CLAUDE_CODE_ENTRYPOINT": None}
-    assert call["prompt"].startswith("Adım: baslik\nTür: ilk çalışma\nBölge: 30A geneli")
+    assert call["prompt"].startswith(single.PREFACE + "\n\nAdım: baslik\nTür: ilk çalışma\nBölge: 30A geneli")
     # "Genel varsayılan" takes the general default; an empty general default gives no option at all
     assert app.put("/api/settings/claude", json={"claude_model": "claude-sonnet-5", "claude_effort": "low", "claude_model_baslik": "inherit",
-                                                 "claude_effort_baslik": "inherit", "claude_max_turns_baslik": 12}).status_code == 200
+                                                 "claude_effort_baslik": "inherit"}).status_code == 200
     second = calls(app, start(app, aile="Deneyim"))[0]
-    assert (second["model"], second["effort"], second["max_turns"]) == ("claude-sonnet-5", "low", "12")
+    assert (second["model"], second["effort"], second["max_turns"]) == ("claude-sonnet-5", "low", "1")
     app.put("/api/settings/claude", json={"claude_model": "", "claude_effort": ""})
     third = calls(app, start(app, aile="Genel planlama"))[0]
     assert "--model" not in third["argv"] and "--effort" not in third["argv"]
-    refused = app.put("/api/settings/claude", json={"claude_max_turns_baslik": 500})
-    assert refused.status_code == 422 and "Tur sınırı" in refused.json()["detail"]
+    refused = app.put("/api/settings/claude", json={"claude_max_turns_baslik": 12})     # GÖREV-18: the turn limit is no longer a setting
+    assert refused.status_code == 422 and "Bilinmeyen ayar" in refused.json()["detail"]
 
 
 def test_an_output_against_the_schema_is_an_error_with_its_problems(app, monkeypatch):
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "schema_error")
     view = start(app)
-    assert view["status"] == "error" and "şemaya uymuyor" in view["error"] and view["candidates"] == []
-    assert any("'kapak_fikri' alanı eksik" in p["metin"] for p in view["problems"])
+    # GÖREV-18: an answer against the schema is asked once more (one turn too, with the answer and its errors); invalid again: an error
+    assert view["status"] == "error" and "iki çağrıda da kullanılamadı" in view["error"] and "şemaya uymuyor" in view["error"]
+    assert "'kapak_fikri' alanı eksik" in view["error"] and view["candidates"] == []
     assert view["actions"] == {"select": False, "reject": False, "correct": True}
-    for scenario, words in (("invalid_json", "geçerli bir JSON değil"), ("missing_file", "baslik.json dosyasını yazmadı")):
+    second = calls(app, view)
+    assert len(second) == 2 and "DÖNÜŞ SEBEBİ" in second[1]["prompt"] and "<<<DOSYA onceki_cevap.txt>>>" in second[1]["prompt"]
+    for scenario, words in (("invalid_json", "okunabilir bir JSON nesnesi değil"), ("missing_file", "okunabilir bir JSON nesnesi değil")):
         monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", scenario)
         assert words in start(app)["error"]
 
@@ -200,7 +208,7 @@ def test_previous_proposals_are_given_and_a_repeated_title_is_refused(app, monke
 def test_turn_limit_and_usage_limit_are_turkish_errors(app, monkeypatch):
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "max_turns")
     view = start(app)
-    assert view["status"] == "error" and "tur sınırına ulaştı (30 tur)" in view["error"]
+    assert view["status"] == "error" and "tek turda vermedi" in view["error"]
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "usage_limit")
     assert "kullanım sınırına ulaşıldı" in start(app)["error"]
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "version_too_old")

@@ -56,15 +56,16 @@ def task_lines(key, ctx):
     if extra.get("chunk"):
         index, total = extra["chunk"]
         lines.append(f"Parça: {index}/{total}")
-    lines += ["", "Çalışma klasöründeki dosyalar:"]
+    lines += ["", "Verilen dosyalar (hepsi aşağıda):"]
     lines += [f"- `{name}` — {DESCRIPTIONS.get(name, name)}" for name in (extra.get("files") or {})]
-    lines += ["", f"Çıktın `{OUTPUTS[key]}`; şeması sistem talimatının sonunda. Yalnız bu klasördeki dosyaları oku, yalnız bu dosyayı yaz."]
+    OUTPUT_FILE = OUTPUTS[key]
+    lines += ["", f"Çıktın `{OUTPUT_FILE}`'un içeriğidir: cevabın yalnız bu JSON'dur; şeması sistem talimatının sonunda."]
     if extra.get("known_terms"):
         lines += ["", "Önceki parçaların terimleri (aynı biçimde kullan):"] + [f"- {t['en']} → {t['tr']}" for t in extra["known_terms"]]
     if extra.get("reason"):
         lines += ["", "DÖNÜŞ SEBEBİ", extra["reason"].strip()]
         if PREVIOUS in (extra.get("files") or {}):
-            lines.append(f"Önceki çıktın `{PREVIOUS}` dosyasında; bu sebebe göre yeniden yaz.")
+            lines.append(f"Önceki çıktın `{PREVIOUS}` bölümünde; bu sebebe göre yeniden yaz.")
     return "\n".join(lines) + "\n"
 
 

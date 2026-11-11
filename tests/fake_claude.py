@@ -26,6 +26,15 @@ Scenarios: dolmuyor (the idea does not fill a video: no candidates, missing data
 
 GÖREV-15: the video text's seven steps (`Adım: metin_…`) are answered by `tests/fake_claude_text.py` (outputs with evidence marks; invalid
 answers, transient failures, the usage limit and slow answers on request through FAKE_CLAUDE_TEXT and FAKE_CLAUDE_SCENARIO=slow).
+
+GÖREV-18: the new way. A step's call must come without tools (`--tools ""`, no `--allowedTools`) and with `--max-turns 1`; otherwise the
+fake ends with an error (so no test can pass with the old way). It opens no file of the run folder: the input files are read from the
+task text's `<<<DOSYA name>>>` sections (standard input), and the output is the answer's text (one `assistant` text block and the
+`result` envelope), never a file. Scenarios: invalid_json (the answer is "{") · missing_file / no_json (an answer without JSON) ·
+prose (the JSON with a sentence before and after) · fenced (the JSON in a ```json fence) · truncated (the answer is cut: `stop_reason`
+"max_tokens", half of the JSON) · truncated_once / invalid_once (only the first call of a run folder; the second is ok).
+FAKE_CLAUDE_TOKENS="read,written" sets the answer's usage (default: read = the task text's and the instructions' characters ÷ 2.3 plus
+4,500, written 800); the per-step override FAKE_CLAUDE_TOKENS_<STEP> (e.g. FAKE_CLAUDE_TOKENS_METIN_BOLUM) wins.
 """
 import json
 import os
@@ -36,6 +45,31 @@ import uuid
 from pathlib import Path
 
 import fake_claude_text  # noqa: E402  (GÖREV-15: the video text steps; this file runs as a script from tests/)
+
+SECTION = re.compile(r"^<<<DOSYA (?P<name>[^>\n]+)>>>\n(?P<body>.*?)\n<<<DOSYA SONU (?P=name)>>>$", re.S | re.M)
+
+
+class GivenFile:
+    """One input file as the task text gives it (GÖREV-18: the fake reads nothing from the run folder)."""
+
+    def __init__(self, files, name):
+        self.files, self.name = files, name
+
+    def is_file(self):
+        return self.name in self.files
+
+    def read_text(self, encoding=None):
+        if self.name not in self.files:
+            raise FileNotFoundError(self.name)
+        return self.files[self.name]
+
+
+class Given:
+    def __init__(self, prompt):
+        self.files = {m.group("name"): m.group("body") for m in SECTION.finditer(prompt)}
+
+    def __truediv__(self, name):
+        return GivenFile(self.files, name)
 
 FLAGS = {"-p", "--verbose", "--strict-mcp-config", "--disable-slash-commands"}
 VALUED = {"--output-format", "--append-system-prompt-file", "--tools", "--permission-mode", "--max-turns", "--setting-sources", "--model",
@@ -212,18 +246,50 @@ def text_session(step, cwd, prompt, scenario, session):
               "duration_ms": 10, "result": "You've hit your session limit · resets 3pm (Europe/Istanbul)"})
         fake_claude_text.log_session(step, start, time.time())
         return 1
-    usage = {"input_tokens": 900, "cache_creation_input_tokens": 200, "cache_read_input_tokens": 3000, "output_tokens": 600}
-    output = cwd / fake_claude_text.OUTPUTS[step]
     data = fake_claude_text.output(step, cwd, prompt)
-    output.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    emit({"type": "assistant", "message": {"id": "msg_1", "content": [{"type": "thinking", "thinking": ""},
-          {"type": "tool_use", "id": "toolu_1", "name": "Write", "input": {"file_path": str(output), "content": "..."}}], "usage": usage}})
-    emit({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_1", "content": "ok"}]}})
-    emit({"type": "assistant", "message": {"id": "msg_2", "content": [{"type": "text", "text": "Yazdım."}], "usage": usage}})
-    emit({"type": "result", "subtype": "success", "is_error": False, "result": "Yazdım.", "session_id": session, "num_turns": 2,
-          "duration_ms": 900, "duration_api_ms": 700, "total_cost_usd": 0.0071, "usage": usage, "modelUsage": {}, "permission_denials": []})
+    answer(json.dumps(data, ensure_ascii=False, indent=1), session, prompt, step=step, scenario=scenario)
     fake_claude_text.log_session(step, start, time.time())
     return 0
+
+
+SYSTEM_CHARS = [0]
+
+
+def usage_of(prompt, step=None):
+    """The answer's usage: FAKE_CLAUDE_TOKENS(_<STEP>) "read,written", else the task text's size (GÖREV-18)."""
+    wanted = os.environ.get(f"FAKE_CLAUDE_TOKENS_{(step or '').upper()}") or os.environ.get("FAKE_CLAUDE_TOKENS")
+    if wanted:
+        read, written = (int(v) for v in wanted.split(","))
+    else:
+        read, written = int((len(prompt) + SYSTEM_CHARS[0]) / 2.3) + 4500, 800
+    return {"input_tokens": 10, "cache_creation_input_tokens": max(0, read - 10), "cache_read_input_tokens": 0, "output_tokens": written}
+
+
+def first_call(prompt):
+    """True for the first call of a run (its task text has no "DÖNÜŞ SEBEBİ"): the *_once scenarios act on it only."""
+    return "DÖNÜŞ SEBEBİ" not in prompt
+
+
+def answer(text, session, prompt, *, step=None, scenario="ok"):
+    """One answer of a one-turn call: a thinking block and a text block, then the envelope (GÖREV-18). The scenarios change the text."""
+    stop = "end_turn"
+    once = first_call(prompt)
+    if scenario == "invalid_json" or (scenario == "invalid_once" and once):
+        text = "{"
+    elif scenario in ("missing_file", "no_json"):
+        text = "Bitti; çıktıyı yazdım."
+    elif scenario == "prose":
+        text = "İşte cevabım:\n" + text + "\nUmarım işe yarar."
+    elif scenario == "fenced":
+        text = "```json\n" + text + "\n```"
+    elif scenario == "truncated" or (scenario == "truncated_once" and once):
+        text, stop = text[: len(text) // 2], "max_tokens"
+    usage = usage_of(prompt, step)
+    emit({"type": "assistant", "message": {"id": "msg_1", "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": text}],
+          "usage": usage}})
+    emit({"type": "result", "subtype": "success", "is_error": False, "result": text, "session_id": session, "num_turns": 1,
+          "stop_reason": stop, "duration_ms": 900, "duration_api_ms": 700, "total_cost_usd": 0.0071, "usage": usage,
+          "modelUsage": {"claude-fake": {"maxOutputTokens": 128000}}, "permission_denials": []})
 
 
 def main():
@@ -238,6 +304,7 @@ def main():
     cwd = Path.cwd()
     scenario = os.environ.get("FAKE_CLAUDE_SCENARIO", "ok")
     system_text = Path(options["--append-system-prompt-file"]).read_text(encoding="utf-8")
+    SYSTEM_CHARS[0] = len(system_text)
     with open(cwd / ".fake_claude_calls.jsonl", "a", encoding="utf-8") as handle:
         handle.write(json.dumps({"argv": argv, "prompt": prompt, "scenario": scenario, "model": options.get("--model"), "effort": options.get("--effort"),
                                  "tools": options.get("--tools"), "allowed": options.get("--allowedTools"), "max_turns": options.get("--max-turns"),
@@ -266,9 +333,15 @@ def main():
         emit({"type": "result", "subtype": "success", "is_error": False, "result": "tamam", "session_id": session, "num_turns": 1,
               "duration_ms": 300, "total_cost_usd": 0.0004, "usage": {"input_tokens": 20, "output_tokens": 2}})
         return 0
+    if options.get("--tools") not in ("", None) or options.get("--allowedTools") or options.get("--max-turns") != "1":
+        text = (f"Sahte Claude: GÖREV-18'den sonra bir adım araçsız ve tek turlu çağrılır (gelen: --tools {options.get('--tools')!r}, "
+                f"--allowedTools {options.get('--allowedTools')!r}, --max-turns {options.get('--max-turns')!r}).")
+        emit({"type": "result", "subtype": "success", "is_error": True, "result": text, "session_id": session, "num_turns": 1, "duration_ms": 5})
+        return 1
+    given = Given(prompt)
     text_step = fake_claude_text.step_of(prompt)
     if text_step:
-        return text_session(text_step, cwd, prompt, scenario, session)
+        return text_session(text_step, given, prompt, scenario, session)
     if scenario == "slow":
         time.sleep(float(os.environ.get("FAKE_CLAUDE_SLEEP", "30")))
     if scenario in ("usage_limit", "not_logged_in", "version_too_old"):
@@ -282,34 +355,17 @@ def main():
               "result": text, "session_id": session, "num_turns": 1, "duration_ms": 10,
               **({"api_error_code": "claude_code_version_too_old"} if scenario == "version_too_old" else {})})
         return 1
-    usage = {"input_tokens": 1200, "cache_creation_input_tokens": 300, "cache_read_input_tokens": 5000, "output_tokens": 800}
-    emit({"type": "assistant", "message": {"id": "msg_1", "content": [{"type": "thinking", "thinking": ""},
-          {"type": "tool_use", "id": "toolu_1", "name": "Read", "input": {"file_path": str(cwd / "secim.md")}}], "usage": usage}})
-    emit({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_1", "content": "..."}]}})
-    if scenario == "denied":
-        emit({"type": "assistant", "message": {"id": "msg_2", "content": [{"type": "tool_use", "id": "toolu_2", "name": "Bash",
-              "input": {"command": "dir .."}}], "usage": usage}})
-        emit({"type": "system", "subtype": "permission_denied", "tool_name": "Bash", "tool_use_id": "toolu_2",
-              "message": "Permission to use Bash has been denied because Claude Code is running in don't ask mode."})
-        emit({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_2", "content": "denied", "is_error": True}]}})
     if scenario == "max_turns":
-        emit({"type": "result", "subtype": "error_max_turns", "is_error": True, "session_id": session, "num_turns": int(options["--max-turns"]) + 1,
+        emit({"type": "result", "subtype": "error_max_turns", "is_error": True, "session_id": session, "num_turns": 2,
               "errors": ["Reached maximum number of turns"]})
         return 1
     review = "Adım: baslik_degerlendirme" in prompt
-    output = cwd / ("baslik_degerlendirme.json" if review else "baslik.json")
-    if scenario == "invalid_json":
-        output.write_text("{", encoding="utf-8")
-    elif scenario != "missing_file":
-        data = build_review(cwd, system_text, scenario, prompt) if review else build(cwd, system_text, scenario, prompt)
-        output.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    emit({"type": "assistant", "message": {"id": "msg_3", "content": [{"type": "tool_use", "id": "toolu_3", "name": "Write",
-          "input": {"file_path": str(output), "content": "..."}}], "usage": usage}})
-    emit({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_3", "content": "ok"}]}})
-    emit({"type": "assistant", "message": {"id": "msg_4", "content": [{"type": "text", "text": "Sekiz aday yazdım."}], "usage": usage}})
-    emit({"type": "result", "subtype": "success", "is_error": False, "result": "Sekiz aday yazdım.", "session_id": session, "num_turns": 4,
-          "duration_ms": 1500, "duration_api_ms": 1200, "total_cost_usd": 0.0123, "usage": usage, "modelUsage": {},
-          "permission_denials": [{"tool_name": "Bash", "tool_use_id": "toolu_2", "tool_input": {"command": "dir .."}}] if scenario == "denied" else []})
+    if scenario in ("invalid_json", "missing_file", "no_json"):
+        text = "{}"                                          # the answer is replaced by the scenario anyway
+    else:
+        data = build_review(given, system_text, scenario, prompt) if review else build(given, system_text, scenario, prompt)
+        text = json.dumps(data, ensure_ascii=False, indent=1)
+    answer(text, session, prompt, step="baslik_degerlendirme" if review else "baslik", scenario=scenario)
     return 0
 
 

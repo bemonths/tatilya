@@ -1102,6 +1102,19 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         selected(destination_id)
         return claude().start_title(destination_id, body.bolge, body.aile, body.not_)
 
+    @app.post("/api/claude/title-runs/tahmin")
+    def estimate_title_run(body: TitleRunInput):
+        """GÖREV-18: the estimate shown before a title run starts (calls, tokens read and written, model; the limits)."""
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return claude().estimate_title(destination_id, body.bolge, body.aile, body.not_)
+
+    @app.post("/api/claude/review-runs/tahmin")
+    def estimate_review_run(body: ReviewRunInput):
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return claude().estimate_review(destination_id, body.bolge, body.baslik, body.not_)
+
     @app.post("/api/claude/review-runs", status_code=201)
     def start_review_run(body: ReviewRunInput):
         """GÖREV-14: Claude evaluates the user's own title or idea."""
@@ -1129,6 +1142,14 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def claude_translate(identifier: str, body: TranslateInput):
         """GÖREV-14: "İngilizcesini Claude yazsın" — an evaluation run with the edited Turkish title."""
         return claude_run_or_404(identifier, lambda: claude().translate(identifier, body.aday, body.baslik_tr))
+
+    @app.post("/api/claude/runs/{identifier}/translate/tahmin")
+    def claude_translate_estimate(identifier: str, body: TranslateInput):
+        return claude_run_or_404(identifier, lambda: claude().estimate_translate(identifier, body.aday, body.baslik_tr))
+
+    @app.post("/api/claude/runs/{identifier}/correct/tahmin")
+    def claude_correct_estimate(identifier: str, body: RunDecisionInput):
+        return claude_run_or_404(identifier, lambda: claude().estimate_correction(identifier, body.not_))
 
     @app.post("/api/claude/runs/{identifier}/reject")
     def claude_reject(identifier: str, body: RunDecisionInput):
@@ -1182,6 +1203,19 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.post("/api/videos/{video_id}/metin", status_code=201)
     def text_start(video_id: str, body: TextRunInput):
         return text_or_404(lambda: text().start(video_id, body.tonlar))
+
+    @app.post("/api/videos/{video_id}/metin/tahmin")
+    def text_estimate(video_id: str, body: TextRunInput):
+        """GÖREV-18: the estimate shown before "Metni yaz" (plan, every tone, total; the limits)."""
+        return text_or_404(lambda: text().estimate(video_id, body.tonlar))
+
+    @app.post("/api/metin/calismalar/{run_id}/ton/tahmin")
+    def text_add_tone_estimate(run_id: str, body: TextToneInput):
+        return text_or_404(lambda: text().estimate_add_tone(run_id, body.ton))
+
+    @app.post("/api/metin/calismalar/{run_id}/yeniden-planla/tahmin")
+    def text_replan_estimate(run_id: str):
+        return text_or_404(lambda: text().estimate_replan(run_id))
 
     @app.get("/api/videos/{video_id}/metin/karsilastirma")
     def text_compare(video_id: str, calisma: str | None = None):

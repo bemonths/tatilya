@@ -3,7 +3,7 @@ candidates, suffix checks), editing a title before choosing it, and "İngilizces
 import time
 import json
 
-from studio.ai import title, title_review
+from studio.ai import single, title, title_review
 from studio.destinations import thirty_a
 from tests.test_claude_steps import app, calls, finished, folder, start  # noqa: F401  (app: fixture with the fake Claude)
 
@@ -47,7 +47,7 @@ def test_an_evaluation_gets_the_title_inputs_its_own_two_files_and_its_schema(ap
     assert instructions.startswith((thirty_a.CLAUDE_INSTRUCTIONS / "ortak.md").read_text(encoding="utf-8").strip()) and expected in instructions
     assert '"adim": {\n  "const": "baslik_degerlendirme"' in instructions.replace(" \n", "\n") or '"const": "baslik_degerlendirme"' in instructions
     task = (folder(app, view) / "gorev.md").read_text(encoding="utf-8")
-    assert task.startswith("Adım: baslik_degerlendirme") and "kullanici_basligi.md" in task and "baslik_olculeri.md" in task
+    assert task.startswith(single.PREFACE + "\n\nAdım: baslik_degerlendirme") and "kullanici_basligi.md" in task and "baslik_olculeri.md" in task
     assert "1–3 aday" in task and "birebir çevirisidir" in task
     record = json.loads((folder(app, view) / "calisma.json").read_text(encoding="utf-8"))
     used = {f["path"] for f in record["talimat_surumu"]["files"]}

@@ -48,9 +48,9 @@ def task(ctx):
     region = params.get("bolge_id")
     summary = title.GENERAL_SUMMARY
     lines = ["Adım: baslik_degerlendirme", f"Tür: {'düzeltme' if ctx.correction else 'ilk çalışma'}", f"Bölge: {params['bolge']}",
-             f"Not: {'aşağıda, secim.md dosyasında' if '\n' in (params.get('not') or '') else params.get('not') or 'yok'}", "",
+             f"Not: {'aşağıda, secim.md bölümünde' if '\n' in (params.get('not') or '') else params.get('not') or 'yok'}", "",
              "Görev: kullanıcının yazdığı başlığı ya da fikri değerlendir (sistem metnindeki \"Kullanıcının başlığını değerlendirme\").", "",
-             "Çalışma klasöründeki dosyalar (hepsini oku):",
+             "Verilen dosyalar (hepsi aşağıda; hepsini oku):",
              f"- `{USER_TITLE}` — kullanıcının yazdığı başlık ya da fikir (aynen).",
              f"- `{MEASURES}` — iyi bir başlığın ölçüleri (başlık önerisi talimatı; oradaki aday sayısı ve çıktı biçimi bu görev için geçerli değil).",
              "- `secim.md` — kullanıcının bölgesi, notu ve başlık ekleri.",
@@ -63,9 +63,9 @@ def task(ctx):
              "- `onceki_oneriler.md` — daha önce önerilen başlıklar.",
              *(["- `onceki_cikti.json` — düzelteceğin önceki çıktın."] if ctx.correction else []), "",
              "Çıktı:",
-             f"- `{OUTPUT}` — şema: sistem talimatının sonundaki \"Çıktı şeması\" bölümü. Okunur Markdown'ı program üretir; sen Markdown yazma.", "",
+             f"- `{OUTPUT}`'un içeriği: cevabın yalnız bu JSON'dur; şeması sistem talimatının sonundaki \"Çıktı şeması\" bölümünde. Okunur "
+             "Markdown'ı program üretir; sen Markdown yazma.", "",
              "Kurallar:",
-             f"- Yalnız bu klasördeki dosyaları oku; yalnız `{OUTPUT}`'u yaz. Başka hiçbir dosyayı oluşturma ya da değiştirme.",
              f"- `kullanici_fikri` alanına `{USER_TITLE}`'ndaki metni (işaret satırlarının arasındakini) aynen yaz.",
              f"- `doluluk`: fikir veriyle doluyorsa `dolar_mi` true; dolmuyorsa false, `aciklama` neden dolmadığını, `eksik_veri` neyin eksik "
              f"olduğunu söyler. Fikir doluyorsa 1–{MAX_CANDIDATES} aday yaz (birincisi en çok önerdiğin); dolmuyorsa aday listesi boş kalabilir. "
@@ -86,9 +86,9 @@ def task(ctx):
               + (" (ek dahil); İngilizce başlık `secim.md`'deki İngilizce ekle, Türkçe karşılığı oradaki Türkçe ekle biter." if title.suffix_lines(params) else "."),
               "- Türkçe karşılık İngilizce başlığın birebir çevirisidir.",
               "- Başlıklar birbirini ve `onceki_oneriler.md`'dekileri tekrar etmez; büyük-küçük harf ve noktalama farkı tekrar sayılır.",
-              "- Bitirince kısa bir Türkçe özet yaz: fikir doluyor mu, kaç aday, önemli eksik veri."]
+              "- Kısa Türkçe özetini (fikir doluyor mu, kaç aday, önemli eksik veri) `notlar` alanına yaz."]
     if ctx.correction:
-        lines += ["", "Düzeltme: kullanıcının notu aşağıda. Önceki çıktın `onceki_cikti.json` dosyasında. Notu uygula ve "
+        lines += ["", "Düzeltme: kullanıcının notu aşağıda. Önceki çıktın `onceki_cikti.json` bölümünde. Notu uygula ve "
                       f"`{OUTPUT}`'u baştan ve eksiksiz yaz.", *steps.note_block(ctx.correction["note"])]
     return "\n".join(lines) + "\n"
 

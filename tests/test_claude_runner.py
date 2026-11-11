@@ -109,15 +109,19 @@ def test_a_run_streams_measures_and_stops_on_timeout(tmp_path, monkeypatch):
     (tmp_path / "secim.md").write_text("- Bölge: 30A geneli (x)\n- İçerik ailesi: hepsi\n", encoding="utf-8")
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "missing_file")
     seen = []
-    result = runner.run(invocation(tmp_path), runner.resolve_command(FAKE), stream_path=tmp_path / "akis.jsonl", on_log=lambda t, l: seen.append(t))
-    assert result.ok and result.turns == 3 and result.session_id and result.metrics()["tokens"]["output"] == 800
-    assert result.metrics()["cost_usd"] == 0.0123 and seen[0].startswith("Claude Code 0.0.0 · model: Opus 5.5 (claude-opus-5-5) · efor: Yüksek")
+    one = dict(tools=(), allowed=(), max_turns=1)                    # GÖREV-18: every step's call (the fake refuses anything else)
+    result = runner.run(invocation(tmp_path, **one), runner.resolve_command(FAKE), stream_path=tmp_path / "akis.jsonl",
+                        on_log=lambda t, l: seen.append(t))
+    assert result.ok and result.turns == 1 and result.session_id and result.metrics()["tokens"]["output"] == 800
+    assert result.envelope["result"] == "Bitti; çıktıyı yazdım." and "--allowedTools" not in result.argv
+    assert result.argv[result.argv.index("--tools") + 1] == "" and result.argv[result.argv.index("--max-turns") + 1] == "1"
+    assert result.metrics()["cost_usd"] == 0.0071 and seen[0].startswith("Claude Code 0.0.0 · model: Opus 5.5 (claude-opus-5-5) · efor: Yüksek")
     stream = [json.loads(line) for line in (tmp_path / "akis.jsonl").read_text(encoding="utf-8").splitlines()]
     assert stream[0]["type"] == "studio_run" and stream[-1]["type"] == "studio_run_end" and any(e.get("type") == "result" for e in stream)
     assert "maliyet karşılığı 0,01 $" in runner.summary_line(result)
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "slow")
     monkeypatch.setenv("FAKE_CLAUDE_SLEEP", "30")
-    slow = runner.run(invocation(tmp_path), runner.resolve_command(FAKE), timeout=1.5)
+    slow = runner.run(invocation(tmp_path, **one), runner.resolve_command(FAKE), timeout=1.5)
     assert slow.failure.kind == runner.TIMEOUT and "zaman aşımı" in slow.failure.message and slow.elapsed_s < 20
     assert runner.timeout_for(30) == 45 * 60 and runner.timeout_for(100) == 100 * 90
 
@@ -134,21 +138,23 @@ def test_instruction_hashes_are_sha256_of_the_files(tmp_path):
 
 def test_settings_defaults_inheritance_validation_and_storage(tmp_path):
     values = settings.load(tmp_path)
-    assert (values["claude_model_baslik"], values["claude_effort_baslik"], values["claude_max_turns_baslik"]) == ("claude-opus-5-5", "high", 30)
+    assert (values["claude_model_baslik"], values["claude_effort_baslik"]) == ("claude-opus-5-5", "high") and "claude_max_turns_baslik" not in values
+    assert (values["claude_call_limit"], values["claude_job_limit"], values["claude_max_sessions"]) == (250_000, 1_500_000, 6)   # GÖREV-18
     assert settings.resolve_model_effort(values, "baslik") == ("claude-opus-5-5", "high")
     assert [v for v, _ in settings.MODEL_CHOICES] == ["", "opus", "sonnet", "haiku", "claude-opus-5-5", "claude-fable-5-1", "claude-sonnet-5-5",
                                                      "claude-sonnet-5", "claude-haiku-4-5"]                  # GÖREV-14: aliases and Sonnet 5.5
     assert [v for v, _ in settings.EFFORT_CHOICES] == ["", "low", "medium", "high", "xhigh", "max"]
     saved = settings.save(tmp_path, {"claude_model": "claude-sonnet-5", "claude_effort": "", "claude_model_baslik": "inherit",
-                                     "claude_effort_baslik": "inherit", "claude_max_turns_baslik": 12})
-    assert settings.resolve_model_effort(saved, "baslik") == ("claude-sonnet-5", "") and settings.max_turns(saved, "baslik") == 12
+                                     "claude_effort_baslik": "inherit", "claude_output_guess_baslik": 12_000})
+    assert settings.resolve_model_effort(saved, "baslik") == ("claude-sonnet-5", "") and settings.output_guess(saved, "baslik") == 12_000
     stored = json.loads((tmp_path / "ayarlar.json").read_text(encoding="utf-8"))
     assert stored["claude"]["claude_model"] == "claude-sonnet-5" and "key" not in json.dumps(stored).lower()
     for change, field in (({"claude_model": "inherit"}, "claude_model"), ({"claude_effort_baslik": "çok"}, "claude_effort_baslik"),
-                          ({"claude_max_turns_baslik": 0}, "claude_max_turns_baslik"), ({"api_key": "x"}, "api_key")):
+                          ({"claude_output_guess_baslik": 0}, "claude_output_guess_baslik"), ({"claude_call_limit": 5}, "claude_call_limit"),
+                          ({"claude_max_turns_baslik": 12}, "claude_max_turns_baslik"), ({"api_key": "x"}, "api_key")):
         with pytest.raises(settings.SettingsError) as found:
             settings.save(tmp_path, change)
         assert found.value.field == field
-    assert settings.load(tmp_path)["claude_max_turns_baslik"] == 12                     # a refused change saves nothing
+    assert settings.load(tmp_path)["claude_output_guess_baslik"] == 12_000              # a refused change saves nothing
     (tmp_path / "ayarlar.json").write_text("{bozuk", encoding="utf-8")
     assert settings.load(tmp_path)["notes"] == ["Ayar dosyası okunamadı; varsayılan ayarlar kullanılıyor."]

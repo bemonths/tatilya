@@ -4,9 +4,10 @@ A step has: a key and Turkish title; instruction files (on the destination side,
 `studio/ai/schemas/`); its tools; an input builder (the program copies or produces the input files into the run's folder); the task text; an
 output check (schema, then meaning); and a Markdown writer (Claude writes only JSON; the program writes the readable Markdown).
 
-Tools: reading inside the run folder (`Read`, `Glob`, `Grep`; Claude Code applies a Read rule to Glob and Grep) and writing the one output file
-(`Write` is allowed only through an `Edit(./file)` rule, as Housing Atlas verified live). No web search, no Bash, nothing else: with
-`--permission-mode dontAsk` every call outside the rules is refused and written to the run record.
+Tools (GÖREV-18): none. Every step is one Claude call with `--tools ""` and `--max-turns 1`: the input files the step writes into its
+run folder are given inside the task text (`single.py`), Claude answers with the output's JSON and the program writes the output file.
+Until GÖREV-18 Claude read the files with `Read` and wrote its output with `Write`, turn after turn; that way is gone (no step uses it
+and it is not a setting; the runner can still pass tools and rules, nothing passes any).
 
 Combined instructions = the destination's common instruction file + the step's file + the step's JSON schema as filled for this run (the
 schema is in the core, the destination's lists, e.g. content families and regions, are filled in for the run), so Claude does not need to open
@@ -21,8 +22,6 @@ from pathlib import Path
 from . import schema as schema_check
 
 SCHEMAS_DIR = Path(__file__).resolve().parent / "schemas"
-READ_TOOLS = ("Read", "Glob", "Grep")
-WRITE_TOOLS = ("Write", "Edit")
 NOTE_START, NOTE_END = "--- not başı ---", "--- not sonu ---"
 
 
@@ -67,13 +66,13 @@ class Step:
     fill_schema: object
     check: object
     render: object
-    tools: tuple = READ_TOOLS + WRITE_TOOLS
+    tools: tuple = ()                                # GÖREV-18: no tools for any step
     voice: bool = False                              # GÖREV-15: the narrator's voice and the chosen tone are part of the instructions
 
     @property
     def allowed(self):
-        """`--allowedTools`: reading in the run folder, writing only the JSON output (`Edit(...)` is what lets Write through)."""
-        return ("Read(./**)", f"Write(./{self.output})", f"Edit(./{self.output})")
+        """`--allowedTools`: none (GÖREV-18; the option is left out of the command)."""
+        return ()
 
     def instruction_paths(self, profile):
         """The step's instruction files in the order they are combined (the tone is the run's, see `combined_instructions`)."""

@@ -190,7 +190,7 @@ def task(ctx):
     lines = ["Adım: baslik", f"Tür: {'düzeltme' if ctx.correction else 'ilk çalışma'}", f"Bölge: {params['bolge']}", f"İçerik ailesi: {family}",
              f"Not: {params.get('not') or 'yok'}", "",
              "Görev: kanalın bir sonraki videosu için konu ve başlık önerileri hazırla (sistem metnindeki \"Konu ve başlık önerisi\").", "",
-             "Çalışma klasöründeki dosyalar (hepsini oku):",
+             "Verilen dosyalar (hepsi aşağıda; hepsini oku):",
              "- `secim.md` — kullanıcının bu çalışma için seçtiği bölge, içerik ailesi ve notu.",
              "- `kanal_plani.md` — kanal planı: içerik aileleri, konu motoru, ilkeler.",
              "- `kanal_arastirmasi.md` — kanal araştırması: rakip videolar, izleyicinin soruları.",
@@ -200,9 +200,9 @@ def task(ctx):
              "- `onceki_oneriler.md` — daha önce önerilen başlıklar.",
              *(["- `onceki_cikti.json` — düzelteceğin önceki çıktın."] if ctx.correction else []), "",
              "Çıktı:",
-             f"- `{OUTPUT}` — şema: sistem talimatının sonundaki \"Çıktı şeması\" bölümü. Okunur Markdown'ı program üretir; sen Markdown yazma.", "",
+             f"- `{OUTPUT}`'un içeriği: cevabın yalnız bu JSON'dur; şeması sistem talimatının sonundaki \"Çıktı şeması\" bölümünde. Okunur "
+             "Markdown'ı program üretir; sen Markdown yazma.", "",
              "Kurallar:",
-             f"- Yalnız bu klasördeki dosyaları oku; yalnız `{OUTPUT}`'u yaz. Başka hiçbir dosyayı oluşturma ya da değiştirme.",
              f"- {MIN_CANDIDATES}–{MAX_CANDIDATES} aday yaz."]
     if region:
         lines.append(f"- Bütün adaylar {params['bolge']} hakkında olur; her adayın `bolge` alanı \"{params['bolge']}\" olur.")
@@ -222,9 +222,9 @@ def task(ctx):
               f"- İngilizce başlık en çok {MAX_TITLE} karakterdir"
               + (" (ek dahil); İngilizce başlık `secim.md`'deki İngilizce ekle, Türkçe karşılığı oradaki Türkçe ekle biter." if suffix_lines(params) else "."),
               "- Başlıklar birbirini ve `onceki_oneriler.md`'dekileri tekrar etmez; büyük-küçük harf ve noktalama farkı tekrar sayılır.",
-              "- Bitirince kısa bir Türkçe özet yaz: kaç aday, hangi aileler, önemli eksik veri."]
+              "- Kısa Türkçe özetini (kaç aday, hangi aileler, önemli eksik veri) `notlar` alanına yaz."]
     if ctx.correction:
-        lines += ["", "Düzeltme: kullanıcının notu aşağıda. Önceki çıktın `onceki_cikti.json` dosyasında. Notu uygula ve "
+        lines += ["", "Düzeltme: kullanıcının notu aşağıda. Önceki çıktın `onceki_cikti.json` bölümünde. Notu uygula ve "
                       f"`{OUTPUT}`'u baştan ve eksiksiz yaz (değişmeyen adayları da).", *steps.note_block(ctx.correction["note"])]
     return "\n".join(lines) + "\n"
 

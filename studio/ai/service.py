@@ -10,6 +10,7 @@ the inputs with their packs, the model, effort, Claude Code version, session id,
 """
 import json
 import statistics
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +21,7 @@ from ..database import Conflict
 from ..destinations import PROFILES
 from ..evidence import PackError, store as store_pack
 from ..evidence import plan as plan_pack
-from . import claude_info, instructions, runner, settings as claude_settings, steps, store, usage
+from . import budget, claude_info, instructions, runner, settings as claude_settings, single, steps, store, usage
 from . import title  # noqa: F401  (registers the title step)
 from . import title_review  # noqa: F401  (registers the evaluation step, GÖREV-14)
 
@@ -55,6 +56,35 @@ def write_json(path, data):
 def sha256_of(path):
     import hashlib
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def schema_errors_of(schema, data):
+    from .schema import errors
+    return errors(schema, data)
+
+
+def combined_metrics(calls, estimate):
+    """The run's metrics (GÖREV-18): its one or two calls summed (tokens, cost, time), `cagri` their number, the estimate beside them."""
+    items = [r.metrics() for r in calls]
+    tokens = {}
+    for m in items:
+        for key, value in (m.get("tokens") or {}).items():
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                tokens[key] = tokens.get(key, 0) + value
+    last = dict(items[-1]) if items else {}
+    last.update({"elapsed_s": round(sum(m.get("elapsed_s") or 0 for m in items), 1), "turns": len(items), "cagri": len(items),
+                 "tool_calls": sum(m.get("tool_calls") or 0 for m in items), "duzen": budget.ONE_CALL, "tahmin": estimate,
+                 "tokens": {**tokens, "source": (last.get("tokens") or {}).get("source", "result")} if tokens else None,
+                 "cost_usd": round(sum(m.get("cost_usd") or 0 for m in items), 6) if any(m.get("cost_usd") for m in items) else None})
+    return last
+
+
+def spending_record(spend):
+    """{"tahmin", "gercek", "karsilastirma"} for the job, the run record and the screens."""
+    if not spend.get("tahmin"):
+        return None
+    return {"tahmin": spend["tahmin"], "gercek": spend.get("gercek"),
+            "karsilastirma": single.comparison(spend["tahmin"], spend.get("gercek"))}
 
 
 class ClaudeService:
@@ -171,12 +201,82 @@ class ClaudeService:
                                  source={"calisma": run_id, "aday": index, "baslik_en": candidate["baslik_en"],
                                          "baslik_tr": candidate["baslik_tr"]})
 
+    # ------------------------------------------------------------------------------------------------------------- estimates (GÖREV-18)
+
+    def estimate(self, destination_id, step_key, params, *, correction_of=None, note=None):
+        """What a run would read and write, before it starts: the step's inputs are prepared in a temporary folder (the same files the run
+        would give Claude; a stale summary pack is made again, as the run would), the task text built, its size measured. Nothing is sent."""
+        step = steps.get(step_key)
+        destination = self.db.destination(destination_id)
+        params = {**params, "baslik_eki": self.suffixes(destination_id)}
+        previous = store.run(self.db, correction_of) if correction_of else None
+        correction = None
+        if previous:
+            data = None
+            try:
+                data = json.loads((self.db.path.parent / previous["folder"] / step.output).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
+            correction = {"run": previous, "data": data, "note": note or ""}
+        config = self.settings()
+        with tempfile.TemporaryDirectory(prefix="30a-tahmin-") as folder:
+            ctx = steps.RunContext(db=self.db, profile=PROFILES.get(destination_id), destination=destination, run_id="tahmin",
+                                   folder=Path(folder), params=params, regions=self.regions(destination_id), correction=correction)
+            try:
+                ctx.inputs = step.prepare(ctx)
+            except (steps.StepError, PackError) as exc:
+                raise Conflict(str(exc)) from exc
+            schema = steps.run_schema(step, ctx)
+            system_text = steps.combined_instructions(step, ctx, schema)
+            task = step.task(ctx)
+            parts = single.sections(Path(folder), ctx.inputs)
+            prompt = single.task_text(task, parts)
+            table = single.parts_table([(INSTRUCTIONS, system_text)], task, parts)
+        call = budget.call_estimate(self.db, config, step.key, single.prompt_tokens(system_text, prompt))
+        row = {"baslik": step.title, "cagri": 1, **call, "en_buyuk_cagri": call["toplam"], **budget.model_text(config, step.key),
+               "not": "Cevap kullanılamazsa (JSON değilse, şemaya uymuyorsa ya da kesildiyse) bir kez daha çağrılır."}
+        return {**budget.summary([row], config, retries=1), "parcalar": table}
+
+    def estimate_title(self, destination_id, region, family, note):
+        return self.estimate(destination_id, "baslik", self.selection(destination_id, region, family, note))
+
+    def estimate_review(self, destination_id, region, user_title, note):
+        text = (user_title or "").strip()
+        if not text:
+            raise Conflict("Değerlendirilecek başlığı ya da fikri yazın.")
+        params = {**self.selection(destination_id, region, title.ALL_FAMILIES, note), "kullanici_basligi": text}
+        return self.estimate(destination_id, "baslik_degerlendirme", params)
+
+    def estimate_correction(self, run_id, note):
+        record = store.run(self.db, run_id)
+        if record is None:
+            raise KeyError(run_id)
+        params = {k: v for k, v in record["params"].items() if k not in ("duzeltme_notu", "baslik_eki")}
+        return self.estimate(record["destination_id"], record["step"], params, correction_of=run_id, note=(note or "").strip())
+
+    def estimate_translate(self, run_id, index, edited_tr):
+        record = store.run(self.db, run_id)
+        if record is None:
+            raise KeyError(run_id)
+        view = self.view(run_id)
+        candidate = next((c for c in view["candidates"] if c["sira"] == index), None)
+        if candidate is None:
+            raise Conflict("Böyle bir aday yok.")
+        edited = (edited_tr or "").strip()
+        note = title_review.source_note(view, candidate, edited)[:MAX_NOTE]
+        params = {**self.selection(record["destination_id"], candidate["bolge"], title.ALL_FAMILIES, note), "kullanici_basligi": edited,
+                  "kaynak": {"calisma": run_id, "aday": index, "baslik_en": candidate["baslik_en"], "baslik_tr": candidate["baslik_tr"]}}
+        return self.estimate(record["destination_id"], "baslik_degerlendirme", params)
+
     # ------------------------------------------------------------------------------------------------------------- the run
 
     def work(self, run_id, destination, step, params, previous, note):
+        """GÖREV-18: one Claude call without tools (a second one only when the answer cannot be used: no JSON, not the schema, cut at the
+        output limit). The input files stay in the run folder and are given inside the task text; the program writes the output file."""
         record = store.run(self.db, run_id)
         job_id = record["job_id"]
-        folder = (self.db.path.parent / record["folder"]).resolve()   # Claude runs in this folder; every path given to it is absolute
+        folder = (self.db.path.parent / record["folder"]).resolve()   # the run's folder; Claude opens nothing in it
+        spend = {"tahmin": None, "gercek": None}
 
         def log(text, level="info"):
             self.db.update_job(job_id, message=text)
@@ -187,8 +287,10 @@ class ClaudeService:
 
         def fail(message, problems=None, extra=None):
             store.update_run(self.db, run_id, status="error", error=message, problems=problems or [])
-            write_json(folder / RUN_RECORD, {**(extra or {}), "durum": "error", "hata": message, "sorunlar": problems or []})
-            self.db.update_job(job_id, status="failed" if not canceled() or self.closing else "canceled", message=message)
+            write_json(folder / RUN_RECORD, {**(extra or {}), "durum": "error", "hata": message, "sorunlar": problems or [],
+                                             "harcama": spending_record(spend)})
+            self.db.update_job(job_id, status="failed" if not canceled() or self.closing else "canceled", message=message,
+                               result={"claude_run": run_id, "harcama": spending_record(spend)})
 
         try:
             self.db.update_job(job_id, status="running", progress=2, message="Girdiler hazırlanıyor.",
@@ -211,45 +313,108 @@ class ClaudeService:
                 return fail(store.INTERRUPTED if self.closing else runner.CANCELED_MESSAGE)
             schema = steps.run_schema(step, ctx)
             write_json(folder / RUN_SCHEMA, schema)
-            (folder / INSTRUCTIONS).write_text(steps.combined_instructions(step, ctx, schema), encoding="utf-8")
-            prompt = step.task(ctx)
+            system_text = steps.combined_instructions(step, ctx, schema)
+            (folder / INSTRUCTIONS).write_text(system_text, encoding="utf-8")
+            task = step.task(ctx)
+            parts = single.sections(folder, ctx.inputs)
+            prompt = single.task_text(task, parts)
             (folder / TASK).write_text(prompt, encoding="utf-8")
             versions = runner.instruction_hashes([*step.instruction_paths(profile), step.schema_path()])
             versions["birlesik_talimat"] = sha256_of(folder / INSTRUCTIONS)
             versions["calisma_semasi"] = sha256_of(folder / RUN_SCHEMA)
             config = self.settings()
             model, effort = claude_settings.resolve_model_effort(config, step.key)
-            turns = claude_settings.max_turns(config, step.key)
+            call_limit, job_limit = claude_settings.limits(config)
+            estimate = budget.call_estimate(self.db, config, step.key, single.prompt_tokens(system_text, prompt))
+            spend["tahmin"] = estimate
             base = {"calisma": run_id, "adim": step.key, "hazirlik": record["scope_id"], "destinasyon": destination["id"], "secim": params,
                     "duzeltme": {"onceki_calisma": previous["id"], "not": note} if previous else None, "talimat_surumu": versions,
-                    "girdiler": ctx.inputs, "model": model, "efor": effort, "tur_siniri": turns, "araclar": list(step.tools),
-                    "izinler": list(step.allowed)}
+                    "girdiler": ctx.inputs, "model": model, "efor": effort, "duzen": budget.ONE_CALL, "tur_siniri": 1, "araclar": [],
+                    "izinler": [], "tahmin": estimate, "sinirlar": {"cagri": call_limit, "is": job_limit},
+                    "istem_parcalari": single.parts_table([(INSTRUCTIONS, system_text)], task, parts)}
             store.update_run(self.db, run_id, model=model, effort=effort)
+            log(f"İstem hazırlandı: {len(parts)} dosya istemin içinde; tahmin: yaklaşık {single.thousands(estimate['okunan'])} token okunacak, "
+                f"{single.thousands(estimate['yazilan'])} yazılacak.")
+            try:
+                single.check_size(estimate, call_limit, step.title)
+            except single.TooLarge as exc:
+                return fail(exc.message, extra=base)
+            if estimate["toplam"] > job_limit:
+                return fail(f"{step.title}: tahmin yaklaşık {single.thousands(estimate['toplam'])} token; iş başına sınır "
+                            f"{single.thousands(job_limit)} (Ayarlar → Claude). Çalışma başlatılmadı.", extra=base)
             try:
                 _, command = runner.find_command(config["claude_path"])
             except runner.ClaudeRunnerError as exc:
                 return fail(exc.failure.message, extra=base)
             if claude_info.api_key_in_env():
                 log(claude_info.API_KEY_WARNING, "warning")
-            invocation = runner.Invocation(cwd=folder, prompt=prompt, system_prompt_file=folder / INSTRUCTIONS, tools=step.tools,
-                                           allowed=step.allowed, max_turns=turns, model=model, effort=effort)
             expected, basis = self.expected_duration(step.key)
             progress = {"tur": "claude", "asama": "claude", "baslangic": ((self.db.job(job_id) or {}).get("progress_info") or {}).get("baslangic"),
-                        "claude_baslangic": iso_now(), "beklenen_s": expected, "dayanak": basis}
+                        "claude_baslangic": iso_now(), "beklenen_s": expected, "dayanak": basis, "harcama": spending_record(spend)}
             base["ilerleme_tahmini"] = {"beklenen_s": expected, "dayanak": basis}
             self.db.update_job(job_id, progress=10, progress_info=progress)
-            result = runner.run(invocation, command, stream_path=folder / STREAM, on_log=log, is_canceled=canceled,
-                                on_tick=lambda elapsed: self.db.update_job(job_id, progress=claude_percent(elapsed, expected)),
-                                on_rate_limit=lambda info: usage.record(self.db, info, source="calisma", run_id=run_id))
-            base.update({"calisma_sonucu": runner.result_dict(result)})
-            store.update_run(self.db, run_id, claude_version=result.claude_version, session_id=result.session_id, metrics=result.metrics())
-            if result.failure:
-                closed = result.failure.kind == runner.CANCELED and self.closing
-                return fail(store.INTERRUPTED if closed else result.failure.message, extra=base)
-            log(runner.summary_line(result))
-            self.db.update_job(job_id, progress=92, message="Çıktı doğrulanıyor ve okunur Markdown yazılıyor.",
-                               progress_info={**progress, "asama": "dogrulama"})
-            self.finish(run_id, step, ctx, base, folder, job_id)
+            calls, retry, data = [], None, None
+            for attempt in (1, 2):
+                text = prompt if attempt == 1 else single.task_text(task, parts, retry=retry)
+                if attempt == 2:
+                    (folder / f"gorev-{attempt}.md").write_text(text, encoding="utf-8")
+                    again = budget.call_estimate(self.db, config, step.key, single.prompt_tokens(system_text, text))
+                    if again["toplam"] > call_limit or spend["gercek"]["toplam"] + again["toplam"] > job_limit:
+                        return fail(f"{step.title}: cevap kullanılamadı ({retry['reason']}); ikinci çağrı token sınırını aşacağı için yapılmadı "
+                                    "(Token sınırına ulaşıldı). \"Düzeltme iste\" ile yeni bir çalışma açabilirsiniz.", extra=base)
+                    log(f"İkinci çağrı (tek tur, önceki cevap ve sorunu istemde): yaklaşık {single.thousands(again['okunan'])} token okunacak.")
+                invocation = runner.Invocation(cwd=folder, prompt=text, system_prompt_file=folder / INSTRUCTIONS, tools=(), allowed=(),
+                                               max_turns=1, model=model, effort=effort)
+                log("Claude düşünüyor; cevap tek seferde gelecek.")
+                result = runner.run(invocation, command, stream_path=folder / (STREAM if attempt == 1 else f"akis-{attempt}.jsonl"), on_log=log,
+                                    is_canceled=canceled, on_tick=lambda elapsed: self.db.update_job(job_id, progress=claude_percent(elapsed, expected)),
+                                    on_rate_limit=lambda info: usage.record(self.db, info, source="calisma", run_id=run_id))
+                calls.append(result)
+                answer = single.answer_text(result)
+                (folder / single.ANSWER_FILE.format(n="" if attempt == 1 else f"-{attempt}")).write_text(answer, encoding="utf-8")
+                spend["gercek"] = single.spent([r.metrics() for r in calls])
+                base.update({"calisma_sonucu": runner.result_dict(result), "cagrilar": [runner.result_dict(r) for r in calls],
+                             "cikti_siniri": single.max_output(result)})
+                store.update_run(self.db, run_id, claude_version=result.claude_version, session_id=result.session_id,
+                                 metrics=combined_metrics(calls, estimate))
+                cut = single.truncated(result)
+                if result.failure and not cut:
+                    closed = result.failure.kind == runner.CANCELED and self.closing
+                    return fail(store.INTERRUPTED if closed else result.failure.message, extra=base)
+                read, written = single.token_total(result.metrics())
+                log(f"Cevap geldi: {single.thousands(read)} token okundu, {single.thousands(written)} token yazıldı · "
+                    f"{runner.duration_text(result.elapsed_s)}.")
+                problem, previous_answer = None, answer
+                if cut:
+                    problem, previous_answer = (f"Cevap uzunluk sınırında kesildi ({single.thousands(written)} token yazılmıştı); kesik cevap kabul "
+                                                "edilmez. Daha kısa yaz: aynı bilgiyi daha az sözle ver."), None
+                    log(f"Cevap uzunluk sınırında kesildi; kabul edilmedi.", "warning")
+                else:
+                    try:
+                        data = single.parse_json(answer)
+                    except single.AnswerError as exc:
+                        problem = exc.message
+                    else:
+                        found = schema_errors_of(schema, data)
+                        if found:
+                            problem = f"Cevap şemaya uymuyor ({len(found)} sorun): " + "; ".join(found[:25])
+                if problem is None:
+                    break
+                data = None
+                if not cut:
+                    log(f"Cevap geçersiz: {problem}", "warning")
+                if attempt == 2:
+                    return fail(f"{step.title}: Claude'un cevabı iki çağrıda da kullanılamadı: {problem} \"Düzeltme iste\" ile yeni bir "
+                                "çalışma açabilirsiniz.", extra=base)
+                if spend["gercek"]["toplam"] >= job_limit:
+                    return fail(f"Token sınırına ulaşıldı: bu iş {single.thousands(spend['gercek']['toplam'])} token harcadı (iş başına sınır "
+                                f"{single.thousands(job_limit)}); cevap kullanılamadığı hâlde ikinci çağrı yapılmadı.", extra=base)
+                retry = {"reason": problem, "previous": previous_answer}
+            write_json(folder / step.output, data)
+            log("Cevap doğrulandı (JSON ve şema); program çıktıyı yazdı.")
+            self.db.update_job(job_id, progress=92, message="Çıktı denetleniyor ve okunur Markdown yazılıyor.",
+                               progress_info={**progress, "asama": "dogrulama", "harcama": spending_record(spend)})
+            self.finish(run_id, step, ctx, base, folder, job_id, spend)
         except Exception as exc:  # anything unexpected: the run is an error, the job ends, nothing is left 'running'
             import traceback
             fail(f"Claude çalışması tamamlanamadı: {exc}", extra={"istisna": traceback.format_exc()})
@@ -324,13 +489,16 @@ class ClaudeService:
         with self.db.connect() as con:
             return [dict(r) for r in con.execute("SELECT id, status FROM claude_runs WHERE status='running'")]
 
-    def finish(self, run_id, step, ctx, base, folder, job_id):
+    def finish(self, run_id, step, ctx, base, folder, job_id, spend=None):
+        spending = spending_record(spend or {})
+        result_extra = {"harcama": spending} if spending else {}
+        base = {**base, "harcama": spending} if spending else base
         output = folder / step.output
         if not output.is_file():
             message = f"Claude {step.output} dosyasını yazmadı."
             store.update_run(self.db, run_id, status="error", error=message, problems=[])
             write_json(folder / RUN_RECORD, {**base, "durum": "error", "hata": message})
-            self.db.update_job(job_id, status="failed", message=message)
+            self.db.update_job(job_id, status="failed", message=message, result={"claude_run": run_id, **result_extra})
             return
         try:
             data = json.loads(output.read_text(encoding="utf-8-sig"))
@@ -338,7 +506,7 @@ class ClaudeService:
             message = f"{step.output} geçerli bir JSON değil: {exc}"
             store.update_run(self.db, run_id, status="error", error=message, problems=[])
             write_json(folder / RUN_RECORD, {**base, "durum": "error", "hata": message})
-            self.db.update_job(job_id, status="failed", message=message)
+            self.db.update_job(job_id, status="failed", message=message, result={"claude_run": run_id, **result_extra})
             return
         from .schema import errors
         schema_errors = errors(json.loads((folder / RUN_SCHEMA).read_text(encoding="utf-8")), data)
@@ -347,7 +515,7 @@ class ClaudeService:
             message = f"{step.output} şemaya uymuyor ({len(schema_errors)} sorun); \"Düzeltme iste\" ile yeni bir çalışma açabilirsiniz."
             store.update_run(self.db, run_id, status="error", error=message, problems=problems)
             write_json(folder / RUN_RECORD, {**base, "durum": "error", "hata": message, "sorunlar": problems})
-            self.db.update_job(job_id, status="failed", message=message)
+            self.db.update_job(job_id, status="failed", message=message, result={"claude_run": run_id, **result_extra})
             return
         problems = step.check(ctx, data)
         (folder / step.markdown).write_text(step.render(ctx, data, problems), encoding="utf-8")
@@ -362,8 +530,13 @@ class ClaudeService:
                        + (f"{count} aday onay bekliyor" if count else "başlık adayı yok"))
         else:
             message = f"{count} başlık önerisi onay bekliyor"
-        self.db.update_job(job_id, status="done", progress=100, result={"claude_run": run_id},
-                           message=message + (f"; {errors_count} doğrulama sorunu var." if errors_count else "."))
+        comparison = (spending or {}).get("karsilastirma")
+        if comparison:
+            self.db.update_job(job_id, message=f"Harcama: {comparison['metin']}." + (f" {comparison['uyari']}" if comparison["fazla"] else ""))
+        info = (self.db.job(job_id) or {}).get("progress_info") or {}
+        self.db.update_job(job_id, status="done", progress=100, result={"claude_run": run_id, **result_extra},
+                           message=message + (f"; {errors_count} doğrulama sorunu var." if errors_count else "."),
+                           progress_info={**info, "harcama": spending} if spending else None)
 
     # ------------------------------------------------------------------------------------------------------------- reading a run
 

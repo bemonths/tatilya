@@ -95,8 +95,8 @@ def test_the_claude_bar_moves_by_stages_and_by_time(app, monkeypatch):
     monkeypatch.setattr(app.app.state.db, "update_job", spy)
     view = start(app)
     stages = [stage for _, stage in seen if stage]
-    assert stages == ["girdiler", "claude", "dogrulama"]
-    assert [p for p, stage in seen if stage] == [2, 10, 92] and seen[-1][0] == 100
+    assert stages == ["girdiler", "claude", "dogrulama", "dogrulama"]           # GÖREV-18: the last one carries the spending to the done job
+    assert [p for p, stage in seen if stage] == [2, 10, 92, 100] and seen[-1][0] == 100
     job = next(j for j in app.get("/api/jobs").json() if j["kind"] == "claude_run")
     info = job["progress_info"]
     assert info["tur"] == "claude" and info["beklenen_s"] == 420 and info["claude_baslangic"] and info["baslangic"]

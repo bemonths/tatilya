@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..ai import claude_info, runner, settings as claude_settings, steps, store as ai_store, tones as T, usage
+from ..ai import budget, claude_info, runner, settings as claude_settings, single, steps, store as ai_store, tones as T, usage
 from ..ai import text_steps as TS
 from ..ai.schema import errors as schema_errors
 from ..database import Conflict
@@ -49,6 +49,7 @@ from ..destinations import PROFILES
 from ..evidence import PackError, stored_file
 from ..evidence.pack import latest_done_run, moment
 from . import audit, document as D, store
+from . import estimate as text_estimate
 from .views import TextViews
 
 JOB_KIND = "claude_metin"
@@ -141,6 +142,8 @@ class Context:
     sections_done: int = 0
     sections_total: int = 0
     job_checked: float = 0.0
+    spent: dict = field(default_factory=lambda: {"okunan": 0, "yazilan": 0, "toplam": 0, "cagri": 0, "maliyet_usd": 0.0})
+    spent_base: dict = field(default_factory=dict)   # GÖREV-18: the run's spending when this job started (the job limit counts from it)
 
     @property
     def pack_ids(self):
@@ -201,18 +204,60 @@ class TextService(TextViews):
             raise Conflict("En az bir ton seçin.")
         return chosen
 
+    # ------------------------------------------------------------------------------------------------------------------- estimates (GÖREV-18)
+
+    def estimate(self, video_id, tone_files):
+        """The estimate shown before "Metni yaz" (and "Planı yeniden yap"): the plan and every chosen tone, and the total."""
+        video = ai_store.video(self.db, video_id)
+        if video is None:
+            raise KeyError(video_id)
+        chosen = self.tone_entries(self.profile_of(video["destination_id"]), tone_files)
+        return text_estimate.estimate(self, video, chosen)
+
+    def estimate_add_tone(self, run_id, tone_file):
+        """"Bu tonla da yaz": one tone with the run's known plan (no plan calls)."""
+        run = store.run(self.db, run_id)
+        if run is None:
+            raise KeyError(run_id)
+        if not run.get("plan"):
+            raise Conflict("Bu çalışmanın planı henüz kesinleşmedi; önce çalışmanın bitmesini bekleyin.")
+        video = ai_store.video(self.db, run["video_id"])
+        added = self.tone_entries(self.profile_of(run["destination_id"]), [tone_file])
+        return text_estimate.estimate(self, video, added, plan=run["plan"], plan_done=True)
+
+    def estimate_replan(self, run_id, tone_files=None):
+        old = store.run(self.db, run_id)
+        if old is None:
+            raise KeyError(run_id)
+        return self.estimate(old["video_id"], tone_files or [t["dosya"] for t in old["tones"]])
+
+    @staticmethod
+    def check_estimate(found):
+        if not found["baslatilabilir"]:
+            raise Conflict("Tahmin token sınırını aşıyor; çalışma başlatılmadı. " + " ".join(found["asiyor"]))
+
+    def keep_estimate(self, run_id, job_id, found):
+        run = store.run(self.db, run_id)
+        state = dict(run.get("state") or {})
+        state["tahmin"] = {"is": job_id, **found["toplam"], "metin": found["metin"]}
+        store.update_run(self.db, run_id, state=state)
+
     def start(self, video_id, tone_files, *, replan_of=None):
         video = ai_store.video(self.db, video_id)
         if video is None:
             raise KeyError(video_id)
         profile = self.profile_of(video["destination_id"])
         chosen = self.tone_entries(profile, tone_files)
+        found = text_estimate.estimate(self, video, chosen)
+        self.check_estimate(found)
         with self.lock:
             self.check_free()
             run_id = store.new_id()
             job_id = self.new_job(video, chosen, replan=bool(replan_of))
             store.insert_run(self.db, run_id=run_id, destination_id=video["destination_id"], video_id=video_id, job_id=job_id, tones=chosen,
                              pack_id=None, replan_of=replan_of)
+            self.keep_estimate(run_id, job_id, found)
+            self.db.update_job(job_id, message=f"Tahmin: {found['metin']}.")
             self.submit(run_id)
         return self.view(run_id)
 
@@ -232,6 +277,8 @@ class TextService(TextViews):
         video = ai_store.video(self.db, run["video_id"])
         profile = self.profile_of(run["destination_id"])
         added = self.tone_entries(profile, [tone_file])[0]
+        found = text_estimate.estimate(self, video, [added], plan=run["plan"], plan_done=True)
+        self.check_estimate(found)
         with self.lock:
             self.check_free()
             tones = list(run["tones"])
@@ -243,6 +290,8 @@ class TextService(TextViews):
             job_id = self.new_job(video, [added], extra=True)
             store.update_run(self.db, run_id, status="running", tones=tones, job_id=job_id, reason=None, reason_text=None, wait_until=None,
                              finished_at=None)
+            self.keep_estimate(run_id, job_id, found)
+            self.db.update_job(job_id, message=f"Tahmin: {found['metin']}.")
             self.submit(run_id)
         return self.view(run_id)
 
@@ -330,9 +379,10 @@ class TextService(TextViews):
                 if tone["dosya"] in written:
                     continue
                 self.tone_phase(ctx, tone)
+            spending = self.close_spending(ctx)
             # the job first: whoever sees the run finished also sees its job done (GÖREV-16: a test read the job a moment too early)
             self.db.update_job(job_id, status="done", progress=100, message="Bütün tonların metni yazıldı; karşılaştırma bekliyor.",
-                               result={"metin_calismasi": run_id, "video": run["video_id"]},
+                               result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": spending},
                                progress_info={**self.progress_info(ctx, "Bitti"), "yuzde": 100})
             store.update_run(self.db, run_id, status="awaiting_comparison", reason=None, reason_text=None, wait_until=None)
         except Stopped:
@@ -340,13 +390,16 @@ class TextService(TextViews):
             store.update_run(self.db, run_id, status="interrupted" if closing else "paused", reason="program_kapandi" if closing else "durduruldu",
                              reason_text="Program kapanırken yarıda kaldı; “Devam” kalan adımları çalıştırır." if closing else
                              "Durduruldu; “Devam” kalan adımları çalıştırır.", wait_until=None)
-            self.db.update_job(job_id, status="canceled", message="Durduruldu; biten adımlar saklandı, “Devam” kalan adımları çalıştırır.")
+            self.db.update_job(job_id, status="canceled", message="Durduruldu; biten adımlar saklandı, “Devam” kalan adımları çalıştırır.",
+                               result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
         except Paused as exc:
             store.update_run(self.db, run_id, status="paused", reason=exc.code, reason_text=exc.text, wait_until=None)
-            self.db.update_job(job_id, status="failed" if exc.code != "plan_hazir" else "done", message=exc.text)
+            self.db.update_job(job_id, status="failed" if exc.code != "plan_hazir" else "done", message=exc.text,
+                               result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
         except Failed as exc:
             store.update_run(self.db, run_id, status="error", reason=exc.code, reason_text=exc.text, wait_until=None)
-            self.db.update_job(job_id, status="failed", message=exc.text)
+            self.db.update_job(job_id, status="failed", message=exc.text,
+                               result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
         except Exception as exc:  # anything unexpected: the run pauses ("Devam" tries again), nothing is left running
             text = f"Beklenmedik hata: {exc}. Biten adımlar saklandı; “Devam” kalan adımları yeniden dener."
             store.update_run(self.db, run_id, status="paused", reason="beklenmedik", reason_text=text, wait_until=None,
@@ -380,6 +433,10 @@ class TextService(TextViews):
                       stop=self.stops.setdefault(run["id"], threading.Event()), wake=self.wakes.setdefault(run["id"], threading.Event()),
                       job_id=job_id, settings=self.settings(), started=self.clock.time(), state=dict(run.get("state") or {}),
                       plan=run.get("plan"), tone_count=len(run["tones"]))
+        for session in store.sessions(self.db, run["id"]):
+            if session.get("metrics") and session["status"] not in ("running",):
+                self.add_spent(ctx, session["metrics"])
+        ctx.spent_base = dict(ctx.spent)
         return ctx
 
     def fresh_pack(self, video, job_id):
@@ -509,6 +566,7 @@ class TextService(TextViews):
         attempt, transient = 1, 0
         while True:
             self.check_stop(ctx)
+            self.check_budget(ctx)
             self.wait_gate(ctx)
             session_id = store.new_id()
             folder = Path("claude") / ctx.video["id"] / step_key / session_id
@@ -518,7 +576,7 @@ class TextService(TextViews):
                                  part=part, round_no=round_no, attempt=attempt, folder=folder.as_posix())
             given = dict(files)
             if previous is not None:
-                given[TS.PREVIOUS] = json.dumps(previous, ensure_ascii=False, indent=1) + "\n"
+                given[TS.PREVIOUS] = previous if isinstance(previous, str) else json.dumps(previous, ensure_ascii=False, indent=1) + "\n"
             rctx = steps.RunContext(db=self.db, profile=ctx.profile, destination=ctx.destination, run_id=session_id, folder=absolute,
                                     params={"video": ctx.video["id"], "metin_calismasi": ctx.run["id"]}, regions=[],
                                     tone=tone if step.voice else None,
@@ -536,6 +594,9 @@ class TextService(TextViews):
                     continue
                 raise Paused("gecersiz_cevap", f"{step.title}: Claude iki denemede de kullanılabilir bir çıktı yazmadı ({message}). Çalışma "
                                                "duraklatıldı; “Devam” bu adımı yeniden başlatır.")
+            if kind == "too_large":
+                raise Paused("cagri_siniri", f"{message} Çalışma duraklatıldı; Ayarlar → Claude'dan tek çağrı sınırını büyütüp “Devam” "
+                                             "deyin.")
             if kind == "limit":
                 self.hold_for_limit(ctx, result, message)
                 continue
@@ -551,15 +612,19 @@ class TextService(TextViews):
             raise Paused("claude_hatasi", f"{step.title}: {message} Çalışma duraklatıldı; sorun giderilince “Devam” ile sürdürün.")
 
     def run_session(self, ctx, step, rctx, session_id, folder):
-        """Runs one Claude session: (kind "done"|"invalid"|"limit"|"transient"|"failed"|…, data, message, result)."""
+        """Runs one Claude call (GÖREV-18: no tools, one turn, the input files inside the task text, the answer is the output's JSON):
+        (kind "done"|"invalid"|"limit"|"transient"|"failed"|"too_large", data, message, result)."""
         profile = ctx.profile
         inputs = step.prepare(rctx)
         for item in inputs:
             item["sha256"] = hashlib.sha256((folder / item["dosya"]).read_bytes()).hexdigest()
         schema = steps.run_schema(step, rctx)
         write_json(folder / "sema.json", schema)
-        (folder / "talimat.md").write_text(steps.combined_instructions(step, rctx, schema), encoding="utf-8")
-        prompt = step.task(rctx)
+        system_text = steps.combined_instructions(step, rctx, schema)
+        (folder / "talimat.md").write_text(system_text, encoding="utf-8")
+        task = step.task(rctx)
+        parts = single.sections(folder, inputs)
+        prompt = single.task_text(task, parts)
         (folder / "gorev.md").write_text(prompt, encoding="utf-8")
         paths = [*step.instruction_paths(profile), step.schema_path()]
         if rctx.tone:
@@ -568,25 +633,39 @@ class TextService(TextViews):
         versions["birlesik_talimat"] = hashlib.sha256((folder / "talimat.md").read_bytes()).hexdigest()
         config = ctx.settings
         model, effort = claude_settings.resolve_model_effort(config, step.key)
-        turns = claude_settings.max_turns(config, step.key)
+        call_limit, _ = claude_settings.limits(config)
+        estimate = budget.call_estimate(self.db, config, step.key, single.prompt_tokens(system_text, prompt))
+        label = step.title + (f" ({rctx.extra.get('section')}. bölüm)" if rctx.extra.get("section") is not None else "")
         base = {"oturum": session_id, "metin_calismasi": ctx.run["id"], "video": ctx.video["id"], "adim": step.key, "parca": rctx.extra.get("section"),
                 "ton": {k: rctx.tone[k] for k in ("dosya", "ad", "sha256")} if rctx.tone else None, "talimat_surumu": versions,
-                "girdiler": inputs, "model": model, "efor": effort, "tur_siniri": turns, "araclar": list(step.tools), "izinler": list(step.allowed),
-                "paket": ctx.pack_record["id"]}
+                "girdiler": inputs, "model": model, "efor": effort, "duzen": budget.ONE_CALL, "tur_siniri": 1, "araclar": [], "izinler": [],
+                "tahmin": estimate, "paket": ctx.pack_record["id"],
+                "istem_parcalari": single.parts_table([("talimat.md", system_text)], task, parts)}
         store.update_session(self.db, session_id, model=model, effort=effort)
+        try:
+            single.check_size(estimate, call_limit, label)
+        except single.TooLarge as exc:
+            store.update_session(self.db, session_id, status="failed", error=exc.message)
+            write_json(folder / "calisma.json", {**base, "durum": "failed", "hata": exc.message})
+            return "too_large", None, exc.message, None
         try:
             _, command = runner.find_command(config["claude_path"])
         except runner.ClaudeRunnerError as exc:
             store.update_session(self.db, session_id, status="failed", error=exc.failure.message)
             write_json(folder / "calisma.json", {**base, "durum": "failed", "hata": exc.failure.message})
             return "failed", None, exc.failure.message, None
-        invocation = runner.Invocation(cwd=folder, prompt=prompt, system_prompt_file=folder / "talimat.md", tools=step.tools, allowed=step.allowed,
-                                       max_turns=turns, model=model, effort=effort)
+        self.log(ctx, f"{label}: istem hazırlandı (yaklaşık {single.thousands(estimate['okunan'])} token okunacak); Claude düşünüyor.")
+        invocation = runner.Invocation(cwd=folder, prompt=prompt, system_prompt_file=folder / "talimat.md", tools=(), allowed=(),
+                                       max_turns=1, model=model, effort=effort)
         result = runner.run(invocation, command, stream_path=folder / "akis.jsonl", is_canceled=lambda: self.canceled(ctx),
                             on_rate_limit=lambda info: usage.record(self.db, info, source="calisma"))
-        base["calisma_sonucu"] = runner.result_dict(result)
-        store.update_session(self.db, session_id, claude_version=result.claude_version, session_id=result.session_id, metrics=result.metrics())
-        if result.failure:
+        answer = single.answer_text(result)
+        (folder / single.ANSWER_FILE.format(n="")).write_text(answer, encoding="utf-8")
+        base.update({"calisma_sonucu": runner.result_dict(result), "cikti_siniri": single.max_output(result)})
+        metrics = {**result.metrics(), "duzen": budget.ONE_CALL, "cagri": 1, "tahmin": estimate}
+        store.update_session(self.db, session_id, claude_version=result.claude_version, session_id=result.session_id, metrics=metrics)
+        cut = single.truncated(result)
+        if result.failure and not cut:
             kind = failure_kind(result)
             status = {"iptal": "canceled", "sinir": "limit", "gecici": "transient"}.get(kind, "failed")
             store.update_session(self.db, session_id, status=status, error=result.failure.message)
@@ -594,15 +673,18 @@ class TextService(TextViews):
             if kind == "iptal":
                 raise Stopped()
             return {"sinir": "limit", "gecici": "transient"}.get(kind, "failed"), None, result.failure.message, result
-        output = folder / step.output
+        self.add_spent(ctx, metrics)
+        read, written = single.token_total(metrics)
+        self.log(ctx, f"{label}: cevap geldi ({single.thousands(read)} token okundu, {single.thousands(written)} yazıldı).")
         data, problems = None, []
-        if not output.is_file():
-            problems = [f"Claude {step.output} dosyasını yazmadı."]
+        if cut:
+            problems = [f"Cevap uzunluk sınırında kesildi ({single.thousands(written)} token yazılmıştı); kesik cevap kabul edilmez. Daha kısa yaz."]
+            self.log(ctx, f"{label}: {single.TRUNCATED_TEXT}; cevap kabul edilmedi.")
         else:
             try:
-                data = json.loads(output.read_text(encoding="utf-8-sig"))
-            except ValueError as exc:
-                problems = [f"{step.output} geçerli bir JSON değil: {exc}"]
+                data = single.parse_json(answer)
+            except single.AnswerError as exc:
+                problems = [exc.message]
         if data is not None:
             problems = [f"Şema: {e}" for e in schema_errors(schema, data)]
             if not problems:
@@ -610,12 +692,63 @@ class TextService(TextViews):
                 problems = [p["metin"] for p in found if p["seviye"] == "hata"]
         if problems:
             store.update_session(self.db, session_id, status="invalid", problems=[{"seviye": "hata", "metin": p} for p in problems])
-            write_json(folder / "calisma.json", {**base, "durum": "invalid", "sorunlar": problems})
-            return "invalid", data, " ".join(problems)[:1500], result
+            write_json(folder / "calisma.json", {**base, "durum": "invalid", "sorunlar": problems, "kesildi": cut})
+            return "invalid", data if data is not None else (None if cut else answer), " ".join(problems)[:1500], result
+        write_json(folder / step.output, data)
         (folder / step.markdown).write_text(step.render(rctx, data, []), encoding="utf-8")
         store.update_session(self.db, session_id, status="done")
         write_json(folder / "calisma.json", {**base, "durum": "done"})
+        self.log(ctx, f"{label}: doğrulandı.")
         return "done", data, None, result
+
+    def add_spent(self, ctx, metrics):
+        """The run's actual tokens after a call (GÖREV-18 Adım 4.3)."""
+        read, written = single.token_total(metrics)
+        with self.lock:
+            ctx.spent["okunan"] += read
+            ctx.spent["yazilan"] += written
+            ctx.spent["toplam"] += read + written
+            ctx.spent["cagri"] += 1
+            ctx.spent["maliyet_usd"] = round(ctx.spent["maliyet_usd"] + float(metrics.get("cost_usd") or 0), 4)
+
+    def job_spending(self, ctx):
+        """{"tahmin", "gercek", "karsilastirma"} of the job (GÖREV-18 Adım 4.4): the estimate the job was started with (none for "Devam")
+        and the tokens the run spent since the job started."""
+        base = ctx.spent_base or {}
+        actual = {key: round(ctx.spent[key] - (base.get(key) or 0), 4) if key == "maliyet_usd" else ctx.spent[key] - int(base.get(key) or 0)
+                  for key in ("okunan", "yazilan", "toplam", "cagri", "maliyet_usd")}
+        estimate = ctx.state.get("tahmin") if (ctx.state.get("tahmin") or {}).get("is") == ctx.job_id else None
+        total = (estimate or {}).get("toplam")
+        return {"tahmin": total, "gercek": actual, "karsilastirma": single.comparison({"toplam": total}, actual) if total else None}
+
+    def close_spending(self, ctx):
+        """At the end of a job: the spending in the log (the red warning when over 1.5 × the estimate), in the run's state and record."""
+        spending = self.job_spending(ctx)
+        comparison = spending.get("karsilastirma")
+        actual = spending["gercek"]
+        text = (f"Harcama: {comparison['metin']}." + (f" {comparison['uyari']}" if comparison["fazla"] else "") if comparison else
+                f"Harcama: {actual['cagri']} çağrı, {single.thousands(actual['toplam'])} token (bu iş).")
+        self.db.update_job(ctx.job_id, message=text)
+        jobs = list(ctx.state.get("harcamalar") or [])
+        jobs.append({"is": ctx.job_id, **spending, "zaman": store.now()})
+        ctx.state["harcamalar"] = jobs[-20:]
+        self.save_state(ctx)
+        try:
+            folder = self.data_dir / self.run_folder(ctx)
+            folder.mkdir(parents=True, exist_ok=True)
+            write_json(folder / "harcama.json", {"isler": ctx.state["harcamalar"], "calismanin_toplami": ctx.spent})
+        except OSError:
+            pass
+        return spending
+
+    def check_budget(self, ctx):
+        """Before a new call: when the actual total since the start (or the last "Devam") has reached the job limit, the chain stops."""
+        _, job_limit = claude_settings.limits(ctx.settings)
+        used = ctx.spent["toplam"] - int(ctx.spent_base.get("toplam") or 0)
+        if used >= job_limit:
+            raise Paused("token_siniri", f"Token sınırına ulaşıldı: bu çalışma {single.thousands(used)} token harcadı (iş başına sınır "
+                                         f"{single.thousands(job_limit)}, Ayarlar → Claude). Biten adımlar saklandı; “Devam” derseniz kalan "
+                                         "adımlar çalışır ve sınır o andan yeniden sayılır.")
 
     # ------------------------------------------------------------------------------------------------------------------- waiting
 
@@ -734,7 +867,7 @@ class TextService(TextViews):
         else:
             remaining += per_tone * max(0, tones - ctx.tone_index)
         return {"tur": "metin", "yuzde": max(1, min(99, int(percent))), "asama": stage_text, "baslangic": iso(ctx.started),
-                "kalan_s": round(remaining), "bekleme": None, "metin_calismasi": ctx.run["id"]}
+                "kalan_s": round(remaining), "bekleme": None, "metin_calismasi": ctx.run["id"], "harcama": self.job_spending(ctx)}
 
     def stage(self, ctx, stage, text=None):
         ctx.stage = stage

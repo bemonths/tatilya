@@ -163,7 +163,7 @@ def test_the_section_writers_run_side_by_side_within_the_session_limit(app, monk
     assert len(sections) == 6
     peak = max(sum(1 for o in sections if o["start"] < e["start"] + 0.05 < o["end"]) for e in sections)
     assert peak == 2                                                     # side by side, never more than the limit
-    assert app.put("/api/settings/claude", json={"claude_max_sessions": 7}).status_code == 422
+    assert app.put("/api/settings/claude", json={"claude_max_sessions": 9}).status_code == 422          # GÖREV-18: 1–8
 
 
 def test_the_usage_threshold_holds_new_sessions_and_the_run_goes_on_by_itself(app, monkeypatch):
