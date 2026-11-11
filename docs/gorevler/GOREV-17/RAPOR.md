@@ -33,7 +33,7 @@ Testler (yerelde, tam takım art arda 3 kez):
 Atlanan 2 test eklentinin uçtan uca denemesidir (`STUDIO_EKLENTI_E2E=1` ister; CI'da çalışmaz). Ayrıca çalıştırıldı: 2/2 geçti
 (Playwright'in Chromium'u, geçici profil, yalnız yerel sayfalar).
 
-Önceki iki 3'lü turda, her seferinde üçüncü turda birer test bir kez düştü; ikisi de bu görevin koduyla ilgisiz, zamanlamaya bağlı test yarışlarıydı:
+Bu temiz 3 turdan önceki üç denemede birer test birer kez düştü; üçü de bu görevin koduyla ilgisiz, eski testlerdeki zamanlamaya bağlı yarışlardı (bilgisayar o sırada başka işlerle de meşguldü):
 
 - `test_lodging.py::test_cancel_job_through_api_publishes_nothing`: test, programın o anda yeniden adlandırdığı geçici dosyayı
   (`manifest.tmp`) okumaya çalışıyordu (o sırada 1,5 GB'lık tam yedek alınıyordu, disk yavaştı). Testin yardımcı işlevi böyle bir
@@ -41,7 +41,11 @@ Atlanan 2 test eklentinin uçtan uca denemesidir (`STUDIO_EKLENTI_E2E=1` ister; 
 - `test_title_review.py::test_an_idea_that_does_not_fill_a_video…`: Claude çalışması "onay bekliyor" olur olmaz test işi okuyordu;
   işin son mesajı bir an sonra yazılıyor. Test, işin bitmesini bekleyecek şekilde düzeltildi (sahte Claude; gerçek Claude çalışmadı).
 
-İki düzeltmeden sonra 3 tur yeniden çalıştırıldı; yukarıdaki tablo o turlardır.
+- `test_text_chain.py::test_plandan_sonra_dur`: aynı türden; metin çalışması "durdu" olur olmaz test işi okuyordu. Test, işin
+  bitmesini bekleyecek şekilde düzeltildi.
+
+Üç düzeltmeden sonra 3 tur yeniden çalıştırıldı ve üçü de temiz geçti; yukarıdaki tablo o turlardır. Yalnız testler değişti; programın
+kendi davranışına dokunulmadı. Aynı türden başka yarışlar kalmış olabilir (yöneticinin konuları, madde 8).
 
 Bu görevde eklenen testler: `tests/test_gorev17.py` (17 test), `tests/frontend.test.mjs` içinde 20 test (her Ayarlar bölümü için bir
 test dahil), `tests/test_extension_e2e.py` içinde 1 uçtan uca test.
@@ -260,3 +264,6 @@ Housing Atlas klasöründe hiçbir dosya değiştirilmedi; yalnız `git fetch` y
 7. **Taşınan klasörün başlatıcıya bağlanması.** Taşınma şu an yalnız `baslat.bat` çalıştırılınca düzeltiliyor. Program kısayolla
    açıldığında da kendiliğinden düzeltmesi istenirse başlatıcıya eklenebilir; kullanıcının masaüstüne sormadan dokunmamak için
    eklenmedi.
+8. **Zamanlamaya bağlı testler.** Bu görevde üç eski testte aynı türden yarış çıktı ve düzeltildi (iş kaydı, çalışmanın durumu
+   değiştikten bir an sonra bitiyor; test hemen okuyordu). Programda çalışmanın durumu ile işin son mesajının aynı anda yazılması
+   istenirse ayrı bir görevde ele alınabilir; kullanıcının gördüğü bir hata değildir.
