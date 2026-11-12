@@ -322,7 +322,8 @@ def main():
                                  "tools": options.get("--tools"), "allowed": options.get("--allowedTools"), "max_turns": options.get("--max-turns"),
                                  "setting_sources": options.get("--setting-sources"), "system_prompt_head": system_text[:200],
                                  "env": {k: os.environ.get(k) for k in ("CLAUDE_CODE_DISABLE_AUTO_MEMORY", "ENABLE_CLAUDEAI_MCP_SERVERS",
-                                                                          "DISABLE_AUTOUPDATER", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT")},
+                                                                          "DISABLE_AUTOUPDATER", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT",
+                                                                          "CLAUDE_CODE_DISABLE_TERMINAL_TITLE", "DISABLE_PROMPT_CACHING")},
                                  "api_key_set": bool(os.environ.get("ANTHROPIC_API_KEY"))}, ensure_ascii=False) + "\n")
     session = str(uuid.uuid4())
     emit({"type": "system", "subtype": "init", "session_id": session, "cwd": str(cwd), "model": options.get("--model") or "claude-fake",

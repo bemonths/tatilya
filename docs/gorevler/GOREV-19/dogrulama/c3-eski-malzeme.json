@@ -1,0 +1,132 @@
+{
+  "ad": "c3-eski-malzeme",
+  "ortam": "eski",
+  "ortam_degiskenleri": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": null,
+    "DISABLE_PROMPT_CACHING": null
+  },
+  "malzeme_karakter": 36000,
+  "komut": "claude.exe -p --output-format stream-json --verbose --append-system-prompt-file \"C:\\Users\\1\\source\\Repos\\30A Studio\\outputs\\30a-studio\\work\\gorev-19\\calisma\\c3-eski-malzeme\\talimat.md\" --tools \"\" --permission-mode dontAsk --max-turns 1 --setting-sources \"\" --strict-mcp-config --disable-slash-commands --model claude-sonnet-5-5 --effort low",
+  "claude_version": "2.1.318",
+  "failure": null,
+  "zarf": {
+    "duration_api_ms": 5050,
+    "stop_reason": "end_turn",
+    "session_id": "72d00dff-04e2-48b4-8ce4-305b124b8dbd",
+    "total_cost_usd": 0.0873887,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 20434,
+      "cache_read_input_tokens": 1587,
+      "output_tokens": 549,
+      "output_tokens_details": {
+        "thinking_tokens": 533
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 20434,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 549,
+          "cache_read_input_tokens": 1587,
+          "cache_creation_input_tokens": 20434,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 20434
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 549,
+        "cacheReadInputTokens": 1587,
+        "cacheCreationInputTokens": 20434,
+        "webSearchRequests": 0,
+        "costUSD": 0.0873887,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 533,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 20434,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"baslik_sayisi\": 9}",
+    "ttft_ms": 5143,
+    "type": "result",
+    "duration_ms": 5168,
+    "uuid": "08c7608f-813d-4011-b180-85e6657e08a5",
+    "ttft_stream_ms": 1605,
+    "time_to_request_ms": 117,
+    "first_content_frame_ms": 1606,
+    "queued_turn_count": 0,
+    "result_index": 0,
+    "model_usage_since_last_result": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 549,
+        "cacheReadInputTokens": 1587,
+        "cacheCreationInputTokens": 20434,
+        "webSearchRequests": 0,
+        "costUSD": 0.0873887,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 533,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 20434,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "credential_expires_at": "2026-12-06T01:36:04.836Z"
+  }
+}

@@ -18,6 +18,12 @@ used: it accepts only an API key, so the subscription login would not work. If t
 set) that session's variables (`CLAUDE_CODE_*` except `CLAUDE_CODE_GIT_BASH_PATH` and `CLAUDE_CODE_OAUTH_TOKEN`, `CLAUDECODE`,
 `ANTHROPIC_BASE_URL` …) do not pass to the child. `ANTHROPIC_API_KEY` passes (the user's choice; the screens warn that it bills the API).
 
+Two waste switches (GÖREV-19; only in the child's environment, never in the user's own settings or Windows variables):
+`CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1` turns off the terminal title and the small-model request that names the session (in GÖREV-18's one real
+call Claude Code also had Haiku read the whole task text: 105 thousand tokens); `DISABLE_PROMPT_CACHING=1`: the steps are one call each, so
+the prompt written to the one-hour cache (twice the normal input price) was never read again. They are set after the parent session's
+`CLAUDE_CODE_*` variables are removed, so they reach the child inside a Claude Code session too.
+
 Permissions (verified live by Housing Atlas): the `Write` tool is allowed only by an `Edit(./path)` rule; a lone `Write(./path)` rule is ignored
 and the write is refused. The folders of the write rules are created before Claude runs.
 
@@ -80,7 +86,9 @@ NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 PERMISSION_MODE = "dontAsk"
 OUTPUT_ARGS = ("--output-format", "stream-json", "--verbose")
 ISOLATION_ARGS = ("--setting-sources", "", "--strict-mcp-config", "--disable-slash-commands")
-ISOLATION_ENV = {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "ENABLE_CLAUDEAI_MCP_SERVERS": "0", "DISABLE_AUTOUPDATER": "1"}
+ISOLATION_ENV = {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "ENABLE_CLAUDEAI_MCP_SERVERS": "0", "DISABLE_AUTOUPDATER": "1",
+                 "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",   # GÖREV-19: no session-naming side call (Haiku read the whole task text)
+                 "DISABLE_PROMPT_CACHING": "1"}               # GÖREV-19: one-call steps never read the 1-hour cache they paid twice for
 SESSION_MARKER = "CLAUDECODE"
 SESSION_KEEP = frozenset({"CLAUDE_CODE_GIT_BASH_PATH", "CLAUDE_CODE_OAUTH_TOKEN"})
 SESSION_VARS = frozenset({"CLAUDECODE", "CLAUDE_AGENT_SDK_VERSION", "CLAUDE_PID", "CLAUDE_EFFORT", "CLAUDE_PREVIEW_CLASSIFIER_FLOOR",

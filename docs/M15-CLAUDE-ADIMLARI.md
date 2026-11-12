@@ -65,6 +65,21 @@ claude -p --output-format stream-json --verbose --append-system-prompt-file tali
   çağrısı daha yaptı ve görev metninin tamamını bir kez daha okudu (105 bin token, 24 token yazdı, 0,05 $). Sonuç zarfının `usage`'ında
   görünmez, yalnız `modelUsage`'da. Program onu harcamaya sayar (`metrics.side_tokens`; iş günlüğünde "…bunun 105 bin token'ını Claude Code'un
   kendi yan çağrısı (claude-haiku-5-5) okudu") ve tahmin, önceki tek çağrılardaki oranın ortancasını okunana ekler.
+- **İki boşa harcama kapalı (GÖREV-19).** Programın başlattığı her Claude alt sürecinin ortamına (`runner.ISOLATION_ENV`; başlık adımları,
+  video metni zinciri, kullanım ölçümü) iki değişken eklenir; kullanıcının Windows değişkenlerine ve kendi Claude Code ayarlarına yazılmaz,
+  Ayarlar'da seçenek değildir:
+  - `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1`: yukarıdaki yan çağrı Claude Code'un **oturum adı isteğidir** (`generate_session_title`, küçük
+    model; JSON `{"title": …}`, 24 token). Claude Code 2.1.318'in kodunda bu istek, girdi kısıtlama bayrağı (`tengu_lucky_brooks`) kapalıyken
+    ilk mesajın **tamamını** gönderir; bu değişken açıkken oturum başında "ad denendi" sayılır ve istek hiç yapılmaz (sunucu bayraklarından
+    bağımsız). 12 Kasım'daki küçük doğrulama çağrılarında (Sonnet 5.5) yan çağrı değişkensiz ortamda da oluşmadı (istemi başka bir bayrak
+    kapatıyordu); kapandığı bu yüzden çağrıyla değil Claude Code'un kodundan gösterildi. Yeniden görünürse iş günlüğündeki satır, harcamaya
+    sayılması ve tahmine payı aynen kalır; yan çağrısız tek çağrılar biriktikçe pay kendiliğinden sıfıra iner (ortanca).
+  - `DISABLE_PROMPT_CACHING=1`: tek çağrıda istemin tamamı bir saatlik önbelleğe yazılıyordu (`cache_creation_input_tokens`, normal girdinin
+    2 katı bedel) ve hiç okunmuyordu. Doğrulamada aynı ~22 bin tokenlik istem: önbellekle 20.434 önbelleğe yazma + 1.587 önbellekten okuma,
+    0,087 $; değişkenle 22.024 normal girdi, önbellek sıfır, 0,048 $ (%45 ucuz). Token sayısı değişmez, yalnız bedel; program bedeli Claude
+    Code'un `total_cost_usd`'sinden gösterir. Ayrıntı: `docs/gorevler/GOREV-19/RAPOR.md`.
+  - Uygulama bir Claude Code oturumunun içinden başlatıldıysa önce o oturumun `CLAUDE_CODE_*` değişkenleri silinir, sonra bu değerler yazılır;
+    iki değişken bu durumda da alt sürece ulaşır (`tests/test_gorev19.py`).
 
 **Tahmin** (`studio/ai/budget.py`, `single.py`, video metni için `studio/text/estimate.py`):
 
@@ -145,7 +160,8 @@ claude -p --output-format stream-json --verbose --append-system-prompt-file <bir
   dosyaları) yüklenmez; kuruluş (managed) ayarları her zaman geçerlidir.
 - `--strict-mcp-config` (ve `--mcp-config` verilmez): hiçbir MCP sunucusu yüklenmez. `--disable-slash-commands`: beceriler kapalı.
 - Ortam değişkenleri: `ENABLE_CLAUDEAI_MCP_SERVERS=0` (claude.ai bağlayıcıları kapalı), `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` (otomatik bellek
-  kapalı), `DISABLE_AUTOUPDATER=1` (çalışma sırasında kendini güncellemez).
+  kapalı), `DISABLE_AUTOUPDATER=1` (çalışma sırasında kendini güncellemez), `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1` (oturum adı yan çağrısı
+  yok) ve `DISABLE_PROMPT_CACHING=1` (önbelleğe yazma yok; ikisi GÖREV-19, yukarıda "İki boşa harcama kapalı").
 - Uygulama bir Claude Code oturumunun içinden başlatıldıysa (`CLAUDECODE`) o oturumun değişkenleri (`CLAUDE_CODE_*`, `CLAUDECODE`,
   `ANTHROPIC_BASE_URL` …) alt sürece geçmez; `CLAUDE_CODE_GIT_BASH_PATH` ve `CLAUDE_CODE_OAUTH_TOKEN` korunur.
 - Kullanıcının aboneliği kullanılır. `ANTHROPIC_API_KEY` tanımlıysa Claude Code API'den ücretlendirir: Ayarlar'da, Videolar ekranında

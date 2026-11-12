@@ -119,7 +119,8 @@ def test_command_settings_isolation_and_environment(app, monkeypatch):
     assert call["allowed"] is None and "--allowedTools" not in argv and call["setting_sources"] == ""
     assert "--strict-mcp-config" in argv and "--disable-slash-commands" in argv and argv[argv.index("--permission-mode") + 1] == "dontAsk"
     assert call["env"] == {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "ENABLE_CLAUDEAI_MCP_SERVERS": "0", "DISABLE_AUTOUPDATER": "1",
-                           "CLAUDECODE": None, "CLAUDE_CODE_ENTRYPOINT": None}
+                           "CLAUDECODE": None, "CLAUDE_CODE_ENTRYPOINT": None, "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
+                           "DISABLE_PROMPT_CACHING": "1"}
     assert call["prompt"].startswith(single.PREFACE + "\n\nAdım: baslik\nTür: ilk çalışma\nBölge: 30A geneli")
     # "Genel varsayılan" takes the general default; an empty general default gives no option at all
     assert app.put("/api/settings/claude", json={"claude_model": "claude-sonnet-5", "claude_effort": "low", "claude_model_baslik": "inherit",

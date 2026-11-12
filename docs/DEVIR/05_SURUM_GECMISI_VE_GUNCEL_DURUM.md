@@ -40,6 +40,25 @@ schema 19
 ## Aktif branch
 
 ```text
+gorev-19-yan-cagri-onbellek
+app 0.20.0
+schema 19
+```
+
+Bu dal (GÖREV-18'in üstüne küçük düzeltme; uygulama sürümü 0.20.0 kalır):
+- programın başlattığı her Claude alt sürecinde `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1` (Claude Code'un istemin tamamını küçük modele okutan oturum adı isteği yapılmaz) ve `DISABLE_PROMPT_CACHING=1` (tek çağrıda hiç okunmayan bir saatlik önbelleğe yazma yok; aynı istemde bedel %45 düştü); Claude Code oturumunun içinden başlatılınca da geçerli; kullanıcının ortamına ve ayarlarına yazılmaz,
+- 6 küçük gerçek doğrulama çağrısı (Sonnet 5.5, toplam 61.765 token, 0,22 $): önbellek ayarı doğrulandı; yan çağrı bu çağrılarda değişkensiz de oluşmadı, kapandığı Claude Code'un kodundan gösterildi (`docs/gorevler/GOREV-19/RAPOR.md`),
+- yan çağrısız kayıtlarda tahmindeki pay sıfıra iner (test); şema değişmedi.
+
+Test:
+- 1118 Python
+- 120 frontend
+
+---
+
+Önceki aktif dal `gorev-18-token-kontrolu` (GÖREV-19 ile birlikte v0.20.0 olarak main'e alınacak):
+
+```text
 gorev-18-token-kontrolu
 app 0.20.0
 schema 19

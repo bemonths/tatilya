@@ -1,0 +1,132 @@
+{
+  "ad": "c5-eski-uzun",
+  "ortam": "eski",
+  "ortam_degiskenleri": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": null,
+    "DISABLE_PROMPT_CACHING": null
+  },
+  "malzeme_karakter": 0,
+  "komut": "claude.exe -p --output-format stream-json --verbose --append-system-prompt-file \"C:\\Users\\1\\source\\Repos\\30A Studio\\outputs\\30a-studio\\work\\gorev-19\\calisma\\c5-eski-uzun\\talimat.md\" --tools \"\" --permission-mode dontAsk --max-turns 1 --setting-sources \"\" --strict-mcp-config --disable-slash-commands --model claude-sonnet-5-5 --effort low",
+  "claude_version": "2.1.318",
+  "failure": null,
+  "zarf": {
+    "duration_api_ms": 62244,
+    "stop_reason": "end_turn",
+    "session_id": "039adeff-766d-4a74-b615-e96c51fecc00",
+    "total_cost_usd": 0.06298669999999999,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 1211,
+      "cache_read_input_tokens": 1587,
+      "output_tokens": 5798,
+      "output_tokens_details": {
+        "thinking_tokens": 681
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 1211,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 5798,
+          "cache_read_input_tokens": 1587,
+          "cache_creation_input_tokens": 1211,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 1211
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 5798,
+        "cacheReadInputTokens": 1587,
+        "cacheCreationInputTokens": 1211,
+        "webSearchRequests": 0,
+        "costUSD": 0.06298669999999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 681,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 1211,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"metin\": \"30A: Florida'nın Beyaz Kumlu Sakin Yüzü\\n\\nFlorida deyince çoğumuzun aklına Miami'nin neon ışıkları, Orlando'nun tema parkları ya da Key West'in gün batımı kalabalığı gelir. Oysa eyaletin kuzeyinde, Meksika Körfezi'ne bakan ince bir şeritte bambaşka bir Florida var. Burada saatler yavaş akar, insanlar çıplak ayakla dolaşır ve yolun kenarındaki en büyük tabela bile genellikle bir dondurmacıya aittir. Bu şeridin adı 30A, yani resmî adıyla Scenic Highway 30A. Walton County'de, Panhandle bölgesinin güneyinde uzanan bu yol yaklaşık 40 kilometre boyunca kumsalla, çam ormanıyla ve sakin göllerle iç içe ilerliyor. Ben de bir sonbahar haftasını bu yolda geçirdim ve dönerken aklımda tek bir cümle vardı: Keşke daha uzun kalsaydım.\\n\\nYola Çıkış: Kumun Rengi\\n\\n30A'ya ilk vardığınızda sizi karşılayan şey, kumun rengi oluyor. Buradaki kum sıradan bir sarı değil; neredeyse beyaz, un gibi ince ve ayağınızın altında hafifçe gıcırdayan bir doku. Bunun nedeni, kumun neredeyse saf kuvars olması. Uzak dağlardan nehirlerle taşınmış ve yüzyıllar boyunca dalgalarla öğütülmüş bu taneler, güneşi öyle güzel yansıtıyor ki öğle saatlerinde gözlüksüz kumsala bakmak zor. Denizin rengi de buna uyum sağlıyor: yakın kıyıda açık turkuaz, biraz açılınca zümrüt yeşili, ufka doğru lacivert. Fotoğraflarda abartılı göründüğü için inanmayanlara, yerinde görünce suskun kaldığımı söylemem yeterli.\\n\\nYol, doğuda ve batıda ana otoyol olan 98 numaralı karayoluna bağlanan bir halka gibi uzanıyor. Ana yolun aksine 30A'da hız sınırı düşük, trafik ağır ve herkes bunu biliyor. Hızlı gitmek isteyen kimse buraya gelmiyor zaten. Yol boyunca küçük kasabalar birbirini izliyor ve her birinin kendi kişiliği var. Bu yüzden 30A'yı tek bir yer olarak değil, birbirine bağlı küçük dünyalar zinciri olarak düşünmek gerekiyor.\\n\\nGrayton Beach: Eski Florida'nın Ruhu\\n\\nGezime Grayton Beach'ten başladım, çünkü burası yolun en eski ve en samimi köşesi. Kasabanın sokakları kumlu, evleri ahşap ve rengârenk, bahçelerinde hamaklar sallanıyor. Burada mimari planlı bir sahne gibi değil, yıllar içinde kendiliğinden oluşmuş gibi duruyor. Grayton Beach State Park ise bölgenin en güzel doğa duraklarından biri. Park, uzun kumul tepelerinin arasından kıvrılan ahşap patikalar ve çam korularıyla dolu. Sahile varmadan önce kumulların üzerindeki yürüme yollarını izlemek gerekiyor, çünkü kumul bitkileri kıyıyı rüzgârdan ve erozyondan koruyor. Yerel halk bu konuda hassas; kumul otlarına basan turistlere nazik ama net uyarılar yapılıyor.\\n\\nAkşam yemeği için herkesin önerdiği yer The Red Bar oldu. Adı gibi içi kırmızıyla kaplı, duvarları eski fotoğraflar ve tuhaf objelerle dolu bir mekân. Her akşam canlı caz çalıyor ve masalar birbirine o kadar yakın ki yan masayla sohbet etmek kaçınılmaz. Yan masadaki bir çift, otuz yıldır her yıl aynı hafta geldiklerini anlattı. Bu bölgede en sık duyduğum hikâye buydu: İnsanlar bir kez geliyor, sonra her yıl dönüyor.\\n\\nSahil Gölleri: 30A'nın Gizli Hazinesi\\n\\nBölgenin en özel yanlarından biri, kıyı kumul gölleri. Dünyada sadece birkaç yerde bulunan bu göller, denizle kumsal arasında kalan tatlı ve acı su karışımı sulak alanlar. Bazen fırtınalarla ya da yağmurlarla dolup taşarak denize açılıyor, sonra kum yeniden yolunu kapatıyor. Western Lake, Grayton Beach State Park içindeki en bilinen örnek. Sabahın erken saatinde kano ya da kürek sörfüyle göle çıktım. Su camsı bir sakinlikteydi, kıyıda ak balıkçıllar bekliyordu ve uzaktan denizin sesi duyuluyordu. Bir yanda göl, diğer yanda Körfez; aralarında sadece birkaç metrelik kum. Bu manzarayı hiçbir otel balkonundan göremezsiniz.\\n\\nGöllerin çevresinde yürüyüş yapmak da keyifli. Point Washington State Forest, 30A'nın hemen kuzeyinde uzanan geniş bir orman ve içinden geçen patikalar hem yürüyüşçüler hem bisikletliler için ideal. Eden Gardens State Park ise tamamen farklı bir hava sunuyor: yaşlı canlı meşelerin sarkan yosunlarıyla süslü bir bahçe ve içinde eski bir malikâne. Burada piknik yapıp bir saat boyunca sadece gölgenin tadını çıkarmak mümkün.\\n\\nSeaside: Film Seti Gibi Bir Kasaba\\n\\nGrayton'dan doğuya doğru ilerleyince Seaside'a varıyorsunuz. Seaside, 1980'lerde planlı bir yerleşim olarak kurulmuş ve yeni kentçilik akımının en bilinen örneklerinden sayılıyor. Pastel renkli ahşap evler, beyaz çitler, dar sokaklar ve herkesi yaya olmaya iten bir yerleşim düzeni var. 1998 yapımı The Truman Show filmi burada çekildi ve kasaba ilk bakışta neden seçildiğini hemen anlatıyor: Her şey fazla düzgün, fazla güzel, neredeyse gerçek dışı.\\n\\nBununla birlikte Seaside yapay bir turistik tuzak olarak kalmıyor. Meydanın çevresinde sıralanan gümüş renkli Airstream karavanlarda yemek satılıyor; balık tacoları, taze limonata, dondurma, kahve. Akşamüstü insanlar bisikletleriyle geliyor, çimenlerde oturuyor ve çocuklar etraftan koşturuyor. Kumsala çıkan ahşap pavyonlar da kasabanın simgesi haline gelmiş. Gün batımında bu pavyonların birinde oturup denizin rengini izlemek, gezinin en unutulmaz anlarından biri oldu.\\n\\nBisiklet: 30A'yı Gezmenin En İyi Yolu\\n\\n30A'yı arabayla gezmek mümkün, ama bence doğru yöntem bisiklet. Yolun neredeyse tamamı boyunca paralel bir bisiklet ve yürüyüş yolu uzanıyor. Kiralık bisiklet dükkânları her kasabada var ve çoğu sepetli, vitesli, rahat sele modelleri veriyor. Sabah serinliğinde pedal çevirmek, bir kasabadan diğerine geçerken değişen mimariyi izlemek ve istediğiniz yerde durup kahve içmek bölgeyi çok daha yakından tanımanızı sağlıyor. Yol boyunca bazı bölümler çam ormanının içinden geçiyor; hava reçine ve tuz kokuyor. Ara sıra karşınıza çıkan sincaplar ve tilkiler de cabası.\\n\\nBir uyarı: Yaz aylarında ve tatil dönemlerinde bisiklet yolu kalabalıklaşıyor. Eğer sakin bir deneyim arıyorsanız, ilkbaharın sonu ya da sonbahar daha doğru bir tercih. Ben ekim ayında gittim; deniz hâlâ yüzülebilecek kadar ılıktı, ama kumsallar yarı boştu.\\n\\nRosemary Beach ve Alys Beach: Akdeniz Esintisi\\n\\nYolun doğu ucuna doğru ilerledikçe mimari bir kez daha değişiyor. Rosemary Beach, Karayip ve Akdeniz esintili yapılarıyla dikkat çekiyor. Taş döşeli yollar, balkonlarda sarkan çiçekler, küçük butikler ve kafeler burayı Avrupa'daki bir sahil kasabasına benzetiyor. Meydandaki restoranlarda deniz ürünleri öne çıkıyor; özellikle Körfez karidesi ve taze yakalanmış kırmızı balık menüden eksik olmuyor. Akşamları sokaklar loş lambalarla aydınlanıyor ve ortam romantik bir hal alıyor.\\n\\nAlys Beach ise daha da ileri gidiyor. Neredeyse tamamen beyaz yapıların oluşturduğu bu yerleşim, Bermuda ve Kuzey Afrika mimarisinden ilham alıyor. Beyaz duvarlar, dar geçitler, iç avlular ve kemerler Ege ya da Fas'taki bir köyü hatırlatıyor. Güneş ışığı beyaz yüzeylerden yansıyınca her şey parlıyor. Sokaklarında yürürken Türkiye'deki Bodrum ya da Alaçatı'yı anımsamadan edemedim; elbette ölçek ve ruh farklı, ama beyazın ve mavinin uyumu tanıdık bir huzur veriyor.\\n\\nNe Yenir, Nerede Dinlenilir\\n\\n30A'nın mutfağı deniz ürünleri ve Güney lezzetlerinin karışımı. Kızarmış istiridye, yengeç keki, karides ve grits (mısır lapası) yaygın tabaklar. Plaj kenarındaki küçük kulübelerde yenen balık sandviçleri, şık restoranlardaki akşam yemeklerinden çoğu zaman daha akılda kalıcı oluyor. Kahvaltı için yerel fırınlar ve kafeler tercih edilebilir; taze pişmiş çörekler ve güçlü kahve güne iyi başlatıyor. Tatlı olarak ise Key lime pie denemeden dönmeyin.\\n\\nKonaklama seçenekleri butik pansiyonlardan kumsal evlerine, otellerden kiralık villalara kadar geniş. Aileler genellikle bir ev kiralamayı tercih ediyor, çünkü mutfak ve bahçe imkânı uzun kalışlar için rahatlık sağlıyor. Fiyatlar sezona göre keskin biçimde değişiyor; yaz ve bahar tatili dönemi en pahalı zamanlar. Erken rezervasyon yapmak gerçekten fark yaratıyor.\\n\\nPratik Notlar\\n\\nBölgeye en yakın büyük havalimanı Northwest Florida Beaches International Airport, yaklaşık bir saatlik mesafede. Destin-Fort Walton Beach Havalimanı ve Pensacola da alternatif. Ulaşım için araba kiralamak şart denebilir; ancak kasabaların içinde yürümek ya da bisiklete binmek yeterli oluyor. Güneş kremi, şapka ve su şişesi unutulmamalı, çünkü kumun yansıması güneşi katlıyor. Ağustos ve eylül aylarında kasırga mevsimi sürdüğü için seyahat sigortası ve hava durumu takibi önemli. Bölge geçmişte kasırgalardan zarar gördü, ama toparlanma çabası ve yerel dayanışma çok güçlü.\\n\\nÇevreye saygı da ayrı bir konu. Kumul bitkilerine basmamak, deniz kaplumbağası yuvalama mevsiminde gece ışıklarını kısmak, çöpünüzü geride bırakmamak buradaki yazılı olmayan kurallar. Yerel halk bu kurallara bağlı ve ziyaretçilerden de aynı hassasiyeti bekliyor.\\n\\nDönüş: Yavaşlığın Değeri\\n\\n30A'da geçirdiğim hafta, tatil kavramına dair düşüncelerimi biraz değiştirdi. Burada yapılacak çok şey var gibi görünüyor, ama asıl öğrendiğim şey hiçbir şey yapmamanın da bir sanat olduğu. Bir sabah kumsalda otururken yanımdan geçen yaşlı bir adam, elindeki kahveyi kaldırıp günaydın dedi ve yoluna devam etti. O an, bu yolun neden insanları geri çağırdığını anladım. Çünkü 30A bir yer olmaktan çok bir tempo: sakin, sıcak ve acelesiz.\\n\\nEğer Florida'yı yalnızca büyük şehirler ve tema parklarıyla tanıyorsanız, Panhandle'ın bu ince şeridine bir şans verin. Bisikletinizi alın, ayakkabılarınızı çıkarın ve beyaz kumun üzerinde yürümeye başlayın. Gün batarken Seaside'daki pavyonlardan birinde oturun, denizin rengi değişirken kimseyle konuşmasanız bile yalnız hissetmeyeceksiniz. 30A bunu başarıyor; ziyaretçisine hem yer açıyor hem de huzur veriyor.\"}",
+    "ttft_ms": 7856,
+    "type": "result",
+    "duration_ms": 62357,
+    "uuid": "628563e8-279f-437e-b04f-5d90120e8bda",
+    "ttft_stream_ms": 1206,
+    "time_to_request_ms": 112,
+    "first_content_frame_ms": 1206,
+    "queued_turn_count": 0,
+    "result_index": 0,
+    "model_usage_since_last_result": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 5798,
+        "cacheReadInputTokens": 1587,
+        "cacheCreationInputTokens": 1211,
+        "webSearchRequests": 0,
+        "costUSD": 0.06298669999999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 681,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 1211,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "credential_expires_at": "2026-12-06T01:36:04.836Z"
+  }
+}

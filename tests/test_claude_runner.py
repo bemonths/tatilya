@@ -43,6 +43,18 @@ def test_environment_isolates_and_drops_a_parent_claude_session():
     assert outside["CLAUDE_CODE_ENTRYPOINT"] == "cli"
 
 
+def test_environment_turns_off_the_side_call_and_prompt_caching_inside_and_outside_a_claude_session():
+    """GÖREV-19: both switches reach the child; inside a Claude Code session the parent's `CLAUDE_CODE_*` (even a "0" title switch of its
+    own) is removed first and the program's value is set after."""
+    inside = runner.build_env({"PATH": "x", "CLAUDECODE": "1", "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "0", "disable_prompt_caching": "0"})
+    outside = runner.build_env({"PATH": "x"})
+    for env in (inside, outside):
+        assert env["CLAUDE_CODE_DISABLE_TERMINAL_TITLE"] == "1"
+        assert env[runner.env_key(env, "DISABLE_PROMPT_CACHING")] == "1"
+    assert "DISABLE_PROMPT_CACHING" not in inside or "disable_prompt_caching" not in inside   # one spelling (Windows ignores case)
+    assert runner.ISOLATION_ENV["CLAUDE_CODE_DISABLE_TERMINAL_TITLE"] == "1" and runner.ISOLATION_ENV["DISABLE_PROMPT_CACHING"] == "1"
+
+
 def test_program_lookup_resolves_the_npm_shim_and_runs_python_scripts(tmp_path, monkeypatch):
     assert runner.resolve_command(FAKE) == [sys.executable, str(FAKE)]
     exe = tmp_path / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude.exe"

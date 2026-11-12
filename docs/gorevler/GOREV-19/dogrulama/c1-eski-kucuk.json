@@ -1,0 +1,132 @@
+{
+  "ad": "c1-eski-kucuk",
+  "ortam": "eski",
+  "ortam_degiskenleri": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": null,
+    "DISABLE_PROMPT_CACHING": null
+  },
+  "malzeme_karakter": 0,
+  "komut": "claude.exe -p --output-format stream-json --verbose --append-system-prompt-file \"C:\\Users\\1\\source\\Repos\\30A Studio\\outputs\\30a-studio\\work\\gorev-19\\calisma\\c1-eski-kucuk\\talimat.md\" --tools \"\" --permission-mode dontAsk --max-turns 1 --setting-sources \"\" --strict-mcp-config --disable-slash-commands --model claude-sonnet-5-5 --effort low",
+  "claude_version": "2.1.318",
+  "failure": null,
+  "zarf": {
+    "duration_api_ms": 1303,
+    "stop_reason": "end_turn",
+    "session_id": "402b2625-bf1c-40a5-96ca-5c9d6349104f",
+    "total_cost_usd": 0.0083698,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 2050,
+      "cache_read_input_tokens": 658,
+      "output_tokens": 10,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 2050,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 10,
+          "cache_read_input_tokens": 658,
+          "cache_creation_input_tokens": 2050,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 2050
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 10,
+        "cacheReadInputTokens": 658,
+        "cacheCreationInputTokens": 2050,
+        "webSearchRequests": 0,
+        "costUSD": 0.0083698,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 0,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 2050,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"tamam\": true}",
+    "ttft_ms": 1728,
+    "type": "result",
+    "duration_ms": 1745,
+    "uuid": "0799c1ae-c3eb-42fb-8db4-bd2677862eb2",
+    "ttft_stream_ms": 1721,
+    "time_to_request_ms": 443,
+    "first_content_frame_ms": 1721,
+    "queued_turn_count": 0,
+    "result_index": 0,
+    "model_usage_since_last_result": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 10,
+        "cacheReadInputTokens": 658,
+        "cacheCreationInputTokens": 2050,
+        "webSearchRequests": 0,
+        "costUSD": 0.0083698,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 0,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 2050,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "credential_expires_at": "2026-12-06T01:36:04.836Z"
+  }
+}
