@@ -105,5 +105,5 @@ Video metninde yazılan değerler Ayarlar'daki çıktı varsayımlarıdır (ger�
 - Testler: `.venv\Scripts\python.exe -m pytest -q` → 1118 geçti, 2 atlandı (7 dk 34 sn; ilk turda eski bir testin ortam karşılaştırması iki yeni değişken yüzünden düştü, test güncellendi); `node --test tests/frontend.test.mjs` → 120 geçti.
 - Belgeler: `docs/M15-CLAUDE-ADIMLARI.md` ("Tek çağrı düzeni, tahmin ve sınırlar" bölümüne "İki boşa harcama kapalı" maddesi; Yalıtım bölümüne iki
   değişken), `docs/DEVIR/05_SURUM_GECMISI_VE_GUNCEL_DURUM.md`, `README.md`.
-- CI: CI_SONUCU
-- main ve etiket: MAIN_SONUCU
+- CI: ilk commit `0e662ee` (kod, testler, belgeler) → çalışma 43230789721 **başarılı** (takılma olmadı). Bu raporun commit'i yalnız belge değiştirir; onun CI'ı da beklendi, sonucu bu dalın son commit'inin GitHub sayfasında görünür.
+- main ve etiket: son commit'in CI'ı başarıyla bitince main `a49c6d0`'dan bu dalın son commit'ine fast-forward edildi ve açıklamalı `v0.20.0` etiketi konuldu ("v0.20.0 — Claude adımları tek çağrılı: tahmin, sınırlar, işletme adı ve başlık denetimleri"). main GÖREV-18'i de içerir.

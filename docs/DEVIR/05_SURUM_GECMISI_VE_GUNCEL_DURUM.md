@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.19.0 -> a49c6d0
-main -> a49c6d0
-app 0.19.0
+tag v0.20.0 -> GÖREV-19'un son commit'i (gorev-19-yan-cagri-onbellek)
+main -> aynı commit
+app 0.20.0
 schema 19
 ```
+
+12 Kasım 2026'da GÖREV-19 Adım 4 ile main, GÖREV-18 ve GÖREV-19'u içeren `gorev-19-yan-cagri-onbellek` dalının son commit'ine fast-forward edildi (`a49c6d0..`) ve bu commit'e açıklamalı `v0.20.0` etiketi konuldu ("v0.20.0 — Claude adımları tek çağrılı: tahmin, sınırlar, işletme adı ve başlık denetimleri"). Main'e alma, son commit'in görev dalı CI'ı başarıyla bittikten sonra yapıldı; önceki commit `0e662ee`'nin CI'ı (43230789721) başarılı. Commit kimliği ve son CI: `docs/gorevler/GOREV-19/RAPOR.md`.
 
 11 Kasım 2026'da GÖREV-18 Adım 1 ile main `a49c6d0`'a (GÖREV-17) fast-forward edildi (`988ca8d..a49c6d0`) ve bu commit'e açıklamalı `v0.19.0` etiketi konuldu ("v0.19.0 — arayüz düzeltmeleri: İşler panelinde temizleme, Ayarlar düzeni, tek pencere"). main CI (43053256607) başarılı; etiket CI (43053261163) ve görev dalı CI (43032939565) takıldı (aynı commit'in main çalışması 4 dakikada geçti; ayrıntı GÖREV-18 RAPOR).
 
@@ -56,7 +58,7 @@ Test:
 
 ---
 
-Önceki aktif dal `gorev-18-token-kontrolu` (GÖREV-19 ile birlikte v0.20.0 olarak main'e alınacak):
+Önceki aktif dal `gorev-18-token-kontrolu` (GÖREV-19 ile birlikte v0.20.0 olarak main'e alındı):
 
 ```text
 gorev-18-token-kontrolu
@@ -70,7 +72,7 @@ Bu dal (kullanıcının "Token kontrolü ve çalışma düzeni" kuralı):
 - paralel oturum 1–8, başlangıç 6; model ve efor değişmedi,
 - işletme adı denetimi (kırmızı; video metninde ve başlık adaylarında; liste veriden, Ayarlar'dan ekle / hariç tut); başlık ve kapak uyarıları (sarı),
 - iki eski hata: ikinci çeviri dilimi; bölüm yazıcısının Markdown'ının girdisinin üstüne yazılması,
-- tek gerçek ölçüm geçici kopyada (Opus 111 bin okudu, eskiden 416 bin; yan Haiku çağrısı 105 bin); gerçek veride yalnız açılış; main'e alınmadı.
+- tek gerçek ölçüm geçici kopyada (Opus 111 bin okudu, eskiden 416 bin; yan Haiku çağrısı 105 bin); gerçek veride yalnız açılış.
 
 Test:
 - 1115 Python
