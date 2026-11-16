@@ -121,7 +121,7 @@ def test_v18_to_v19_adds_the_table_keeps_every_row_and_hides_nothing(tmp_path):
         before = {t: con.execute(f'SELECT * FROM "{t}" ORDER BY rowid').fetchall() for t in tables}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 20 == SCHEMA_VERSION
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 21 == SCHEMA_VERSION
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT * FROM "{t}" ORDER BY rowid').fetchall() for t in tables}
         assert after == before and con.execute("SELECT COUNT(*) FROM job_hidden").fetchone()[0] == 0

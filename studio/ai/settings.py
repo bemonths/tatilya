@@ -46,6 +46,14 @@ CLAUDE_STEPS = (("baslik", "Konu ve başlık"), ("baslik_degerlendirme", "Başl�
                 ("metin_bolum", "Video metni · bölüm"), ("metin_birlestirme", "Video metni · birleştirme"),
                 ("metin_giris_kapanis", "Video metni · giriş ve kapanış"), ("metin_son_okuma", "Video metni · son okuma"),
                 ("metin_ceviri", "Video metni · çeviri"))
+# GÖREV-21: the Settings table names every Claude step as its screen names it and says which step of a video (or which project screen)
+# it belongs to. The keys and the stored settings do not change.
+STEP_PLACES = {"baslik": ("Öneri al (başlık önerisi)", "Proje · Konu bankası"),
+               "baslik_degerlendirme": ("Kendi başlığını değerlendirme", "Proje · Konu bankası; 1 · Başlık ve vaat"),
+               "metin_plan": ("Planlayıcı", "3 · Plan"), "metin_plan_elestiri": ("Plan eleştirmeni", "3 · Plan"),
+               "metin_bolum": ("Bölümler", "4 · Yazım"), "metin_birlestirme": ("Birleştirme", "4 · Yazım"),
+               "metin_giris_kapanis": ("Giriş ve kapanış", "4 · Yazım"), "metin_son_okuma": ("Son okuma", "4 · Yazım"),
+               "metin_ceviri": ("Çeviri", "4 · Yazım")}
 # GÖREV-18: every step is one call without tools (`--tools ""`, `--max-turns 1`); the turn limit is no longer a setting (old
 # `claude_max_turns_<step>` keys in a settings file are ignored). Model and effort are as before (GÖREV-18 Adım 5 keeps them).
 STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high"},
@@ -58,13 +66,13 @@ STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high"},
                  "metin_son_okuma": {"model": "opus", "effort": "medium"},
                  "metin_ceviri": {"model": "sonnet", "effort": "medium"}}
 # GÖREV-15 (Adım 5): the video text chain's own settings. Sessions at once (the section writers run side by side), the usage thresholds
-# at which no new session opens (5-hour and weekly window, percent) and "Plandan sonra dur" (the run stops after the plan for the user).
+# at which no new session opens (5-hour and weekly window, percent). GÖREV-21: "Plandan sonra dur" is gone — the chain always stops after
+# the plan and writes only after the user approved it; an old `claude_stop_after_plan` in a settings file is ignored.
 TEXT_FIELDS = {"claude_max_sessions": (1, 8, 6), "claude_limit_five_hour": (1, 100, 90), "claude_limit_week": (1, 100, 95)}
 STOP_AFTER_PLAN = "claude_stop_after_plan"
 TEXT_HELP = {"claude_max_sessions": "Video metninin bölüm yazıcıları aynı anda çalışır; aynı anda en çok bu kadar Claude oturumu açılır (1–8).",
              "claude_limit_five_hour": "5 saatlik kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer.",
-             "claude_limit_week": "Haftalık kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer.",
-             STOP_AFTER_PLAN: "Açıksa video metni çalışması plandan sonra durur; planı görüp “Devam” ile sürdürürsünüz."}
+             "claude_limit_week": "Haftalık kullanım bu yüzdeye gelince yeni oturum açılmaz; çalışma sıfırlanmayı bekleyip kendiliğinden sürer."}
 # GÖREV-18: token limits (Settings → Claude). A call is one step's single Claude call (read and written tokens together); the job limit
 # is the safety catch of one job (a title run, or a video text run with all its tones). The output guess is the estimate's written
 # tokens (thinking included) for a step with no earlier run to take a median from.
@@ -96,7 +104,6 @@ def defaults():
     values = {"claude_path": "", "claude_model": "", "claude_effort": ""}
     values.update({field: default for field, (_, _, default) in TEXT_FIELDS.items()})
     values.update({field: default for field, (_, _, default) in LIMIT_FIELDS.items()})
-    values[STOP_AFTER_PLAN] = False
     for key, _ in CLAUDE_STEPS:
         step = STEP_DEFAULTS.get(key, {})
         values[f"claude_model_{key}"] = step.get("model", INHERIT)
@@ -121,10 +128,6 @@ def check(field, value):
         low, high, _ = TEXT_FIELDS[field]
         if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
             raise SettingsError(field, f"{low} ile {high} arasında bir tam sayı olmalı.")
-        return value
-    if field == STOP_AFTER_PLAN:
-        if not isinstance(value, bool):
-            raise SettingsError(field, "Açık ya da kapalı olmalı.")
         return value
     if field in LIMIT_FIELDS:
         low, high, _ = LIMIT_FIELDS[field]
@@ -195,6 +198,8 @@ def save(data_dir, changes):
     """Checks every changed field (all or nothing) and writes the whole Claude section atomically; returns the new settings."""
     current = {k: v for k, v in load(data_dir).items() if k != "notes"}
     for field, value in (changes or {}).items():
+        if field == STOP_AFTER_PLAN:
+            continue                                        # GÖREV-21: no longer a setting; an old screen may still send it
         if field not in current:
             raise SettingsError(field, "Bilinmeyen ayar.")
         current[field] = check(field, value)
@@ -284,11 +289,11 @@ def options():
     """The Settings screen's lists."""
     return {"models": [{"value": v, "label": l} for v, l in MODEL_CHOICES], "efforts": [{"value": v, "label": l} for v, l in EFFORT_CHOICES],
             "inherit": {"value": INHERIT, "label": INHERIT_LABEL},
-            "steps": [{"key": key, "label": title, "model_field": f"claude_model_{key}", "effort_field": f"claude_effort_{key}",
+            "steps": [{"key": key, "label": title, "screen": STEP_PLACES.get(key, (title, ""))[0], "place": STEP_PLACES.get(key, (title, ""))[1],
+                       "model_field": f"claude_model_{key}", "effort_field": f"claude_effort_{key}",
                        "output_guess_field": f"claude_output_guess_{key}"} for key, title in CLAUDE_STEPS],
             "output_guess": {"min": OUTPUT_GUESS_RANGE[0], "max": OUTPUT_GUESS_RANGE[1], "help": OUTPUT_GUESS_HELP},
             "limits": [{"field": field, "min": low, "max": high, "default": default, "help": LIMIT_HELP[field]}
                        for field, (low, high, default) in LIMIT_FIELDS.items()],
             "text": {"fields": [{"field": field, "min": low, "max": high, "default": default, "help": TEXT_HELP[field]}
-                                for field, (low, high, default) in TEXT_FIELDS.items()],
-                     "stop_after_plan": {"field": STOP_AFTER_PLAN, "help": TEXT_HELP[STOP_AFTER_PLAN]}}}
+                                for field, (low, high, default) in TEXT_FIELDS.items()]}}

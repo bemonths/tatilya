@@ -77,6 +77,36 @@ class RunDecisionInput(BaseModel):
     not_: str | None = Field(default=None, alias="not", max_length=4000)
     baslik_en: str | None = Field(default=None, max_length=200)
     baslik_tr: str | None = Field(default=None, max_length=300)
+    video_id: str | None = Field(default=None, max_length=64)
+
+
+class VideoCreateInput(BaseModel):
+    """GÖREV-21: "Yeni video" with an optional working name."""
+    model_config = ConfigDict(extra="forbid")
+    destination_id: str | None = None
+    ad: str | None = Field(default=None, max_length=120)
+
+
+class StepDecisionInput(BaseModel):
+    """GÖREV-21: the approval component — the user's note and, for 5 · Kontrol ve ton seçimi's "Onayla", the version (tone) to go on with."""
+    model_config = ConfigDict(extra="forbid")
+    not_: str | None = Field(default=None, alias="not", max_length=4000)
+    surum: str | None = Field(default=None, max_length=64)
+
+
+class VideoTitleInput(BaseModel):
+    """GÖREV-21: 1 · Başlık ve vaat — the candidate of the topic bank the video uses (optionally with the title as the user edited it)."""
+    model_config = ConfigDict(extra="forbid")
+    calisma: str = Field(min_length=1, max_length=64)
+    aday: int = Field(ge=0, le=100)
+    not_: str | None = Field(default=None, alias="not", max_length=4000)
+    baslik_en: str | None = Field(default=None, max_length=200)
+    baslik_tr: str | None = Field(default=None, max_length=300)
+
+
+class PlanInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    not_: str | None = Field(default=None, alias="not", max_length=4000)
 
 
 class ReviewRunInput(BaseModel):
@@ -96,7 +126,7 @@ class TranslateInput(BaseModel):
 
 
 class TextRunInput(BaseModel):
-    """GÖREV-15: "Metni yaz" — the tones (file stems) a new text run writes, each with the same plan."""
+    """4 · Yazım: "Yazımı başlat" — the tones (file stems) written with the approved plan."""
     model_config = ConfigDict(extra="forbid")
     tonlar: list[str] = Field(min_length=1, max_length=12)
 

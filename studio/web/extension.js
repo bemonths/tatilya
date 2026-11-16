@@ -1,9 +1,10 @@
 import {api, esc, date} from "./api.js";
-import {linkSettingsMentions, settingsHref} from "./settings.js";
+import {linkSettingsMentions} from "./settings.js";
 
-// GÖREV-14 (Adım 7): Settings → Tarayıcı eklentisi. The extension opens, in the user's own Chrome, the pages the program asks for and hands
-// back only their content; this section shows its connection, the pairing code, the sites it may open, the speed, the install steps,
-// a trial with the program's own local page and the trial of the problem sites (the user presses it).
+// The browser extension (GÖREV-14) opens, in the user's own Chrome, the pages the program asks for and hands back only their content.
+// GÖREV-21 split its screen by layer: Ayarlar → Tarayıcı eklentisi keeps only the pairing code and the connection (a program setting);
+// the sites it may open, its speed, the trial with the program's own local page, the trial of the problem sites and the warm-up list are
+// data work and live in Veri → Okuma denemeleri.
 
 const STATE_LABELS={tamam:"okundu",dogrulama:"doğrulama geçilmedi",giris:"giriş gerekiyor",odeme:"ödeme sayfası",izin_yok:"izin yok",hata:"hata",
   erisim_reddedildi:"erişim reddedildi",bolge_engeli:"bölge engeli",yonlendi:"başka siteye yönlendi",atlandi:"kullanıcı atladı"};
@@ -42,33 +43,58 @@ export function trialRows(rows) {
     </tbody></table></div>`;
 }
 
-export function extensionSection(view, {message="", trial=null, problems=null}={}) {
+/** Ayarlar → Tarayıcı eklentisi (GÖREV-21): only the pairing code and the connection (with the one-time install steps the pairing
+ *  needs). What the extension reads and the trial readings are data work: Veri → Okuma denemeleri (extensionReading). */
+export function extensionSection(view, {message=""}={}) {
   const state=connectionText(view);
-  const list=items=>items?.length?items.map(d=>`<span class="tag">${esc(d)}</span>`).join(" "):'<span class="muted">yok</span>';
   return `<section class="info-card extension-settings" id="extension-settings"><span class="eyebrow">TARAYICI EKLENTİSİ</span><h2 style="margin-top:12px">Tarayıcı eklentisi</h2>
-    <p>Programın kendi tarayıcısının giremediği bazı sitelere sizin günlük Chrome'unuz girebiliyor. “30A Studio Yardımcısı” eklentisi, programın istediği sayfaları Chrome'da kendi açtığı ayrı pencerede açar ve yalnız sayfanın içeriğini programa verir. Tıklamaz, yazı yazmaz, sekmelerinize, çerezlerinize, parolalarınıza ve geçmişinize erişmez; izin vermediğiniz siteye gitmez.</p>
+    <p>“30A Studio Yardımcısı” eklentisi, programın istediği sayfaları sizin Chrome'unuzda kendi açtığı ayrı pencerede açar ve yalnız sayfanın içeriğini programa verir. Burada yalnız eşleştirme ve bağlantı durumu vardır; eklentinin okuduğu siteler, hızı ve deneme okumaları <a href="#veri/okuma">Veri → Okuma denemeleri</a> sekmesindedir.</p>
     <p class="stage-note"><span class="note-mark">●</span><span><strong>Bağlantı:</strong> <span class="tag ${state.tone}" id="extension-connection">${esc(state.text)}</span></span></p>
     ${view.eski_surum?`<p class="stage-note claude-warning">Chrome'daki eklenti eski sürüm (${esc(view.surum)}; programın klasöründeki ${esc(view.beklenen_surum)}). chrome://extensions sayfasında “30A Studio Yardımcısı”nın yenile düğmesine basın.</p>`:""}
     <div class="extension-code"><span class="eyebrow">EŞLEŞME KODU</span><strong id="extension-code">${esc(view.kod)}</strong>
       <button id="extension-renew" class="quiet">Kodu yenile</button><small class="muted">Kodu yenileyince eklentiye yeni kodu yeniden yazmanız gerekir.</small></div>
+    <details class="extension-guide"><summary>Kurulum ve eşleştirme adımları (bir kez)</summary>
+      <ol class="extension-steps">${view.kurulum.map(step=>`<li>${esc(step)}</li>`).join("")}</ol>
+      <p class="path">${esc(view.klasor)}</p>
+      ${(view.kurulum_resimleri||[]).map(name=>`<img src="/eklenti-kurulum/${encodeURIComponent(name)}" alt="${esc(name)}" loading="lazy">`).join("")}
+      <p class="muted">Rehberin tamamı eklenti klasöründeki KURULUM.md dosyasında.</p></details>
+    ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
+  </section>`;
+}
+
+/** Veri → Okuma denemeleri (GÖREV-21): the sites the extension may open, its speed, the trial with the program's own local page and the
+ *  trial of the problem sites (the user presses it). These were in Ayarlar → Tarayıcı eklentisi. */
+export function extensionReading(view, {message="", trial=null, problems=null}={}) {
+  const state=connectionText(view);
+  const list=items=>items?.length?items.map(d=>`<span class="tag">${esc(d)}</span>`).join(" "):'<span class="muted">yok</span>';
+  return `<section class="info-card extension-settings" id="extension-reading"><span class="eyebrow">EKLENTİYLE OKUMA</span><h2 style="margin-top:12px">Eklentinin deneme okuması</h2>
+    <p>Programın kendi tarayıcısının giremediği bazı sitelere sizin günlük Chrome'unuz girebiliyor. Eklenti tıklamaz, yazı yazmaz, sekmelerinize, çerezlerinize, parolalarınıza ve geçmişinize erişmez; izin vermediğiniz siteye gitmez.</p>
+    <p class="stage-note"><span class="note-mark">●</span><span><strong>Bağlantı:</strong> <span class="tag ${state.tone}" id="extension-connection">${esc(state.text)}</span> · eşleştirme kodu <a href="#settings/eklenti">Ayarlar → Tarayıcı eklentisi</a> bölümünde.</span></p>
     <p><strong>İzin verilen siteler:</strong> ${list(view.izinli_alan_adlari)}</p>
     <p><strong>İzin bekleyen siteler:</strong> ${list(view.izin_bekleyen_alan_adlari)} <small class="muted">İzni Chrome'da eklenti simgesine tıklayıp “İzin ver” ile siz verirsiniz.</small></p>
     <form id="extension-speed" class="toolbar video-form"><label>Aynı sitede iki sayfa arası en az (saniye)<input type="number" id="extension-gap" min="${view.aralik_sinirlari[0]}" max="${view.aralik_sinirlari[1]}" value="${esc(view.aralik_saniye)}"></label><button type="submit">Hızı kaydet</button></form>
-    <h3>Kurulum (bir kez)</h3>
-    <ol class="extension-steps">${view.kurulum.map(step=>`<li>${esc(step)}</li>`).join("")}</ol>
-    <p class="path">${esc(view.klasor)}</p>
-    ${(view.kurulum_resimleri||[]).length?`<details class="extension-guide"><summary>Resimli kurulum rehberi</summary>${view.kurulum_resimleri.map(name=>`<img src="/eklenti-kurulum/${encodeURIComponent(name)}" alt="${esc(name)}" loading="lazy">`).join("")}<p class="muted">Rehberin tamamı eklenti klasöründeki KURULUM.md dosyasında.</p></details>`:""}
     <div class="decision-actions"><button class="primary" id="extension-trial">Deneme</button><small class="muted">Eklentiyle programın kendi yerel deneme sayfasını açar (gerçek bir site değildir).</small></div>
     ${trial?`<div class="extension-trial-result">${trial.error?`<p class="stage-note claude-warning">${esc(trial.error)}</p>`:`<p><span class="tag ${trial.durum==="tamam"?"green":"warm"}">${esc(STATE_LABELS[trial.durum] || trial.durum)}</span> ${esc(trial.baslik || "")} · ${Math.round((trial.bayt||0)/1024)} KB · SHA-256 <code>${esc((trial.sha256||"").slice(0,16))}</code><small class="source-host">${esc(trial.dosya || "")}</small></p>`}</div>`:""}
     <h3>Sorunlu siteler</h3>
-    <p class="muted">Raporlarda bu bilgisayardan okunamayan siteler: ${view.sorunlu_siteler.map(s=>esc(s.alan_adi)).join(", ")}. Düğme her siteden tek bir sayfayı eklentiyle okur ve sonucu tabloda gösterir; bölge engelli listedeki siteler eklentiyle değil, <a href="${settingsHref("proxy")}">ABD proxy'si</a> tanımlıysa onunla denenir. Bu düğmeye siz basarsınız.</p>
+    <p class="muted">Raporlarda bu bilgisayardan okunamayan siteler: ${view.sorunlu_siteler.map(s=>esc(s.alan_adi)).join(", ")}. Düğme her siteden tek bir sayfayı eklentiyle okur ve sonucu tabloda gösterir; bölge engelli listedeki siteler eklentiyle değil, ABD proxy'si tanımlıysa onunla denenir (aşağıdaki bölüm). Bu düğmeye siz basarsınız.</p>
     <div class="decision-actions"><button id="extension-problems">Sorunlu sitelerden birer sayfa dene</button></div>
     ${problems?trialRows(problems):""}
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
   </section>`;
 }
 
-export class ExtensionSettings {
+/** Veri → Okuma denemeleri: the warm-up list — the sites opened in the program's browser before a long collection (read only). */
+export function warmUpSection(list) {
+  const sites=list?.siteler || [];
+  return `<section class="info-card" id="warm-up-list"><span class="eyebrow">ISINMA LİSTESİ</span><h2 style="margin-top:12px">Isınma listesi</h2>
+    <p>Uzun bir çekimden önce programın tarayıcısında ayrı sekmelerde açılan siteler: bir kez doğrulama sayfası gösteren alan adları ve korumalı kiralama siteleri. Doğrulamayı siz geçersiniz; sonra çekim başlar. Liste veriden çıkar, elle değişmez.</p>
+    ${sites.length?`<div class="table-scroll"><table class="reference-table"><thead><tr><th>ALAN ADI</th><th>SEBEP</th><th>İLK GÖRÜLME</th><th>SON GÖRÜLME</th></tr></thead><tbody>
+      ${sites.map(s=>`<tr><td><strong>${esc(s.alan_adi)}</strong><small class="source-host">${esc(s.adres)}</small></td><td>${esc(s.sebep)}</td><td>${esc(s.ilk?date(s.ilk):"—")}</td><td>${esc(s.son?date(s.son):"—")}</td></tr>`).join("")}</tbody></table></div>`
+      :'<p class="muted">Listede site yok.</p>'}
+  </section>`;
+}
+
+class ExtensionBase {
   constructor(container) {this.container=container;this.view=null;this.message="";this.trial=null;this.problems=null;this.timer=null;this.sequence=0;}
   async load(message="") {
     try {
@@ -78,13 +104,6 @@ export class ExtensionSettings {
       this.draw();
       if(!this.timer) this.timer=setInterval(()=>this.refresh(),5000);
     } catch(error) {if(!error.stale) this.container.textContent=error.message;}
-  }
-  draw() {
-    this.container.innerHTML=extensionSection(this.view,{message:this.message,trial:this.trial,problems:this.problems});
-    this.container.querySelector("#extension-renew").addEventListener("click",()=>this.renew());
-    this.container.querySelector("#extension-speed").addEventListener("submit",event=>{event.preventDefault();this.speed();});
-    this.container.querySelector("#extension-trial").addEventListener("click",()=>this.runTrial());
-    this.container.querySelector("#extension-problems").addEventListener("click",()=>this.runProblems());
   }
   /** The connection line every 5 s ("Eklenti çalışıyor: <site> · <durum>" while a job runs); stops when the section is gone. */
   async refresh() {
@@ -101,6 +120,14 @@ export class ExtensionSettings {
       if(code && code.textContent!==this.view.kod) code.textContent=this.view.kod;
     } catch(error) { /* the next refresh tries again */ }
   }
+}
+
+/** Ayarlar → Tarayıcı eklentisi: the pairing code and the connection. */
+export class ExtensionSettings extends ExtensionBase {
+  draw() {
+    this.container.innerHTML=extensionSection(this.view,{message:this.message});
+    this.container.querySelector("#extension-renew").addEventListener("click",()=>this.renew());
+  }
   async renew() {
     if(!globalThis.confirm?.("Eşleşme kodu yenilensin mi? Eklentiye yeni kodu yeniden yazmanız gerekecek.")) return;
     this.sequence++;
@@ -108,6 +135,16 @@ export class ExtensionSettings {
     catch(error) {if(error.stale) return;this.message=error.message;}
     this.sequence++;
     this.draw();
+  }
+}
+
+/** Veri → Okuma denemeleri: the extension's sites, speed and trial readings. */
+export class ExtensionReading extends ExtensionBase {
+  draw() {
+    this.container.innerHTML=extensionReading(this.view,{message:this.message,trial:this.trial,problems:this.problems});
+    this.container.querySelector("#extension-speed").addEventListener("submit",event=>{event.preventDefault();this.speed();});
+    this.container.querySelector("#extension-trial").addEventListener("click",()=>this.runTrial());
+    this.container.querySelector("#extension-problems").addEventListener("click",()=>this.runProblems());
   }
   async speed() {
     const value=Number(this.container.querySelector("#extension-gap").value);

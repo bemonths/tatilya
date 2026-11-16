@@ -1,148 +1,422 @@
-"""The workflow of a video (GÖREV-14): eight steps with live statuses for the sidebar.
+"""The steps of a video and their stored statuses (GÖREV-21; after Rota Stüdyo `rota/state.py` and its TASARIM 6.2, kept in SQLite).
 
-The unit of the workflow is a video record (Housing Atlas uses a state). Statuses are not kept in a file; they are computed from the records
-every time (the video record, Claude runs, evidence packs, collector runs), so what the sidebar shows cannot drift from what is stored.
+The program has two layers. The project layer (the destination) holds what is done once and used by every video: the data, the topic
+bank, the channel's rules and the list of videos. The video layer holds one video's eight steps:
 
-Status codes follow Housing Atlas (TASARIM 6.2): waiting, ready, running, awaiting_approval, approved, done, error, stale; and two of
-our own: `due` (Veri: a collector's suggested interval passed) and `planned` (the step is not built yet). Each step carries the "Sıradaki
-iş" line its screen starts with: what has to be done and which button does it.
+| No | key | Adım | Onay |
+|---|---|---|---|
+| 1 | baslik | Başlık ve vaat | evet |
+| 2 | paket | Veri paketi | hayır (bitince tamamlandı) |
+| 3 | plan | Plan | evet |
+| 4 | yazim | Yazım | hayır |
+| 5 | kontrol | Kontrol ve ton seçimi | evet |
+| 6 | yayin | Yayın paketi | henüz yok |
+| 7 | ses | Seslendirme | henüz yok |
+| 8 | kurgu | Kurgu paketi | henüz yok |
+
+Statuses (`video_steps.status`): waiting (bekliyor), ready (hazır), running (çalışıyor), awaiting_approval (onay bekliyor), approved
+(onaylandı), done (tamamlandı), error (hata), stale (eskidi). Rules:
+- The first step starts ready, the others waiting (a video opened from the topic bank starts with its first step awaiting approval).
+- When a step is approved (a step without approval: done) the next step, if it waits, becomes ready; when the step leaves that state
+  (run again, rejected) a next step that is ready waits again: nothing starts before the approval.
+- When a step's approved output changes, the later steps that have an output (awaiting approval, approved, done) become stale with a
+  Turkish reason ("Plan onayı değişti."); outputs are never deleted. The user runs the step again or says "Bu değişiklik etkilemiyor":
+  the step returns to the status it had and the note goes to the status log.
+- A step that looks running while no work of it runs (the program closed half way) becomes error and can be resumed.
+Every change and every decision is a dated Turkish sentence in `video_step_log`.
+
+Steps 6–8 are not built yet: they stay waiting and their screens say "Sonraki görevde gelecek".
 """
-from . import refresh
-from .ai import store, title_review
+import json
+from datetime import datetime, timezone
+
 from .evidence.pack import latest_done_run, moment
-from .text import store as text_store
 
 STATUS_LABELS = {"waiting": "bekliyor", "ready": "hazır", "running": "çalışıyor", "awaiting_approval": "onay bekliyor",
-                 "approved": "onaylandı", "done": "tamamlandı", "error": "hata", "stale": "eskidi", "due": "güncelleme zamanı geldi",
-                 "planned": "planlanan", "paused": "duraklatıldı"}
-COMPLETE = ("approved", "done")
-TITLE_STEPS = ("baslik", "baslik_degerlendirme")
+                 "approved": "onaylandı", "done": "tamamlandı", "error": "hata", "stale": "eskidi"}
 STEPS = (
-    ("veri", "Veri"),
-    ("baslik", "Konu ve başlık"),
+    ("baslik", "Başlık ve vaat"),
     ("paket", "Veri paketi"),
-    ("metin", "Video metni"),
-    ("kontrol", "Kontrol"),
-    ("gorsel", "Görsel plan"),
-    ("uretim", "Video üretimi"),
-    ("yayin", "Yayın hazırlığı"),
+    ("plan", "Plan"),
+    ("yazim", "Yazım"),
+    ("kontrol", "Kontrol ve ton seçimi"),
+    ("yayin", "Yayın paketi"),
+    ("ses", "Seslendirme"),
+    ("kurgu", "Kurgu paketi"),
 )
-PLANNED = {"kontrol", "gorsel", "uretim", "yayin"}
-HREFS = {"baslik": "#videos"}   # the topic and title step is the Videolar screen (proposals, approval, video records)
-PLANNED_NEXT = "Bu adım henüz kurulmadı (planlanan). Şimdilik yapılacak iş yok."
+KEYS = tuple(key for key, _ in STEPS)
+TITLES = dict(STEPS)
+APPROVAL = frozenset({"baslik", "plan", "kontrol"})
+PLANNED_NOTE = "Sonraki görevde gelecek"
+PLANNED = {
+    "yayin": "Yayın paketi: videonun son başlığı, açıklaması, etiketleri ve sabit yorumu. Onaylanan metinden ve seçilen tondan üretilecek.",
+    "ses": "Seslendirme: seçilen tonun İngilizce seslendirme metninden anlatım sesi ve zaman damgaları.",
+    "kurgu": "Kurgu paketi: Kurgu Motoru'na gidecek paket (metin, cümle kimlikleri, ses ve veri kayıtları). Stok görüntü, animasyon ve "
+             "kurgu bu programda değil, Kurgu Motoru'nda yapılır.",
+}
+WITH_OUTPUT = frozenset({"awaiting_approval", "approved", "done"})
+COMPLETE = frozenset({"approved", "done"})
+INTERRUPTED = "Program kapanırken yarıda kaldı; kaldığı yerden sürdürebilirsiniz."
+FIELDS = ("note", "error", "ref", "inputs")
+REASONS = {"baslik": "Başlık onayı değişti.", "paket": "Veri paketi değişti.", "plan": "Plan onayı değişti.", "yazim": "Yazım değişti.",
+           "veri": "Veri paketten sonra yeniden çekildi."}
 
 
-def step(key, title, number, status, next_text, label=None, detail=None):
-    return {"id": key, "number": number, "title": title, "status": status, "label": label or STATUS_LABELS[status],
-            "next": next_text, "detail": detail, "planned": key in PLANNED, "href": HREFS.get(key, f"#adim/{key}")}
+class StateError(ValueError):
+    pass
 
 
-def data_step(db, destination_id, jobs, today=None):
-    if any(j["kind"] == "source_collection" and j["status"] in ("queued", "running") for j in jobs):
-        return "running", "Veri toplanıyor. İş bitince durum kendiliğinden güncellenir; ilerlemesi İşler panelinde.", None
-    current = refresh.status(db, destination_id, today)
-    if current["batch"] and current["batch"]["status"] == "running":
-        return "running", "Zamanı gelen kaynaklar sırayla çekiliyor; ilerlemesi İşler panelinde.", None
-    if current["due_count"]:
-        names = ", ".join(i["source_name"] for i in current["items"] if i["due"])
-        return ("due", f"Güncelleme zamanı gelen {current['due_count']} kaynak var: aşağıdaki 'Zamanı gelenleri başlat' düğmesine bas.",
-                names)
-    if latest_done_run(db, destination_id) is None:
-        return "waiting", "Henüz veri çekilmedi: Veri toplama ekranından kaynakları çek.", None
-    return "done", "Veri güncel; yapılacak iş yok. Sonraki adım: Konu ve başlık.", None
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
-def title_step(db, destination_id, video, has_data):
-    if video:
-        return "approved", f"Başlık seçildi: “{video['title_en']}”. Sonraki adım: Veri paketi.", None
-    runs = [r for r in store.runs(db, destination_id) if r["step"] in TITLE_STEPS]
-    if any(r["status"] == "running" for r in runs):
-        return "running", "Claude çalışıyor. Bitince öneriler bu ekranda onay için görünür; ilerlemesi İşler panelinde.", None
-    # GÖREV-15 Adım 1d: an evaluation without candidates ("veriyle dolmuyor") has nothing to approve; it is information, not waiting
-    waiting = [r for r in runs if r["status"] == "awaiting_approval" and not title_review.without_candidates(db.path.parent, r)]
-    if waiting:
-        return ("awaiting_approval", "Başlık seçilmedi: onay bekleyen öneriden bir başlık seç (“Bu başlığı seç”) ya da yeni öneri al.",
-                f"{len(waiting)} çalışma onay bekliyor")
-    if runs and runs[0]["status"] == "error":
-        return ("error", "Son Claude çalışması hata verdi: sebebini çalışmanın ekranında oku, sonra yeniden çalıştır.",
-                runs[0].get("error"))
-    if not has_data:
-        return "waiting", "Önce veri gerekiyor: 1. adımdan (Veri) kaynakları çek.", None
-    if runs and title_review.without_candidates(db.path.parent, runs[0]):
-        return ("ready", "Son değerlendirme: fikir veriyle dolmuyor (bilgi). Yeni öneri al ya da başka bir başlık yaz; değerlendirmeyi "
-                "“Reddet” ile kapatabilirsin.", title_review.NO_CANDIDATES_TEXT)
-    chosen = [r for r in runs if r["status"] == "approved"]
-    if chosen:
-        return ("ready", "Üst çubuktan bir video seç ya da yeni öneri al (“Öneri al”) veya kendi başlığını yaz.", None)
-    return "ready", "Henüz başlık önerisi yok: bölgeyi seçip “Öneri al” düğmesine bas ya da kendi başlığını yaz.", None
+def label(step):
+    return f"{KEYS.index(step) + 1} · {TITLES[step]}"
 
 
-def pack_step(db, destination_id, video):
-    if not video:
-        return "waiting", "Önce bir başlık seç (2. adım: Konu ve başlık); paket seçilen başlığın içerik planından kurulur.", None
-    packs = video.get("packs") or []
-    if not packs:
-        return "ready", "Bu videonun veri paketi yok: “Kanıt paketi üret” düğmesine bas.", None
-    latest = latest_done_run(db, destination_id)
-    made = moment(packs[0]["created_at"])
-    if latest and (made is None or made < moment(latest)):
-        return "stale", "Paket verinin son çekiminden eski: “Kanıt paketi üret” ile yeniden üret.", "veri paketten sonra yeniden çekildi"
-    return "done", "Paket hazır. Sonraki adım: Video metni.", None
+def check_step(step):
+    if step not in KEYS:
+        raise StateError(f"Bilinmeyen adım: {step}.")
 
 
-def text_step(db, destination_id, video):
-    """GÖREV-15 (Adım 8): the video text's status from its runs, versions and the choice."""
-    if not video:
-        return "waiting", "Önce bir başlık seç ve paketini üret (2. ve 3. adım).", None
-    if not (video.get("packs") or []):
-        return "waiting", "Önce paket üretilmeli (3. adım: Veri paketi).", None
-    runs = text_store.runs(db, video["id"])
-    active = [r for r in runs if r["status"] in text_store.ACTIVE]
-    if active:
-        run = active[0]
-        if run["status"] == "waiting_limit":
-            return "running", run.get("reason_text") or "Claude kullanım sınırı bekleniyor; çalışma kendiliğinden sürecek.", "kullanım sınırı bekleniyor"
-        return "running", "Video metni yazılıyor; ilerlemesi İşler panelinde.", None
-    chosen = text_store.selection(db, video["id"])
-    if chosen:
-        version = text_store.version(db, chosen["version_id"])
-        latest = latest_done_run(db, destination_id)
-        newest_pack = (video.get("packs") or [{}])[0].get("id")
-        made = moment(version["created_at"])
-        if latest and made is not None and moment(latest) > made and newest_pack and newest_pack != version.get("pack_id"):
-            return ("stale", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Seçilen sürümden sonra veri yeniden çekildi ve "
-                    "paket değişti (bilgi).", "veri yeniden çekildi ve paket seçilen sürümden sonra değişti")
-        return ("done", f"Seçilen metin: {version['tone_name']} ({version['number']}. sürüm). Sonraki adım: Kontrol (henüz kurulmadı).", None)
-    if runs and runs[0]["status"] in ("paused", "interrupted", "error"):
-        run = runs[0]
-        reason = run.get("reason_text") or run["status_label"]
-        if run["status"] == "error":
-            return "error", f"Metin çalışması hata verdi: {reason}", reason
-        return "paused", f"Metin çalışması durdu: {reason} “Devam” ile sürdürün.", reason
-    if text_store.versions(db, video_id=video["id"]):
-        return ("awaiting_approval", "Karşılaştırma ekranında tonları karşılaştır ve “Bu tonla devam et” de.", None)
-    return "ready", "Ton seç ve “Metni yaz”a bas.", None
+# ---- rows (inside the caller's transaction) -----------------------------------------------------------------------------------
+
+def _rows(con, video_id):
+    return {r["step"]: dict(r) for r in con.execute("SELECT * FROM video_steps WHERE video_id=?", (video_id,))}
 
 
-def compute(db, destination_id, video_id=None, today=None):
-    """The workflow of the selected video (None: no video selected). Unknown video ids count as no selection."""
-    videos = store.videos(db, destination_id)
-    video = next((v for v in videos if v["id"] == video_id), None) if video_id else None
-    jobs = db.jobs(destination_id)
-    data_status, data_next, data_detail = data_step(db, destination_id, jobs, today)
-    has_data = latest_done_run(db, destination_id) is not None
-    computed = {"veri": (data_status, data_next, data_detail), "baslik": title_step(db, destination_id, video, has_data),
-                "paket": pack_step(db, destination_id, video), "metin": text_step(db, destination_id, video)}
-    steps = []
-    for number, (key, title) in enumerate(STEPS, 1):
-        if key in computed:
-            status, next_text, detail = computed[key]
-            label = "güncel" if key == "veri" and status == "done" else None
-            steps.append(step(key, title, number, status, next_text, label, detail))
+def _log(con, video_id, step, text):
+    con.execute("INSERT INTO video_step_log (video_id,step,at,text) VALUES (?,?,?,?)", (video_id, step, now(), text))
+
+
+def _update(con, video_id, step, **fields):
+    fields["updated_at"] = now()
+    con.execute(f"UPDATE video_steps SET {', '.join(f'{k}=?' for k in fields)} WHERE video_id=? AND step=?", (*fields.values(), video_id, step))
+
+
+def init(con, video_id, statuses=None, note="Video açıldı."):
+    """The step rows of a new video: the first step ready, the others waiting (`statuses` overrides: {step: status or (status, ref)})."""
+    statuses = statuses or {}
+    for index, key in enumerate(KEYS):
+        given = statuses.get(key, "ready" if index == 0 else "waiting")
+        status, ref = given if isinstance(given, tuple) else (given, None)
+        con.execute("INSERT INTO video_steps (video_id,step,status,ref,updated_at) VALUES (?,?,?,?,?)", (video_id, key, status, ref, now()))
+    _log(con, video_id, None, note)
+
+
+def seed(con, video_id, note="Adım durumları videonun kayıtlarından çıkarıldı."):
+    """The steps of a video that has none yet (a video made before schema 21), from its records."""
+    video = con.execute("SELECT * FROM videos WHERE id=?", (video_id,)).fetchone()
+    if video is None:
+        raise KeyError(video_id)
+    titled = bool(video["title_en"])
+    pack = con.execute("SELECT id FROM evidence_packs WHERE video_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1", (video_id,)).fetchone()
+    runs = [dict(r) for r in con.execute("SELECT id,status,reason,plan,state FROM text_runs WHERE video_id=? ORDER BY created_at DESC, rowid DESC",
+                                         (video_id,))]
+    versions = con.execute("SELECT COUNT(*) FROM text_versions WHERE video_id=?", (video_id,)).fetchone()[0]
+    chosen = con.execute("SELECT 1 FROM text_selections WHERE video_id=? LIMIT 1", (video_id,)).fetchone()
+    found = {"baslik": "approved" if titled else "ready",
+             "paket": ("done", pack["id"]) if pack else "ready" if titled else "waiting"}
+    planned = next((r for r in runs if r["plan"]), None)
+    latest = runs[0] if runs else None
+    active = ("running", "waiting_limit")
+    plan_done = False
+    if planned:
+        waiting = planned["status"] == "paused" and planned["reason"] == "plan_hazir" and not versions
+        approved = bool(json.loads(planned["state"] or "{}").get("plan_onaylandi"))
+        if waiting and not approved:
+            found["plan"] = ("awaiting_approval", planned["id"])
         else:
-            steps.append(step(key, title, number, "planned", PLANNED_NEXT))
-    completed = sum(1 for s in steps if s["status"] in COMPLETE)
-    return {"video": video and {k: video[k] for k in ("id", "title_en", "title_tr", "region_name", "status", "status_label")},
-            "videos": [{"id": v["id"], "title_en": v["title_en"], "title_tr": v["title_tr"], "region_name": v["region_name"]} for v in videos],
-            "steps": steps, "completed": completed, "total": len(steps),
-            "dots": "".join("●" if s["status"] in COMPLETE else "○" for s in steps)}
+            plan_done = True
+            found["plan"] = ("approved", planned["id"])
+            if not approved:      # the old chain wrote on without an approval: its plans count as approved
+                con.execute("UPDATE text_runs SET state=json_set(state,'$.plan_onaylandi',json('true')) WHERE id=?", (planned["id"],))
+    elif latest:
+        found["plan"] = ("running" if latest["status"] in active else "error", latest["id"])
+    else:
+        found["plan"] = "ready" if pack else "waiting"
+    if versions:
+        found["yazim"] = ("done", (planned or latest or {}).get("id"))
+    elif plan_done:
+        found["yazim"] = (("running" if latest["status"] in active else "error" if latest["status"] in ("paused", "interrupted", "error")
+                           else "ready"), planned["id"])
+    else:
+        found["yazim"] = "waiting"
+    found["kontrol"] = "approved" if chosen and versions else "awaiting_approval" if versions else "waiting"
+    init(con, video_id, found, note)
+
+
+def ensure(con, video_id):
+    rows = _rows(con, video_id)
+    if len(rows) < len(KEYS):
+        if rows:
+            for index, key in enumerate(KEYS):       # a step added by a later version: its starting status
+                if key not in rows:
+                    con.execute("INSERT INTO video_steps (video_id,step,status,updated_at) VALUES (?,?,?,?)", (video_id, key, "waiting", now()))
+        else:
+            seed(con, video_id)
+        rows = _rows(con, video_id)
+    return rows
+
+
+def _check_set(step, status):
+    check_step(step)
+    if status not in STATUS_LABELS:
+        raise StateError(f"Bilinmeyen adım durumu: {status}.")
+    if status == "stale":
+        raise StateError("Eskime yalnızca girdiler değişince işaretlenir.")
+    if step in PLANNED and status != "waiting":
+        raise StateError(f"{label(step)} adımı henüz kurulmadı.")
+    if status in ("awaiting_approval", "approved") and step not in APPROVAL:
+        raise StateError(f"{label(step)} adımında onay yok; '{STATUS_LABELS[status]}' durumuna geçemez.")
+    if status == "done" and step in APPROVAL:
+        raise StateError(f"{label(step)} adımı onaylıdır; bitince 'onay bekliyor' durumuna geçer.")
+
+
+def _apply_set(con, video_id, step, status, values):
+    rows = ensure(con, video_id)
+    old = rows[step]["status"]
+    fields = {k: v for k, v in values.items() if k in FIELDS}
+    if status != "error" and "error" not in fields:
+        fields["error"] = None
+    _update(con, video_id, step, status=status, stale_reason=None, status_before_stale=None, **fields)
+    if old != status:
+        _log(con, video_id, step, f"{label(step)}: {STATUS_LABELS[old]} → {STATUS_LABELS[status]}.")
+    index = KEYS.index(step)
+    if index + 1 < len(KEYS) and KEYS[index + 1] not in PLANNED:
+        following = KEYS[index + 1]
+        current = rows[following]["status"]
+        if status in COMPLETE and current == "waiting":
+            _update(con, video_id, following, status="ready")
+            _log(con, video_id, following, f"{label(following)}: bekliyor → hazır.")
+        elif status not in COMPLETE and current == "ready":
+            _update(con, video_id, following, status="waiting")
+            _log(con, video_id, following, f"{label(following)}: hazır → bekliyor.")
+
+
+def _apply_stale(con, video_id, step, reason, only=False):
+    rows = ensure(con, video_id)
+    staled = []
+    for later in ((step,) if only else KEYS[KEYS.index(step):]):
+        row = rows[later]
+        if row["status"] in WITH_OUTPUT:
+            _update(con, video_id, later, status="stale", status_before_stale=row["status"], stale_reason=reason)
+            staled.append(label(later))
+        elif row["status"] == "stale":
+            previous = row["stale_reason"]
+            if not previous:
+                _update(con, video_id, later, stale_reason=reason)
+            elif reason not in previous:
+                _update(con, video_id, later, stale_reason=f"{previous} {reason}")
+            staled.append(label(later))
+    if staled:
+        _log(con, video_id, step, f"Girdiler değişti ({reason}) Eskiyen adımlar: {', '.join(staled)}.")
+    return staled
+
+
+# ---- the public functions (each is one transaction) -------------------------------------------------------------------------------
+
+def steps(db, video_id):
+    with db.connect() as con:
+        con.execute("BEGIN IMMEDIATE")
+        return ensure(con, video_id)
+
+
+def step(db, video_id, key):
+    check_step(key)
+    return steps(db, video_id)[key]
+
+
+def set_step(db, video_id, key, status, *, stale_from=None, reason="", log=None, **values):
+    """Sets a step's status (and the next step's by the rules); `stale_from`: the later steps with an output become stale with
+    `reason`; `log`: one more sentence for the status log (a decision with its note)."""
+    _check_set(key, status)
+    if stale_from is not None:
+        check_step(stale_from)
+        if KEYS.index(stale_from) <= KEYS.index(key):
+            raise StateError(f"Eskime {label(key)} adımından sonraki bir adımdan başlamalı.")
+        if not reason:
+            raise StateError("Eskime sebebi gerekli.")
+    with db.connect() as con:
+        con.execute("BEGIN IMMEDIATE")
+        _apply_set(con, video_id, key, status, values)
+        if stale_from is not None:
+            _apply_stale(con, video_id, stale_from, reason)
+        if log:
+            _log(con, video_id, key, log)
+        return _rows(con, video_id)
+
+
+def mark_stale(db, video_id, key, reason, *, only=False):
+    check_step(key)
+    with db.connect() as con:
+        con.execute("BEGIN IMMEDIATE")
+        _apply_stale(con, video_id, key, reason, only)
+        return _rows(con, video_id)
+
+
+def clear_stale(db, video_id, key, note="", inputs=None):
+    """"Bu değişiklik etkilemiyor": the step returns to the status it had; the decision and the note go to the status log."""
+    check_step(key)
+    with db.connect() as con:
+        con.execute("BEGIN IMMEDIATE")
+        row = ensure(con, video_id)[key]
+        if row["status"] != "stale":
+            raise StateError(f"{label(key)} adımı eskimiş değil; eskimeyi kaldırmaya gerek yok.")
+        fields = {"inputs": inputs} if inputs is not None else {}
+        _update(con, video_id, key, status=row["status_before_stale"] or "ready", status_before_stale=None, stale_reason=None, **fields)
+        _log(con, video_id, key, f"{label(key)}: eskime kaldırıldı (“Bu değişiklik etkilemiyor”). Sebep: {row['stale_reason'] or '—'} "
+                                 f"Not: {(note or '').strip() or 'yok'}")
+        return _rows(con, video_id)
+
+
+def log(db, video_id, key, text):
+    with db.connect() as con:
+        _log(con, video_id, key, text)
+
+
+def history(db, video_id, limit=200):
+    with db.connect() as con:
+        return [dict(r) for r in con.execute("SELECT id,step,at,text FROM video_step_log WHERE video_id=? ORDER BY id DESC LIMIT ?",
+                                             (video_id, limit))]
+
+
+def active_steps(db):
+    """(video id, step) of the work that runs now: a text run (its plan or its writing) and a title run started from a video."""
+    with db.connect() as con:
+        found = set()
+        for row in con.execute("SELECT video_id, state FROM text_runs WHERE status IN ('running','waiting_limit')"):
+            approved = bool(json.loads(row["state"] or "{}").get("plan_onaylandi"))
+            found.add((row["video_id"], "yazim" if approved else "plan"))
+        for row in con.execute("SELECT json_extract(params,'$.video_id') FROM claude_runs WHERE status='running'"):
+            if row[0]:
+                found.add((row[0], "baslik"))
+    return found
+
+
+def recover(db, video_id=None):
+    """A step that looks running while none of its work runs becomes error (the program closed half way)."""
+    active = active_steps(db)
+    with db.connect() as con:
+        con.execute("BEGIN IMMEDIATE")
+        rows = con.execute("SELECT video_id, step FROM video_steps WHERE status='running' AND (? IS NULL OR video_id=?)",
+                           (video_id, video_id)).fetchall()
+        for row in rows:
+            if (row["video_id"], row["step"]) in active:
+                continue
+            _update(con, row["video_id"], row["step"], status="error", error=INTERRUPTED)
+            _log(con, row["video_id"], row["step"], f"{label(row['step'])} adımı çalışıyor görünüyordu ama çalışan işi yoktu; durumu hata "
+                                                    f"yapıldı: {INTERRUPTED}")
+
+
+def pack_built(db, video_id, pack_id):
+    """The video's pack was made (again): the pack step is done and the later steps that have an output are stale."""
+    return set_step(db, video_id, "paket", "done", ref=pack_id, inputs=None, stale_from="plan", reason=REASONS["paket"])
+
+
+def writing_done(db, video_id, run_id):
+    """Every chosen tone is written: the writing is done and the check opens for approval (an approved check becomes stale)."""
+    with db.connect() as con:
+        con.execute("BEGIN IMMEDIATE")
+        _apply_set(con, video_id, "yazim", "done", {"ref": run_id, "note": None})
+        check = _rows(con, video_id)["kontrol"]
+        if check["status"] == "approved" or (check["status"] == "stale" and check["status_before_stale"] == "approved"):
+            _apply_stale(con, video_id, "kontrol", REASONS["yazim"])
+        else:
+            _apply_set(con, video_id, "kontrol", "awaiting_approval", {"ref": run_id})
+
+
+def choice_valid(db, video_id):
+    """Is the chosen text (the tone picked with the check's approval) still the video's choice?"""
+    row = step(db, video_id, "kontrol")
+    return row["status"] == "approved" or (row["status"] == "stale" and row["status_before_stale"] == "approved")
+
+
+def check_data(db, destination_id, video_id, rows):
+    """The pack step becomes stale when the data was collected again after the video's pack was made (once per collection: a cleared
+    staleness remembers the collection it was cleared for)."""
+    row = rows["paket"]
+    if row["status"] != "done" or not row["ref"]:
+        return rows
+    latest = latest_done_run(db, destination_id)
+    if not latest:
+        return rows
+    with db.connect() as con:
+        pack = con.execute("SELECT created_at FROM evidence_packs WHERE id=?", (row["ref"],)).fetchone()
+    made = moment(pack["created_at"]) if pack else None
+    seen = moment(row["inputs"]) if row["inputs"] else None
+    newest = moment(latest)
+    if made is None or newest is None or newest <= made or (seen is not None and newest <= seen):
+        return rows
+    return mark_stale(db, video_id, "paket", REASONS["veri"], only=True)
+
+
+# ---- what the sidebar and the step screens read ---------------------------------------------------------------------------------------
+
+NEXT = {
+    ("baslik", "ready"): "Bu videonun başlığını seç: konu bankasından bir aday al ya da kendi başlığını yazıp Claude'a değerlendirt.",
+    ("baslik", "running"): "Claude başlığı değerlendiriyor; bitince adaylar bu ekranda görünür.",
+    ("baslik", "awaiting_approval"): "Başlığı ve vaadi oku; uygunsa “Onayla”, değişmesi gerekiyorsa notunu yazıp “Düzeltme iste”.",
+    ("baslik", "approved"): "Başlık onaylandı. Sonraki adım: 2 · Veri paketi.",
+    ("baslik", "error"): "Son Claude çalışması hata verdi; sebebi aşağıda. Yeniden deneyebilir ya da bankadan bir başlık seçebilirsin.",
+    ("paket", "waiting"): "Önce 1 · Başlık ve vaat adımı onaylanmalı.",
+    ("paket", "ready"): "“Veri paketini üret” düğmesine bas; Claude çalışmaz.",
+    ("paket", "done"): "Veri paketi hazır. Sonraki adım: 3 · Plan.",
+    ("paket", "error"): "Veri paketi üretilemedi; sebebi aşağıda. “Veri paketini üret” ile yeniden dene.",
+    ("plan", "waiting"): "Önce 2 · Veri paketi adımı bitmeli.",
+    ("plan", "ready"): "“Planı çıkar” düğmesine bas; tahmin düğmenin üstünde yazar.",
+    ("plan", "running"): "Claude planı yazıyor; harcama ve “İptal” aşağıda.",
+    ("plan", "awaiting_approval"): "Planı oku; uygunsa “Onayla”. Onaylanmadan yazım başlamaz.",
+    ("plan", "approved"): "Plan onaylandı. Sonraki adım: 4 · Yazım.",
+    ("plan", "error"): "Plan çalışması yarıda kaldı ya da hata verdi; “Kaldığı yerden sürdür” ile devam et ya da “Planı çıkar” ile yeniden başlat.",
+    ("yazim", "waiting"): "Önce 3 · Plan adımı onaylanmalı; plan onaylanmadan yazım başlamaz.",
+    ("yazim", "ready"): "Tonları seç ve “Yazımı başlat” düğmesine bas; tahmin düğmenin üstünde yazar.",
+    ("yazim", "running"): "Metin yazılıyor; halka tablosu ve “İptal” aşağıda.",
+    ("yazim", "done"): "Metin yazıldı. Sonraki adım: 5 · Kontrol ve ton seçimi.",
+    ("yazim", "error"): "Yazım yarıda kaldı ya da hata verdi; “Kaldığı yerden sürdür” biten halkaları yeniden çalıştırmadan devam eder.",
+    ("kontrol", "waiting"): "Önce 4 · Yazım adımı bitmeli.",
+    ("kontrol", "ready"): "“Kontrolü yeniden aç” ile karşılaştırmaya dön ya da 4 · Yazım adımında metni yeniden yazdır.",
+    ("kontrol", "awaiting_approval"): "Denetim bulgularına ve tonların karşılaştırmasına bak; devam edilecek tonu seçip “Onayla”.",
+    ("kontrol", "approved"): "Ton seçildi. Sonraki adımlar (6 · Yayın paketi, 7 · Seslendirme, 8 · Kurgu paketi) sonraki görevde gelecek.",
+}
+STALE_NEXT = "Bu adım eskidi. Yeniden çalıştır ya da değişiklik bu adımı etkilemiyorsa “Bu değişiklik etkilemiyor” de."
+
+
+def step_view(row, number):
+    key = row["step"]
+    planned = key in PLANNED
+    status = row["status"]
+    if planned:
+        next_text = f"{PLANNED_NOTE}. {PLANNED[key]}"
+    elif status == "stale":
+        next_text = STALE_NEXT
+    else:
+        next_text = NEXT.get((key, status), "")
+    return {"id": key, "number": number, "title": TITLES[key], "status": status,
+            "label": PLANNED_NOTE.lower() if planned else STATUS_LABELS[status], "next": next_text,
+            "detail": row["stale_reason"] if status == "stale" else row["error"] if status == "error" else None,
+            "planned": planned, "approval": key in APPROVAL, "stale_reason": row["stale_reason"],
+            "status_before_stale": row["status_before_stale"], "note": row["note"], "error": row["error"], "ref": row["ref"],
+            "updated_at": row["updated_at"]}
+
+
+def progress(rows):
+    return {"completed": sum(1 for key in KEYS if rows[key]["status"] in COMPLETE), "total": len(KEYS)}
+
+
+def compute(db, destination_id, video_id):
+    """The open video's eight steps for the sidebar and the screens (None: no video). An unknown or foreign video counts as none."""
+    from .ai import store
+    video = store.video(db, video_id) if video_id else None
+    if video is None or video["destination_id"] != destination_id:
+        return {"video": None, "steps": [], "completed": 0, "total": len(KEYS)}
+    recover(db, video_id)
+    rows = check_data(db, destination_id, video_id, steps(db, video_id))
+    return {"video": {k: video.get(k) for k in ("id", "name", "title_en", "title_tr", "region_name", "created_at", "archived_at")}
+            | {"display_name": display_name(video)},
+            "steps": [step_view(rows[key], number) for number, key in enumerate(KEYS, 1)], **progress(rows)}
+
+
+def display_name(video):
+    """The name a video is shown with: its Turkish title, else its working name."""
+    return video.get("title_tr") or video.get("name") or "Adsız video"

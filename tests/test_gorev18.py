@@ -9,7 +9,8 @@ import pytest
 from studio.ai import budget, settings as claude_settings, single, title_marks
 from studio.text import audit, businesses, document as D
 from tests.test_claude_steps import FAKE, app, calls, finished, folder, start  # noqa: F401
-from tests.text_helpers import add_video, open_app, sessions, start_text, text_env, text_job, wait_run  # noqa: F401
+from tests.text_helpers import (add_video, decide, open_app, sessions, start_plan, start_text, start_writing, text_env, text_job,  # noqa: F401
+                                wait_run)
 from tests.text_helpers import app as text_app  # noqa: F401
 
 TWO = ("arastirmaci_dost", "hikaye_anlaticisi")
@@ -160,13 +161,23 @@ def test_model_and_effort_are_unchanged_and_the_sessions_default_is_six(tmp_path
 
 def test_two_tones_end_to_end_every_call_one_turn_without_tools_and_the_call_count(text_app):
     add_video(text_app)
-    estimate = text_app.post("/api/videos/v1/metin/tahmin", json={"tonlar": list(TWO)}).json()
+    # GÖREV-21: the plan and the writing are two steps, each with its own estimate and its own job
+    plan_estimate = text_app.post("/api/videos/v1/plan/tahmin", json={}).json()
+    assert [r["baslik"] for r in plan_estimate["satirlar"]] == ["Plan"] and plan_estimate["satirlar"][0]["cagri"] == 2
+    assert plan_estimate["metin"].startswith("Plan: 2 çağrı, yaklaşık ")
+    planned = start_plan(text_app)
+    assert planned["status"] == "paused" and planned["reason"] == "plan_hazir"
+    plan_job = text_job(text_app, settled=True)
+    assert plan_job["status"] == "done" and plan_job["result"]["harcama"]["gercek"]["cagri"] == 2
+    assert plan_job["result"]["harcama"]["tahmin"] == plan_estimate["toplam"]["toplam"]
+    assert decide(text_app, "plan").status_code == 200
+    estimate = text_app.post("/api/videos/v1/yazim/tahmin", json={"tonlar": list(TWO)}).json()
     lines = {r["baslik"]: r for r in estimate["satirlar"]}
-    assert list(lines) == ["Plan", "Araştırmacı dost", "Hikâye anlatıcısı"] and lines["Plan"]["cagri"] == 2
-    assert lines["Araştırmacı dost"]["cagri"] == 5 + 3 + 1                    # 5 sections from the title's plan, merge, ends, final, 1 chunk
-    assert estimate["metin"].startswith("Plan: 2 çağrı, yaklaşık ") and "Toplam: yaklaşık " in estimate["metin"]
-    view = start_text(text_app, TWO)
-    assert view["status"] == "awaiting_comparison"
+    assert list(lines) == ["Araştırmacı dost", "Hikâye anlatıcısı"]             # the plan is approved: no plan calls
+    assert lines["Araştırmacı dost"]["cagri"] == 6 + 3 + 1                    # the plan's 6 sections, merge, ends, final, 1 chunk
+    assert "Toplam: yaklaşık " in estimate["metin"]
+    view = start_writing(text_app, TWO)
+    assert view["status"] == "awaiting_comparison" and view["id"] == planned["id"]      # the plan's own run goes on
     done = [s for s in view["oturumlar"] if s["status"] == "done"]
     assert len(done) == 2 + 2 * (6 + 3 + 1) == len(view["oturumlar"])        # the fake plan has 6 sections; one chunk per tone
     for session in done:
@@ -177,8 +188,8 @@ def test_two_tones_end_to_end_every_call_one_turn_without_tools_and_the_call_cou
         assert record["tahmin"]["okunan"] > 0
     job = text_job(text_app, settled=True)
     texts = [e["text"] for e in job["log"]]
-    assert job["result"]["harcama"]["gercek"]["cagri"] == 22 and job["result"]["harcama"]["tahmin"] == estimate["toplam"]["toplam"]
-    assert any(t.startswith("Tahmin: Plan: 2 çağrı") for t in texts) and any(t.startswith("Harcama: tahmin ") for t in texts)
+    assert job["result"]["harcama"]["gercek"]["cagri"] == 20 and job["result"]["harcama"]["tahmin"] == estimate["toplam"]["toplam"]
+    assert any(t.startswith("Tahmin: Araştırmacı dost: 10 çağrı") for t in texts) and any(t.startswith("Harcama: tahmin ") for t in texts)
     assert any("istem hazırlandı (yaklaşık " in t for t in texts) and any(": cevap geldi (" in t for t in texts)
     assert not any(t.startswith("Tur ") for t in texts)
 
@@ -199,17 +210,23 @@ def test_the_plan_sections_and_translation_get_their_files_unchanged(text_app, m
 
 def test_the_job_limit_stops_the_chain_and_devam_goes_on(text_app, monkeypatch):
     add_video(text_app)
+    planned = start_plan(text_app)
+    assert planned["reason"] == "plan_hazir" and decide(text_app, "plan").status_code == 200
     assert text_app.put("/api/settings/claude", json={"claude_job_limit": 100_000}).status_code == 200
-    refused = text_app.post("/api/videos/v1/metin", json={"tonlar": list(TWO)})
+    refused = text_app.post("/api/videos/v1/yazim", json={"tonlar": list(TWO)})
     assert refused.status_code == 409 and "Tahmin token sınırını aşıyor" in refused.json()["detail"]
-    assert text_app.put("/api/settings/claude", json={"claude_job_limit": 400_000}).status_code == 200
-    one = text_app.post("/api/videos/v1/metin/tahmin", json={"tonlar": ["arastirmaci_dost"]}).json()
+    assert text_app.get("/api/videos/v1/adimlar/yazim").json()["adim"]["status"] == "ready"       # nothing started
+    # one writer at a time, so the calls of the writing come one after the other
+    assert text_app.put("/api/settings/claude", json={"claude_job_limit": 400_000, "claude_max_sessions": 1}).status_code == 200
+    one = text_app.post("/api/videos/v1/yazim/tahmin", json={"tonlar": ["arastirmaci_dost"]}).json()
     assert one["baslatilabilir"] and one["toplam"]["toplam"] < 400_000
     monkeypatch.setenv("FAKE_CLAUDE_TOKENS", "200000,1000")                     # every call reads 200 thousand: far more than estimated
-    view = start_text(text_app)
+    view = start_writing(text_app)
     assert view["status"] == "paused" and view["reason"] == "token_siniri" and view["reason_text"].startswith("Token sınırına ulaşıldı")
     first = [s for s in view["oturumlar"] if s["status"] == "done"]
-    assert [s["step"] for s in first] == ["metin_plan", "metin_plan_elestiri"]   # 402 thousand after two calls: no third call
+    # the limit counts from the start of the job (the writing): 402 thousand after two sections, no third call
+    assert [s["step"] for s in first] == ["metin_plan", "metin_plan_elestiri", "metin_bolum", "metin_bolum"]
+    assert text_app.get("/api/videos/v1/adimlar/yazim").json()["adim"]["status"] == "error"       # GÖREV-21: the step says so and can go on
     job = text_job(text_app, settled=True)
     assert job["status"] == "failed" and job["result"]["harcama"]["gercek"]["toplam"] == 402_000
     monkeypatch.setenv("FAKE_CLAUDE_TOKENS", "1000,500")
@@ -223,14 +240,14 @@ def test_the_job_limit_stops_the_chain_and_devam_goes_on(text_app, monkeypatch):
 def test_a_text_call_over_the_call_limit_pauses_the_run(text_app, monkeypatch):
     add_video(text_app)
     assert text_app.put("/api/settings/claude", json={"claude_call_limit": 20_000}).status_code == 200
-    refused = text_app.post("/api/videos/v1/metin", json={"tonlar": ["arastirmaci_dost"]})
+    refused = text_app.post("/api/videos/v1/plan", json={})
     assert refused.status_code == 409 and "tek çağrı sınırı" in refused.json()["detail"]
     # a call that is bigger than its estimate said is still not sent: the run pauses before it
     from studio.text import engine
     passing = {"satirlar": [], "toplam": {"cagri": 1, "okunan": 1, "yazilan": 1, "toplam": 2}, "sinirlar": {}, "asiyor": [],
                "baslatilabilir": True, "metin": "deneme", "yeniden_deneme": 1}
     monkeypatch.setattr(engine.text_estimate, "estimate", lambda *a, **k: passing)
-    view = start_text(text_app)
+    view = start_plan(text_app)
     assert view["status"] == "paused" and view["reason"] == "cagri_siniri" and "tek çağrı sınırı" in view["reason_text"]
     assert [s["status"] for s in view["oturumlar"]] == ["failed"]
 

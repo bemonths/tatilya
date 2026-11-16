@@ -28,55 +28,75 @@ export function regionRows(hosts) {
     </tbody></table></div>`;
 }
 
-export function proxySection(view, {message="", test=null}={}) {
+/** Ayarlar → ABD proxy'si (GÖREV-21): only the connection details and whether the password is in the vault. */
+export function proxySection(view, {message=""}={}) {
   const notes=(view.notlar||[]).map(n=>`<p class="stage-note claude-warning">${esc(n)}</p>`).join("");
   return `<section class="info-card proxy-settings" id="abd-proxy"><span class="eyebrow">ABD PROXY'Sİ</span><h2 style="margin-top:12px">ABD proxy'si (bölge engeli için)</h2>
-    <p>Bazı siteler (ör. CVS, Publix, HCA) yalnız ABD içinden gelen ziyaretçiye hizmet veriyor; bu bilgisayardan da, eklentiyle de okunamıyor. Kendi ABD proxy'nizi buraya girerseniz program yalnız aşağıdaki listedeki alan adlarını bu proxy üzerinden okur; öbür bütün istekler doğrudan gider. Proxy bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz; adres döndürme yoktur. Hız kuralı aynıdır: aynı sitede iki sayfa arası en az 8 saniye. Proxy üzerinden doğrulama sayfası çıkarsa onu yine siz geçersiniz.</p>
+    <p>Bazı siteler yalnız ABD içinden gelen ziyaretçiye hizmet veriyor. Kendi ABD proxy'nizin bağlantı bilgilerini buraya girersiniz; program yalnız bölge engelli listedeki alan adlarını bu proxy üzerinden okur, öbür bütün istekler doğrudan gider. Proxy'nin denemesi ve bölge engelli alan adları listesi <a href="#veri/okuma">Veri → Okuma denemeleri</a> sekmesindedir.</p>
     <form id="proxy-form" class="video-form proxy-form" autocomplete="off">
       <label>Proxy adresi<input id="proxy-url" value="${esc(view.adres)}" placeholder="http://sunucu:port" spellcheck="false"><small class="muted">Şema http, https ya da socks5; ör. http://sunucu:8080. Kullanıcı adı ve parola adrese yazılmaz.</small></label>
       <label>Kullanıcı adı<input id="proxy-user" value="${esc(view.kullanici)}" spellcheck="false"></label>
-      <label>Parola<input id="proxy-password" type="password" placeholder="${view.parola_kayitli?"kayıtlı (değiştirmek için yazın)":""}" autocomplete="new-password"><small class="muted">${view.parola_kayitli?'<span class="tag green">kayıtlı</span> Windows Kimlik Bilgisi Yöneticisi\'nde; burada gösterilmez.':"Parola Windows Kimlik Bilgisi Yöneticisi'ne kaydedilir; hiçbir dosyaya yazılmaz."}</small></label>
-      <div class="decision-actions"><button type="submit" class="primary">Kaydet</button>${view.parola_kayitli?'<button type="button" class="quiet" id="proxy-forget">Parolayı sil</button>':""}<button type="button" id="proxy-test"${view.tanimli?"":" disabled"}>Proxy'yi dene</button></div>
+      <label>Parola<input id="proxy-password" type="password" placeholder="${view.parola_kayitli?"kayıtlı (değiştirmek için yazın)":""}" autocomplete="new-password"><small class="muted">${view.parola_kayitli?'<span class="tag green">kasada kayıtlı</span> Windows Kimlik Bilgisi Yöneticisi\'nde; burada gösterilmez.':"<span class=\"tag\">kasada yok</span> Parola Windows Kimlik Bilgisi Yöneticisi'ne kaydedilir; hiçbir dosyaya yazılmaz."}</small></label>
+      <div class="decision-actions"><button type="submit" class="primary">Kaydet</button>${view.parola_kayitli?'<button type="button" class="quiet" id="proxy-forget">Parolayı sil</button>':""}</div>
     </form>
     ${notes}
+    ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
+  </section>`;
+}
+
+/** Veri → Okuma denemeleri (GÖREV-21): the proxy's trial reading and the region-blocked domains (these were in Ayarlar → ABD proxy'si). */
+export function proxyReading(view, {message="", test=null}={}) {
+  return `<section class="info-card proxy-settings" id="proxy-reading"><span class="eyebrow">PROXY'YLE OKUMA</span><h2 style="margin-top:12px">Proxy'nin deneme okuması ve bölge engelli alan adları</h2>
+    <p>Proxy bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz; adres döndürme yoktur. Hız kuralı aynıdır: aynı sitede iki sayfa arası en az 8 saniye. Bağlantı bilgileri <a href="${settingsHref("proxy")}">Ayarlar → ABD proxy'si</a> bölümündedir${view.tanimli?"":" (henüz tanımlı değil)"}.</p>
+    <div class="decision-actions"><button type="button" id="proxy-test"${view.tanimli?"":" disabled"}>Proxy'yi dene</button><small class="muted">Proxy üzerinden çıkış adresini ve ülkesini gösterir.</small></div>
     ${testResult(test)}
     <h3>Bölge engelli alan adları</h3>
-    <p class="muted">Program bir sitede ABD dışı erişim engeli görünce alan adını bu listeye kendisi ekler (tarih ve engel sayfasının başlığıyla). Bu alan adları <a href="${settingsHref("eklenti")}">tarayıcı eklentisiyle</a> okunmaz; ABD proxy'si tanımlıysa önce proxy üzerinden doğrudan, olmazsa programın kendi tarayıcısıyla proxy üzerinden okunur; proxy yoksa atlanır ve kaydedilir.</p>
+    <p class="muted">Program bir sitede ABD dışı erişim engeli görünce alan adını bu listeye kendisi ekler (tarih ve engel sayfasının başlığıyla). Bu alan adları tarayıcı eklentisiyle okunmaz; ABD proxy'si tanımlıysa önce proxy üzerinden doğrudan, olmazsa programın kendi tarayıcısıyla proxy üzerinden okunur; proxy yoksa atlanır ve kaydedilir.</p>
     ${regionRows(view.bolge_engelli)}
     <form id="region-form" class="toolbar video-form"><label>Alan adı ekle<input id="region-host" placeholder="ör. winndixie.com" spellcheck="false"></label><button type="submit">Listeye ekle</button></form>
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
   </section>`;
 }
 
-export class ProxySettings {
+class ProxyBase {
   constructor(container) {this.container=container;this.view=null;this.message="";this.test=null;}
   async load(message="") {
     try {this.view=await api("abd-proxy");this.message=message;this.draw();}
     catch(error) {if(!error.stale) this.container.textContent=error.message;}
-  }
-  draw() {
-    this.container.innerHTML=proxySection(this.view,{message:this.message,test:this.test});
-    this.container.querySelector("#proxy-form").addEventListener("submit",event=>{event.preventDefault();this.save();});
-    this.container.querySelector("#proxy-forget")?.addEventListener("click",()=>this.forget());
-    this.container.querySelector("#proxy-test").addEventListener("click",()=>this.runTest());
-    this.container.querySelector("#region-form").addEventListener("submit",event=>{event.preventDefault();this.add();});
-    this.container.querySelectorAll("[data-region-remove]").forEach(button=>button.addEventListener("click",()=>this.remove(button.dataset.regionRemove)));
   }
   async call(path, options, done) {
     try {this.view=await api(path,options);this.message=done;}
     catch(error) {if(error.stale) return;this.message=error.message;}
     this.draw();
   }
+}
+
+/** Ayarlar → ABD proxy'si: the connection details. */
+export class ProxySettings extends ProxyBase {
+  draw() {
+    this.container.innerHTML=proxySection(this.view,{message:this.message});
+    this.container.querySelector("#proxy-form").addEventListener("submit",event=>{event.preventDefault();this.save();});
+    this.container.querySelector("#proxy-forget")?.addEventListener("click",()=>this.forget());
+  }
   async save() {
     const body={adres:this.container.querySelector("#proxy-url").value,kullanici:this.container.querySelector("#proxy-user").value};
     const password=this.container.querySelector("#proxy-password").value;
     if(password) body.parola=password;
-    this.test=null;
     await this.call("abd-proxy",{method:"PUT",body:JSON.stringify(body)},password?"Kaydedildi; parola Kimlik Bilgisi Yöneticisi'ne yazıldı.":"Kaydedildi.");
   }
   async forget() {
     if(!globalThis.confirm?.("Proxy parolası Windows Kimlik Bilgisi Yöneticisi'nden silinsin mi?")) return;
     await this.call("abd-proxy/parola",{method:"DELETE"},"Parola silindi.");
+  }
+}
+
+/** Veri → Okuma denemeleri: "Proxy'yi dene" and the region-blocked list. */
+export class ProxyReading extends ProxyBase {
+  draw() {
+    this.container.innerHTML=proxyReading(this.view,{message:this.message,test:this.test});
+    this.container.querySelector("#proxy-test").addEventListener("click",()=>this.runTest());
+    this.container.querySelector("#region-form").addEventListener("submit",event=>{event.preventDefault();this.add();});
+    this.container.querySelectorAll("[data-region-remove]").forEach(button=>button.addEventListener("click",()=>this.remove(button.dataset.regionRemove)));
   }
   async runTest() {
     this.test=null;this.message="Proxy deneniyor…";this.draw();

@@ -698,17 +698,18 @@ test('a pack lists its neighborhood by name whichever template is selected (GÖR
     section_count:8,evidence_count:1,number_count:1,missing_count:0,markdown_sha256:'a'.repeat(64),json_sha256:'b'.repeat(64)},choiceNames(templates)),/mahalle: Rosemary Beach/);
 });
 
-import {regionOptions, familyOptions, warnings, runRow, candidateList, candidateDetail, videoCard} from '../studio/web/videos.js';
+import {regionOptions, familyOptions, warnings, runRow, candidateList, candidateDetail, bankRuns} from '../studio/web/videos.js';
 import {claudeSection} from '../studio/web/claude.js';
-import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask} from '../studio/web/workflow.js';
+import {storedVideo, persistVideo, progressText, nextTask, statusTag} from '../studio/web/workflow.js';
+import {PROJECT_SCREENS, VERI_TABS, routeOf as layerRoute, redirectOf, projectNav, videoNav, sidebar, veriTabs, projectLabel, stepHref} from '../studio/web/layers.js';
 import {usageHtml, claudeProgress, progressText as claudeProgressText, durationText, claudeBar} from '../studio/web/usage.js';
 import {editorHtml, versionRows, fileButtons} from '../studio/web/instructions.js';
 import {suffixSection} from '../studio/web/claude.js';
 import {instructionLine} from '../studio/web/videos.js';
-import {editProblems, editForm, reviewSummary, runRow as videoRunRow, videoCard as videoCardOf} from '../studio/web/videos.js';
+import {editProblems, editForm, reviewSummary, runRow as videoRunRow} from '../studio/web/videos.js';
 import {packHead} from '../studio/web/workflow.js';
 import * as E from '../eklenti/logic.js';
-import {connectionText, extensionSection, trialRows} from '../studio/web/extension.js';
+import {connectionText, extensionSection, extensionReading, warmUpSection, trialRows} from '../studio/web/extension.js';
 
 const titleOptions={available:true,whole_region:'30A geneli',regions:[{id:'rosemary-beach',name:'Rosemary Beach'}],families:['Genel planlama','Deneyim'],all_families:'hepsi',
   claude:{found:true,api_key_warning:null}};
@@ -723,31 +724,30 @@ test('the Videolar form offers the region (required), the families and warns abo
   assert.equal(warnings(titleOptions),'');
   assert.match(warnings({...titleOptions,claude:{found:false,api_key_warning:'ANTHROPIC_API_KEY ortam değişkeni tanımlı'}}),/Claude Code bulunamadı.*ANTHROPIC_API_KEY/s);
   assert.match(runRow({id:'r1',params:{bolge:'Rosemary Beach',aile:'hepsi',not:''},status:'awaiting_approval',created_at:'2026-10-10T12:00:00Z',model_label:'Opus 5.5',effort_label:'Yüksek',metrics:{turns:9,elapsed_s:120}}),
-    /href="#videos\/run\/r1".*Onay bekliyor.*Opus 5.5 · Yüksek.*9 tur/s);
+    /href="#konu\/calisma\/r1".*Havuzda.*Opus 5.5 · Yüksek.*9 tur/s);
 });
 
 test('titles are listed first; a chosen title opens its details with the evidence values and the select button', () => {
   const view={params:{bolge:'Rosemary Beach'},actions:{select:true},candidates:[titleCandidate,{...titleCandidate,sira:1,baslik_en:'Second',sorunlar:[{seviye:'hata',metin:'Var olmayan kanıt'}],secilebilir:false}]};
   const closed=candidateList(view,null);
-  assert.match(closed,/Why &lt;People&gt; Pay So Much<\/span><span class="title-tr">Neden bu kadar ödeniyor<\/span>.*Deneyim/s);
+  // GÖREV-21: the Turkish title large, the English one small and pale
+  assert.match(closed,/<span class="title-tr-big small">Neden bu kadar ödeniyor<\/span><span class="title-en-small" lang="en">Why &lt;People&gt; Pay So Much<\/span>.*Deneyim/s);
   assert.doesNotMatch(closed,/Neden önerildi/);
   assert.match(closed,/doğrulama hatası/);
   const open=candidateList(view,0);
-  assert.match(open,/Neden önerildi.*İzleyicinin sorusu.*Kanca.*K0034.*3,727 USD \(7 gece\).*İçerik planı.*Fiyat.*Eksik veri.*Yorum yok.*mahalle-rehberi.*mahalle = rosemary-beach.*Kapak fikri.*Bu başlığı seç/s);
+  assert.match(open,/Neden önerildi.*İzleyicinin sorusu.*Kanca.*K0034.*3,727 USD \(7 gece\).*İçerik planı.*Fiyat.*Eksik veri.*Yorum yok.*mahalle-rehberi.*mahalle = rosemary-beach.*Kapak fikri.*Bu başlıkla video aç/s);
   assert.match(candidateDetail(view.candidates[1],view),/Hata: Var olmayan kanıt.*data-select-candidate="1" disabled/s);
-  assert.match(candidateDetail({...titleCandidate,video_id:'v1'},view),/Bu başlık seçildi/);
+  assert.match(candidateDetail({...titleCandidate,video_id:'v1',video_adi:'Rehber'},view),/Kullanıldı: “Rehber” videosunda\..*href="#video\/v1\/baslik"/s);
+  assert.doesNotMatch(candidateDetail({...titleCandidate,video_id:'v1'},view),/Bu başlıkla video aç/);
 });
 
 test('a video record without a template still produces its plan pack (GÖREV-14); the Claude settings section shows path, version and inherit choices', () => {
-  const video={id:'v1',title_en:'T',title_tr:'B',family:'Deneyim',region_name:'Rosemary Beach',status:'baslik_secildi',status_label:'başlık seçildi',created_at:'',template_key:null,params:{},analysis:{},packs:[]};
-  assert.match(videoCard(video),/yeni şablon gerekir \(bilgi\).*data-video-pack="v1">Kanıt paketi üret.*içerik planından kurulur/s);
-  assert.match(videoCard({...video,template_key:'mahalle-rehberi',packs:[{id:'p1'}]}),/data-video-pack="v1">.*yazar-ozeti/s);
   const section=claudeSection({settings:{claude_path:'',claude_model:'',claude_effort:'',claude_model_baslik:'claude-opus-5-5',claude_effort_baslik:'high',claude_output_guess_baslik:60000,
       claude_call_limit:250000,claude_job_limit:1500000},
     notes:[],info:{found:true,path:'D:/programs/claude.exe',version:'2.1.284',api_key_warning:'ANTHROPIC_API_KEY uyarısı'},
     harcama:[{adim:'baslik',baslik:'Konu ve başlık',yeni:{sayi:0},eski:{sayi:3,ortanca:460000,en_yuksek:470000}}],
     options:{models:[{value:'',label:'Claude Code varsayılanı'},{value:'claude-opus-5-5',label:'Opus 5.5'}],efforts:[{value:'',label:'Otomatik'},{value:'high',label:'Yüksek'}],
-      inherit:{value:'inherit',label:'Genel varsayılan'},steps:[{key:'baslik',label:'Konu ve başlık',model_field:'claude_model_baslik',effort_field:'claude_effort_baslik',output_guess_field:'claude_output_guess_baslik'}],
+      inherit:{value:'inherit',label:'Genel varsayılan'},steps:[{key:'baslik',label:'Konu ve başlık',screen:'Öneri al (başlık önerisi)',place:'Proje · Konu bankası',model_field:'claude_model_baslik',effort_field:'claude_effort_baslik',output_guess_field:'claude_output_guess_baslik'}],
       output_guess:{min:500,max:128000,help:'Çıktı varsayımı'},limits:[{field:'claude_call_limit',min:20000,max:1000000,default:250000,help:'tek'},{field:'claude_job_limit',min:100000,max:10000000,default:1500000,help:'iş'}]}});
   assert.ok(section.includes('Bulunan program: D:/programs/claude.exe<br>Sürüm: 2.1.284'));
   assert.match(section,/ANTHROPIC_API_KEY uyarısı/);
@@ -759,44 +759,118 @@ test('a video record without a template still produces its plan pack (GÖREV-14)
   assert.match(section,/Tek çağrı sınırı \(token\)<input type="number" data-field="claude_call_limit" min="20000" max="1000000" step="1000" value="250000"/);
   assert.match(section,/İş başına toplam sınır \(token\)<input type="number" data-field="claude_job_limit"[^>]*value="1500000"/);
   assert.match(section,/Her adım tek bir çağrıdır/);
+  // GÖREV-21: one table for every Claude step — its name on the screen and the video step (or project screen) it belongs to
+  assert.match(section,/CLAUDE ADIMI \(EKRANDAKİ ADI\)<\/th><th>AİT OLDUĞU YER/);
+  assert.match(section,/data-claude-step="baslik"><td><strong>Öneri al \(başlık önerisi\)<\/strong><\/td><td class="step-place">Proje · Konu bankası<\/td>/);
+  assert.doesNotMatch(section,/Plandan sonra dur|claude_stop_after_plan/);
 });
 
-// GÖREV-14: workflow sidebar helpers.
+// GÖREV-21: the two layers. The statuses come from the server (studio/workflow.py); the sidebar shows one layer at a time.
 
-const flow={video:null,videos:[{id:'v1',title_en:'Rosemary <Beach> Guide',title_tr:'Rehber',region_name:'Rosemary Beach'}],completed:2,total:8,dots:'●●○○○○○○',
-  steps:[{id:'veri',number:1,title:'Veri',status:'done',label:'güncel',next:'Veri güncel.',href:'#adim/veri',planned:false,detail:null},
-    {id:'baslik',number:2,title:'Konu ve başlık',status:'awaiting_approval',label:'onay bekliyor',next:'Başlık seçilmedi: onay bekleyen öneriden bir başlık seç ya da yeni öneri al.',href:'#videos',planned:false,detail:'1 çalışma onay bekliyor'},
-    {id:'metin',number:4,title:'Video metni',status:'planned',label:'planlanan',next:'Bu adım henüz kurulmadı.',href:'#adim/metin',planned:true,detail:null}]};
+const STEP_NAMES=[['baslik','Başlık ve vaat'],['paket','Veri paketi'],['plan','Plan'],['yazim','Yazım'],['kontrol','Kontrol ve ton seçimi'],['yayin','Yayın paketi'],['ses','Seslendirme'],['kurgu','Kurgu paketi']];
+const STEP_STATUS={baslik:['approved','onaylandı'],paket:['done','tamamlandı'],plan:['awaiting_approval','onay bekliyor'],yazim:['waiting','bekliyor'],kontrol:['waiting','bekliyor']};
+const flow={video:{id:'v1',display_name:'Rosemary <Beach> rehberi',title_en:'Rosemary Beach Guide',title_tr:'Rosemary <Beach> rehberi'},completed:2,total:8,
+  steps:STEP_NAMES.map(([id,title],index)=>({id,number:index+1,title,status:(STEP_STATUS[id]||['waiting'])[0],label:(STEP_STATUS[id]||[null,'sonraki görevde gelecek'])[1],
+    next:id==='plan'?'Planı oku; uygunsa “Onayla”. Onaylanmadan yazım başlamaz.':'',planned:index>4,approval:['baslik','plan','kontrol'].includes(id),detail:null}))};
+const noVideo={video:null,steps:[],completed:0,total:8};
 
-test('workflow: progress, video selector, routes and the remembered video', () => {
-  assert.equal(progressText(flow),'●●○○○○○○ 2/8 adım');
-  assert.equal(progressText(null),'');
-  const options=videoOptions(flow,'v1');
-  assert.match(options,/^<option value="">Video seçilmedi<\/option><option value="v1" selected>Rosemary &lt;Beach&gt; Guide<\/option>$/);
-  assert.equal(videoOptions(null),'<option value="">Video seçilmedi</option>');
-  assert.equal(stepOfHash('#adim/paket'),'paket');
-  assert.equal(stepOfHash('#videos'),'baslik');
-  assert.equal(stepOfHash('#videos/run/abc'),'baslik');
-  assert.equal(stepOfHash('#sources'),null);
+test('GÖREV-21 menü, video açık değilken: yalnız dört proje ekranı (Ayarlar en altta, index.html\'de); adım yok', () => {
+  const nav=sidebar(noVideo,layerRoute('#konu'));
+  assert.deepEqual(PROJECT_SCREENS.map(s=>s.title),['Veri','Konu bankası','Kanal','Videolar']);
+  assert.match(nav,/^<div class="group-label">PROJE<\/div>/);
+  assert.deepEqual([...nav.matchAll(/data-screen="([a-z]+)"/g)].map(m=>m[1]),['veri','konu','kanal','videolar']);
+  assert.equal((nav.match(/<a /g)||[]).length,4);                                 // nothing else: no step, no tool, no "video seçilmedi"
+  assert.doesNotMatch(nav,/ADIMLAR|workflow-step|video seçilmedi|Videoyu kapat|← Proje/);
+  assert.match(nav,/href="#konu" class="project-screen active" data-screen="konu" aria-current="page"/);
+  assert.equal(sidebar(null,layerRoute('#sources')),projectNav('veri'));
+  const index=readFileSync(new URL('../studio/web/index.html',import.meta.url),'utf8');
+  assert.doesNotMatch(index,/video-select|Video seçilmedi|workflow-progress/);       // the top bar has no video selector any more
+  assert.match(index,/id="project-control"/);
+  assert.ok(index.indexOf('id="navigation"')<index.indexOf('id="settings-nav"'));   // Ayarlar stays at the bottom of the sidebar
+});
+
+test('GÖREV-21 menü, video açıkken: videonun adı ve "Videoyu kapat", daraltılmış "← Proje" ve yalnız o videonun sekiz adımı', () => {
+  const nav=sidebar(flow,layerRoute('#video/v1/plan'));
+  assert.match(nav,/AÇIK VİDEO<\/span><strong class="video-name"[^>]*>Rosemary &lt;Beach&gt; rehberi<\/strong>\s*<button type="button" class="quiet" id="video-close" data-video-close>Videoyu kapat<\/button>/);
+  assert.match(nav,/data-project-toggle aria-expanded="false" aria-controls="project-collapsed">← Proje<\/button>\s*<div id="project-collapsed" class="project-collapsed" hidden><\/div>/);
+  assert.deepEqual([...nav.matchAll(/data-step="([a-z]+)"/g)].map(m=>m[1]),STEP_NAMES.map(n=>n[0]));     // the eight steps, in order
+  assert.equal((nav.match(/<a /g)||[]).length,8);                                 // and nothing but them
+  assert.doesNotMatch(nav,/data-screen=/);
+  assert.match(nav,/ADIMLAR <span class="steps-progress">2\/8<\/span>/);
+  assert.match(nav,/href="#video\/v1\/plan" class="workflow-step active " data-step="plan" aria-current="page">\s*<span class="step-no">3<\/span><span><span class="nav-title">Plan<\/span>\s*<span class="nav-sub step-status warm" style="display:block">onay bekliyor/);
+  assert.match(nav,/data-step="kurgu"[^>]*>\s*<span class="step-no">8<\/span>.*step-status planned" style="display:block">sonraki görevde gelecek/s);
+  // "← Proje" opened (or a project screen shown while the video stays open): the four project screens under the row, the steps stay
+  const open=videoNav(flow,null,{projectOpen:true,activeScreen:'kanal'});
+  assert.match(open,/aria-expanded="true"[^>]*>← Proje<\/button>\s*<div id="project-collapsed" class="project-collapsed" >.*data-screen="kanal" aria-current="page"/s);
+  assert.equal((open.match(/data-step=/g)||[]).length,8);
+  assert.match(sidebar(flow,layerRoute('#konu')),/aria-expanded="true"/);
+  // "Videoyu kapat" → the workflow has no video → the menu is the project view again
+  assert.equal(sidebar(noVideo,layerRoute('#videolar')),projectNav('videolar'));
+  const app=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  assert.match(app,/if\(event\.target\.closest\("\[data-video-close\]"\)\) \{closeVideo\(\)/);
+  assert.match(app,/async function closeVideo\(\) \{\s*state\.videoId="";[\s\S]*?api\("videolar\/kapat",\{method:"POST"/);
+});
+
+test('GÖREV-21 adresler: katmanlar, Veri sekmeleri, proje adı ve hatırlanan video', () => {
+  assert.deepEqual(layerRoute('#video/v1/yazim/surum/s9'),{layer:'video',screen:'video',page:'video',videoId:'v1',step:'yazim',view:'surum',id:'s9'});
+  assert.equal(layerRoute('#video/v1').step,'baslik');
+  assert.deepEqual(layerRoute('#konu/calisma/r1'),{layer:'proje',screen:'konu',page:'konu',runId:'r1'});
+  assert.deepEqual(layerRoute('#kanal/tonlar'),{layer:'proje',screen:'kanal',page:'kanal',section:'tonlar'});
+  assert.equal(layerRoute('#videolar/arsiv').archived,true);
+  for(const [hash,tab] of [['#sources','sources'],['#collect/weather','collect'],['#quality','quality'],['#evidence','evidence'],['#veri/okuma','okuma'],['','sources']])
+    assert.deepEqual([layerRoute(hash).screen,layerRoute(hash).tab],['veri',tab],hash);
+  assert.equal(layerRoute('#settings/claude').layer,'ayarlar');assert.equal(layerRoute('#bilinmeyen'),null);
+  assert.deepEqual(VERI_TABS.map(t=>t.title),['Kaynaklar','Toplama','Kalite','Kanıt paketi','Okuma denemeleri']);   // the tab names are written on the screen
+  const tabs=veriTabs('collect');
+  assert.match(tabs,/aria-label="Veri sekmeleri"/);assert.match(tabs,/class="section-nav-item active" href="#collect" data-tab="collect" aria-current="page">Toplama</);
+  assert.match(tabs,/href="#veri\/okuma" data-tab="okuma" >Okuma denemeleri</);
+  assert.equal(stepHref('v 1','plan'),'#video/v%201/plan');
+  // one project: only its name; more: a selector
+  const d={id:'30a',name:'30A',subtitle:'South Walton, Florida'};
+  assert.equal(projectLabel([d],d),'<span class="project-name" id="project-name">30A / South Walton</span>');
+  assert.match(projectLabel([d,{id:'x',name:'Destin',subtitle:''}],d),/<select id="destination-select" aria-label="Proje"><option value="30a" selected>30A \/ South Walton<\/option><option value="x" >Destin<\/option>/);
+  assert.equal(progressText(flow),'2/8');assert.equal(progressText(null),'');assert.equal(progressText(noVideo),'');
   const memory=new Map(), storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
   assert.equal(storedVideo(storage,'30a'),'');
   persistVideo(storage,'30a','v1');assert.equal(storedVideo(storage,'30a'),'v1');assert.equal(storedVideo(storage,'other'),'');
   persistVideo(storage,'30a','');assert.equal(storedVideo(storage,'30a'),'');
   const broken={getItem(){throw new Error('kapalı');},setItem(){throw new Error('kapalı');},removeItem(){throw new Error('kapalı');}};
   assert.equal(storedVideo(broken,'30a'),'');persistVideo(broken,'30a','v1');
+  // the open video is the server's to remember (bootstrap gives it back at the next start)
+  const app=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  assert.match(app,/state\.videoId=data\.open_video_id \|\| "";/);
 });
 
-test('workflow: ADIMLAR shows each step with its live status, VERİ the tool screens; every step screen starts with the next task', () => {
-  const nav=stepNav(flow,'baslik');
-  assert.match(nav,/ADIMLAR · video seçilmedi.*href="#adim\/veri".*Veri.*step-status green.*güncel.*href="#videos" class="workflow-step active.*aria-current="page".*onay bekliyor.*planned-step.*planlanan/s);
-  assert.equal(stepNav(null,'veri'),'');
-  assert.match(stepNav({...flow,video:{id:'v1'}},null),/^<div class="group-label">ADIMLAR<\/div>/);
-  const tools=toolNav([{id:'sources',title:'Veri kaynakları',subtitle:'Kaynak kütüphanesi',state:'active'},{id:'evidence',title:'Kanıt paketi',subtitle:'Şablondan kanıt',state:'active'}],'evidence');
-  assert.match(tools,/VERİ.*href="#sources".*Veri kaynakları.*href="#evidence" class="active"/s);
-  assert.ok(!tools.includes('Rakip analizi') && !tools.includes('İçerik briefi'));
-  const line=nextTask(flow.steps[1]);
-  assert.match(line,/Sıradaki iş.*Başlık seçilmedi: onay bekleyen öneriden bir başlık seç ya da yeni öneri al\..*onay bekliyor.*1 çalışma onay bekliyor/s);
+test('GÖREV-21 taşıma: Ayarlar\'dan taşınan bölümlerin eski adresleri ve eski adım adresleri yeni yerlerine yönlenir', () => {
+  assert.equal(redirectOf('#settings/tonlar'),'#kanal/tonlar');
+  assert.equal(redirectOf('#settings/talimatlar'),'#kanal/talimatlar');
+  assert.equal(redirectOf('#settings/uyari-ifadeleri'),'#kanal/uyari-ifadeleri');
+  assert.equal(redirectOf('#settings/baslik-eki'),'#kanal/baslik-eki');
+  assert.equal(redirectOf('#ayarlar/tonlar'),'#kanal/tonlar');
+  for(const kept of ['#settings','#settings/claude','#settings/eklenti','#settings/proxy','#settings/klasor','#kanal/tonlar','#konu','#sources','#video/v1/plan','']) assert.equal(redirectOf(kept),null,kept);
+  assert.equal(redirectOf('#videos'),'#konu');assert.equal(redirectOf('#videos/run/r 1'),'#konu/calisma/r%201');
+  assert.equal(redirectOf('#adim/veri'),'#sources');assert.equal(redirectOf('#adim/baslik','v1'),'#konu');
+  assert.equal(redirectOf('#adim/paket'),'#videolar');                         // no video open: the list of videos
+  assert.equal(redirectOf('#adim/paket','v1'),'#video/v1/paket');
+  assert.equal(redirectOf('#adim/metin','v1'),'#video/v1/plan');
+  assert.equal(redirectOf('#adim/metin/karsilastirma/r1','v1'),'#video/v1/kontrol');
+  assert.equal(redirectOf('#adim/metin/surum/s1','v1'),'#video/v1/yazim/surum/s1');
+  assert.equal(redirectOf('#adim/uretim','v1'),'#video/v1/kurgu');
+  const app=readFileSync(new URL('../studio/web/app.js',import.meta.url),'utf8');
+  assert.match(app,/const moved=redirectOf\(location\.hash,state\.videoId\);[^\n]*\n\s*if\(moved\) \{location\.replace\(moved\);return;\}/);
+  // the sections are drawn on the Kanal screen by the same modules, with their own addresses
+  assert.deepEqual(CHANNEL_SECTIONS.map(s=>s.slug),['talimatlar','tonlar','uyari-ifadeleri','baslik-eki']);
+  const frame=channelFrame('tonlar');
+  for(const slot of ['instructions-slot','tones-slot','warnings-slot','suffix-settings-slot']) assert.ok(frame.includes(`id="${slot}"`),slot);
+  assert.match(frame,/class="section-nav-item active" href="#kanal\/tonlar"/);
+  assert.equal(channelSectionOfHash('#kanal/baslik-eki'),'baslik-eki');assert.equal(channelSectionOfHash('#kanal'),null);assert.equal(channelSectionOfHash('#settings/tonlar'),null);
+});
+
+test('GÖREV-21 her adım ekranı "Sıradaki iş" satırı ve durumuyla başlar', () => {
+  const line=nextTask(flow.steps[2]);
+  assert.match(line,/Sıradaki iş.*Planı oku; uygunsa “Onayla”\. Onaylanmadan yazım başlamaz\..*<span class="tag warm">onay bekliyor<\/span>/s);
   assert.equal(nextTask(null),'');
+  assert.equal(statusTag(flow.steps[7]),'<span class="tag planned">sonraki görevde gelecek</span>');
 });
 
 // GÖREV-14 Adım 4: usage panel, Claude progress bar, instruction editor, title suffix, the run's instruction versions.
@@ -871,10 +945,6 @@ test('evaluation: the summary comes first; runs and video records show what kind
   const row=videoRunRow({id:'r9',step:'baslik_degerlendirme',status:'awaiting_approval',created_at:'',params:{bolge:'Seaside',kullanici_basligi:'Seaside fikri',not:'Bu aday düzenlendi\nikinci satır',kaynak:{}},metrics:{}});
   assert.match(row,/tag">değerlendirme<\/span>.*“Seaside fikri”.*düzenlenen adaydan · Bu aday düzenlendi</s);
   assert.ok(!row.includes('ikinci satır'));
-  const video={id:'v1',title_en:'Edited | 30A Florida Vacation',title_tr:'Düzenli | 30A Florida Tatili',family:'Deneyim',region_name:'Seaside',status:'baslik_secildi',status_label:'başlık seçildi',created_at:'',template_key:'mahalle-rehberi',params:{},analysis:{},packs:[],
-    user_edited:true,proposed_title_en:'Proposed | 30A Florida Vacation',proposed_title_tr:'Önerilen | 30A Florida Tatili'};
-  assert.match(videoCardOf(video),/kullanıcı düzenledi.*Önerilen başlık: Proposed \| 30A Florida Vacation · Önerilen \| 30A Florida Tatili/s);
-  assert.ok(!videoCardOf({...video,user_edited:false}).includes('kullanıcı düzenledi'));
 });
 
 test('app.js imports every name once (a repeated import name stops the whole page)', () => {
@@ -882,7 +952,7 @@ test('app.js imports every name once (a repeated import name stops the whole pag
   const names=[...source.matchAll(/^import\s*\{([^}]*)\}\s*from/gm)].flatMap(m=>m[1].split(',').map(part=>part.trim().split(/\s+as\s+/).pop()).filter(Boolean));
   const repeated=names.filter((name,index)=>names.indexOf(name)!==index);
   assert.deepEqual(repeated,[]);
-  assert.ok(names.includes('claudeProgressText') && names.includes('progressText'));
+  assert.ok(names.includes('claudeProgressText'));
 });
 
 // GÖREV-14 Adım 6: the head of a video pack's writer's summary on the Veri paketi step.
@@ -971,15 +1041,22 @@ test('extension: wait rules are seconds or an element, with limits', () => {
   assert.equal(E.bytesToBase64(new Uint8Array([104, 105])), 'aGk=');
 });
 
-test('Settings → Tarayıcı eklentisi: connection, code, domains, speed, steps, trials', () => {
+test('Ayarlar → Tarayıcı eklentisi: yalnız eşleşme kodu ve bağlantı; siteler, hız ve denemeler Veri → Okuma denemeleri\'nde (GÖREV-21)', () => {
   const view = {eslesti: true, bagli: true, surum: '0.16.0', son_gorulme: '2026-10-10T20:00:00+00:00', kod: 'K7QM-3XRA', izinli_alan_adlari: ['cvs.com'],
     izin_bekleyen_alan_adlari: ['publix.com'], aralik_saniye: 8, aralik_sinirlari: [3, 120], kurulum: ['Bir', 'İki'], klasor: 'C:/30a-studio/eklenti',
     sorunlu_siteler: [{alan_adi: 'realjoy.com'}, {alan_adi: 'order.online'}]};
   assert.equal(connectionText(view).tone, 'green');
   assert.match(connectionText({...view, bagli: false}).text, /^Bağlı değil/);
   assert.match(connectionText({eslesti: false}).text, /^Eşleşmedi/);
-  const html = extensionSection(view, {trial: {durum: 'tamam', baslik: 'Deneme', bayt: 2048, sha256: 'abc', dosya: 'raw/eklenti/x.html'}});
-  assert.match(html, /K7QM-3XRA.*Kodu yenile.*cvs\.com.*publix\.com.*min="3" max="120" value="8".*<li>Bir<\/li><li>İki<\/li>.*Deneme.*okundu.*realjoy\.com, order\.online.*Sorunlu sitelerden birer sayfa dene/s);
+  const settings = extensionSection(view);
+  assert.match(settings, /id="extension-connection".*K7QM-3XRA.*Kodu yenile.*<li>Bir<\/li><li>İki<\/li>/s);
+  assert.doesNotMatch(settings, /id="extension-trial"|id="extension-problems"|id="extension-speed"|İzin verilen siteler/);      // no data work in Ayarlar
+  assert.match(settings, /<a href="#veri\/okuma">Veri → Okuma denemeleri<\/a>/);
+  const html = extensionReading(view, {trial: {durum: 'tamam', baslik: 'Deneme', bayt: 2048, sha256: 'abc', dosya: 'raw/eklenti/x.html'}});
+  assert.match(html, /cvs\.com.*publix\.com.*min="3" max="120" value="8".*id="extension-trial">Deneme.*okundu.*realjoy\.com, order\.online.*Sorunlu sitelerden birer sayfa dene/s);
+  assert.doesNotMatch(html, /Kodu yenile|id="extension-code"/);
+  assert.match(warmUpSection({siteler:[{alan_adi:'oversee.us',adres:'https://www.oversee.us/',sebep:'korumalı kiralama sitesi',ilk:null,son:null}]}), /Isınma listesi.*oversee\.us.*korumalı kiralama sitesi/s);
+  assert.match(warmUpSection({siteler:[]}), /Listede site yok/);
   assert.match(trialRows([{alan_adi: 'cvs.com', durum: 'dogrulama', bayt: 4096, not: 'süre doldu'}]), /cvs\.com.*doğrulama geçilmedi.*4 KB.*süre doldu/s);
   assert.equal(trialRows([]), '');
 });
@@ -987,14 +1064,15 @@ import {runStatusTag, runView as runViewOf} from '../studio/web/videos.js';
 test('GÖREV-15 1d: an evaluation without candidates is information, not "Onay bekliyor"',()=>{
   const run={id:'r1',step:'baslik_degerlendirme',status:'awaiting_approval',adaysiz:true,bilgi:'Değerlendirildi: veriyle dolmuyor',params:{bolge:'Rosemary Beach',kullanici_basligi:'köpek'},created_at:'2026-10-11T10:00:00Z'};
   assert.match(runStatusTag(run),/Değerlendirildi: veriyle dolmuyor/);
-  assert.doesNotMatch(runStatusTag(run),/Onay bekliyor/);
-  assert.match(runStatusTag({...run,adaysiz:false}),/Onay bekliyor/);
+  assert.doesNotMatch(runStatusTag(run),/Havuzda/);
+  assert.match(runStatusTag({...run,adaysiz:false}),/Havuzda/);
+  assert.match(runStatusTag({...run,adaysiz:false,canceled:true,status:'error'}),/İptal edildi/);      // GÖREV-21: a canceled run says so
   const view={...run,candidates:[],actions:{select:true,reject:true,correct:true},review:{kullanici_fikri:'köpek',doluluk:{dolar_mi:false,eksik_veri:['x']},sorunlar:[]},summary:{}};
   const html=runViewOf(view,null);
   assert.match(html,/onay beklemiyor/);assert.match(html,/id="run-reject" class="quiet" >/);
 });
 import {toneRows, toneForm, archiveRows, warningsBox} from '../studio/web/tones.js';
-import {toneChoice, writeBox, runRows, planView, compareView, versionView, textBar, routeOf} from '../studio/web/text.js';
+import {toneChoice, planView, compareView, versionView, textBar} from '../studio/web/text.js';
 import {textSettings, formValues as claudeFormValues} from '../studio/web/claude.js';
 
 const TONES={tonlar:[{dosya:'arastirmaci_dost',ad:'Araştırmacı dost',ilk_satir:'Anlatıcı, 30A yı iyi tanıyan…',degisti:'2026-10-11T00:00:00+00:00',varsayilan:true,kullanim:2},
@@ -1024,25 +1102,13 @@ test('GÖREV-15 Tonlar: the new tone form, the long text note and the edit form 
 const OPTIONS={video:{id:'v1',title_en:'Deneme | 30A Florida Vacation'},tonlar:[{dosya:'arastirmaci_dost',ad:'Araştırmacı dost',ilk_cumle:'Anlatıcı, iyi tanıyan bir dost.',varsayilan:true},
   {dosya:'hikaye_anlaticisi',ad:'Hikâye anlatıcısı',ilk_cumle:'Anlatıcı, izleyiciyi tutan sesi.',varsayilan:false}],paket:{var:false,eski:false,metin:'Paket önce yeniden üretilecek (bu videonun paketi yok).'},
   calismalar:[],surumler:[],mesgul:false,claude_mesgul:false};
-test('GÖREV-15 Video metni: tone choice with the default ticked, "Tonları yönet" and the pack note',()=>{
-  const html=writeBox(OPTIONS,['arastirmaci_dost'],false);
+test('4 · Yazım: tone choice with the default ticked and "Tonları yönet" (Kanal → Tonlar)',()=>{
+  const html=toneChoice(OPTIONS.tonlar,['arastirmaci_dost']);
   assert.match(html,/data-tone="arastirmaci_dost" checked/);assert.match(html,/data-tone="hikaye_anlaticisi" >/);
-  assert.match(html,/Anlatıcı, iyi tanıyan bir dost\./);assert.match(html,/href="#settings\/tonlar"/);assert.match(html,/Paket önce yeniden üretilecek/);
-  assert.match(html,/id="text-start" >/);
-  assert.match(writeBox(OPTIONS,[],false),/id="text-start" disabled/);
-  assert.match(writeBox({...OPTIONS,mesgul:true},['arastirmaci_dost'],false),/Bir video metni çalışması sürüyor/);
+  assert.match(html,/Anlatıcı, iyi tanıyan bir dost\./);assert.match(html,/href="#kanal\/tonlar">Tonları yönet \(Kanal → Tonlar\)/);
   assert.match(toneChoice(OPTIONS.tonlar,[]),/varsayılan/);
 });
-const RUN={id:'r1',video_id:'v1',status:'paused',status_label:'duraklatıldı',reason_text:'Durduruldu; “Devam” kalan adımları çalıştırır.',tones:[{dosya:'arastirmaci_dost',ad:'Araştırmacı dost'}],
-  created_at:'2026-10-11T00:00:00+00:00',replan_of:null,kullanim:{oturum:12,sure_s:600,token:120000,maliyet_usd:0.5},surumler:[{id:'s1',number:1,tone_file:'arastirmaci_dost',tone_name:'Araştırmacı dost'}],
-  eylemler:{devam:true,durdur:false,ton_ekle:true,plani_yeniden_yap:true,plani_goster:true}};
-test('GÖREV-15 Video metni: runs with Devam, the plan, the comparison and "Bu tonla da yaz"',()=>{
-  const html=runRows([RUN],OPTIONS.tonlar);
-  assert.match(html,/data-text-resume="r1"/);assert.match(html,/#adim\/metin\/plan\/r1/);assert.match(html,/#adim\/metin\/karsilastirma\/r1/);
-  assert.match(html,/data-add-tone-select="r1"/);assert.match(html,/<option value="hikaye_anlaticisi">Hikâye anlatıcısı<\/option>/);
-  assert.match(html,/12 oturum · 10 dk/);assert.match(html,/120 bin token · 0,50 \$/);
-  assert.match(runRows([{...RUN,status:'running',status_label:'çalışıyor',eylemler:{...RUN.eylemler,devam:false,durdur:true}}]),/data-text-stop="r1"/);
-  assert.deepEqual(routeOf('#adim/metin/surum/s1'),{view:'surum',id:'s1'});assert.deepEqual(routeOf('#adim/metin'),{view:'main',id:null});
+test('3 · Plan: the plan in readable Turkish (sections, concepts, the promise check, the program\'s warnings, the critic\'s notes)',()=>{
   const plan=planView({plan:{bolumler:[{no:1,ic_adi:'Bir',tek_fikir:'Tek',en_carpici_an:'An',kanitlar:['K0001'],kelime_butcesi:350,acilis_bicimi:'gecmis',acilis_notu:'Not'}],
     kavramlar:[{kavram:'customary use',bolum:1}],yeniden_kancalar:[{bolumden_sonra:1,uzerine:'kanca'}],vaat_kontrolu:{karsilanan:[{vaat:'Soru',bolumler:[1]}],karsilanamayan:['Fiyat']},notlar:[]},
     plan_uyarilari:['1. ve 2. bölüm aynı biçimde açılıyor (soru).'],elestiri:{notlar:['Plan iyi.'],yeniden_yap:false},plan_turu:1});
@@ -1052,12 +1118,13 @@ const COMPARE={sutunlar:[{id:'s1',number:1,tone_file:'arastirmaci_dost',tone_nam
     parcalar:{giris:{baslik:'Giriş',tr:['Merhaba.'],en:['Hello.'],isaretler:0},'bolum-1':{baslik:'1. Bir',tr:['Bir.'],en:['One.'],isaretler:1}}},
   {id:'s2',number:2,tone_file:'vlogger',tone_name:'Vlogger',words:2250,dakika:15,red:0,yellow:0,cost_usd:0.4,tokens:{},elapsed_s:280,secili:true,ton_var:false,
     parcalar:{giris:{baslik:'Giriş',tr:['Selam.'],en:['Hi.'],isaretler:0}}}],satirlar:['giris','bolum-1']};
-test('GÖREV-15 Video metni: the comparison — columns, header numbers, Turkish first, the language switch and "Bu tonla devam et"',()=>{
-  const tr=compareView(COMPARE,'tr',OPTIONS.tonlar,'r1');
+test('5 · Kontrol ve ton seçimi: the comparison — columns, header numbers, Turkish first and the language switch; the tone is chosen in the approval component',()=>{
+  const tr=compareView(COMPARE,'tr',id=>`#video/v1/yazim/surum/${id}`);
   assert.match(tr,/repeat\(2, minmax\(320px, 1fr\)\)/);assert.match(tr,/2\.300 kelime · ~15,3 dk/);assert.match(tr,/1 kırmızı/);assert.match(tr,/0,42 \$/);
-  assert.match(tr,/<p>Merhaba\.<\/p>/);assert.doesNotMatch(tr,/<p>Hello\.<\/p>/);assert.match(tr,/data-choose="s1"/);assert.match(tr,/<span class="tag green">seçili<\/span>/);
+  assert.match(tr,/<p>Merhaba\.<\/p>/);assert.doesNotMatch(tr,/<p>Hello\.<\/p>/);assert.match(tr,/<span class="tag green">seçili ton<\/span>/);
+  assert.doesNotMatch(tr,/data-choose|Bu tonla devam et/);                          // GÖREV-21: no button of its own; "Onayla" picks the tone
+  assert.match(tr,/href="#video\/v1\/yazim\/surum\/s1">Metnin tamamı/);
   assert.match(tr,/silinmiş ton/);assert.match(tr,/compare-cell empty/);assert.match(tr,/data-lang="tr" aria-pressed="true"/);
-  assert.match(tr,/id="compare-add"/);assert.match(tr,/<option value="hikaye_anlaticisi">/);
   const en=compareView(COMPARE,'en');assert.match(en,/<p>Hello\.<\/p>/);assert.doesNotMatch(en,/<p>Merhaba\.<\/p>/);
   const both=compareView(COMPARE,'both');assert.match(both,/<p>Merhaba\.<\/p><p class="en">Hello\.<\/p>/);
 });
@@ -1070,7 +1137,7 @@ test('GÖREV-15 Video metni: a version — numbers, both languages, marks of the
   assert.match(html,/sentence-row has-red/);assert.match(html,/sentence-row has-yellow/);assert.match(html,/title="Kanıt: K0001"/);assert.match(html,/title="Kanıt işareti yok"/);
   assert.match(html,/sentence-mark red" title="Mesafe kuralı\."/);assert.match(html,/Çevirmen: Belirsiz\./);assert.match(html,/<strong>walkover<\/strong>/);
   assert.match(html,/dosya\/en" download>İngilizce/);assert.match(html,/dosya\/tr" download>Türkçe/);assert.match(html,/dosya\/seslendirme" download>Seslendirme/);
-  assert.match(html,/data-choose="s1"/);assert.match(html,/Türkçe düzeltme ve İngilizceye uyarlama bu görevde yok/);
+  assert.doesNotMatch(html,/data-choose/);assert.match(html,/Türkçe düzeltme ve İngilizceye uyarlama bu görevde yok/);
 });
 test('GÖREV-15 İşler: the text run bar — stage text, elapsed and remaining time, and the usage limit wait',()=>{
   const now=Date.parse('2026-10-11T10:10:00Z');
@@ -1082,18 +1149,20 @@ test('GÖREV-15 İşler: the text run bar — stage text, elapsed and remaining 
   assert.match(textBar({...job,status:'done'},now),/aria-valuenow="100"/);
   assert.equal(textBar({...job,progress_info:{tur:'claude'}},now),"");
 });
-test('GÖREV-15 Ayarlar → Claude: sessions at once, thresholds and "Plandan sonra dur"',()=>{
-  const html=textSettings({claude_max_sessions:3,claude_limit_five_hour:90,claude_limit_week:95,claude_stop_after_plan:true},
-    {fields:[{field:'claude_max_sessions',min:1,max:6,default:3,help:'h'},{field:'claude_limit_five_hour',min:1,max:100,default:90,help:'h'},{field:'claude_limit_week',min:1,max:100,default:95,help:'h'}],stop_after_plan:{field:'claude_stop_after_plan',help:'s'}});
-  assert.match(html,/Aynı anda en çok Claude oturumu/);assert.match(html,/min="1" max="6" value="3"/);assert.match(html,/data-field="claude_stop_after_plan" checked/);
-  const form={querySelectorAll:()=>[{dataset:{field:'claude_max_sessions'},type:'number',value:'4'},{dataset:{field:'claude_stop_after_plan'},type:'checkbox',checked:false,value:'on'}]};
-  assert.deepEqual(claudeFormValues(form),{claude_max_sessions:4,claude_stop_after_plan:false});
+test('Ayarlar → Claude: sessions at once and the thresholds; "Plandan sonra dur" is gone (GÖREV-21)',()=>{
+  const html=textSettings({claude_max_sessions:3,claude_limit_five_hour:90,claude_limit_week:95},
+    {fields:[{field:'claude_max_sessions',min:1,max:6,default:3,help:'h'},{field:'claude_limit_five_hour',min:1,max:100,default:90,help:'h'},{field:'claude_limit_week',min:1,max:100,default:95,help:'h'}]});
+  assert.match(html,/Aynı anda en çok Claude oturumu/);assert.match(html,/min="1" max="6" value="3"/);
+  assert.doesNotMatch(html,/Plandan sonra dur|claude_stop_after_plan|type="checkbox"/);
+  assert.match(html,/Yazım, plan onaylanmadan başlamaz/);
+  const form={querySelectorAll:()=>[{dataset:{field:'claude_max_sessions'},type:'number',value:'4'}]};
+  assert.deepEqual(claudeFormValues(form),{claude_max_sessions:4});
 });
 
 // GÖREV-16: the extension's page kinds (the same fixtures as the Python test), "Son iş", the trial table with kinds, "Eklenti çalışıyor",
 // "Bu sayfayı atla", Settings → ABD proxy'si, and the video text's "seçildi" and plan usage.
 import {skipButton} from '../studio/web/extension.js';
-import {proxySection, testResult, regionRows} from '../studio/web/proxy.js';
+import {proxySection, proxyReading, testResult, regionRows} from '../studio/web/proxy.js';
 import {usageText} from '../studio/web/text.js';
 
 const KINDS_DIR=new URL('./fixtures/sayfa_turleri/', import.meta.url);
@@ -1141,17 +1210,23 @@ test('GÖREV-16 Ayarlar → Tarayıcı eklentisi: "Eklenti çalışıyor", the o
   assert.equal(skipButton({id:'j1',progress_info:{tur:'eklenti'},waiting_for:''}),'');
   assert.equal(skipButton({id:'j1',progress_info:{tur:'claude'},waiting_for:'x'}),'');
 });
-test('GÖREV-16 Ayarlar → ABD proxy\'si: empty, saved password, the test result and the list',()=>{
+test('Ayarlar → ABD proxy\'si: yalnız bağlantı bilgileri ve parolanın kasada olup olmadığı; deneme ve liste Veri → Okuma denemeleri\'nde (GÖREV-21)',()=>{
   const empty=proxySection({adres:'',kullanici:'',parola_kayitli:false,tanimli:false,notlar:[],bolge_engelli:[]});
-  assert.match(empty,/ABD proxy'si \(bölge engeli için\)/);assert.match(empty,/id="proxy-test" disabled/);assert.match(empty,/Listede alan adı yok\./);
-  assert.match(empty,/bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz/);
-  const saved=proxySection({adres:'http://proxy.example:8080',kullanici:'abd',parola_kayitli:true,tanimli:true,notlar:["Chrome, kullanıcı adı ve parola isteyen SOCKS5 proxy'yi desteklemiyor"],
+  assert.match(empty,/ABD proxy'si \(bölge engeli için\)/);assert.match(empty,/<span class="tag">kasada yok<\/span>/);
+  assert.doesNotMatch(empty,/id="proxy-test"|id="region-form"|Bölge engelli alan adları<\/h3>/);          // no data work in Ayarlar
+  assert.match(empty,/<a href="#veri\/okuma">Veri → Okuma denemeleri<\/a>/);
+  const view={adres:'http://proxy.example:8080',kullanici:'abd',parola_kayitli:true,tanimli:true,notlar:["Chrome, kullanıcı adı ve parola isteyen SOCKS5 proxy'yi desteklemiyor"],
     bolge_engelli:[{host:'cvs.com',title:null,evidence:'CVS.com is not available outside of the United States',added_by:'program',first_seen_at:'2026-10-11T11:34:14+00:00',last_seen_at:'2026-10-11T11:34:14+00:00',url:'https://www.cvs.com/x'},
-      {host:'winndixie.com',added_by:'kullanici',first_seen_at:'2026-10-11T12:00:00+00:00',last_seen_at:'2026-10-11T12:00:00+00:00'}]});
-  assert.match(saved,/<span class="tag green">kayıtlı<\/span>/);assert.match(saved,/placeholder="kayıtlı \(değiştirmek için yazın\)"/);
+      {host:'winndixie.com',added_by:'kullanici',first_seen_at:'2026-10-11T12:00:00+00:00',last_seen_at:'2026-10-11T12:00:00+00:00'}]};
+  const saved=proxySection(view);
+  assert.match(saved,/<span class="tag green">kasada kayıtlı<\/span>/);assert.match(saved,/placeholder="kayıtlı \(değiştirmek için yazın\)"/);
   assert.match(saved,/id="proxy-password" type="password"/);assert.doesNotMatch(saved,/id="proxy-password"[^>]*value=/);
-  assert.match(saved,/id="proxy-forget"/);assert.match(saved,/id="proxy-test">/);assert.match(saved,/SOCKS5 proxy&#39;yi desteklemiyor/);
-  assert.match(saved,/data-region-remove="cvs.com"/);assert.match(saved,/<td>program<\/td>/);assert.match(saved,/<td>siz<\/td>/);assert.match(saved,/outside of the United States/);
+  assert.match(saved,/id="proxy-forget"/);assert.match(saved,/SOCKS5 proxy&#39;yi desteklemiyor/);assert.doesNotMatch(saved,/data-region-remove/);
+  const reading=proxyReading(view);
+  assert.match(reading,/id="proxy-test">Proxy'yi dene/);assert.match(reading,/bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz/);
+  assert.match(reading,/data-region-remove="cvs.com"/);assert.match(reading,/<td>program<\/td>/);assert.match(reading,/<td>siz<\/td>/);assert.match(reading,/outside of the United States/);
+  assert.doesNotMatch(reading,/id="proxy-password"|id="proxy-form"/);
+  assert.match(proxyReading({...view,tanimli:false,bolge_engelli:[]}),/id="proxy-test" disabled>.*Listede alan adı yok\./s);
   const ok=testResult({ok:true,ip:'203.0.113.7',ulke:'US',uyari:null,satirlar:['Proxy: http://proxy.example (kullanıcı adıyla)','Çıkış adresi 203.0.113.7, ülke US.']});
   assert.match(ok,/tag green">Çıkış adresi 203\.0\.113\.7 · ülke US/);assert.doesNotMatch(ok,/ABD'de görünmüyor/);
   const tr=testResult({ok:true,ip:'198.51.100.2',ulke:'TR',uyari:"Proxy'nin çıkış adresi ABD'de görünmüyor",satirlar:[]});
@@ -1159,11 +1234,7 @@ test('GÖREV-16 Ayarlar → ABD proxy\'si: empty, saved password, the test resul
   assert.match(testResult({error:"ABD proxy'si tanımlı değil"}),/claude-warning/);assert.equal(testResult(null),'');
   assert.match(regionRows([]),/Listede alan adı yok/);
 });
-test('GÖREV-16 Video metni: "seçildi" in the runs, the plan line and the plan usage above the comparison',()=>{
-  const usage={oturum:12,sure_s:600,token:120000,maliyet_usd:0.5,plan:{oturum:2,sure_s:60,token:20000,maliyet_usd:0.1}};
-  const html=runRows([{...RUN,kullanim:usage,secildi:'Araştırmacı dost'}],OPTIONS.tonlar);
-  assert.match(html,/tag green">seçildi: Araştırmacı dost<\/span>/);assert.doesNotMatch(html,/duraklatıldı<\/span>/);
-  assert.match(html,/plan: 2 oturum · 1 dk · 20 bin token · 0,10 \$/);
+test('GÖREV-16 Video metni: the usage text and the plan usage above the comparison',()=>{
   assert.equal(usageText({oturum:2,sure_s:60,token:20000,maliyet_usd:0.1}),'2 oturum · 1 dk · 20 bin token · 0,10 $');
   const compare=compareView({...COMPARE,planlar:[{metin_calismasi:'r1',surumler:[1,2],kullanim:{oturum:2,sure_s:60,token:20000,maliyet_usd:0.1}}]},'tr');
   assert.match(compare,/Planın kullanımı \(bütün tonlar için bir kez\): <span class="tag">plan: 2 oturum/);
@@ -1173,7 +1244,7 @@ test('GÖREV-16 Video metni: "seçildi" in the runs, the plan line and the plan 
 
 // ---- GÖREV-17: the job panel (hiding finished jobs), the Settings layout, one window for a job, the proxy words ----
 import {jobsPanel, jobCard, panelHead, hiddenSection, visibleJobs, removableJobs, windowLines, emptyPanel} from '../studio/web/jobs.js';
-import {SECTIONS, sectionOfHash, isSettingsHash, sectionId, settingsHref, settingsNav, sectionCard, settingsFrame, folderCard, aboutCard, usageCard, linkSettingsMentions} from '../studio/web/settings.js';
+import {SECTIONS, CHANNEL_SECTIONS, channelFrame, channelSectionOfHash, sectionOfHash, isSettingsHash, sectionId, settingsHref, settingsNav, sectionCard, settingsFrame, folderCard, aboutCard, usageCard, linkSettingsMentions} from '../studio/web/settings.js';
 import {kindText} from '../studio/web/extension.js';
 import {tonesHtml} from '../studio/web/tones.js';
 
@@ -1238,20 +1309,19 @@ const view17={
 const sectionHtml17={
   'klasor':[folderCard('C:/veri/30a'),/class="path">C:\/veri\/30a</],
   'claude':[claudeSection(view17.claude),/<button class="primary" type="submit">Claude ayarlarını kaydet<\/button>/],
-  'baslik-eki':[suffixSection(view17.suffix),/<button class="primary" type="submit">Başlık ekini kaydet<\/button>/],
   'kullanim':[usageCard(view17.usage),/usage-settings-text">Kullanım birkaç dakikada bir yenilenir\./],
-  'talimatlar':[editorHtml(view17.instructions),/id="instruction-save">Kaydet</],
-  'tonlar':[tonesHtml({list:TONES,form:{},message:''}),/<button class="primary" type="submit">Tonu ekle<\/button>/],
-  'uyari-ifadeleri':[warningsBox(view17.warnings),/id="warnings-save">Kaydet</],
-  'eklenti':[extensionSection(view17.extension),/id="extension-trial">Deneme</],
+  'eklenti':[extensionSection(view17.extension),/id="extension-renew" class="quiet">Kodu yenile</],
   'proxy':[proxySection(view17.proxy),/<button type="submit" class="primary">Kaydet<\/button>/],
   'hakkinda':[aboutCard('0.19.0'),/about-version">SÜRÜM 0\.19\.0</],
 };
 
 test('GÖREV-17 Ayarlar: a button for every section; the address names the section',()=>{
-  assert.deepEqual(SECTIONS.map(s=>s.slug),['klasor','claude','baslik-eki','kullanim','talimatlar','tonlar','uyari-ifadeleri','eklenti','proxy','hakkinda']);
+  // GÖREV-21: only the program's settings are left — no content rule of the channel, no data work
+  assert.deepEqual(SECTIONS.map(s=>s.slug),['klasor','claude','kullanim','eklenti','proxy','hakkinda']);
+  assert.deepEqual(SECTIONS.map(s=>s.title),['Kayıt klasörü','Claude','Claude kullanımı','Tarayıcı eklentisi',"ABD proxy'si",'Hakkında']);
+  for(const moved of ['talimatlar','tonlar','uyari-ifadeleri','baslik-eki']) assert.equal(sectionOfHash(`#settings/${moved}`),null,moved);
   assert.deepEqual(Object.keys(sectionHtml17),SECTIONS.map(s=>s.slug));
-  const nav=settingsNav('tonlar');
+  const nav=settingsNav('claude');
   for(const section of SECTIONS) {
     assert.ok(nav.includes(`href="#settings/${section.slug}" data-settings-section="${section.slug}"`),section.slug);
     assert.ok(nav.includes(`</span> ${section.title.replace("'","&#39;")}</a>`),section.title);
@@ -1260,7 +1330,7 @@ test('GÖREV-17 Ayarlar: a button for every section; the address names the secti
     assert.equal(settingsHref(section.slug),`#settings/${section.slug}`);
   }
   assert.equal((nav.match(/class="section-nav-item active"/g)||[]).length,1);
-  assert.match(nav,/class="section-nav-item active" href="#settings\/tonlar"[^>]*aria-current="true"/);
+  assert.match(nav,/class="section-nav-item active" href="#settings\/claude"[^>]*aria-current="true"/);
   assert.equal(sectionOfHash('#settings'),null);assert.equal(sectionOfHash('#settings/yok'),null);assert.equal(sectionOfHash('#collect/weather'),null);
   assert.ok(isSettingsHash('#settings') && isSettingsHash('#settings/proxy') && isSettingsHash('#ayarlar') && !isSettingsHash('#sources') && !isSettingsHash(''));
 });
@@ -1282,7 +1352,8 @@ for(const section of SECTIONS) {
 
 test('GÖREV-17 Ayarlar: the frame keeps every slot the section modules draw into, in the order of the buttons',()=>{
   const frame=settingsFrame('C:/veri/30a','0.19.0');
-  const slots=['claude-settings-slot','suffix-settings-slot','usage-settings-slot','instructions-slot','tones-slot','warnings-slot','extension-slot','proxy-slot'];
+  const slots=['claude-settings-slot','usage-settings-slot','extension-slot','proxy-slot'];
+  for(const gone of ['suffix-settings-slot','instructions-slot','tones-slot','warnings-slot']) assert.ok(!frame.includes(`id="${gone}"`),gone);      // GÖREV-21: these are on the Kanal screen
   let last=-1;
   for(const slot of slots) {const at=frame.indexOf(`id="${slot}"`);assert.ok(at>last,slot);last=at;}
   assert.ok(frame.indexOf('id="settings-nav-bar"')<frame.indexOf('id="ayar-klasor"'));
@@ -1291,14 +1362,34 @@ test('GÖREV-17 Ayarlar: the frame keeps every slot the section modules draw int
   assert.deepEqual([...order].sort((a,b)=>a-b),order);
 });
 
-test('GÖREV-17 Ayarlar: links on other screens open the section itself',()=>{
-  assert.match(toneChoice(OPTIONS.tonlar,[]),/href="#settings\/tonlar">Tonları yönet/);
+// the Kanal screen's sections are drawn by the same modules as before (GÖREV-21: they were Settings sections)
+const channelHtml21={
+  'talimatlar':[editorHtml(view17.instructions),/id="instruction-save">Kaydet</],
+  'tonlar':[tonesHtml({list:TONES,form:{},message:''}),/<button class="primary" type="submit">Tonu ekle<\/button>/],
+  'uyari-ifadeleri':[warningsBox(view17.warnings),/id="warnings-save">Kaydet</],
+  'baslik-eki':[suffixSection(view17.suffix),/<button class="primary" type="submit">Başlık ekini kaydet<\/button>/],
+};
+for(const section of CHANNEL_SECTIONS) {
+  test(`GÖREV-21 Kanal → ${section.title}: the section's card and its main button are on the Kanal screen`,()=>{
+    const [inner,main]=channelHtml21[section.slug];
+    const card=sectionCard(section.slug,inner,CHANNEL_SECTIONS);
+    assert.match(card,new RegExp(`^<section class="settings-section" id="ayar-${section.slug}" data-section="${section.slug}"`));
+    assert.match(card,main);
+    assert.ok(channelFrame().includes(`href="#kanal/${section.slug}"`));
+  });
+}
+
+test('GÖREV-17/21: links on other screens open the section itself, in the layer it lives in now',()=>{
+  assert.match(toneChoice(OPTIONS.tonlar,[]),/href="#kanal\/tonlar">Tonları yönet/);
   assert.match(warnings({...titleOptions,claude:{found:false}}),/<a href="#settings\/claude">Ayarlar → Claude<\/a> bölümünden/);
-  assert.match(extensionSection(view17.extension),/<a href="#settings\/proxy">ABD proxy'si<\/a> tanımlıysa/);
-  assert.match(proxySection(view17.proxy),/<a href="#settings\/eklenti">tarayıcı eklentisiyle<\/a> okunmaz/);
+  assert.match(extensionReading(view17.extension),/<a href="#settings\/eklenti">Ayarlar → Tarayıcı eklentisi<\/a>/);
+  assert.match(proxyReading(view17.proxy),/<a href="#settings\/proxy">Ayarlar → ABD proxy'si<\/a>/);
   assert.match(trialRows([{alan_adi:'cvs.com',durum:'bolge_engeli',tur:'bolge_engeli',not:"bölge engeli: ABD proxy'si tanımlı değil (Ayarlar)"}]),/tanımlı değil \(<a href="#settings\/proxy">Ayarlar → ABD proxy'si<\/a>\)/);
   assert.equal(linkSettingsMentions('Eşleşme kodu geçersiz; Ayarlar → Tarayıcı eklentisi ekranındaki kodu yazın.'),
     'Eşleşme kodu geçersiz; <a href="#settings/eklenti">Ayarlar → Tarayıcı eklentisi</a> ekranındaki kodu yazın.');
+  // a text that still says "Ayarlar → Tonlar" is led to where the tones are now
+  assert.equal(linkSettingsMentions('Tonu Ayarlar → Tonlar ekranından geri alın.'),'Tonu <a href="#kanal/tonlar">Kanal → Tonlar</a> ekranından geri alın.');
+  assert.equal(linkSettingsMentions('Kanal → Talimatlar'),'<a href="#kanal/talimatlar">Kanal → Talimatlar</a>');
   assert.match(jobCard(job17('c1','failed',{message:"Ayarlar → Claude'dan tur sınırını artırın <b>"})),/<a href="#settings\/claude">Ayarlar → Claude<\/a>&#39;dan tur sınırını artırın &lt;b&gt;/);
   assert.equal(linkSettingsMentions('düz metin'),'düz metin');
 });
@@ -1444,4 +1535,186 @@ test('refresh table names the companies added since the last run under the estim
     added_companies:[{company:'Yeni <Şirket>',listings:61,requests:1525}]}];
   const html=refreshSection({items,note:'',estimate_seconds:30000,estimate_complete:true,batch:null});
   assert.match(html,/yeni şirketler dahil: Yeni &lt;Şirket&gt; 61 ilan, \+1525 istek/);
+});
+
+// --- GÖREV-21: the shared parts of every Claude step (cost in the same place, one approval component), the step screens, the topic bank
+// and the video list --------------------------------------------------------------------------------------------------------------------
+import {costText, costLine, runningPanel, spentText, spentLine, chainTable, staleBox, errorBox, decisionCard, versionsCard, logCard, bindStep} from '../studio/web/claude-step.js';
+import {titleCard, titleChooser, packCard, planCard, writingCard, versionList, checkCards, toneRadios, plannedBody} from '../studio/web/steps.js';
+import {videoRow, videoList} from '../studio/web/videolist.js';
+
+const estimate21={satirlar:[{baslik:'Plan',cagri:2,okunan:82000,yazilan:26000,toplam:108000,modeller:[{adim:'metin_plan',model_adi:'Opus',efor_adi:'Yüksek'},{adim:'metin_plan_elestiri',model_adi:'Opus',efor_adi:'Orta'}]}],
+  toplam:{cagri:2,okunan:82000,yazilan:26000,toplam:108000},sinirlar:{cagri:250000,is:1500000},asiyor:[],baslatilabilir:true,metin:'Plan: 2 çağrı, yaklaşık 108 bin token'};
+
+test('GÖREV-21 maliyet: düğmenin üstünde tahmin — kaç çağrı, okunan ve yazılan token, model',()=>{
+  assert.equal(costText(estimate21),'2 çağrı · okunacak ≈ 82 bin · yazılacak ≈ 26 bin token (toplam ≈ 108 bin) · model: Opus · Yüksek; Opus · Orta');
+  assert.match(costLine({estimate:estimate21}),/^<p class="cost-line " data-cost-line><span class="tag ">Tahmin<\/span> 2 çağrı · okunacak ≈ 82 bin/);
+  assert.match(costLine({estimate:{...estimate21,baslatilabilir:false}}),/cost-line over.*tag error">Tahmin.*sınırı aşıyor; başlatılamaz/s);
+  assert.match(costLine({loading:true}),/hesaplanıyor…/);assert.match(costLine({}),/Claude “Başlat” demeden çalışmaz/);
+  assert.match(costLine({error:'Önce paket'}),/cost-error.*Önce paket/s);
+  // the same line above every start button: the plan, the writing, the bank's forms and the own title of step 1
+  const view={adim:{id:'plan',status:'ready'},eylemler:{run:true},calisma:null,is:null,mesgul:null};
+  const card=planCard(view,{estimate:estimate21},'',false);
+  assert.ok(card.indexOf('data-cost-line')<card.indexOf('id="plan-start"'));
+  assert.match(card,/<button type="button" class="primary" id="plan-start" >Planı çıkar<\/button>/);
+  const writing=writingCard({adim:{id:'yazim',status:'ready'},eylemler:{run:true},tonlar:[{dosya:'a',ad:'A',ilk_cumle:'c',varsayilan:true}],calisma:null,is:null},['a'],{estimate:estimate21},'',false);
+  assert.ok(writing.indexOf('data-cost-line')<writing.indexOf('id="writing-start"'));
+  assert.match(writing,/id="writing-start" >Yazımı başlat</);
+  const chooser=titleChooser({adaylar:[],degerlendirmeler:[],secenekler:{available:true,whole_region:'30A geneli',regions:[],claude:{found:true}}},{baslik:'',bolge:'',not:''},{},'',false);
+  assert.ok(chooser.indexOf('data-cost-line')<chooser.indexOf('id="own-title-start"'));
+  const source=readFileSync(new URL('../studio/web/videos.js',import.meta.url),'utf8');
+  assert.equal((source.match(/\$\{costLine\(\{hint\}\)\}<button class="primary" id="(title|review)-start"/g)||[]).length,2);
+});
+
+test('GÖREV-21 maliyet: iş sürerken o ana kadarki harcama (çağrı ve token) ve "İptal"; bitince gerçek ile tahmin yan yana',()=>{
+  const job={id:'j1',kind:'claude_metin',status:'running',progress:40,message:'Bölüm yazılıyor',created_at:'2026-11-16T10:00:00Z',
+    progress_info:{tur:'metin',yuzde:40,asama:'bölümler 2/6 bitti',harcama:{tahmin:540000,gercek:{cagri:3,okunan:95000,yazilan:25000,toplam:120000}}}};
+  const panel=runningPanel(job);
+  assert.match(panel,/data-run-panel="j1"/);assert.match(panel,/<button type="button" class="quiet" data-step-cancel="j1">İptal<\/button>/);
+  assert.match(panel,/Şu ana kadar<\/span> 3 çağrı · 120 bin token \(okunan 95 bin, yazılan 25 bin\) · tahmin 540 bin token/);
+  assert.match(panel,/aria-valuenow="40"/);assert.match(panel,/iptal edildi” diye düşer; o ana kadarki harcaması sayılır/);
+  assert.match(runningPanel({...job,progress_info:{tur:'metin',yuzde:5}}),/henüz biten çağrı yok/);
+  assert.equal(runningPanel({...job,status:'done'}),'');assert.equal(runningPanel(null),'');
+  assert.equal(spentText({cagri:0,toplam:0}),'0 çağrı bitti (token, çağrı bitince sayılır)');
+  const line=spentLine({tahmin:100000,gercek:{cagri:4,okunan:150000,yazilan:20000,toplam:170000},karsilastirma:{fazla:true,uyari:'Gerçek harcama tahminin 1,5 katını geçti.'}});
+  assert.match(line,/spend-line over.*gerçek 4 çağrı · 170 bin token.*tahmin 100 bin token.*Beklenenden fazla<\/span> Gerçek harcama tahminin 1,5 katını geçti\./s);
+  assert.doesNotMatch(spentLine({tahmin:{toplam:100000},gercek:{cagri:2,okunan:80000,yazilan:10000,toplam:90000},karsilastirma:{fazla:false}}),/Beklenenden fazla/);
+  assert.equal(spentLine(null),'');
+  // "İptal" asks for the job's cancellation; the screen then says how it was recorded
+  let canceled=null;
+  const button={dataset:{stepCancel:'j1'},addEventListener(_,fn){this.click=fn;},disabled:false};
+  const root={querySelectorAll:selector=>selector==='[data-step-cancel]'?[button]:[],querySelector:()=>null};
+  globalThis.confirm=()=>true;
+  bindStep(root,{cancel:id=>{canceled=id;}});button.click();
+  delete globalThis.confirm;
+  assert.equal(canceled,'j1');assert.equal(button.disabled,true);
+  const steps=readFileSync(new URL('../studio/web/steps.js',import.meta.url),'utf8');
+  assert.match(steps,/await api\(`jobs\/\$\{encodeURIComponent\(jobId\)\}\/cancel`,\{method:"POST"\}\);this\.message="İptal edildi; iş kayda “iptal edildi” diye düştü, harcaması sayıldı\."/);
+});
+
+test('GÖREV-21 maliyet: çok parçalı adımlarda halka tablosu — durum, çağrı, gerçek ve tahmini token; altında toplam ve tahmin',()=>{
+  const chain={halkalar:[
+    {grup:'plan',grup_adi:'Plan',adim:'metin_plan',baslik:'Planlayıcı',durum:'done',durum_adi:'Tamamlandı',ayrinti:null,cagri:1,gercek:70000,tahmin:80000,tahmini_cagri:1},
+    {grup:'plan',grup_adi:'Plan',adim:'metin_plan_elestiri',baslik:'Plan eleştirmeni',durum:'running',durum_adi:'Çalışıyor',ayrinti:null,cagri:0,gercek:0,tahmin:28000,tahmini_cagri:1},
+    {grup:'a',grup_adi:'Araştırmacı dost',adim:'metin_bolum',baslik:'Bölümler',durum:'partial',durum_adi:'Yarıda kaldı',ayrinti:'2/6 bölüm',cagri:2,gercek:50000,tahmin:150000,tahmini_cagri:6},
+    {grup:'a',grup_adi:'Araştırmacı dost',adim:'denetim',baslik:'Program denetimi',durum:'waiting',durum_adi:'Bekliyor',ayrinti:'Claude çağrısı yok',cagri:0,gercek:0,tahmin:null,tahmini_cagri:null}],
+    toplam:{cagri:3,gercek:120000,tahmin:258000},fazla:false,uyari:null};
+  const html=chainTable(chain,{title:'Yazımın halkaları'});
+  assert.match(html,/<h2>Yazımın halkaları<\/h2>/);
+  assert.match(html,/<th>HALKA<\/th><th>DURUM<\/th><th>ÇAĞRI \(YAPILAN \/ TAHMİN\)<\/th><th>GERÇEK TOKEN<\/th><th>TAHMİNİ TOKEN<\/th>/);
+  assert.equal((html.match(/class="chain-group"/g)||[]).length,2);
+  assert.match(html,/data-link="metin_plan"><td>Planlayıcı<\/td>\s*<td><span class="tag green">Tamamlandı<\/span><\/td><td>1 \/ 1<\/td>\s*<td>70 bin<\/td><td>80 bin<\/td>/);
+  assert.match(html,/Bölümler<small class="source-host">2\/6 bölüm<\/small><\/td>\s*<td><span class="tag warm">Yarıda kaldı<\/span><\/td><td>2 \/ 6<\/td>/);
+  assert.match(html,/Program denetimi<small class="source-host">Claude çağrısı yok<\/small>.*Bekliyor<\/span><\/td><td>0<\/td>\s*<td>—<\/td><td>—<\/td>/s);
+  assert.match(html,/<tfoot><tr><td>Toplam<\/td><td><\/td><td>3<\/td><td><strong>120 bin<\/strong><\/td><td>258 bin<\/td>/);
+  assert.match(chainTable({...chain,fazla:true,uyari:'Gerçek harcama tahminin 1,5 katını geçti.'}),/Beklenenden fazla<\/span> Gerçek harcama tahminin 1,5 katını geçti\./);
+  assert.equal(chainTable({halkalar:[]}),'');assert.equal(chainTable(null),'');
+});
+
+test('GÖREV-21 onay bileşeni: 1, 3 ve 5. adımlarda aynı bileşen — not alanı ve üç düğme; onaysız adımda yok',()=>{
+  const all={approve:true,correct:true,reject:true};
+  for(const id of ['baslik','plan','kontrol']) {
+    const card=decisionCard({id,approval:true,status:'awaiting_approval'},all);
+    assert.match(card,/id="decision-card" aria-label="Karar"/,id);assert.match(card,/<textarea id="decision-note"/,id);
+    assert.deepEqual([...card.matchAll(/data-decision="([a-z]+)"/g)].map(m=>m[1]),['onayla','duzeltme','reddet'],id);
+    assert.match(card,/>Onayla<\/button>\s*<button type="button" data-decision="duzeltme" >Düzeltme iste<\/button>\s*<button type="button" class="quiet" data-decision="reddet" >Reddet<\/button>/,id);
+    assert.match(card,/kullanıcının düzeltme notu/,id);
+  }
+  assert.equal(decisionCard({id:'paket',approval:false,status:'done'},all),'');                 // a step without approval has no decision
+  assert.equal(decisionCard({id:'yazim',approval:false,status:'done'},all),'');
+  assert.equal(decisionCard({id:'plan',approval:true,status:'ready'},{approve:false,correct:false,reject:false}),'');
+  const approved=decisionCard({id:'plan',approval:true,status:'approved'},{approve:false,correct:true,reject:true});
+  assert.match(approved,/data-decision="onayla" disabled/);assert.match(approved,/data-decision="duzeltme" >/);
+  // 5 · Kontrol: the tone to go on with is chosen next to "Onayla"
+  const tones=toneRadios({tonlar:[{id:'s1',tone_name:'Araştırmacı dost',number:1,red:1,yellow:2},{id:'s2',tone_name:'Vlogger',number:2,red:0,yellow:0}]},'s2');
+  const check=decisionCard({id:'kontrol',approval:true,status:'awaiting_approval'},all,{extra:tones,approveLabel:'Onayla ve bu tonla devam et'});
+  assert.match(check,/Devam edilecek ton.*name="go-on-tone" value="s1" >.*name="go-on-tone" value="s2" checked>.*Onayla ve bu tonla devam et/s);
+  assert.ok(check.indexOf('go-on-tone')<check.indexOf('data-decision="onayla"'));
+  // the buttons reach the handler with the note
+  const calls=[];
+  const buttons=['onayla','duzeltme','reddet'].map(kind=>({dataset:{decision:kind},addEventListener(_,fn){this.click=fn;}}));
+  const root={querySelectorAll:selector=>selector==='[data-decision]'?buttons:[],querySelector:selector=>selector==='#decision-note'?{value:'kısalt'}:null};
+  bindStep(root,{decide:(kind,note)=>calls.push([kind,note])});
+  buttons.forEach(button=>button.click());
+  assert.deepEqual(calls,[['onayla','kısalt'],['duzeltme','kısalt'],['reddet','kısalt']]);
+  // the old buttons are gone from the screens
+  for(const file of ['steps.js','text.js','videos.js','claude-step.js']) {
+    const source=readFileSync(new URL(`../studio/web/${file}`,import.meta.url),'utf8');
+    assert.doesNotMatch(source,/Bu başlığı seç<|Bu tonla devam et<|>Devam<\/button>|Plandan sonra dur</,file);
+  }
+});
+
+test('GÖREV-21 eskime: sebep Türkçe yazılır, "Bu değişiklik etkilemiyor" adımı önceki durumuna döndürür; hata ve sürümler',()=>{
+  const stale=staleBox({status:'stale',stale_reason:'Plan onayı değişti.',status_before_stale:'done'},{clear_stale:true});
+  assert.match(stale,/<strong>Bu adım eskidi:<\/strong> Plan onayı değişti\..*önceki durumuna \(tamamlandı\) döner.*<button type="button" data-clear-stale >Bu değişiklik etkilemiyor<\/button>/s);
+  assert.equal(staleBox({status:'done'},{}),'');
+  let note=null;
+  const root={querySelectorAll:()=>[],querySelector:selector=>selector==='[data-clear-stale]'?{addEventListener(_,fn){this.click=fn;root.button=this;}}:selector==='#stale-note'?{value:'veri aynı'}:null};
+  bindStep(root,{clearStale:text=>{note=text;}});root.button.click();
+  assert.equal(note,'veri aynı');
+  assert.match(errorBox({status:'error',error:'Program kapanırken yarıda kaldı; kaldığı yerden sürdürebilirsiniz.'}),/claude-warning.*kaldığı yerden sürdürebilirsiniz/s);
+  assert.equal(errorBox({status:'ready',error:null}),'');
+  const resumable=planCard({adim:{id:'plan',status:'error'},eylemler:{run:true,resume:true},calisma:null,is:null},{},'',false);
+  assert.match(resumable,/data-resume>Kaldığı yerden sürdür</);
+  const versions=versionsCard([{id:'r2',zaman:'2026-11-16T10:00:00Z',baslik:'6 bölümlü plan · onaylı',ayrinti:'Düzeltme notu: kısalt'},{id:'r1',zaman:'2026-11-15T10:00:00Z',baslik:'5 bölümlü plan'}],item=>item.id==='r2'?'#x':'');
+  assert.match(versions,/<h2>Sürümler<\/h2><small>2 kayıt · hiçbiri silinmez<\/small>.*<a href="#x">6 bölümlü plan · onaylı<\/a><small class="source-host">Düzeltme notu: kısalt<\/small>.*<strong>5 bölümlü plan<\/strong>/s);
+  assert.equal(versionsCard([]),'');
+  assert.match(logCard([{at:'2026-11-16T10:00:00Z',text:'3 · Plan onaylandı. Not: yok'}]),/Durum günlüğü.*3 · Plan onaylandı\. Not: yok/s);
+});
+
+test('GÖREV-21 adım ekranları: başlık (Türkçe büyük, İngilizce küçük), plan onaylanmadan yazım yok, kontrol, henüz kurulmayan adımlar',()=>{
+  const title=titleCard({baslik_tr:'Çiftler için <Rosemary>',baslik_en:'Rosemary for Couples',bolge:'Rosemary Beach',aile:'Deneyim',izleyici_sorusu:'Uygun mu?',vaat:'Evet, çünkü…',neden_onerildi:'Boşluk var.',
+    icerik_plani:[{bolum:'Fiyat',ne_anlatir:'Ne tutar?'}],eksik_veri:['Yorum yok'],kapak_fikri:'İki sandalye',isaretler:[]});
+  assert.match(title,/<p class="title-tr-big">Çiftler için &lt;Rosemary&gt;<\/p><p class="title-en-small" lang="en">Rosemary for Couples<\/p>/);
+  assert.match(title,/İzleyicinin sorusu<\/h3><p>Uygun mu\?<\/p>\s*<h3>Vaat<\/h3><p>Evet, çünkü…<\/p>/);assert.match(title,/<strong>Fiyat<\/strong> — Ne tutar\?/);
+  assert.equal(titleCard(null),'');
+  const chooser=titleChooser({adaylar:[{calisma:'r1',sira:2,baslik_tr:'Başlık',baslik_en:'Title',aile:'Deneyim',bolge:'Seaside',bu_video:true}],degerlendirmeler:[],secenekler:{available:false}},{baslik:'',bolge:'',not:''},{},'',false);
+  assert.match(chooser,/Konu bankasından seç.*title-tr-big small">Başlık<\/span><span class="title-en-small" lang="en">Title<\/span>.*bu video için değerlendirildi.*data-use-candidate="r1:2" >Bu başlığı kullan/s);
+  assert.match(packCard({adim:{id:'paket',status:'ready'},eylemler:{run:true},surumler:[],paket:null},false),/Claude çalışmaz · token harcamaz.*id="pack-build" >Veri paketini üret</s);
+  // 4 · Yazım never starts before the plan is approved: the step waits, its button is off and the screen says why
+  const waiting=writingCard({adim:{id:'yazim',status:'waiting'},eylemler:{run:false},tonlar:[{dosya:'a',ad:'A',ilk_cumle:'c',varsayilan:true}],calisma:null,is:null},['a'],{},'',false);
+  assert.match(waiting,/id="writing-start" disabled>Yazımı başlat</);assert.match(waiting,/Plan onaylanmadan yazım başlamaz: önce 3 · Plan adımında planı onaylayın\./);
+  const note=writingCard({adim:{id:'yazim',status:'ready'},eylemler:{run:true},tonlar:[{dosya:'a',ad:'A',ilk_cumle:'c',varsayilan:true}],calisma:null,is:null,duzeltme_notu:'Girişi kısalt'},['a'],{},'',false);
+  assert.match(note,/Kullanıcının düzeltme notu<\/strong> \(5 · Kontrol ve ton seçimi adımından\): Girişi kısalt.*Claude&#39;a malzeme olarak verilir|Kullanıcının düzeltme notu<\/strong> \(5 · Kontrol ve ton seçimi adımından\): Girişi kısalt.*Claude'a malzeme olarak verilir/s);
+  assert.match(note,/>Düzeltme notuyla yeniden yaz</);
+  const list=versionList({calisma:{surumler:[{id:'s1',number:1,tone_name:'Araştırmacı dost',words:2300,dakika:15.3,red:1,yellow:2,created_at:'2026-11-16T10:00:00Z',secili:true}]}},'v1');
+  assert.match(list,/Araştırmacı dost<\/strong> <span class="tag green">seçili ton<\/span>.*2\.300 kelime · ~15,3 dk.*href="#video\/v1\/yazim\/surum\/s1">Metni oku/s);
+  const cards=checkCards({tonlar:[{id:'s1',tone_name:'Araştırmacı dost',number:1,red:2,yellow:1,words:2300,dakika:15.3,secili:false,isletme_adi:1,
+    bulgular:[{kural:'isletme',ad:'işletme adı',kirmizi:1,sari:0,ornekler:[{no:12,metin:'Modica Market adı geçiyor.',seviye:'kirmizi'}]},{kural:'ses',ad:'ses',kirmizi:0,sari:1,ornekler:[{no:3,metin:'amazing',seviye:'sari'}]}]}]});
+  assert.match(cards,/Programın denetimi.*Araştırmacı dost.*2 kırmızı.*tag error">İşletme adı denetimi: 1 bulgu.*işletme adı<\/strong>.*12\. cümle: Modica Market adı geçiyor\..*ses<\/strong>/s);
+  assert.match(checkCards({tonlar:[{id:'s1',tone_name:'A',number:1,red:0,yellow:0,words:10,dakika:0.1,isletme_adi:0,bulgular:[]}]}),/tag green">İşletme adı denetimi: bulgu yok/);
+  assert.match(plannedBody({adim:{title:'Kurgu paketi'},aciklama:'Kurgu Motoru\'na gidecek paket.'}),/Sonraki görevde gelecek.*Kurgu paketi.*Kurgu Motoru&#39;na gidecek paket\./s);
+});
+
+test('GÖREV-21 konu bankası: çalışmalar ve adayları (Türkçe büyük, İngilizce küçük), "Bu başlıkla video aç", kullanılan adayda video',()=>{
+  const bank={calismalar:[{id:'r1',step:'baslik',status:'approved',created_at:'2026-10-10T19:57:00Z',params:{bolge:'30A geneli',aile:'hepsi'},model_label:'Opus 5.5',metrics:{},
+      adaylar:[{sira:0,baslik_tr:'Kış videosu',baslik_en:'Winter Video',aile:'Sezon ve zamanlama',bolge:'30A geneli',video_id:'v1',video_adi:'Kış videosu',secilebilir:false},
+        {sira:1,baslik_tr:'Bütçe <rehberi>',baslik_en:'Budget Guide',aile:'Masraf ve bütçe',bolge:'Seaside',video_id:null,video_adi:null,secilebilir:true}]},
+    {id:'r2',step:'baslik_degerlendirme',status:'awaiting_approval',adaysiz:true,bilgi:'Değerlendirildi: veriyle dolmuyor',created_at:'2026-10-10T23:32:00Z',params:{bolge:'Rosemary Beach',kullanici_basligi:'köpek'},metrics:{},adaylar:[]}],aday_sayisi:2,kullanilan:1,kullanilabilir:1};
+  const html=bankRuns(bank);
+  assert.match(html,/data-bank-run="r1".*Öneri · 30A geneli/s);
+  assert.match(html,/<li class="used">.*title-tr-big small">Kış videosu<\/span><span class="title-en-small" lang="en">Winter Video<\/span>.*<span class="tag green">kullanıldı<\/span> <a class="source-link" href="#video\/v1\/baslik">Kış videosu →<\/a>/s);
+  assert.match(html,/title-tr-big small">Bütçe &lt;rehberi&gt;<\/span>.*<span class="tag">Seaside<\/span>\s*<button type="button" class="primary" data-open-video="r1:1">Bu başlıkla video aç<\/button>/s);
+  assert.equal((html.match(/data-open-video=/g)||[]).length,1);                    // a used candidate cannot open a second video
+  assert.match(html,/Değerlendirme · “köpek”.*Fikir veriyle dolmuyor; aday yok/s);
+  assert.match(bankRuns({calismalar:[]}),/Henüz öneri çalışması yok/);
+  const source=readFileSync(new URL('../studio/web/videos.js',import.meta.url),'utf8');      // "Bu başlıkla video aç" opens the video
+  assert.match(source,/api\(`claude\/runs\/\$\{encodeURIComponent\(runId\)\}\/select`[\s\S]{0,200}studio:video-opened",\{detail:\{id:video\.id,step:"baslik"\}\}/);
+  assert.match(source,/<h2>Öneri al<\/h2>/);assert.match(source,/Önceki öneriler \(/);
+});
+
+test('GÖREV-21 Videolar: başlığın Türkçesi büyük, İngilizcesi küçük; tarih; adım ilerlemesi; "Yeni video", "Arşive kaldır", "Arşivdekileri göster"; silme yok',()=>{
+  const video={id:'v1',ad:'Kış videosu',calisma_adi:'kış',baslik_tr:'Kış videosu',baslik_en:'Winter Video',bolge:'30A geneli',olusturuldu:'2026-11-16T10:00:00Z',arsivlendi:null,ilerleme:'3/8',completed:3,total:8,
+    siradaki:{id:'yazim',ad:'4 · Yazım',durum:'ready',durum_adi:'hazır'}};
+  const row=videoRow(video,{open:true});
+  assert.match(row,/data-open-video="v1".*<span class="title-tr-big">Kış videosu<\/span>\s*<span class="title-en-small" lang="en">Winter Video<\/span>/s);
+  assert.match(row,/oluşturuldu /);assert.match(row,/<span class="video-progress"[^>]*>3\/8<\/span>/);assert.match(row,/4 · Yazım: hazır/);
+  assert.match(row,/<span class="tag green">açık<\/span>/);assert.match(row,/data-archive="v1">Arşive kaldır</);
+  const untitled=videoRow({...video,baslik_tr:null,baslik_en:null,ilerleme:'0/8',siradaki:{id:'baslik',ad:'1 · Başlık ve vaat',durum:'ready',durum_adi:'hazır'}});
+  assert.match(untitled,/<span class="title-tr-big">kış<\/span>\s*<span class="title-en-small">Başlık henüz seçilmedi \(1 · Başlık ve vaat\)/);
+  assert.match(videoRow({...video,arsivlendi:'2026-11-16T12:00:00Z'},{archived:true}),/data-open-video="v1" disabled.*data-unarchive="v1">Arşivden çıkar/s);
+  const list=videoList({videolar:[video],arsiv:false,arsivdeki:2,acik:'v1'},{name:''});
+  assert.match(list,/<h2>Yeni video<\/h2>.*Çalışma adı \(isteğe bağlı\).*id="new-video">Yeni video<\/button>.*Projenin videoları.*id="show-archived">Arşivdekileri göster \(2\)/s);
+  assert.doesNotMatch(list+row,/>Sil<|data-delete/);                                 // nothing is deleted
+  assert.match(videoList({videolar:[],arsiv:true,arsivdeki:0,acik:null},{name:''}),/Arşivdeki videolar.*Arşivde video yok\..*← Projenin videoları/s);
 });

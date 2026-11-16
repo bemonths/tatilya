@@ -44,6 +44,7 @@ from pathlib import Path
 from ..ai import budget, claude_info, runner, settings as claude_settings, single, steps, store as ai_store, tones as T, usage
 from ..ai import text_steps as TS
 from ..ai.schema import errors as schema_errors
+from .. import workflow
 from ..database import Conflict
 from ..destinations import PROFILES
 from ..evidence import PackError, stored_file
@@ -68,7 +69,9 @@ NETWORK = re.compile(r"econnreset|econnrefused|etimedout|enotfound|socket hang u
                      r"error)|getaddrinfo|eai_again", re.I)
 SERVER = re.compile(r"\b5\d\d\b.*(?:error|server)|internal server error|service unavailable|bad gateway|gateway timeout|overloaded", re.I)
 PUBLISHED_EMPTY = "Henüz yayınlanmış video yok."
-NOT_RESUMABLE = "Bu çalışma sürdürülemez; “Planı yeniden yap” ile yeni bir çalışma açın."
+NOT_RESUMABLE = "Bu çalışma sürdürülemez; 3 · Plan adımında “Planı çıkar” ile yeni bir çalışma açın."
+PLAN_READY = "Plan hazır; onayınızı bekliyor. 3 · Plan adımında okuyup “Onayla”, “Düzeltme iste” ya da “Reddet” deyin."
+PLAN_FIRST = "Plan onaylanmadan yazım başlamaz: önce 3 · Plan adımında planı onaylayın."
 
 
 class Stopped(Exception):
@@ -206,13 +209,43 @@ class TextService(TextViews):
 
     # ------------------------------------------------------------------------------------------------------------------- estimates (GÖREV-18)
 
-    def estimate(self, video_id, tone_files):
-        """The estimate shown before "Metni yaz" (and "Planı yeniden yap"): the plan and every chosen tone, and the total."""
+    def estimate_plan(self, video_id, note=None):
+        """GÖREV-21: the estimate above "Planı çıkar": the plan's two calls (planner and critic)."""
+        video = ai_store.video(self.db, video_id)
+        if video is None:
+            raise KeyError(video_id)
+        self.profile_of(video["destination_id"])
+        return text_estimate.estimate(self, video, [], note=(note or "").strip() or None)
+
+    def estimate_writing(self, video_id, tone_files, note=None):
+        """GÖREV-21: the estimate above "Yazımı başlat": every chosen tone with the approved plan (no plan calls)."""
         video = ai_store.video(self.db, video_id)
         if video is None:
             raise KeyError(video_id)
         chosen = self.tone_entries(self.profile_of(video["destination_id"]), tone_files)
-        return text_estimate.estimate(self, video, chosen)
+        base = self.approved_plan(video_id)
+        return text_estimate.estimate(self, video, chosen, plan=base["plan"], plan_done=True, note=(note or "").strip() or None)
+
+    def approved_plan(self, video_id):
+        """The text run whose plan the user approved (the plan step's record); Conflict when the plan is not approved."""
+        row = workflow.step(self.db, video_id, "plan")
+        run = store.run(self.db, row["ref"]) if row["ref"] else None
+        if row["status"] != "approved" or not run or not run.get("plan") or not (run.get("state") or {}).get("plan_onaylandi"):
+            raise Conflict(PLAN_FIRST)
+        return run
+
+    def writing_run(self, video_id, base):
+        """The run that writes with the approved plan: the newest one made from it, else the plan's own run."""
+        return next((r for r in store.runs(self.db, video_id) if r["id"] == base["id"] or (r.get("state") or {}).get("plan_kaynagi") == base["id"]),
+                    base)
+
+    def set_plan_approval(self, run_id, approved):
+        run = store.run(self.db, run_id)
+        if run is None:
+            raise KeyError(run_id)
+        state = dict(run.get("state") or {})
+        state["plan_onaylandi"] = bool(approved)
+        store.update_run(self.db, run_id, state=state)
 
     def estimate_add_tone(self, run_id, tone_file):
         """"Bu tonla da yaz": one tone with the run's known plan (no plan calls)."""
@@ -225,12 +258,6 @@ class TextService(TextViews):
         added = self.tone_entries(self.profile_of(run["destination_id"]), [tone_file])
         return text_estimate.estimate(self, video, added, plan=run["plan"], plan_done=True)
 
-    def estimate_replan(self, run_id, tone_files=None):
-        old = store.run(self.db, run_id)
-        if old is None:
-            raise KeyError(run_id)
-        return self.estimate(old["video_id"], tone_files or [t["dosya"] for t in old["tones"]])
-
     @staticmethod
     def check_estimate(found):
         if not found["baslatilabilir"]:
@@ -240,32 +267,75 @@ class TextService(TextViews):
         run = store.run(self.db, run_id)
         state = dict(run.get("state") or {})
         state["tahmin"] = {"is": job_id, **found["toplam"], "metin": found["metin"]}
+        # GÖREV-21: the estimate of every link of the chain (per the plan or a tone, per step: calls and tokens), for the link table
+        links = dict(state.get("tahmin_halkalar") or {})
+        for row in found["satirlar"]:
+            group = {}
+            for call in row.get("cagrilar") or []:
+                item = group.setdefault(call["adim"], {"cagri": 0, "toplam": 0})
+                item["cagri"] += 1
+                item["toplam"] += call["toplam"]
+            links[row.get("ton") or "plan"] = group
+        state["tahmin_halkalar"] = links
         store.update_run(self.db, run_id, state=state)
 
-    def start(self, video_id, tone_files, *, replan_of=None):
+    def start_plan(self, video_id, note=None):
+        """GÖREV-21 (3 · Plan): "Planı çıkar" — a new text run that writes the plan and stops for the user's approval. `note`: the
+        user's correction note ("Düzeltme iste"), given to the planner with the plan it is about."""
         video = ai_store.video(self.db, video_id)
         if video is None:
             raise KeyError(video_id)
-        profile = self.profile_of(video["destination_id"])
-        chosen = self.tone_entries(profile, tone_files)
-        found = text_estimate.estimate(self, video, chosen)
+        self.profile_of(video["destination_id"])
+        note = (note or "").strip() or None
+        found = text_estimate.estimate(self, video, [], note=note)
         self.check_estimate(found)
+        previous = next((r for r in store.runs(self.db, video_id) if r.get("plan")), None)
         with self.lock:
             self.check_free()
             run_id = store.new_id()
-            job_id = self.new_job(video, chosen, replan=bool(replan_of))
-            store.insert_run(self.db, run_id=run_id, destination_id=video["destination_id"], video_id=video_id, job_id=job_id, tones=chosen,
-                             pack_id=None, replan_of=replan_of)
+            job_id = self.new_job(video, [], phase="plan", replan=bool(previous))
+            store.insert_run(self.db, run_id=run_id, destination_id=video["destination_id"], video_id=video_id, job_id=job_id, tones=[],
+                             pack_id=None, replan_of=previous["id"] if previous else None)
+            if note:
+                store.update_run(self.db, run_id, state={"plan_notu": note, "onceki_plan": previous["id"] if previous else None})
             self.keep_estimate(run_id, job_id, found)
             self.db.update_job(job_id, message=f"Tahmin: {found['metin']}.")
+            workflow.set_step(self.db, video_id, "plan", "running", ref=run_id)
             self.submit(run_id)
         return self.view(run_id)
 
-    def replan(self, run_id, tone_files=None):
-        old = store.run(self.db, run_id)
-        if old is None:
-            raise KeyError(run_id)
-        return self.start(old["video_id"], tone_files or [t["dosya"] for t in old["tones"]], replan_of=run_id)
+    def start_writing(self, video_id, tone_files, note=None):
+        """GÖREV-21 (4 · Yazım): "Yazımı başlat" — the chosen tones are written with the approved plan. The plan's own run goes on when it
+        has written nothing yet; a rewrite (or a correction note) opens a new run with the same plan, so finished texts stay."""
+        video = ai_store.video(self.db, video_id)
+        if video is None:
+            raise KeyError(video_id)
+        chosen = self.tone_entries(self.profile_of(video["destination_id"]), tone_files)
+        base = self.approved_plan(video_id)
+        note = (note or "").strip() or None
+        found = text_estimate.estimate(self, video, chosen, plan=base["plan"], plan_done=True, note=note)
+        self.check_estimate(found)
+        with self.lock:
+            self.check_free()
+            current = self.writing_run(video_id, base)
+            written = bool(store.versions(self.db, text_run_id=current["id"])) or any(s["tone"] for s in store.sessions(self.db, current["id"]))
+            job_id = self.new_job(video, chosen, phase="yazim", replan=written)
+            if written or note or current["id"] != base["id"]:
+                run_id = store.new_id()
+                store.insert_run(self.db, run_id=run_id, destination_id=video["destination_id"], video_id=video_id, job_id=job_id, tones=chosen,
+                                 pack_id=base.get("pack_id"))
+                kept = {k: v for k, v in (base.get("state") or {}).items() if k in ("plan_bitti", "plan_uyarilari", "elestiri", "plan_turu")}
+                store.update_run(self.db, run_id, plan=base["plan"],
+                                 state={**kept, "plan_bitti": True, "plan_onaylandi": True, "plan_kaynagi": base["id"], "yazim_notu": note})
+            else:
+                run_id = base["id"]
+                store.update_run(self.db, run_id, status="running", tones=chosen, job_id=job_id, reason=None, reason_text=None, wait_until=None,
+                                 finished_at=None)
+            self.keep_estimate(run_id, job_id, found)
+            self.db.update_job(job_id, message=f"Tahmin: {found['metin']}.")
+            workflow.set_step(self.db, video_id, "yazim", "running", ref=run_id)
+            self.submit(run_id)
+        return self.view(run_id)
 
     def add_tone(self, run_id, tone_file):
         """"Bu tonla da yaz": one more tone with the run's plan (the plan and the pack stay)."""
@@ -274,6 +344,8 @@ class TextService(TextViews):
             raise KeyError(run_id)
         if not run.get("plan"):
             raise Conflict("Bu çalışmanın planı henüz kesinleşmedi; önce çalışmanın bitmesini bekleyin.")
+        if not (run.get("state") or {}).get("plan_onaylandi"):
+            raise Conflict(PLAN_FIRST)
         video = ai_store.video(self.db, run["video_id"])
         profile = self.profile_of(run["destination_id"])
         added = self.tone_entries(profile, [tone_file])[0]
@@ -326,11 +398,13 @@ class TextService(TextViews):
         self.wakes.setdefault(run_id, threading.Event()).set()
         return self.view(run_id)
 
-    def new_job(self, video, tones, *, replan=False, extra=False, resumed=False):
+    def new_job(self, video, tones, *, replan=False, extra=False, resumed=False, phase=None):
         names = ", ".join(t["ad"] for t in tones)
-        what = "devam" if resumed else "bir ton daha" if extra else "planı yeniden" if replan else "yeni"
+        what = "devam" if resumed else "bir ton daha" if extra else "yeniden" if replan else "yeni"
+        head = {"plan": "Plan", "yazim": "Yazım"}.get(phase, "Video metni")
+        title = f"{head} · {video['title_en']}" + (f" · {names}" if names else "") + f" ({what})"
         try:
-            return self.db.add_job(kind=JOB_KIND, title=f"Video metni · {video['title_en']} · {names} ({what})", destination_id=video["destination_id"])
+            return self.db.add_job(kind=JOB_KIND, title=title, destination_id=video["destination_id"])
         except Conflict as exc:
             raise Conflict("Bir video metni çalışması sürüyor; bitmesini bekleyin.") from exc
 
@@ -361,10 +435,23 @@ class TextService(TextViews):
         if self.canceled(ctx):
             raise Stopped()
 
+    def phase_of(self, run):
+        """The video step a run works for now: its plan until the user approved it, then the writing."""
+        return "yazim" if (run.get("state") or {}).get("plan_onaylandi") else "plan"
+
+    def mark(self, video_id, step, status, **values):
+        """The step's status after the chain moved (never breaks the chain)."""
+        try:
+            workflow.set_step(self.db, video_id, step, status, **values)
+        except Exception:
+            pass
+
     def execute(self, run_id):
         run = store.run(self.db, run_id)
         job_id = run["job_id"]
+        phase = self.phase_of(run)
         ctx = None
+        self.mark(run["video_id"], phase, "running", ref=run_id)
         try:
             self.db.update_job(job_id, status="running", progress=1, message="Metin çalışması başlıyor.",
                                progress_info={"tur": "metin", "yuzde": 1, "asama": "Hazırlanıyor", "baslangic": iso(self.clock.time())})
@@ -372,6 +459,10 @@ class TextService(TextViews):
             plan = self.plan_phase(ctx)
             if plan is None:
                 return
+            if not ctx.state.get("plan_onaylandi"):        # GÖREV-21: the chain does not write before the user approves the plan
+                raise Paused("plan_hazir", PLAN_READY)
+            if not ctx.run["tones"]:
+                raise Paused("ton_yok", "Bu çalışmada yazılacak ton seçilmedi; 4 · Yazım adımında ton seçip “Yazımı başlat” deyin.")
             ctx.tone_count = len(ctx.run["tones"])
             written = {v["tone_file"] for v in store.versions(self.db, text_run_id=run_id)}
             for index, tone in enumerate(ctx.run["tones"]):
@@ -381,30 +472,42 @@ class TextService(TextViews):
                 self.tone_phase(ctx, tone)
             spending = self.close_spending(ctx)
             # the job first: whoever sees the run finished also sees its job done (GÖREV-16: a test read the job a moment too early)
-            self.db.update_job(job_id, status="done", progress=100, message="Bütün tonların metni yazıldı; karşılaştırma bekliyor.",
+            self.db.update_job(job_id, status="done", progress=100, message="Seçilen tonların metni yazıldı; 5 · Kontrol ve ton seçimi onay bekliyor.",
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": spending},
                                progress_info={**self.progress_info(ctx, "Bitti"), "yuzde": 100})
             store.update_run(self.db, run_id, status="awaiting_comparison", reason=None, reason_text=None, wait_until=None)
+            try:
+                workflow.writing_done(self.db, run["video_id"], run_id)
+            except Exception:
+                pass
         except Stopped:
             closing = self.closing
+            text = ("Program kapanırken yarıda kaldı; “Kaldığı yerden sürdür” kalan halkaları çalıştırır." if closing else
+                    "İptal edildi; biten halkalar saklandı. “Kaldığı yerden sürdür” kalan halkaları çalıştırır.")
             store.update_run(self.db, run_id, status="interrupted" if closing else "paused", reason="program_kapandi" if closing else "durduruldu",
-                             reason_text="Program kapanırken yarıda kaldı; “Devam” kalan adımları çalıştırır." if closing else
-                             "Durduruldu; “Devam” kalan adımları çalıştırır.", wait_until=None)
-            self.db.update_job(job_id, status="canceled", message="Durduruldu; biten adımlar saklandı, “Devam” kalan adımları çalıştırır.",
+                             reason_text=text, wait_until=None)
+            self.db.update_job(job_id, status="canceled", message=text,
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
+            self.mark(run["video_id"], phase, "error", error=text, ref=run_id)
         except Paused as exc:
             store.update_run(self.db, run_id, status="paused", reason=exc.code, reason_text=exc.text, wait_until=None)
             self.db.update_job(job_id, status="failed" if exc.code != "plan_hazir" else "done", message=exc.text,
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
+            if exc.code == "plan_hazir":
+                self.mark(run["video_id"], "plan", "awaiting_approval", ref=run_id)
+            else:
+                self.mark(run["video_id"], phase, "error", error=exc.text, ref=run_id)
         except Failed as exc:
             store.update_run(self.db, run_id, status="error", reason=exc.code, reason_text=exc.text, wait_until=None)
             self.db.update_job(job_id, status="failed", message=exc.text,
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
+            self.mark(run["video_id"], phase, "error", error=exc.text, ref=run_id)
         except Exception as exc:  # anything unexpected: the run pauses ("Devam" tries again), nothing is left running
-            text = f"Beklenmedik hata: {exc}. Biten adımlar saklandı; “Devam” kalan adımları yeniden dener."
+            text = f"Beklenmedik hata: {exc}. Biten halkalar saklandı; “Kaldığı yerden sürdür” kalanları yeniden dener."
             store.update_run(self.db, run_id, status="paused", reason="beklenmedik", reason_text=text, wait_until=None,
                              state={**((ctx.state if ctx else run.get("state")) or {}), "son_hata": traceback.format_exc()[-4000:]})
             self.db.update_job(job_id, status="failed", message=text)
+            self.mark(run["video_id"], phase, "error", error=text, ref=run_id)
         finally:
             store.close_running(self.db, run_id, "canceled" if (ctx and ctx.stop.is_set()) or self.closing else "failed",
                                 "Çalışma bu oturum bitmeden durdu.")
@@ -892,6 +995,11 @@ class TextService(TextViews):
         self.stage(ctx, "plan", "Plan yazılıyor")
         base_files = {"baslik_analizi.md": self.title_analysis(ctx), "paket_ozeti.md": ctx.summary_text, "sayilar.csv": ctx.numbers_text}
         planner_files = {**base_files, "kanal_plani.md": self.channel_plan(ctx)}
+        if ctx.state.get("plan_notu"):                 # GÖREV-21: "Düzeltme iste" — the note and the plan it is about, as material
+            planner_files[TS.NOTE_FILE] = TS.note_text(ctx.state["plan_notu"])
+            old = store.run(self.db, ctx.state["onceki_plan"]) if ctx.state.get("onceki_plan") else None
+            if old and old.get("plan"):
+                planner_files[TS.PREVIOUS_PLAN] = json.dumps(old["plan"], ensure_ascii=False, indent=1) + "\n"
         warnings, round_no = [], 1
 
         def plan_round(number, reason=None, previous=None):
@@ -932,8 +1040,6 @@ class TextService(TextViews):
         write_json(folder / "plan.json", plan)
         write_json(folder / "plan_denetimi.json", {"uyarilar": warnings, "elestiri": ctx.state["elestiri"]})
         self.log(ctx, f"Plan kesinleşti: {len(plan['bolumler'])} bölüm" + (f"; {len(warnings)} program uyarısı." if warnings else "."))
-        if ctx.settings.get(claude_settings.STOP_AFTER_PLAN):
-            raise Paused("plan_hazir", "Plan hazır; “Plandan sonra dur” açık olduğu için çalışma durdu. Planı görüp “Devam” ile sürdürün.")
         return plan
 
     # ------------------------------------------------------------------------------------------------------------------- one tone
@@ -958,20 +1064,22 @@ class TextService(TextViews):
         plan_text = json.dumps(plan, ensure_ascii=False, indent=1) + "\n"
         ordered = sorted(plan["bolumler"], key=lambda s: s["no"])
         ctx.sections_total, ctx.sections_done = len(ordered), 0
+        # GÖREV-21: the user's correction note of the check ("Düzeltme iste"), given to every call that writes or revises the text
+        note = {TS.NOTE_FILE: TS.note_text(ctx.state["yazim_notu"])} if ctx.state.get("yazim_notu") else {}
         self.stage(ctx, "metin_bolum")
-        sections = self.sections(ctx, info, ordered, plan_text)
+        sections = self.sections(ctx, info, ordered, plan_text, note)
         self.stage(ctx, "metin_birlestirme")
-        merge = self.session(ctx, "metin_birlestirme", tone=info, files={"bolumler.md": D.sections_text(plan, sections), "plan.json": plan_text},
-                             extra={"plan": plan})
+        merge = self.session(ctx, "metin_birlestirme", tone=info, files={"bolumler.md": D.sections_text(plan, sections), "plan.json": plan_text,
+                                                                           **note}, extra={"plan": plan})
         draft = D.assemble(plan, sections, merge, {"giris": [], "kapanis": []})
         self.stage(ctx, "metin_giris_kapanis")
         ends = self.session(ctx, "metin_giris_kapanis", tone=info, files={
             "metin.md": D.marked_text(draft, numbered=False, title=ctx.title), "baslik_analizi.md": self.title_analysis(ctx),
-            "yayinlanan_videolar.md": self.published(ctx)})
+            "yayinlanan_videolar.md": self.published(ctx), **note})
         document = D.assemble(plan, sections, merge, ends)
         self.stage(ctx, "metin_son_okuma")
         final = self.session(ctx, "metin_son_okuma", tone=info, files={
-            "metin.md": D.marked_text(document, numbered=True, title=ctx.title), "paket_ozeti.md": ctx.summary_text},
+            "metin.md": D.marked_text(document, numbered=True, title=ctx.title), "paket_ozeti.md": ctx.summary_text, **note},
             extra={"sentence_count": len(D.sentences(document))})
         document, applied, refused = D.apply_corrections(document, final.get("duzeltmeler"), ctx.pack_ids)
         self.stage(ctx, "denetim")
@@ -995,7 +1103,7 @@ class TextService(TextViews):
         document = D.attach_findings(document, findings)
         self.save_version(ctx, info, document, findings, applied, refused)
 
-    def sections(self, ctx, info, ordered, plan_text):
+    def sections(self, ctx, info, ordered, plan_text, note=None):
         """The section writers side by side, at most the session limit at once; finished ones are kept even when another one stops."""
         results, problems = {}, []
         limit = max(1, int(ctx.settings.get("claude_max_sessions", 3)))
@@ -1003,7 +1111,7 @@ class TextService(TextViews):
 
         def one(section):
             data = self.session(ctx, "metin_bolum", tone=info, part=f"bolum-{section['no']}", files={
-                "plan.json": plan_text, "bolum.md": self.section_file(ctx, section)}, extra={"section": section["no"]})
+                "plan.json": plan_text, "bolum.md": self.section_file(ctx, section), **(note or {})}, extra={"section": section["no"]})
             with counter:
                 ctx.sections_done += 1
             self.stage(ctx, "metin_bolum")
@@ -1078,6 +1186,7 @@ class TextService(TextViews):
 
     def recover(self):
         store.recover(self.db)
+        workflow.recover(self.db)       # GÖREV-21: a step left "çalışıyor" by a program that closed half way is "hata" now
 
     def shutdown(self):
         with self.lock:

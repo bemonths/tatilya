@@ -1,4 +1,5 @@
-"""GÖREV-15 Adım 4–6 with the fake Claude: the writing chain end to end (two tones on one plan, "Bu tonla da yaz", "Planı yeniden yap"),
+"""GÖREV-15 Adım 4–6 with the fake Claude, in the order GÖREV-21 gives the chain (the plan, its approval, then the writing; the helper
+`start_text` does the three): the writing chain end to end (two tones on one plan, "Bu tonla da yaz", "Planı yeniden çıkar"),
 the returns of the plan (program check, critic), an invalid answer asked once more, the section writers within the session limit, the usage
 limit wait that goes on by itself, transient waits, "Durdur" and "Devam", a run cut by the app closing, "Plandan sonra dur", other Claude
 runs refused while a text run works, the combined instructions with the voice and the tone, the ids of baslik_analizi.md, the pack made
@@ -12,8 +13,9 @@ from studio.ai import settings as claude_settings
 from studio.database import Database
 from studio.text import engine as E
 from studio.text import store
-from tests.legacy import V17_TABLES, V18_TABLES, V19_TABLES, V20_TABLES, drop_v17
-from tests.text_helpers import FakeClock, add_video, app, open_app, sessions, start_text, text_env, text_job, wait_run  # noqa: F401
+from tests.legacy import V17_TABLES, V18_TABLES, V19_TABLES, V20_TABLES, V21_TABLES, drop_v17
+from tests.text_helpers import (FakeClock, add_video, app, decide, open_app, sessions, start_plan, start_text, start_writing,  # noqa: F401
+                                step_status, text_env, text_job, wait_run)
 
 TWO = ("arastirmaci_dost", "hikaye_anlaticisi")
 
@@ -25,7 +27,7 @@ def folder_of(client, session):
 def test_two_tones_on_one_plan_end_to_end(app):
     add_video(app)
     view = start_text(app, TWO)
-    assert view["status"] == "awaiting_comparison" and view["status_label"] == "karşılaştırma bekliyor"
+    assert view["status"] == "awaiting_comparison" and view["status_label"] == "yazıldı"
     assert len(sessions(view, "metin_plan")) == 1 and len(sessions(view, "metin_plan_elestiri")) == 1
     for tone in TWO:
         assert len(sessions(view, "metin_bolum", tone)) == 6
@@ -38,7 +40,8 @@ def test_two_tones_on_one_plan_end_to_end(app):
     plans = [json.loads((folder_of(app, s) / "plan.json").read_text(encoding="utf-8")) for s in sessions(view, "metin_bolum")]
     assert all(p == view["plan"] for p in plans)                         # every section writer of both tones had the one plan
     job = text_job(app)
-    assert job["status"] == "done" and job["message"] == "Bütün tonların metni yazıldı; karşılaştırma bekliyor."
+    assert job["status"] == "done" and job["message"] == "Seçilen tonların metni yazıldı; 5 · Kontrol ve ton seçimi onay bekliyor."
+    assert step_status(app, "yazim") == "done" and step_status(app, "kontrol") == "awaiting_approval"
     assert job["progress"] == 100 and job["progress_info"]["tur"] == "metin"
     assert any(e["text"].startswith("Araştırmacı dost: 1. sürüm kaydedildi") for e in job["log"])
 
@@ -92,9 +95,11 @@ def test_bu_tonla_da_yaz_and_plani_yeniden_yap(app):
     assert len(sessions(view, "metin_plan")) == 1 and len(sessions(view, "metin_bolum", "arastirmaci_dost")) == 6
     again = app.post(f"/api/metin/calismalar/{first['id']}/ton", json={"ton": "pratik_planlayici"})
     assert again.status_code == 409 and again.json()["detail"] == "Bu tonla bu planın metni zaten yazıldı."
-    replanned = app.post(f"/api/metin/calismalar/{first['id']}/yeniden-planla", json={"tonlar": ["vlogger"]})
-    assert replanned.status_code == 201 and replanned.json()["replan_of"] == first["id"]
-    second = wait_run(app, replanned.json()["id"])
+    replanned = start_plan(app)                    # "Planı yeniden çıkar": a new run; the old one and its versions stay
+    assert replanned["replan_of"] == first["id"] and replanned["reason"] == "plan_hazir" and replanned["id"] != first["id"]
+    assert decide(app, "plan").status_code == 200
+    second = start_writing(app, ("vlogger",))
+    assert second["id"] == replanned["id"]
     assert len(sessions(second, "metin_plan")) == 1 and [v["number"] for v in second["surumler"]] == [3]
     old = app.get(f"/api/metin/calismalar/{first['id']}").json()
     assert len(old["surumler"]) == 2 and old["status"] == "awaiting_comparison"
@@ -172,9 +177,9 @@ def test_the_usage_threshold_holds_new_sessions_and_the_run_goes_on_by_itself(ap
     service, shown = app.app.state.text, []
     original_log = service.log
     monkeypatch.setattr(service, "log", lambda ctx, text, **fields: (shown.append(fields.get("progress_info")), original_log(ctx, text, **fields))[1])
-    view = start_text(app)
-    assert view["status"] == "awaiting_comparison"
-    job = text_job(app)
+    view = start_plan(app)                         # the hold comes before the plan's second call (the critic)
+    assert view["status"] == "paused" and view["reason"] == "plan_hazir"
+    job = text_job(app, settled=True)
     waits = [e["text"] for e in job["log"] if e["text"].startswith("Claude kullanım sınırı:")]
     assert waits and waits[0].endswith("'te kendiliğinden sürecek.")
     waiting = [info for info in shown if info and info.get("bekleme")]
@@ -213,19 +218,25 @@ def test_durdur_and_devam(app, monkeypatch):
     add_video(app)
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "slow")
     monkeypatch.setenv("FAKE_CLAUDE_SLEEP", "1.5")
-    run = start_text(app, wait=False)
+    run = start_plan(app, wait=False)
     end = time.monotonic() + 60
     while time.monotonic() < end and not sessions(app.get(f"/api/metin/calismalar/{run['id']}").json(), "metin_plan_elestiri"):
         time.sleep(0.1)
+    assert step_status(app, "plan") == "running"
     assert app.post(f"/api/metin/calismalar/{run['id']}/durdur").status_code == 200
     paused = wait_run(app, run["id"])
-    assert paused["status"] == "paused" and paused["reason"] == "durduruldu" and paused["status_label"] == "duraklatıldı"
+    # GÖREV-21: a stopped run is recorded as "iptal edildi"; what it spent is counted
+    assert paused["status"] == "paused" and paused["reason"] == "durduruldu" and paused["status_label"] == "iptal edildi"
     assert sessions(paused, "metin_plan")[0]["status"] == "done" and sessions(paused, "metin_plan_elestiri")[-1]["status"] == "canceled"
-    assert text_job(app)["status"] == "canceled"
+    job = text_job(app, settled=True)
+    assert job["status"] == "canceled" and job["result"]["harcama"]["gercek"]["cagri"] == 1
+    step = app.get("/api/videos/v1/adimlar/plan").json()
+    assert step["adim"]["status"] == "error" and step["eylemler"]["resume"] and "Kaldığı yerden sürdür" in step["adim"]["error"]
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "ok")
-    assert app.post(f"/api/metin/calismalar/{run['id']}/devam").status_code == 200
+    assert app.post("/api/videos/v1/adimlar/plan/surdur").status_code == 200         # "Kaldığı yerden sürdür"
     view = wait_run(app, run["id"])
-    assert view["status"] == "awaiting_comparison" and len(sessions(view, "metin_plan")) == 1
+    assert view["status"] == "paused" and view["reason"] == "plan_hazir" and len(sessions(view, "metin_plan")) == 1
+    assert step_status(app, "plan") == "awaiting_approval"
 
 
 def test_a_run_cut_by_the_app_closing_is_yarida_kaldi_and_devam_goes_on(text_env, monkeypatch):
@@ -234,7 +245,7 @@ def test_a_run_cut_by_the_app_closing_is_yarida_kaldi_and_devam_goes_on(text_env
     add_video(client)
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "slow")
     monkeypatch.setenv("FAKE_CLAUDE_SLEEP", "1.5")
-    run = start_text(client, wait=False)
+    run = start_plan(client, wait=False)
     end = time.monotonic() + 60
     while time.monotonic() < end and not sessions(client.get(f"/api/metin/calismalar/{run['id']}").json(), "metin_plan_elestiri"):
         time.sleep(0.1)
@@ -244,9 +255,13 @@ def test_a_run_cut_by_the_app_closing_is_yarida_kaldi_and_devam_goes_on(text_env
     try:
         view = again.get(f"/api/metin/calismalar/{run['id']}").json()
         assert view["status"] == "interrupted" and view["status_label"] == "yarıda kaldı" and view["eylemler"]["devam"]
+        # GÖREV-21: the step that looked running is "hata" after the restart and can go on from where it stopped
+        step = again.get("/api/videos/v1/adimlar/plan").json()
+        assert step["adim"]["status"] == "error" and step["eylemler"]["resume"]
         assert again.post(f"/api/metin/calismalar/{run['id']}/devam").status_code == 200
         view = wait_run(again, run["id"])
-        assert view["status"] == "awaiting_comparison" and len(sessions(view, "metin_plan")) == 1
+        assert view["status"] == "paused" and view["reason"] == "plan_hazir" and len(sessions(view, "metin_plan")) == 1
+        assert again.get("/api/videos/v1/adimlar/plan").json()["adim"]["status"] == "awaiting_approval"
         assert [s["status"] for s in sessions(view, "metin_plan_elestiri")] == ["canceled", "done"]
     finally:
         again.__exit__(None, None, None)
@@ -269,38 +284,49 @@ def test_a_run_left_behind_by_a_killed_app_says_so_on_its_job_too(text_env):
         again.__exit__(None, None, None)
 
 
-def test_plandan_sonra_dur(app):
+def test_the_chain_always_stops_after_the_plan_and_writes_only_after_the_approval(app):
+    """GÖREV-21: "Plandan sonra dur" is no setting any more — the chain never goes on to the writing before the plan is approved."""
     add_video(app)
-    assert app.put("/api/settings/claude", json={claude_settings.STOP_AFTER_PLAN: True}).status_code == 200
-    view = start_text(app)
-    assert view["status"] == "paused" and view["reason"] == "plan_hazir" and view["plan"] and not view["surumler"]
+    assert claude_settings.STOP_AFTER_PLAN not in app.get("/api/settings/claude").json()["settings"]
+    assert app.put("/api/settings/claude", json={claude_settings.STOP_AFTER_PLAN: False}).status_code == 200      # an old screen's field is ignored
+    view = start_plan(app)
+    assert view["status"] == "paused" and view["reason"] == "plan_hazir" and view["plan"] and not view["surumler"] and not view["plan_onaylandi"]
     assert text_job(app, settled=True)["status"] == "done" and "Plan hazır" in text_job(app)["message"]
-    assert view["eylemler"]["plani_goster"] and view["eylemler"]["devam"]
-    assert app.post(f"/api/metin/calismalar/{view['id']}/devam").status_code == 200
-    done = wait_run(app, view["id"])
-    assert done["status"] == "awaiting_comparison" and len(sessions(done, "metin_plan")) == 1 and len(done["surumler"]) == 1
+    assert view["eylemler"]["plani_goster"]
+    refused = app.post("/api/videos/v1/yazim", json={"tonlar": ["arastirmaci_dost"]})
+    assert refused.status_code == 409 and refused.json()["detail"].startswith("Plan onaylanmadan yazım başlamaz")
+    assert app.post(f"/api/metin/calismalar/{view['id']}/devam").status_code == 200           # "Devam" does not get past the approval either
+    again = wait_run(app, view["id"])
+    assert again["status"] == "paused" and again["reason"] == "plan_hazir" and not sessions(again, "metin_bolum")
+    assert decide(app, "plan").status_code == 200
+    done = start_writing(app)
+    assert done["id"] == view["id"] and done["status"] == "awaiting_comparison"
+    assert len(sessions(done, "metin_plan")) == 1 and len(done["surumler"]) == 1
 
 
 def test_other_claude_runs_are_refused_while_a_text_run_works(app, monkeypatch):
     add_video(app)
     monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "slow")
     monkeypatch.setenv("FAKE_CLAUDE_SLEEP", "1.0")
-    run = start_text(app, wait=False)
+    run = start_plan(app, wait=False)
     refused = app.post("/api/claude/title-runs", json={"bolge": "30A geneli"})
     assert refused.status_code == 409 and refused.json()["detail"] == "Bir video metni çalışması sürüyor; bitmesini bekleyin."
     assert app.post("/api/claude/usage/refresh").json()["detail"] == "Bir video metni çalışması sürüyor; bitmesini bekleyin."
-    second = app.post("/api/videos/v1/metin", json={"tonlar": ["belgesel"]})
+    second = app.post("/api/videos/v1/plan", json={})
     assert second.status_code == 409 and second.json()["detail"] == "Bir video metni çalışması sürüyor; bitmesini bekleyin."
     assert app.post(f"/api/metin/calismalar/{run['id']}/durdur").status_code == 200
     wait_run(app, run["id"])
 
 
-def test_the_pack_is_made_when_missing_and_again_when_older_than_the_data(app):
+def test_the_plan_needs_the_pack_step_and_the_pack_is_made_again_when_older_than_the_data(app):
     add_video(app, with_pack=False)
     options = app.get("/api/videos/v1/metin").json()
     assert options["paket"] == {"var": False, "eski": False, "paket": None, "metin": "Paket önce yeniden üretilecek (bu videonun paketi yok)."}
+    early = app.post("/api/videos/v1/plan", json={})                        # GÖREV-21: 2 · Veri paketi comes before 3 · Plan
+    assert early.status_code == 409 and "2 · Veri paketi" in early.json()["detail"]
+    assert app.post("/api/videos/v1/evidence-pack").status_code == 201 and step_status(app, "paket") == "done"
     view = start_text(app)
-    assert view["pack_id"] and any(e["text"] == "Videonun paketi yok; paket üretiliyor." for e in text_job(app)["log"])
+    assert view["pack_id"] and view["status"] == "awaiting_comparison"
     db = app.app.state.db
     later = "2099-01-01T00:00:00+00:00"
     identifier = uuid.uuid4().hex
@@ -310,9 +336,11 @@ def test_the_pack_is_made_when_missing_and_again_when_older_than_the_data(app):
         con.execute("""INSERT INTO source_runs (id,job_id,status,started_at,finished_at,connector_name,connector_version,metadata,destination_id)
             VALUES (?,?,'done',?,?,'deneme','deneme/1','{}','30a')""", (identifier, identifier, later, later))
     assert app.get("/api/videos/v1/metin").json()["paket"]["eski"] is True
-    again = start_text(app, ("belgesel",))
-    assert again["pack_id"] != view["pack_id"]
-    assert any(e["text"] == "Videonun paketi verinin son çekiminden eski; paket yeniden üretiliyor." for e in text_job(app)["log"])
+    stale = app.get("/api/videos/v1/adimlar/paket").json()["adim"]         # the pack step says so, in Turkish
+    assert stale["status"] == "stale" and stale["stale_reason"] == "Veri paketten sonra yeniden çekildi."
+    again = start_plan(app)
+    assert again["pack_id"] != view["pack_id"] and again["reason"] == "plan_hazir"
+    assert any(e["text"] == "Videonun paketi verinin son çekiminden eski; paket yeniden üretiliyor." for e in text_job(app, settled=True)["log"])
 
 
 def test_version_files_downloads_and_the_choice(app):
@@ -363,9 +391,9 @@ def test_v16_to_v17_adds_the_text_tables_and_keeps_rows(tmp_path):
                   con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 21
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-    assert after == {**before, **V17_TABLES, **V18_TABLES, **V19_TABLES, **V20_TABLES}
+    assert after == {**before, **V17_TABLES, **V18_TABLES, **V19_TABLES, **V20_TABLES, **V21_TABLES}
     assert list((tmp_path / "backups").glob("studio-v16-*.sqlite3"))

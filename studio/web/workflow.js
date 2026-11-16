@@ -1,13 +1,16 @@
 import {esc} from "./api.js";
 
-// GÖREV-14: the sidebar's workflow. The unit is a video record (Housing Atlas uses a state): a video selector in the top bar, the
-// selected video's eight steps (ADIMLAR) with live statuses computed by the server from the records, and the tool screens (VERİ).
+// GÖREV-21: the statuses of a video's steps as the sidebar and the step screens show them. The statuses are stored on the server
+// (studio/workflow.py): bekliyor, hazır, çalışıyor, onay bekliyor, onaylandı, tamamlandı, hata, eskidi. The sidebar itself (the
+// project layer and the video layer) is studio/web/layers.js.
 
 export const STATUS_TONE={waiting:"",ready:"ready",running:"running",awaiting_approval:"warm",approved:"green",done:"green",error:"error",
-  stale:"warm",due:"warm",planned:"planned"};
+  stale:"warm"};
+export const STATUS_LABELS={waiting:"bekliyor",ready:"hazır",running:"çalışıyor",awaiting_approval:"onay bekliyor",approved:"onaylandı",
+  done:"tamamlandı",error:"hata",stale:"eskidi"};
 const VIDEO_KEY="studio.video.";
 
-/** The selected video of a destination, remembered in this browser (a convenience; an unknown id simply means no video). */
+/** The open video of a destination as this browser remembers it (the server remembers it too; this only bridges a first paint). */
 export function storedVideo(storage, destinationId) {
   try { return storage?.getItem(VIDEO_KEY+destinationId) || ""; } catch { return ""; }
 }
@@ -16,42 +19,18 @@ export function persistVideo(storage, destinationId, videoId) {
   try {
     if(videoId) storage?.setItem(VIDEO_KEY+destinationId, videoId);
     else storage?.removeItem(VIDEO_KEY+destinationId);
-  } catch { /* private window: the selection lasts until the page closes */ }
+  } catch { /* private window: the choice lasts until the page closes */ }
 }
 
-/** "●●○○○○○○ 2/8 adım" */
+/** "3/8" */
 export function progressText(workflow) {
-  if(!workflow) return "";
-  return `${workflow.dots} ${workflow.completed}/${workflow.total} adım`;
+  if(!workflow || !workflow.video) return "";
+  return `${workflow.completed}/${workflow.total}`;
 }
 
-export function videoOptions(workflow, selected="") {
-  const videos=workflow?.videos || [];
-  return `<option value="">Video seçilmedi</option>`+videos.map(v=>`<option value="${esc(v.id)}" ${v.id===selected?"selected":""}>${esc(v.title_en)}</option>`).join("");
-}
-
-/** The step key of a workflow route: "#adim/paket" → "paket"; the Videolar screen is the topic and title step. */
-export function stepOfHash(hash) {
-  const route=String(hash || "").replace(/^#/,"");
-  if(route.startsWith("adim/")) return route.slice(5).split("/")[0];
-  if(route==="videos" || route.startsWith("videos/")) return "baslik";
-  return null;
-}
-
-export function stepNav(workflow, activeStep) {
-  if(!workflow) return "";
-  return `<div class="group-label">ADIMLAR${workflow.video?"":" · video seçilmedi"}</div>`+workflow.steps.map(step=>{
-    const current=step.id===activeStep;
-    return `<a href="${esc(step.href)}" class="workflow-step ${current?"active":""} ${step.planned?"planned-step":""}" ${current?'aria-current="page"':""}>
-      <span class="step-no">${step.number}</span><span><span class="nav-title">${esc(step.title)}</span>
-      <span class="nav-sub step-status ${STATUS_TONE[step.status] || ""}" style="display:block">${esc(step.label)}</span></span></a>`;
-  }).join("");
-}
-
-export function toolNav(tools, page) {
-  return `<div class="group-label">VERİ</div>`+tools.map(tool=>`<a href="#${esc(tool.id)}" class="${page===tool.id?"active":""}" ${page===tool.id?'aria-current="page"':""}>
-    <span class="step-no tool-no" aria-hidden="true">${{sources:"▤",collect:"⇣",quality:"✓",evidence:"▦"}[tool.id] || "·"}</span><span><span class="nav-title">${esc(tool.title)}</span>
-    <span class="nav-sub" style="display:block">${tool.state==="planned"?"Planlanan aşama":esc(tool.subtitle)}</span></span></a>`).join("");
+/** The status tag of a step ("onay bekliyor"); a step that is not built yet says "sonraki görevde gelecek". */
+export function statusTag(step) {
+  return `<span class="tag ${step.planned?"planned":STATUS_TONE[step.status] || ""}">${esc(step.label)}</span>`;
 }
 
 /** The head of a pack's writer's summary: everything before its first section ("## 1. …"), for the Veri paketi step. */
@@ -65,5 +44,5 @@ export function packHead(text) {
 export function nextTask(step) {
   if(!step) return "";
   return `<p class="next-task" role="status"><span class="next-task-label">Sıradaki iş</span><span>${esc(step.next)}</span>
-    <span class="tag ${STATUS_TONE[step.status] || ""}">${esc(step.label)}</span></p>${step.detail?`<p class="next-task-detail muted">${esc(step.detail)}</p>`:""}`;
+    ${statusTag(step)}</p>`;
 }

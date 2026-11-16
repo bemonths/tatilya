@@ -107,10 +107,42 @@ def wait_run(client, run_id, limit=120, until=("running", "waiting_limit")):
     raise AssertionError(f"metin çalışması bitmedi: {view['status']}")
 
 
-def start_text(client, tones=("arastirmaci_dost",), video_id="v1", wait=True):
-    started = client.post(f"/api/videos/{video_id}/metin", json={"tonlar": list(tones)})
+def start_plan(client, video_id="v1", wait=True, note=None):
+    """3 · Plan: "Planı çıkar" (GÖREV-21). The run writes the plan and stops for the user's approval (paused, "plan_hazir")."""
+    started = client.post(f"/api/videos/{video_id}/plan", json={"not": note} if note else {})
     assert started.status_code == 201, started.json()
     return wait_run(client, started.json()["id"]) if wait else started.json()
+
+
+def decide(client, step, action="onayla", video_id="v1", **body):
+    """The approval component: onayla, duzeltme, reddet, etkilemiyor."""
+    return client.post(f"/api/videos/{video_id}/adimlar/{step}/{action}", json=body)
+
+
+def step_status(client, step, video_id="v1"):
+    return client.get(f"/api/videos/{video_id}/adimlar/{step}").json()["adim"]["status"]
+
+
+def start_writing(client, tones=("arastirmaci_dost",), video_id="v1", wait=True):
+    """4 · Yazım: "Yazımı başlat" with the approved plan."""
+    started = client.post(f"/api/videos/{video_id}/yazim", json={"tonlar": list(tones)})
+    assert started.status_code == 201, started.json()
+    return wait_run(client, started.json()["id"]) if wait else started.json()
+
+
+def start_text(client, tones=("arastirmaci_dost",), video_id="v1", wait=True, plan_env=None):
+    """The whole text of a video as the user gets it since GÖREV-21: the plan, its approval, then the writing (the same text run goes
+    on). `plan_env`: (monkeypatch, {name: value}) set only after the plan is approved (troubles meant for the writing)."""
+    plan = start_plan(client, video_id)
+    if not (plan["status"] == "paused" and plan["reason"] == "plan_hazir"):
+        return plan                                  # the plan itself did not finish (an error, a pause): the test looks at that
+    approved = decide(client, "plan", video_id=video_id)
+    assert approved.status_code == 200, approved.json()
+    if plan_env:
+        patcher, values = plan_env
+        for name, value in values.items():
+            patcher.setenv(name, value)
+    return start_writing(client, tones, video_id, wait)
 
 
 def sessions(view, step=None, tone=None):

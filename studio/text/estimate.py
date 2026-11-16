@@ -67,9 +67,10 @@ def words_tokens(words):
     return int(words * TOKENS_PER_WORD)
 
 
-def estimate(service, video, tones, *, plan=None, plan_done=False):
+def estimate(service, video, tones, *, plan=None, plan_done=False, note=None):
     """The estimate of a text run: {"satirlar", "toplam", "sinirlar", "asiyor", "baslatilabilir", "metin"} (`budget.summary`).
-    `tones`: [{"dosya", "ad"}]; `plan`: the run's final plan when it is known ("Bu tonla da yaz"); `plan_done`: no plan calls."""
+    `tones`: [{"dosya", "ad"}] (none: the plan alone, GÖREV-21); `plan`: the approved plan when it is known (the writing);
+    `plan_done`: no plan calls; `note`: the user's correction note, given as one more file to the calls that write."""
     settings = service.settings()
     profile = service.profile_of(video["destination_id"])
     pack, summary_raw, numbers_text = pack_texts(service, video)
@@ -83,10 +84,11 @@ def estimate(service, video, tones, *, plan=None, plan_done=False):
     analysis = service.title_analysis(ctx)
     est = Estimator(service, ctx, settings)
     base_files = {"baslik_analizi.md": analysis, "paket_ozeti.md": summary_text, "sayilar.csv": numbers_text}
+    note_file = {TS.NOTE_FILE: TS.note_text(note)} if note else {}
     rows = []
     title = video["title_en"]
     if not plan_done:
-        planner = est.measured("metin_plan", {**base_files, "kanal_plani.md": service.channel_plan(ctx)}, extra={"video_title": title})
+        planner = est.measured("metin_plan", {**base_files, "kanal_plani.md": service.channel_plan(ctx), **note_file}, extra={"video_title": title})
         if plan:
             critic = est.measured("metin_plan_elestiri", {"plan.json": json.dumps(plan, ensure_ascii=False, indent=1) + "\n", **base_files},
                                   extra={"video_title": title})
@@ -112,7 +114,7 @@ def estimate(service, video, tones, *, plan=None, plan_done=False):
             extra = {"video_title": title, "section": number}
             if sections:
                 ctx.plan = plan
-                files = {"plan.json": plan_text, "bolum.md": service.section_file(ctx, sections[number - 1])}
+                files = {"plan.json": plan_text, "bolum.md": service.section_file(ctx, sections[number - 1]), **note_file}
                 calls.append(est.measured("metin_bolum", files, tone=info, extra=extra))
             else:
                 calls.append(est.guessed("metin_bolum", {}, plan_tokens + single.tokens_of(len(summary_text)) // count * 2, tone=info, extra=extra))

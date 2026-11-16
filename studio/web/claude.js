@@ -25,7 +25,7 @@ export function claudeSection(view, message="") {
   const {settings, options, info, notes}=view;
   const inherit=[options.inherit];
   const spending=Object.fromEntries((view.harcama||[]).map(row=>[row.adim,row]));
-  const steps=options.steps.map(step=>`<tr><td>${esc(step.label)}</td>
+  const steps=options.steps.map(step=>`<tr data-claude-step="${esc(step.key)}"><td><strong>${esc(step.screen || step.label)}</strong></td><td class="step-place">${esc(step.place || "—")}</td>
     <td><select data-field="${esc(step.model_field)}" aria-label="${esc(step.label)} modeli">${choiceOptions([...inherit,...options.models],settings[step.model_field])}</select></td>
     <td><select data-field="${esc(step.effort_field)}" aria-label="${esc(step.label)} eforu">${choiceOptions([...inherit,...options.efforts],settings[step.effort_field])}</select></td>
     <td class="median-cell">${esc(medianText(spending[step.key]))}</td>
@@ -39,8 +39,8 @@ export function claudeSection(view, message="") {
       <label>Claude Code yolu (boşsa kendiliğinden aranır)<input data-field="claude_path" value="${esc(settings.claude_path)}" placeholder="C:\\Users\\…\\claude.exe"></label>
       <div class="form-grid"><label>Genel varsayılan model<select data-field="claude_model">${choiceOptions(options.models,settings.claude_model)}</select></label>
       <label>Genel varsayılan efor<select data-field="claude_effort">${choiceOptions(options.efforts,settings.claude_effort)}</select></label></div>
-      <div class="table-scroll"><table class="reference-table model-table"><thead><tr><th>ADIM</th><th>MODEL</th><th>EFOR</th><th>SON ÇALIŞMALARIN ORTANCASI</th><th>ÇIKTI VARSAYIMI</th></tr></thead><tbody>${steps}</tbody></table></div>
-      <p class="muted form-note">Ortanca, adımın son başarılı çalışmalarının okunan ve yazılan toplam token'ıdır; “eski düzen” çok turlu eski çalışmalardır. ${esc(options.output_guess?.help || "")}</p>
+      <div class="table-scroll"><table class="reference-table model-table"><thead><tr><th>CLAUDE ADIMI (EKRANDAKİ ADI)</th><th>AİT OLDUĞU YER</th><th>MODEL</th><th>EFOR</th><th>SON ÇALIŞMALARIN ORTANCASI</th><th>ÇIKTI VARSAYIMI</th></tr></thead><tbody>${steps}</tbody></table></div>
+      <p class="muted form-note">Bütün Claude adımlarının modeli, eforu ve sınırları bu tablodadır; her satır adımın ekrandaki adını ve hangi video adımına (ya da proje ekranına) ait olduğunu yazar. Adımların içerikle ilgili ayarları (talimatlar, tonlar, başlık eki) burada değil, Kanal ekranındadır. Ortanca, adımın son başarılı çalışmalarının okunan ve yazılan toplam token'ıdır; “eski düzen” çok turlu eski çalışmalardır. ${esc(options.output_guess?.help || "")}</p>
       ${limitFields(settings, options.limits)}
       ${textSettings(settings, options.text)}
       ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
@@ -50,13 +50,13 @@ export function claudeSection(view, message="") {
 
 const TEXT_LABELS={claude_max_sessions:"Aynı anda en çok Claude oturumu", claude_limit_five_hour:"5 saatlik pencere eşiği (%)", claude_limit_week:"Haftalık pencere eşiği (%)"};
 
-/** GÖREV-15: the video text chain's settings — sessions at once, the usage thresholds and "Plandan sonra dur". */
+/** The text chain's limits — sessions at once and the usage thresholds. GÖREV-21: "Plandan sonra dur" is gone; the chain always stops
+ *  after the plan and writes only after the plan is approved (3 · Plan). */
 export function textSettings(settings, text) {
   if(!text) return "";
   const fields=text.fields.map(f=>`<label>${esc(TEXT_LABELS[f.field] || f.field)}<input type="number" data-field="${esc(f.field)}" min="${f.min}" max="${f.max}" value="${esc(settings[f.field])}"><span class="muted form-note">${esc(f.help)}</span></label>`).join("");
-  const stop=text.stop_after_plan;
-  return `<h3 style="margin-top:18px">Video metni çalışması</h3><div class="form-grid text-settings">${fields}
-    <label class="checkbox-label"><input type="checkbox" data-field="${esc(stop.field)}" ${settings[stop.field]?"checked":""}> Plandan sonra dur<span class="muted form-note">${esc(stop.help)}</span></label></div>`;
+  return `<h3 style="margin-top:18px">Oturum ve kullanım sınırları (3 · Plan ve 4 · Yazım)</h3><div class="form-grid text-settings">${fields}</div>
+    <p class="muted form-note">Yazım, plan onaylanmadan başlamaz; bunun bir ayarı yoktur.</p>`;
 }
 
 // GÖREV-14 (Adım 4e): the destination's title suffixes. The program writes them into every title and evaluation run and checks every title.

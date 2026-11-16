@@ -8,7 +8,8 @@ from ..database import Conflict
 from .settings import effort_label, model_label
 
 STATUS_LABELS = {"running": "çalışıyor", "awaiting_approval": "onay bekliyor", "approved": "seçildi", "rejected": "reddedildi", "error": "hata"}
-VIDEO_STATUS_LABELS = {"baslik_secildi": "başlık seçildi", "paket_hazir": "kanıt paketi hazır"}
+VIDEO_STATUS_LABELS = {"yeni": "başlık seçilmedi", "baslik_secildi": "başlık seçildi", "paket_hazir": "kanıt paketi hazır"}
+CANCELED = "İş iptal edildi; Claude durduruldu."      # runner.CANCELED_MESSAGE: a canceled run is recorded as "iptal edildi"
 INTERRUPTED = "Uygulama kapanırken yarıda kaldı."
 JSON_FIELDS = ("params", "metrics", "problems")
 
@@ -27,7 +28,8 @@ def decode_run(row):
     item = dict(row)
     for key in JSON_FIELDS:
         item[key] = json.loads(item[key]) if item[key] else ([] if key == "problems" else None)
-    item["status_label"] = STATUS_LABELS.get(item["status"], item["status"])
+    item["canceled"] = item["status"] == "error" and item.get("error") == CANCELED
+    item["status_label"] = "iptal edildi" if item["canceled"] else STATUS_LABELS.get(item["status"], item["status"])
     item["model_label"], item["effort_label"] = model_label(item["model"] or ""), effort_label(item["effort"] or "")
     return item
 
@@ -81,18 +83,72 @@ def decode_video(row):
     return item
 
 
+USED = "Bu başlık başka bir videoda kullanılıyor."
+
+
 def insert_video(con, video):
+    """A new video: with the candidate it was opened with (topic bank), or empty ("Yeni video": only an optional working name)."""
+    titled = bool(video.get("title_en"))
     try:
-        con.execute("""INSERT INTO videos (id,destination_id,region_id,region_name,title_en,title_tr,family,analysis,template_key,params,status,
-            created_at,run_id,candidate,proposed_title_en,proposed_title_tr,user_edited) VALUES (?,?,?,?,?,?,?,?,?,?,'baslik_secildi',?,?,?,?,?,?)""", (
-            video["id"], video["destination_id"], video["region_id"], video["region_name"], video["title_en"], video["title_tr"], video["family"],
-            json.dumps(video["analysis"], ensure_ascii=False), video["template_key"], json.dumps(video["params"], ensure_ascii=False), now(),
-            video["run_id"], video["candidate"], video.get("proposed_title_en", video["title_en"]),
-            video.get("proposed_title_tr", video["title_tr"]), 1 if video.get("user_edited") else 0))
+        con.execute("""INSERT INTO videos (id,destination_id,name,region_id,region_name,title_en,title_tr,family,analysis,template_key,params,status,
+            created_at,run_id,candidate,proposed_title_en,proposed_title_tr,user_edited) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
+            video["id"], video["destination_id"], video.get("name"), video.get("region_id"), video.get("region_name"), video.get("title_en"),
+            video.get("title_tr"), video.get("family"), json.dumps(video.get("analysis") or {}, ensure_ascii=False), video.get("template_key"),
+            json.dumps(video.get("params") or {}, ensure_ascii=False), "baslik_secildi" if titled else "yeni", now(),
+            video.get("run_id"), video.get("candidate"), video.get("proposed_title_en", video.get("title_en")),
+            video.get("proposed_title_tr", video.get("title_tr")), 1 if video.get("user_edited") else 0))
     except Exception as exc:
         if "UNIQUE" in str(exc):
-            raise Conflict("Bu başlık zaten seçildi; video kaydı var.") from exc
+            raise Conflict(USED) from exc
         raise
+
+
+TITLE_FIELDS = ("region_id", "region_name", "title_en", "title_tr", "family", "template_key", "run_id", "candidate", "proposed_title_en",
+                "proposed_title_tr")
+
+
+def set_video_title(con, video_id, video):
+    """The candidate an existing video uses from now on (its first step: chosen from the bank or from its own evaluation)."""
+    try:
+        con.execute(f"""UPDATE videos SET {', '.join(f'{k}=?' for k in TITLE_FIELDS)}, analysis=?, params=?, user_edited=?, status='baslik_secildi'
+            WHERE id=?""", (*(video.get(k) for k in TITLE_FIELDS), json.dumps(video.get("analysis") or {}, ensure_ascii=False),
+                            json.dumps(video.get("params") or {}, ensure_ascii=False), 1 if video.get("user_edited") else 0, video_id))
+    except Exception as exc:
+        if "UNIQUE" in str(exc):
+            raise Conflict(USED) from exc
+        raise
+
+
+def clear_video_title(con, video_id):
+    """The video no longer uses a candidate (rejected, or a correction was asked for): the candidate is free in the bank again."""
+    con.execute(f"""UPDATE videos SET {', '.join(f'{k}=NULL' for k in TITLE_FIELDS)}, analysis='{{}}', params='{{}}', user_edited=0, status='yeni'
+        WHERE id=?""", (video_id,))
+
+
+def set_archived(db, video_id, archived):
+    with db.connect() as con:
+        con.execute("UPDATE videos SET archived_at=? WHERE id=?", (now() if archived else None, video_id))
+
+
+def open_video(db, destination_id):
+    with db.connect() as con:
+        row = con.execute("SELECT open_video_id FROM project_state WHERE destination_id=?", (destination_id,)).fetchone()
+    return row[0] if row else None
+
+
+def set_open_video(db, destination_id, video_id):
+    with db.connect() as con:
+        con.execute("""INSERT INTO project_state (destination_id,open_video_id,updated_at) VALUES (?,?,?)
+            ON CONFLICT(destination_id) DO UPDATE SET open_video_id=excluded.open_video_id, updated_at=excluded.updated_at""",
+                    (destination_id, video_id, now()))
+
+
+def used_candidates(db, destination_id):
+    """{(run id, candidate): video} of the candidates a video uses ("kullanıldı")."""
+    with db.connect() as con:
+        return {(r["run_id"], r["candidate"]): {"id": r["id"], "ad": r["title_tr"] or r["name"] or "Adsız video", "arsivde": bool(r["archived_at"])}
+                for r in con.execute("SELECT id,run_id,candidate,title_tr,name,archived_at FROM videos WHERE destination_id=? AND run_id IS NOT NULL",
+                                     (destination_id,))}
 
 
 def videos(db, destination_id):

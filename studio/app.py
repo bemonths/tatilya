@@ -18,12 +18,14 @@ from .catalog import CADENCES, CATEGORIES, METHODS, STEPS
 from .database import Conflict, Database
 from .jobs import JobQueue
 from . import refresh, workflow
-from .models import (EvidencePackInput, JobInput, ReviewRunInput, RunDecisionInput, SourceInput, SourceUpdate, TextRunInput, TextSelectInput,
-                     TextToneInput, TitleRunInput, ToneInput, ToneRestoreInput, TranslateInput)
+from .models import (EvidencePackInput, JobInput, PlanInput, ReviewRunInput, RunDecisionInput, SourceInput, SourceUpdate, StepDecisionInput,
+                     TextRunInput, TextSelectInput, TextToneInput, TitleRunInput, ToneInput, ToneRestoreInput, TranslateInput,
+                     VideoCreateInput, VideoTitleInput)
 from . import evidence
 from .ai import settings as claude_settings
 from .ai.service import ClaudeService
 from .text.engine import TextService
+from .video_flow import VideoFlow
 from .watchdog import Watchdog
 from . import extension as ext
 from . import proxy as proxy_mod
@@ -64,6 +66,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         app.state.text = TextService(db, db.path.parent, app.state.claude)      # GÖREV-15: the video text's chain
         app.state.text.recover()
         app.state.claude.text = app.state.text
+        app.state.flow = VideoFlow(db, db.path.parent, app.state.claude, app.state.text)     # GÖREV-21: the video layer
         app.state.jobs = JobQueue(db, extension=app.state.extension, region=lambda: app.state.region_access())
         app.state.batches = refresh.BatchRunner(db, app.state.jobs)
         app.state.batches.recover()
@@ -162,6 +165,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                 "cadences": CADENCES, "steps": [dict(id=id_, title=title, subtitle=f"{ready_count} kaynak hazır" if id_=="collect" else subtitle, state=state)
                                                for id_, title, subtitle, state in STEPS],
                 "sources": source_list, "jobs": db.jobs(destination_id), "data_path": str(db.path.parent),
+                "open_video_id": app.state.flow.opened(destination_id),       # GÖREV-21: the video that was open last time
                 "canonical_regions": context.canonical_regions,
                 "collections": db.collections(destination_id), "weather_runs": weather_runs(destination_id),
                 "restaurant_runs": restaurant_runs(destination_id),
@@ -488,9 +492,25 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
 
     @app.get("/api/workflow")
     def workflow_view(destination_id: str = DEFAULT_DESTINATION_ID, video_id: str | None = None):
-        """The eight steps of the selected video with live statuses, computed from the records (GÖREV-14)."""
+        """The open video's eight steps with their stored statuses (GÖREV-21; `studio/workflow.py`). No video: no steps."""
         selected(destination_id)
         return workflow.compute(db, destination_id, video_id)
+
+    @app.get("/api/isinma-listesi")
+    def warm_up_list(destination_id: str = DEFAULT_DESTINATION_ID):
+        """GÖREV-21 (Veri → Okuma denemeleri): the sites opened in the program's browser before a long collection — the hosts that once
+        showed a verification page and the protected rental sites. Read only."""
+        selected(destination_id)
+        with db.connect() as con:
+            rows = [dict(r) for r in con.execute("SELECT host, url, reason, first_seen_at, last_seen_at FROM browser_hosts ORDER BY host")]
+            protected = [r[0] for r in con.execute("SELECT domain FROM destination_agency_sites WHERE destination_id=? AND enabled=1 AND protected=1 "
+                                                   "ORDER BY domain", (destination_id,))]
+        known = {r["host"] for r in rows}
+        items = [{"alan_adi": r["host"], "adres": r["url"] or f"https://{r['host']}/", "sebep": r["reason"] or "doğrulama sayfası görüldü",
+                  "ilk": r["first_seen_at"], "son": r["last_seen_at"]} for r in rows]
+        items += [{"alan_adi": d, "adres": f"https://www.{d}/", "sebep": "korumalı kiralama sitesi", "ilk": None, "son": None}
+                  for d in protected if d not in known]
+        return {"siteler": sorted(items, key=lambda i: i["alan_adi"]), "komut": "python -m studio.sources.browser_verification isinma"}
 
     @app.get("/api/sources")
     def sources(destination_id: str = DEFAULT_DESTINATION_ID):
@@ -1218,11 +1238,19 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def claude_run(identifier: str):
         return claude_run_or_404(identifier, lambda: claude().view(identifier))
 
+    @app.get("/api/konu-bankasi")
+    def topic_bank(destination_id: str = DEFAULT_DESTINATION_ID):
+        """GÖREV-21: the project's topic bank — every title and evaluation run with its candidates and which video uses which."""
+        selected(destination_id)
+        return claude().bank(destination_id)
+
     @app.post("/api/claude/runs/{identifier}/select", status_code=201)
     def claude_select(identifier: str, body: RunDecisionInput):
+        """GÖREV-21: "Bu başlıkla video aç" — a new video opened with the candidate (with `video_id`: that video uses it)."""
         if body.aday is None:
             raise HTTPException(422, "Seçilecek aday belirtilmedi.")
-        return claude_run_or_404(identifier, lambda: claude().select(identifier, body.aday, body.not_, body.baslik_en, body.baslik_tr))
+        return claude_run_or_404(identifier, lambda: flow().use_candidate(identifier, body.aday, body.not_, body.baslik_en, body.baslik_tr,
+                                                                          body.video_id))
 
     @app.post("/api/claude/runs/{identifier}/translate", status_code=201)
     def claude_translate(identifier: str, body: TranslateInput):
@@ -1261,10 +1289,103 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         selected(destination_id)
         return claude().videos(destination_id)
 
+    # --- The video layer (GÖREV-21): the project's videos, the open video, a step's screen, the approval component -------------------
+
+    def flow():
+        return app.state.flow
+
+    def flow_or_404(action):
+        try:
+            return action()
+        except KeyError:
+            raise HTTPException(404, "Video, adım ya da sürüm bulunamadı.") from None
+        except workflow.StateError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.get("/api/videolar")
+    def video_list(destination_id: str = DEFAULT_DESTINATION_ID, arsiv: bool = False):
+        selected(destination_id)
+        return flow().list(destination_id, arsiv)
+
+    @app.post("/api/videolar", status_code=201)
+    def video_create(body: VideoCreateInput):
+        destination_id = body.destination_id or DEFAULT_DESTINATION_ID
+        selected(destination_id)
+        return flow().create(destination_id, body.ad)
+
+    @app.post("/api/videolar/kapat")
+    def video_close(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return flow().close(destination_id)
+
+    @app.post("/api/videos/{video_id}/ac")
+    def video_open(video_id: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        return flow_or_404(lambda: flow().open(destination_id, video_id))
+
+    @app.post("/api/videos/{video_id}/arsivle")
+    def video_archive(video_id: str):
+        return flow_or_404(lambda: flow().set_archived(video_id, True))
+
+    @app.post("/api/videos/{video_id}/arsivden-cikar")
+    def video_unarchive(video_id: str):
+        return flow_or_404(lambda: flow().set_archived(video_id, False))
+
+    @app.get("/api/videos/{video_id}/adimlar/{step}")
+    def video_step(video_id: str, step: str):
+        return flow_or_404(lambda: flow().step_view(video_id, step))
+
+    @app.get("/api/videos/{video_id}/gunluk")
+    def video_log(video_id: str):
+        return flow_or_404(lambda: {"gunluk": workflow.history(db, flow().video(video_id)["id"])})
+
+    @app.post("/api/videos/{video_id}/adimlar/{step}/onayla")
+    def video_step_approve(video_id: str, step: str, body: StepDecisionInput):
+        return flow_or_404(lambda: flow().approve(video_id, step, body.not_, body.surum))
+
+    @app.post("/api/videos/{video_id}/adimlar/{step}/duzeltme/tahmin")
+    def video_step_correct_estimate(video_id: str, step: str, body: StepDecisionInput):
+        return flow_or_404(lambda: {"tahmin": flow().correction_estimate(video_id, step, body.not_)})
+
+    @app.post("/api/videos/{video_id}/adimlar/{step}/duzeltme", status_code=201)
+    def video_step_correct(video_id: str, step: str, body: StepDecisionInput):
+        return flow_or_404(lambda: flow().correct(video_id, step, body.not_))
+
+    @app.post("/api/videos/{video_id}/adimlar/{step}/reddet")
+    def video_step_reject(video_id: str, step: str, body: StepDecisionInput):
+        return flow_or_404(lambda: flow().reject(video_id, step, body.not_))
+
+    @app.post("/api/videos/{video_id}/adimlar/{step}/etkilemiyor")
+    def video_step_clear_stale(video_id: str, step: str, body: StepDecisionInput):
+        return flow_or_404(lambda: flow().clear_stale(video_id, step, body.not_))
+
+    @app.post("/api/videos/{video_id}/adimlar/{step}/surdur")
+    def video_step_resume(video_id: str, step: str):
+        return flow_or_404(lambda: flow().resume(video_id, step))
+
+    @app.post("/api/videos/{video_id}/baslik/aday", status_code=201)
+    def video_title_use(video_id: str, body: VideoTitleInput):
+        """1 · Başlık ve vaat: "Bu başlığı kullan" — the video takes a candidate of the topic bank."""
+        return flow_or_404(lambda: flow().use_candidate(body.calisma, body.aday, body.not_, body.baslik_en, body.baslik_tr, video_id))
+
+    @app.post("/api/videos/{video_id}/baslik/degerlendir/tahmin")
+    def video_title_review_estimate(video_id: str, body: ReviewRunInput):
+        video = flow_or_404(lambda: flow().video(video_id))
+        return claude().estimate_review(video["destination_id"], body.bolge, body.baslik, body.not_)
+
+    @app.post("/api/videos/{video_id}/baslik/degerlendir", status_code=201)
+    def video_title_review(video_id: str, body: ReviewRunInput):
+        return flow_or_404(lambda: flow().start_review(video_id, body.bolge, body.baslik, body.not_))
+
+    @app.post("/api/videos/{video_id}/kontrol/ac")
+    def video_check_reopen(video_id: str):
+        return flow_or_404(lambda: flow().reopen_check(video_id))
+
     @app.post("/api/videos/{identifier}/evidence-pack", status_code=201)
     async def video_evidence_pack(identifier: str):
+        """2 · Veri paketi: "Veri paketini üret" (no Claude); only after the title is approved."""
         try:
-            return await asyncio.to_thread(claude().video_pack, identifier)
+            return await asyncio.to_thread(flow().build_pack, identifier)
         except KeyError:
             raise HTTPException(404, "Video kaydı bulunamadı.") from None
 
@@ -1286,22 +1407,28 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def text_options(video_id: str):
         return text_or_404(lambda: text().options(video_id))
 
-    @app.post("/api/videos/{video_id}/metin", status_code=201)
-    def text_start(video_id: str, body: TextRunInput):
-        return text_or_404(lambda: text().start(video_id, body.tonlar))
+    @app.post("/api/videos/{video_id}/plan/tahmin")
+    def plan_estimate(video_id: str, body: PlanInput):
+        """3 · Plan: the estimate above "Planı çıkar" (the planner and the critic)."""
+        return text_or_404(lambda: flow().estimate_plan(video_id, body.not_))
 
-    @app.post("/api/videos/{video_id}/metin/tahmin")
-    def text_estimate(video_id: str, body: TextRunInput):
-        """GÖREV-18: the estimate shown before "Metni yaz" (plan, every tone, total; the limits)."""
-        return text_or_404(lambda: text().estimate(video_id, body.tonlar))
+    @app.post("/api/videos/{video_id}/plan", status_code=201)
+    def plan_start(video_id: str, body: PlanInput):
+        return text_or_404(lambda: flow().start_plan(video_id, body.not_))
+
+    @app.post("/api/videos/{video_id}/yazim/tahmin")
+    def writing_estimate(video_id: str, body: TextRunInput):
+        """4 · Yazım: the estimate above "Yazımı başlat" (every chosen tone with the approved plan)."""
+        return text_or_404(lambda: flow().estimate_writing(video_id, body.tonlar))
+
+    @app.post("/api/videos/{video_id}/yazim", status_code=201)
+    def writing_start(video_id: str, body: TextRunInput):
+        """Never before the plan is approved (409)."""
+        return text_or_404(lambda: flow().start_writing(video_id, body.tonlar))
 
     @app.post("/api/metin/calismalar/{run_id}/ton/tahmin")
     def text_add_tone_estimate(run_id: str, body: TextToneInput):
         return text_or_404(lambda: text().estimate_add_tone(run_id, body.ton))
-
-    @app.post("/api/metin/calismalar/{run_id}/yeniden-planla/tahmin")
-    def text_replan_estimate(run_id: str):
-        return text_or_404(lambda: text().estimate_replan(run_id))
 
     @app.get("/api/videos/{video_id}/metin/karsilastirma")
     def text_compare(video_id: str, calisma: str | None = None):
@@ -1322,17 +1449,6 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.post("/api/metin/calismalar/{run_id}/ton", status_code=201)
     def text_add_tone(run_id: str, body: TextToneInput):
         return text_or_404(lambda: text().add_tone(run_id, body.ton))
-
-    @app.post("/api/metin/calismalar/{run_id}/yeniden-planla", status_code=201)
-    async def text_replan(run_id: str, request: Request):
-        try:
-            body = await request.json()
-        except ValueError:
-            body = {}
-        chosen = body.get("tonlar") if isinstance(body, dict) else None
-        if chosen is not None and (not isinstance(chosen, list) or not all(isinstance(i, str) for i in chosen)):
-            raise HTTPException(422, "Tonlar bir liste olmalı.")
-        return text_or_404(lambda: text().replan(run_id, chosen))
 
     @app.get("/api/metin/surumler/{version_id}")
     def text_version(version_id: str):

@@ -1,5 +1,9 @@
 import {esc} from "./api.js";
 
+// GÖREV-21: Ayarlar holds only the program's settings — the data folder, Claude (model, effort and limits of every Claude step in one
+// table), Claude's usage, the extension's pairing and connection, the US proxy's connection details, about. The channel's content rules
+// (Talimatlar, Tonlar, Uyarı ifadeleri, Başlık eki) moved to the project screen "Kanal" and the trial readings to Veri → Okuma
+// denemeleri; their old addresses (#settings/tonlar …) go to the new places (studio/web/layers.js, redirectOf).
 // GÖREV-17 (Adım 3): the layout of the Settings screen, after Housing Atlas (atlas/web/js/screens/settings.js: SECTIONS, sectionNav).
 // A row of section buttons under the heading; a button takes the page straight to its section and the address names the section
 // (#settings/tonlar), so links on other screens ("Tonları yönet", the proxy notes, the extension warnings) open the section itself.
@@ -10,15 +14,38 @@ import {esc} from "./api.js";
 export const SECTIONS=Object.freeze([
   {slug:"klasor", title:"Kayıt klasörü", icon:"▤", main:".path"},
   {slug:"claude", title:"Claude", icon:"✦", main:"#claude-form button[type=submit]"},
-  {slug:"baslik-eki", title:"Başlık eki", icon:"✎", main:"#suffix-form button[type=submit]"},
   {slug:"kullanim", title:"Claude kullanımı", icon:"◔", main:".usage-settings-text"},
-  {slug:"talimatlar", title:"Talimatlar", icon:"☰", main:"#instruction-save"},
-  {slug:"tonlar", title:"Tonlar", icon:"♪", main:"#tone-form button[type=submit]"},
-  {slug:"uyari-ifadeleri", title:"Uyarı ifadeleri", icon:"⚑", main:"#warnings-save"},
-  {slug:"eklenti", title:"Tarayıcı eklentisi", icon:"▣", main:"#extension-trial"},
+  {slug:"eklenti", title:"Tarayıcı eklentisi", icon:"▣", main:"#extension-renew"},
   {slug:"proxy", title:"ABD proxy'si", icon:"⇄", main:"#proxy-form button[type=submit]"},
   {slug:"hakkinda", title:"Hakkında", icon:"ⓘ", main:".about-version"},
 ].map(Object.freeze));
+
+/** The project screen "Kanal" (GÖREV-21): the channel's content rules, which were Settings sections. */
+export const CHANNEL_SECTIONS=Object.freeze([
+  {slug:"talimatlar", title:"Talimatlar", icon:"☰", main:"#instruction-save"},
+  {slug:"tonlar", title:"Tonlar", icon:"♪", main:"#tone-form button[type=submit]"},
+  {slug:"uyari-ifadeleri", title:"Uyarı ifadeleri", icon:"⚑", main:"#warnings-save"},
+  {slug:"baslik-eki", title:"Başlık eki", icon:"✎", main:"#suffix-form button[type=submit]"},
+].map(Object.freeze));
+export const channelHref=slug=>`#kanal/${slug}`;
+export const CHANNEL_INTRO="Kanalın içerik kuralları: Claude'a verilen talimatlar, anlatıcının tonları, denetimin uyarı ifadeleri ve başlık eki. Bunlar bütün videolarda kullanılır.";
+
+/** "#kanal/tonlar" → "tonlar"; null for the screen itself or an unknown section. */
+export function channelSectionOfHash(hash) {
+  const [page,slug]=String(hash || "").replace(/^#/,"").split("/");
+  return page==="kanal" && CHANNEL_SECTIONS.some(section=>section.slug===slug)?slug:null;
+}
+
+/** The Kanal screen's frame: the section buttons and one slot per section. */
+export function channelFrame(current=null) {
+  const slot=(slug,id,text)=>sectionCard(slug,`<div class="settings-slot" id="${id}"><p class="muted">${esc(text)}</p></div>`,CHANNEL_SECTIONS);
+  return `<div id="channel-screen"><nav class="section-nav" id="settings-nav-bar" aria-label="Kanal bölümleri">${CHANNEL_SECTIONS.map(section=>
+    `<a class="section-nav-item ${section.slug===current?"active":""}" href="${channelHref(section.slug)}" data-settings-section="${section.slug}" ${section.slug===current?'aria-current="true"':""}><span aria-hidden="true">${section.icon}</span> ${esc(section.title)}</a>`).join("")}</nav>
+    ${slot("talimatlar","instructions-slot","Talimatlar yükleniyor…")}
+    ${slot("tonlar","tones-slot","Tonlar yükleniyor…")}
+    ${slot("uyari-ifadeleri","warnings-slot","Uyarı ifadeleri yükleniyor…")}
+    ${slot("baslik-eki","suffix-settings-slot","Başlık eki yükleniyor…")}</div>`;
+}
 
 const ROUTES=["settings","ayarlar"];       // "#ayarlar/tonlar" opens the same section as "#settings/tonlar"
 
@@ -48,8 +75,8 @@ export function settingsNav(current=null) {
 }
 
 /** One section: an anchor the buttons scroll to, the section's icon for its card title, and the slot its own module draws into. */
-export function sectionCard(slug, inner) {
-  const section=SECTIONS.find(item=>item.slug===slug);
+export function sectionCard(slug, inner, sections=SECTIONS) {
+  const section=sections.find(item=>item.slug===slug);
   return `<section class="settings-section" id="${sectionId(slug)}" data-section="${slug}" aria-label="${esc(section.title)}" style="--section-icon:'${section.icon}'">${inner}</section>`;
 }
 
@@ -58,7 +85,7 @@ export function folderCard(dataPath) {
 }
 
 export function aboutCard(version) {
-  return `<div class="info-card"><span class="eyebrow about-version">SÜRÜM ${esc(version)}</span><h2 style="margin-top:12px">Veriden video metnine</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Claude ile konu ve başlık önerisi, kendi başlığınızın değerlendirilmesi ve video kaydı; seçilen tonlarla İngilizce video metni, Türkçe karşılığı ve programın denetimi kullanılabilir. Her Claude adımı tek çağrıdır; iş başlamadan önce tahmini harcama gösterilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">İlk gerçek video metinleri ve onların ölçümü; sonra görsel plan, video üretimi ve yayın hazırlığı aşamalı olarak eklenecek.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></div>`;
+  return `<div class="info-card"><span class="eyebrow about-version">SÜRÜM ${esc(version)}</span><h2 style="margin-top:12px">Veriden video metnine</h2><p>Kaynak kütüphanesi, plaj, hava, restoran, mahalle, iklim, konaklama ve günlük ihtiyaç verisi toplama; kanıt paketi ve yazar özeti; Claude ile konu ve başlık önerisi, kendi başlığınızın değerlendirilmesi ve video kaydı; seçilen tonlarla İngilizce video metni, Türkçe karşılığı ve programın denetimi kullanılabilir. Her Claude adımı tek çağrıdır; iş başlamadan önce tahmini harcama gösterilir.</p><span class="tag warm">Sonraki aşama</span><p style="margin-top:12px">İlk gerçek video metinleri ve onların ölçümü; sonra yayın paketi, seslendirme ve kurgu paketi (Kurgu Motoru'na) aşamalı olarak eklenecek. Stok görüntü, animasyon ve kurgu bu programda değil, Kurgu Motoru'nda yapılır.</p><a href="#collect" class="return-link">Toplanan verileri gör →</a></div>`;
 }
 
 const thousand=value=>value==null?"—":Number(value)>=1000?`${Math.round(Number(value)/1000)} bin`:String(value);
@@ -84,25 +111,23 @@ export function settingsFrame(dataPath, version, current=null) {
   return `<div id="settings-screen">${settingsNav(current)}
     ${sectionCard("klasor",folderCard(dataPath))}
     ${slot("claude","claude-settings-slot","Claude ayarları yükleniyor…")}
-    ${slot("baslik-eki","suffix-settings-slot","Başlık eki yükleniyor…")}
     ${sectionCard("kullanim",`<div class="settings-slot" id="usage-settings-slot">${usageCard(null)}</div>`)}
-    ${slot("talimatlar","instructions-slot","Talimatlar yükleniyor…")}
-    ${slot("tonlar","tones-slot","Tonlar yükleniyor…")}
-    ${slot("uyari-ifadeleri","warnings-slot","Uyarı ifadeleri yükleniyor…")}
     ${slot("eklenti","extension-slot","Tarayıcı eklentisi yükleniyor…")}
     ${slot("proxy","proxy-slot","ABD proxy'si yükleniyor…")}
     ${sectionCard("hakkinda",aboutCard(version))}</div>`;
 }
 
-export const SETTINGS_INTRO="30A Studio’nun ayarları. Aşağıdaki düğmelerden birine basınca sayfa o bölüme gider.";
+export const SETTINGS_INTRO="Yalnız programın ayarları. Kanalın içerik kuralları (talimatlar, tonlar, uyarı ifadeleri, başlık eki) sol menüdeki Kanal ekranındadır; deneme okumaları Veri → Okuma denemeleri sekmesindedir.";
 
-const MENTION_SLUGS={"Claude":"claude","Tarayıcı eklentisi":"eklenti","Tonlar":"tonlar","Talimatlar":"talimatlar"};
+const MENTION_SLUGS={"Claude":"claude","Tarayıcı eklentisi":"eklenti"};
+const CHANNEL_MENTIONS={"Tonlar":"tonlar","Talimatlar":"talimatlar","Uyarı ifadeleri":"uyari-ifadeleri","Başlık eki":"baslik-eki"};
 
 /** Turns "Ayarlar → Claude", "Ayarlar → Tarayıcı eklentisi" … and the proxy note's "(Ayarlar)" inside an already escaped text into
  *  links to that section, so a warning on another screen or in the job panel opens the section itself. */
 export function linkSettingsMentions(escaped) {
   return String(escaped ?? "")
-    .replace(/Ayarlar → (Claude|Tarayıcı eklentisi|Tonlar|Talimatlar)/g,(whole,name)=>`<a href="${settingsHref(MENTION_SLUGS[name])}">${whole}</a>`)
+    .replace(/Ayarlar → (Claude|Tarayıcı eklentisi)/g,(whole,name)=>`<a href="${settingsHref(MENTION_SLUGS[name])}">${whole}</a>`)
+    .replace(/(?:Kanal|Ayarlar) → (Tonlar|Talimatlar|Uyarı ifadeleri|Başlık eki)/g,(whole,name)=>`<a href="${channelHref(CHANNEL_MENTIONS[name])}">Kanal → ${name}</a>`)
     .replace(/Ayarlar → ABD proxy(&#39;|&#x27;|'|’)si/g,whole=>`<a href="${settingsHref("proxy")}">${whole}</a>`)
     .replace(/tanımlı değil \(Ayarlar\)/g,`tanımlı değil (<a href="${settingsHref("proxy")}">Ayarlar → ABD proxy'si</a>)`);
 }

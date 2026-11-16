@@ -5,7 +5,8 @@ import uuid
 from datetime import datetime, timezone
 
 RUN_LABELS = {"running": "çalışıyor", "waiting_limit": "kullanım sınırı bekleniyor", "paused": "duraklatıldı", "interrupted": "yarıda kaldı",
-              "awaiting_comparison": "karşılaştırma bekliyor", "error": "hata"}
+              "awaiting_comparison": "yazıldı", "error": "hata"}
+REASON_LABELS = {"plan_hazir": "plan hazır", "durduruldu": "iptal edildi"}       # GÖREV-21: what a paused run is called in the lists
 ACTIVE = ("running", "waiting_limit")
 RESUMABLE = ("paused", "interrupted")
 RUN_JSON = ("tones", "plan", "state")
@@ -27,6 +28,8 @@ def decode_run(row):
     for key in RUN_JSON:
         item[key] = json.loads(item[key]) if item[key] else ({} if key == "state" else None)
     item["status_label"] = RUN_LABELS.get(item["status"], item["status"])
+    if item["status"] == "paused" and item.get("reason") in REASON_LABELS:
+        item["status_label"] = REASON_LABELS[item["reason"]]
     return item
 
 

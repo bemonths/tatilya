@@ -51,6 +51,36 @@ V19_TABLES = {"job_hidden": 0}
 V20_TABLES = {"destination_road_networks": 1, "destination_airfare_sources": 1, "road_snapshots": 0, "road_targets": 0, "road_nearest": 0,
               "airfare_snapshots": 0, "airfare_quarters": 0}
 V20_INTERVALS = ("openstreetmap-road-network", "bts-airport-fares")
+# Tables created by v21 (GÖREV-21: the steps of a video, their status log, the open video); empty in a database without videos.
+V21_TABLES = {"video_steps": 0, "video_step_log": 0, "project_state": 0}
+V20_VIDEOS = """CREATE TABLE videos (
+        id TEXT PRIMARY KEY, destination_id TEXT NOT NULL REFERENCES destinations(id),
+        region_id TEXT REFERENCES regions(id), region_name TEXT NOT NULL,
+        title_en TEXT NOT NULL CHECK(length(title_en) BETWEEN 1 AND 100), title_tr TEXT NOT NULL CHECK(length(title_tr) > 0),
+        family TEXT NOT NULL, analysis TEXT NOT NULL CHECK(json_valid(analysis) AND json_type(analysis)='object'),
+        template_key TEXT, params TEXT NOT NULL CHECK(json_valid(params) AND json_type(params)='object'),
+        status TEXT NOT NULL CHECK(status IN ('baslik_secildi','paket_hazir')), created_at TEXT NOT NULL,
+        run_id TEXT NOT NULL REFERENCES claude_runs(id), candidate INTEGER NOT NULL CHECK(candidate >= 0),
+        proposed_title_en TEXT, proposed_title_tr TEXT, user_edited INTEGER NOT NULL DEFAULT 0 CHECK(user_edited IN (0,1)),
+        UNIQUE(run_id, candidate)
+    )"""
+
+
+def drop_v21(con):
+    """A schema 20 file made from a fresh one: the videos table as schema 15–20 had it (a title and a chosen candidate required, no
+    working name, no archive) and without the v21 tables. Rows of videos are kept (a video without a title cannot exist there)."""
+    con.execute("PRAGMA foreign_keys=OFF")
+    con.execute("DROP INDEX video_step_log_video")
+    for table in ("video_step_log", "video_steps", "project_state"):
+        con.execute(f"DROP TABLE {table}")
+    con.execute("ALTER TABLE videos RENAME TO videos_v21")
+    con.execute("DROP INDEX videos_destination")
+    con.execute(V20_VIDEOS)
+    con.execute("""INSERT INTO videos SELECT id,destination_id,region_id,region_name,title_en,title_tr,family,analysis,template_key,params,
+        CASE status WHEN 'yeni' THEN 'baslik_secildi' ELSE status END,created_at,run_id,candidate,proposed_title_en,proposed_title_tr,user_edited
+        FROM videos_v21""")
+    con.execute("DROP TABLE videos_v21")
+    con.execute("CREATE INDEX videos_destination ON videos(destination_id, created_at)")
 
 
 def drop_v17(con):
@@ -64,8 +94,9 @@ def drop_v17(con):
 
 
 def drop_v20(con, rows=False):
-    """A schema 19 file made from a fresh one: without the v20 tables (GÖREV-20: road distances, airfare). The two v20 sources and
-    refresh intervals stay (the upgrade adds each only once); `rows=True` takes them out too, as in a file v20 never touched."""
+    """A schema 19 file made from a fresh one: without the v20 tables (GÖREV-20: road distances, airfare) and the v21 changes. The two
+    v20 sources and refresh intervals stay (the upgrade adds each only once); `rows=True` takes them out too, as in a file v20 never touched."""
+    drop_v21(con)
     con.execute("DROP INDEX road_nearest_category")
     for table in ("road_nearest", "road_targets", "road_snapshots", "airfare_quarters", "airfare_snapshots", "destination_road_networks",
                   "destination_airfare_sources"):

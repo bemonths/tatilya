@@ -21,6 +21,7 @@ from ..database import Conflict
 from ..destinations import PROFILES
 from ..evidence import PackError, store as store_pack
 from ..evidence import plan as plan_pack
+from .. import workflow
 from . import budget, claude_info, instructions, runner, settings as claude_settings, single, steps, store, usage
 from . import title  # noqa: F401  (registers the title step)
 from . import title_review  # noqa: F401  (registers the evaluation step, GÖREV-14)
@@ -170,20 +171,39 @@ class ClaudeService:
                 self.db.update_job(job_id, status="failed", message=str(exc))
                 raise
             (self.db.path.parent / folder).mkdir(parents=True, exist_ok=True)
+            self.video_step(params, "running")
             self.executor.submit(self.work, run_id, destination, step, params, previous, note)
         return store.run(self.db, run_id)
+
+    def video_step(self, params, status, error=None):
+        """GÖREV-21: a title run started from a video's first step (params["video_id"]) moves that step: running while Claude works,
+        ready when the candidates are there to choose from (or the run was canceled), error when the run failed."""
+        video_id = (params or {}).get("video_id")
+        if not video_id:
+            return
+        try:
+            workflow.set_step(self.db, video_id, "baslik", status, error=error)
+        except Exception:      # the step's status must never break a run
+            pass
 
     def start_title(self, destination_id, region, family, note):
         return self.start(destination_id, "baslik", self.selection(destination_id, region, family, note))
 
-    def start_review(self, destination_id, region, user_title, note, *, source=None):
-        """GÖREV-14 Adım 5a: the user's own title or idea, evaluated by Claude into 0–3 candidates."""
+    def review_params(self, destination_id, region, user_title, note, video_id=None):
         text = (user_title or "").strip()
         if not text:
             raise Conflict("Değerlendirilecek başlığı ya da fikri yazın.")
         if len(text) > title_review.MAX_IDEA:
             raise Conflict(f"Başlık ya da fikir en çok {title_review.MAX_IDEA} karakter olabilir.")
         params = {**self.selection(destination_id, region, title.ALL_FAMILIES, note), "kullanici_basligi": text}
+        if video_id:
+            params["video_id"] = video_id
+        return params
+
+    def start_review(self, destination_id, region, user_title, note, *, source=None, video_id=None):
+        """GÖREV-14 Adım 5a: the user's own title or idea, evaluated by Claude into 0–3 candidates. GÖREV-21: `video_id` when it was
+        asked from a video's first step (the candidates are shown there; the run is in the topic bank like every other)."""
+        params = self.review_params(destination_id, region, user_title, note, video_id)
         if source:
             params["kaynak"] = source
         return self.start(destination_id, "baslik_degerlendirme", params)
@@ -245,17 +265,13 @@ class ClaudeService:
         return self.estimate(destination_id, "baslik", self.selection(destination_id, region, family, note))
 
     def estimate_review(self, destination_id, region, user_title, note):
-        text = (user_title or "").strip()
-        if not text:
-            raise Conflict("Değerlendirilecek başlığı ya da fikri yazın.")
-        params = {**self.selection(destination_id, region, title.ALL_FAMILIES, note), "kullanici_basligi": text}
-        return self.estimate(destination_id, "baslik_degerlendirme", params)
+        return self.estimate(destination_id, "baslik_degerlendirme", self.review_params(destination_id, region, user_title, note))
 
     def estimate_correction(self, run_id, note):
         record = store.run(self.db, run_id)
         if record is None:
             raise KeyError(run_id)
-        params = {k: v for k, v in record["params"].items() if k not in ("duzeltme_notu", "baslik_eki")}
+        params = {k: v for k, v in record["params"].items() if k not in ("duzeltme_notu", "baslik_eki", "video_id")}
         return self.estimate(record["destination_id"], record["step"], params, correction_of=run_id, note=(note or "").strip())
 
     def estimate_translate(self, run_id, index, edited_tr):
@@ -291,6 +307,10 @@ class ClaudeService:
 
         def fail(message, problems=None, extra=None):
             store.update_run(self.db, run_id, status="error", error=message, problems=problems or [])
+            if message == runner.CANCELED_MESSAGE:
+                self.video_step(params, "ready")
+            else:
+                self.video_step(params, "error", error=message)
             write_json(folder / RUN_RECORD, {**(extra or {}), "durum": "error", "hata": message, "sorunlar": problems or [],
                                              "harcama": spending_record(spend)})
             self.db.update_job(job_id, status="failed" if not canceled() or self.closing else "canceled", message=message,
@@ -501,6 +521,7 @@ class ClaudeService:
         output = folder / step.output
         if not output.is_file():
             message = f"Claude {step.output} dosyasını yazmadı."
+            self.video_step(ctx.params, "error", error=message)
             store.update_run(self.db, run_id, status="error", error=message, problems=[])
             write_json(folder / RUN_RECORD, {**base, "durum": "error", "hata": message})
             self.db.update_job(job_id, status="failed", message=message, result={"claude_run": run_id, **result_extra})
@@ -509,6 +530,7 @@ class ClaudeService:
             data = json.loads(output.read_text(encoding="utf-8-sig"))
         except ValueError as exc:
             message = f"{step.output} geçerli bir JSON değil: {exc}"
+            self.video_step(ctx.params, "error", error=message)
             store.update_run(self.db, run_id, status="error", error=message, problems=[])
             write_json(folder / RUN_RECORD, {**base, "durum": "error", "hata": message})
             self.db.update_job(job_id, status="failed", message=message, result={"claude_run": run_id, **result_extra})
@@ -518,6 +540,7 @@ class ClaudeService:
         if schema_errors:
             problems = [title.problem(title.ERROR, f"Şema: {e}") for e in schema_errors]
             message = f"{step.output} şemaya uymuyor ({len(schema_errors)} sorun); \"Düzeltme iste\" ile yeni bir çalışma açabilirsiniz."
+            self.video_step(ctx.params, "error", error=message)
             store.update_run(self.db, run_id, status="error", error=message, problems=problems)
             write_json(folder / RUN_RECORD, {**base, "durum": "error", "hata": message, "sorunlar": problems})
             self.db.update_job(job_id, status="failed", message=message, result={"claude_run": run_id, **result_extra})
@@ -525,6 +548,7 @@ class ClaudeService:
         problems = step.check(ctx, data)
         (folder / step.markdown).write_text(step.render(ctx, data, problems), encoding="utf-8")
         store.update_run(self.db, run_id, status="awaiting_approval", problems=problems)
+        self.video_step(ctx.params, "ready")
         write_json(folder / RUN_RECORD, {**base, "durum": "awaiting_approval", "sorunlar": problems,
                                          "paketler": {name: record["id"] for name, record in ctx.packs.items()}})
         errors_count = sum(p["seviye"] == title.ERROR for p in problems)
@@ -577,6 +601,7 @@ class ClaudeService:
             except ValueError:
                 data = None
         chosen = store.chosen(self.db, run_id)
+        used = store.used_candidates(self.db, record["destination_id"])
         problems = record["problems"]
         candidates = []
         if data and record["status"] != "error":
@@ -585,6 +610,7 @@ class ClaudeService:
             for index, item in enumerate(data.get("adaylar") or []):
                 own = [p for p in problems if p["aday"] == index]
                 candidates.append({**title.resolve_candidate(ctx, item), "sira": index, "sorunlar": own, "video_id": chosen.get(index),
+                                   "video_adi": (used.get((run_id, index)) or {}).get("ad"),
                                    "secilebilir": not any(p["seviye"] == title.ERROR for p in own) and index not in chosen,
                                    "isaretler": check(item.get("baslik_en"), item.get("kapak_fikri"), item.get("bolge"), suffix)})
         markdown = (folder / step.markdown).read_text(encoding="utf-8") if (folder / step.markdown).is_file() else None
@@ -628,9 +654,38 @@ class ClaudeService:
     def runs(self, destination_id):
         return [self.with_outcome(r) for r in store.runs(self.db, destination_id)]
 
+    def brief_candidates(self, record, used):
+        """A run's candidates for the topic bank's list (titles, family, region, whether a video uses it), read from its output."""
+        if record["status"] == "error":
+            return []
+        try:
+            step = steps.get(record["step"])
+            data = json.loads((self.db.path.parent / record["folder"] / step.output).read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, KeyError):
+            return []
+        errors = {p["aday"] for p in record["problems"] if p.get("seviye") == title.ERROR and p.get("aday") is not None}
+        out = []
+        for index, item in enumerate(data.get("adaylar") or []):
+            video = used.get((record["id"], index))
+            out.append({"sira": index, "baslik_en": item.get("baslik_en"), "baslik_tr": item.get("baslik_tr"), "aile": item.get("aile"),
+                        "bolge": item.get("bolge"), "video_id": video and video["id"], "video_adi": video and video["ad"],
+                        "secilebilir": index not in errors and not video and self.actions(record)["select"]})
+        return out
+
+    def bank(self, destination_id):
+        """GÖREV-21: the topic bank of the project — every title and evaluation run of the destination with its candidates. A candidate
+        a video uses is marked ("kullanıldı", with the video); the others stay in the pool."""
+        used = store.used_candidates(self.db, destination_id)
+        runs = [{**r, "adaylar": self.brief_candidates(r, used)} for r in self.runs(destination_id)]
+        free = sum(1 for r in runs for c in r["adaylar"] if c["secilebilir"])
+        return {"calismalar": runs, "aday_sayisi": sum(len(r["adaylar"]) for r in runs), "kullanilabilir": free,
+                "kullanilan": sum(1 for r in runs for c in r["adaylar"] if c["video_id"])}
+
     # ------------------------------------------------------------------------------------------------------------- decisions
 
-    def select(self, run_id, index, note="", title_en=None, title_tr=None):
+    def select(self, run_id, index, note="", title_en=None, title_tr=None, video_id=None):
+        """GÖREV-21: "Bu başlıkla video aç" (topic bank: a new video whose first step waits for approval) or, with `video_id`,
+        "Bu başlığı kullan" in that video's first step. The candidate is marked used; the others stay in the pool."""
         record = store.run(self.db, run_id)
         if record is None:
             raise KeyError(run_id)
@@ -641,7 +696,15 @@ class ClaudeService:
         if candidate is None:
             raise Conflict("Böyle bir aday yok.")
         if candidate["video_id"]:
-            raise Conflict("Bu başlık zaten seçildi; video kaydı var.")
+            raise Conflict(f"Bu başlık kullanıldı: “{candidate.get('video_adi') or 'bir video'}” videosunda.")
+        existing = store.video(self.db, video_id) if video_id else None
+        if video_id:
+            if existing is None or existing["destination_id"] != record["destination_id"]:
+                raise KeyError(video_id)
+            current = workflow.step(self.db, video_id, "baslik")["status"]
+            if current not in ("ready", "error"):
+                raise Conflict(f"Bu videonun başlığı şu anda değiştirilemez (1 · Başlık ve vaat: {workflow.STATUS_LABELS[current]}). "
+                               "Önce “Reddet” ya da “Düzeltme iste” deyin.")
         if not candidate["secilebilir"]:
             raise Conflict("Bu adayda doğrulama hatası var; seçilemez. \"Düzeltme iste\" ile yeni bir çalışma açabilirsiniz.")
         note = (note or "").strip()
@@ -663,15 +726,36 @@ class ClaudeService:
                          "paketler": {name: pack["id"] for name, pack in self.context_of(record)[1].packs.items()}})
         if edited:
             analysis["duzenleme"] = {"onerilen_en": candidate["baslik_en"], "onerilen_tr": candidate["baslik_tr"], "zaman": store.now()}
-        video = {"id": store.new_id(), "destination_id": record["destination_id"], "region_id": regions.get(candidate["bolge"]),
+        video = {"id": video_id or store.new_id(), "destination_id": record["destination_id"], "region_id": regions.get(candidate["bolge"]),
                  "region_name": candidate["bolge"], "title_en": chosen_en, "title_tr": chosen_tr,
                  "proposed_title_en": candidate["baslik_en"], "proposed_title_tr": candidate["baslik_tr"], "user_edited": edited,
                  "family": candidate["aile"], "analysis": analysis, "template_key": candidate.get("sablon"),
                  "params": candidate.get("parametreler") or {}, "run_id": run_id, "candidate": index}
         with self.db.connect() as con:
-            store.insert_video(con, video)
+            con.execute("BEGIN IMMEDIATE")
+            if existing:
+                store.set_video_title(con, video["id"], video)
+            else:
+                store.insert_video(con, video)
+                workflow.init(con, video["id"], {"baslik": ("awaiting_approval", run_id)},
+                              f"Video konu bankasından açıldı: “{chosen_tr}”.")
             con.execute("UPDATE claude_runs SET status='approved', decision_note=?, decided_at=? WHERE id=?", (note or None, store.now(), run_id))
+        if existing:
+            workflow.set_step(self.db, video["id"], "baslik", "awaiting_approval", ref=run_id, log=f"Başlık seçildi: “{chosen_tr}”.")
         return store.video(self.db, video["id"])
+
+    def release(self, video_id):
+        """The video gives its candidate back to the bank (its title was rejected, or a correction was asked for). A run none of whose
+        candidates is used any more waits for a choice again."""
+        video = store.video(self.db, video_id)
+        if video is None:
+            raise KeyError(video_id)
+        with self.db.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            store.clear_video_title(con, video_id)
+            if video.get("run_id") and not con.execute("SELECT 1 FROM videos WHERE run_id=?", (video["run_id"],)).fetchone():
+                con.execute("UPDATE claude_runs SET status='awaiting_approval' WHERE id=? AND status='approved'", (video["run_id"],))
+        return video
 
     def reject(self, run_id, note=""):
         record = store.run(self.db, run_id)
@@ -682,7 +766,7 @@ class ClaudeService:
         store.update_run(self.db, run_id, status="rejected", decision_note=(note or "").strip() or None, decided_at=store.now())
         return store.run(self.db, run_id)
 
-    def correct(self, run_id, note):
+    def correct(self, run_id, note, video_id=None):
         record = store.run(self.db, run_id)
         if record is None:
             raise KeyError(run_id)
@@ -693,7 +777,9 @@ class ClaudeService:
             raise Conflict("Düzeltme için ne değişmesi gerektiğini nota yazın.")
         if len(note) > MAX_NOTE:
             raise Conflict(f"Not en çok {MAX_NOTE} karakter olabilir.")
-        params = {k: v for k, v in record["params"].items() if k != "duzeltme_notu"}
+        params = {k: v for k, v in record["params"].items() if k not in ("duzeltme_notu", "video_id")}
+        if video_id:
+            params["video_id"] = video_id
         return self.start(record["destination_id"], record["step"], params, correction_of=run_id, note=note)
 
     # ------------------------------------------------------------------------------------------------------------- videos
@@ -714,6 +800,7 @@ class ClaudeService:
             raise Conflict(str(exc)) from exc
         record = store_pack(self.db, pack, video_id=video["id"])
         store.set_video_status(self.db, video["id"], "paket_hazir")
+        workflow.pack_built(self.db, video["id"], record["id"])
         return record
 
     # ------------------------------------------------------------------------------------------------------------- life

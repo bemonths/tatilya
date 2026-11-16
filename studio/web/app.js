@@ -1,6 +1,5 @@
-import {destinationOptions, storedDestination, persistDestination, resetDestinationState} from "./destinations.js";
+import {storedDestination, persistDestination, resetDestinationState} from "./destinations.js";
 import {api, esc, host, date, setDestination, destinationRevision, destinationPath, startHeartbeat} from "./api.js";
-import {roadmap} from "./roadmap.js";
 import {connectorState, jobResultTarget, domainTarget} from "./connectors.js";
 import {RestaurantScreen, SITE_CONNECTOR} from "./restaurants.js";
 import {NeighborhoodScreen} from "./neighborhoods.js";
@@ -12,20 +11,22 @@ import {WeatherScreen} from "./weather.js";
 import {BeachScreen} from "./collection.js";
 import {refreshSection} from "./refresh.js";
 import {EvidenceScreen} from "./evidence.js";
-import {VideosScreen, videoCard} from "./videos.js";
-import {storedVideo, persistVideo, progressText, videoOptions, stepOfHash, stepNav, toolNav, nextTask, packHead} from "./workflow.js";
+import {BankScreen} from "./videos.js";
+import {VideoListScreen} from "./videolist.js";
+import {StepScreen} from "./steps.js";
+import {persistVideo} from "./workflow.js";
+import {routeOf, redirectOf, sidebar, veriTabs, projectLabel, stepHref} from "./layers.js";
 import {renderClaudeSettings, renderSuffixSettings} from "./claude.js";
 import {UsagePanel, claudeProgress, progressText as claudeProgressText} from "./usage.js";
 import {InstructionEditor} from "./instructions.js";
-import {ExtensionSettings} from "./extension.js";
-import {ProxySettings} from "./proxy.js";
-import {TextScreen} from "./text.js";
+import {ExtensionSettings, ExtensionReading, warmUpSection} from "./extension.js";
+import {ProxySettings, ProxyReading} from "./proxy.js";
 import {ToneSettings} from "./tones.js";
 import {jobsPanel, active} from "./jobs.js";
-import {sectionOfHash, isSettingsHash, sectionId, settingsFrame, usageCard, SETTINGS_INTRO} from "./settings.js";
+import {sectionOfHash, isSettingsHash, sectionId, settingsFrame, usageCard, SETTINGS_INTRO, channelFrame, channelSectionOfHash, CHANNEL_INTRO} from "./settings.js";
 
 const $ = selector => document.querySelector(selector);
-const state = {data:null, page:"sources", selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:"", hiddenJobs:[], showHidden:false};
+const state = {data:null, page:"sources", route:null, selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:"", projectOpen:false, hiddenJobs:[], showHidden:false};
 let toastTimer;
 let events=null;
 let lastCollectionId=null;
@@ -46,14 +47,14 @@ const climateDone=jobs=>jobs.filter(j=>j.kind==="source_collection" && j.status=
 const climateScreen=new ClimateScreen();
 const referencesScreen=new ReferencesScreen();
 const evidenceScreen=new EvidenceScreen();
-const videosScreen=new VideosScreen();
+const videosScreen=new BankScreen();          // Konu bankası (project layer)
+const videoListScreen=new VideoListScreen();   // Videolar (project layer)
+const stepScreen=new StepScreen();             // the open video's steps (video layer)
 let lastClaudeKey="";
 const usagePanel=new UsagePanel(document.querySelector("#usage-panel"));
-const textScreen=new TextScreen();
 let lastUsageLoad=0;
 let lastWorkflowKey="";
 let workflowSequence=0;
-let packSequence=0;
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
 const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-roads":"openstreetmap-road-network","collect-airfare":"bts-airport-fares","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
@@ -71,109 +72,105 @@ function options(values, selected="", empty=null) {
     `<option value="${esc(value)}" ${value === selected ? "selected" : ""}>${esc(value)}</option>`).join("");
 }
 
-// GÖREV-14: ADIMLAR (the selected video's eight steps with live statuses) and VERİ (the tool screens).
+// GÖREV-21: the sidebar shows one layer at a time. No video open: only the four project screens (Veri, Konu bankası, Kanal,
+// Videolar) and Ayarlar at the bottom. A video open: its name with "Videoyu kapat", the collapsed "← Proje" row and only that video's
+// eight steps (studio/web/layers.js).
 function navigation() {
-  $("#navigation").innerHTML = stepNav(state.workflow, stepOfHash(location.hash)) + toolNav(state.data.steps, state.page);
+  $("#navigation").innerHTML = sidebar(state.workflow, state.route, state.projectOpen);
   const settings=$("#settings-nav");             // GÖREV-17: the Settings item at the bottom of the sidebar is marked while its screen is open
   settings.classList.toggle("active",state.page==="settings");
   if(state.page==="settings") settings.setAttribute("aria-current","page"); else settings.removeAttribute("aria-current");
 }
 
 function currentStep() {
-  return state.workflow?.steps.find(step=>step.id===stepOfHash(location.hash)) || null;
-}
-
-function nextTaskSlot(step) {
-  return `<div id="next-task-slot">${nextTask(step)}</div>`;
+  return state.route?.layer==="video" ? state.workflow?.steps.find(step=>step.id===state.route.step) || null : null;
 }
 
 async function loadWorkflow() {
-  const ticket=++workflowSequence, first=!state.workflow;
+  const ticket=++workflowSequence;
   const result=await api(state.videoId?`workflow?video_id=${encodeURIComponent(state.videoId)}`:"workflow");
   if(ticket!==workflowSequence) return;
   state.workflow=result;
   if(state.videoId && !result.video) {state.videoId="";persistVideo(localStorage,state.data.selected_destination.id,"");}
-  $("#video-select").innerHTML=videoOptions(result,state.videoId);
-  $("#workflow-progress").textContent=progressText(result);
-  $("#workflow-progress").title=result.video?`${result.video.title_en} · ${result.video.region_name}`:"Video seçilmedi";
   navigation();
-  if(first && ["adim","videos"].includes(state.page)) {render();return;}
-  const slot=document.querySelector("#next-task-slot");
-  if(slot) slot.innerHTML=nextTask(currentStep());
 }
 
-function selectVideo(videoId) {
-  state.videoId=videoId || "";
-  persistVideo(localStorage,state.data.selected_destination.id,state.videoId);
-  return loadWorkflow().then(()=>{if(["adim","videos"].includes(state.page)) render();});
+/** Opens a video: the server remembers it for the next start, the sidebar becomes that video's steps. */
+async function openVideo(videoId, step=null) {
+  if(!videoId) return;
+  if(videoId!==state.videoId) {
+    state.videoId=videoId;state.projectOpen=false;
+    persistVideo(localStorage,state.data.selected_destination.id,videoId);
+    try {await api(`videos/${encodeURIComponent(videoId)}/ac`,{method:"POST",body:"{}"});} catch(error) {if(!error.stale) toast(error.message);}
+  }
+  await loadWorkflow();
+  if(!state.workflow?.video) {location.hash="#videolar";return;}
+  const target=step || state.workflow.steps.find(s=>!["approved","done"].includes(s.status) && !s.planned)?.id || "baslik";
+  const hash=stepHref(videoId,target);
+  if(location.hash===hash) render(); else location.hash=hash;
+}
+
+/** "Videoyu kapat": the menu returns to the project; the video is not deleted. */
+async function closeVideo() {
+  state.videoId="";state.projectOpen=false;
+  persistVideo(localStorage,state.data.selected_destination.id,"");
+  try {await api("videolar/kapat",{method:"POST",body:"{}"});} catch(error) {if(!error.stale) toast(error.message);}
+  await loadWorkflow();
+  if(location.hash==="#videolar") render(); else location.hash="#videolar";
 }
 
 function renderStep() {
-  const key=stepOfHash(location.hash);
-  if(key==="baslik") {location.hash="#videos";return;}
-  const step=currentStep();
-  if(!step) {$("#main").innerHTML='<p role="status" class="loading">İş akışı yükleniyor…</p>';return;}
-  if(key==="veri") renderDataStep(step);
-  else if(key==="paket") renderPackStep(step);
-  else if(key==="metin") textScreen.render($("#main"),{videoId:state.videoId, step, heading:pageHeading, nextTaskSlot, reload:loadWorkflow});
-  else renderPlannedStep(step);
+  const route=state.route;
+  if(route.videoId!==state.videoId) {openVideo(route.videoId,route.step).catch(error=>{if(!error.stale) toast(error.message);});return;}
+  stepScreen.render($("#main"),{route, heading:pageHeading, stepTitle:currentStep()?.title, jobs:()=>state.data.jobs,
+    reload:()=>loadWorkflow().catch(()=>{})});
 }
 
-function renderDataStep(step) {
-  $("#main").innerHTML = pageHeading("Veri", `${state.data.selected_destination.name} için toplanan verinin durumu: hangi kaynağın güncelleme zamanı geldi, hangisi güncel.`) +
-    nextTaskSlot(step) + `<div id="refresh-section">${refreshSection(state.data.refresh,state.data.jobs.some(active))}</div>
-    <div class="planned-grid tool-links">${state.data.steps.map(tool=>`<a class="planned-card" href="#${esc(tool.id)}"><span class="eyebrow">VERİ ARACI</span><h3>${esc(tool.title)}</h3><p>${esc(tool.subtitle)}</p></a>`).join("")}</div>`;
-  updateRefresh().catch(()=>{});
+/** Veri → Okuma denemeleri (GÖREV-21): the trial readings that were in Ayarlar — the extension's, the warm-up list, the proxy's. */
+function renderReadingTrials() {
+  $("#main").innerHTML = veriHeading("Okuma denemeleri", "Bir sitenin okunup okunamadığını deneyen araçlar: tarayıcı eklentisinin deneme okuması, ısınma listesi ve ABD proxy'sinin deneme okuması. Bağlantı bilgileri Ayarlar'dadır.") +
+    `<div id="reading-screen"><section class="settings-section"><div class="settings-slot" id="extension-reading-slot"><p class="muted">Yükleniyor…</p></div></section>
+    <section class="settings-section"><div class="settings-slot" id="warm-up-slot"><p class="muted">Yükleniyor…</p></div></section>
+    <section class="settings-section"><div class="settings-slot" id="proxy-reading-slot"><p class="muted">Yükleniyor…</p></div></section></div>`;
+  new ExtensionReading($("#extension-reading-slot")).load();
+  new ProxyReading($("#proxy-reading-slot")).load();
+  api("isinma-listesi").then(list=>{const slot=$("#warm-up-slot");if(slot) slot.innerHTML=warmUpSection(list);}).catch(error=>{const slot=$("#warm-up-slot");if(slot && !error.stale) slot.textContent=error.message;});
 }
 
-async function renderPackStep(step) {
-  const ticket=++packSequence;
-  $("#main").innerHTML = pageHeading("Veri paketi", "Seçilen başlığın içerik planından kurulan kanıt paketi: bölümler planın sırasıyla gelir, her bölümde dayandığı satırlar ve blokları bulunur.") +
-    nextTaskSlot(step) + '<div id="pack-step-body" aria-live="polite"><p>Yükleniyor…</p></div>';
-  const body=$("#pack-step-body");
-  if(!state.videoId) {body.innerHTML='<section class="quality-result empty"><h2>Video seçilmedi</h2><p>Üst çubuktaki video seçiciden bir video seçin ya da 2. adımda (Konu ve başlık) bir başlık seçin.</p><a class="return-link" href="#videos">Konu ve başlık →</a></section>';return;}
-  try {
-    const videos=await api("videos");
-    if(ticket!==packSequence) return;
-    const video=videos.find(v=>v.id===state.videoId);
-    body.innerHTML=video?`<section class="library"><div class="library-title"><h2>Seçili video</h2><small>${esc(video.region_name)}</small></div><div class="video-list">${videoCard(video)}</div></section><div id="pack-head-slot"></div>`:'<p class="muted">Seçili video bulunamadı.</p>';
-    const pack=video?.packs?.[0];
-    if(pack) {
-      fetch(`/api/${destinationPath(`evidence-packs/${encodeURIComponent(pack.id)}/yazar-ozeti`)}`).then(r=>r.ok?r.text():Promise.reject(new Error("Paket okunamadı."))).then(text=>{
-        if(ticket!==packSequence) return;
-        const slot=$("#pack-head-slot");
-        if(slot) slot.innerHTML=`<section class="library pack-head"><div class="library-title"><h2>Paketin başı</h2><small>yazar özeti · paket ${esc(pack.id.slice(0,8))} · ${esc(date(pack.created_at))}</small></div><pre class="path pack-head-text">${esc(packHead(text))}</pre></section>`;
-      }).catch(error=>{const slot=$("#pack-head-slot");if(slot) slot.textContent=error.message;});
-    }
-    body.querySelectorAll("[data-video-pack]").forEach(button=>button.addEventListener("click",async()=>{
-      button.disabled=true;
-      try {
-        await api(`videos/${encodeURIComponent(button.dataset.videoPack)}/evidence-pack`,{method:"POST",body:"{}"});
-        toast("Video için kanıt paketi üretildi.");
-        await loadWorkflow();renderPackStep(currentStep());
-      } catch(error) {if(!error.stale) toast(error.message);button.disabled=false;}
-    }));
-  } catch(error) {if(!error.stale && ticket===packSequence) body.textContent=error.message;}
+/** Kanal (GÖREV-21, project layer): the channel's content rules, which were Settings sections; each is drawn by its own module. */
+function renderChannel() {
+  const ticket=++settingsSequence;
+  $("#main").innerHTML = pageHeading("Kanal", CHANNEL_INTRO) + channelFrame(channelSectionOfHash(location.hash));
+  $("#settings-nav-bar").addEventListener("click",event=>{
+    const link=event.target.closest("[data-settings-section]");
+    if(link && link.getAttribute("href")===location.hash) {event.preventDefault();goToSettingsSection(link.dataset.settingsSection);}
+  });
+  const loads=[
+    new InstructionEditor($("#instructions-slot")).load(),
+    new ToneSettings($("#tones-slot"),$("#warnings-slot")).load(),
+    renderSuffixSettings($("#suffix-settings-slot")),
+  ];
+  goToSettingsSection(channelSectionOfHash(location.hash),{smooth:false});
+  Promise.allSettled(loads).then(()=>{if(ticket===settingsSequence && state.page==="kanal") goToSettingsSection(channelSectionOfHash(location.hash),{smooth:false,focus:false});});
 }
 
-const PLANNED_ROADMAP={kontrol:"check",gorsel:"visuals",uretim:"video",yayin:"publish"};
-
-function renderPlannedStep(step) {
-  const plan=roadmap[PLANNED_ROADMAP[step.id]];
-  $("#main").innerHTML = `<div class="planned-layout">${pageHeading(step.title, "Bu adım geliştirme planında; henüz kurulmadı.")}${nextTaskSlot(step)}
-    ${plan?`<section class="planned-hero"><span class="tag warm">Planlanan adım · Henüz bağlı değil</span><h2>${esc(plan.headline)}</h2><p>${esc(plan.description)}</p><a class="return-link" href="#videos">← Konu ve başlık</a></section>
-    <div class="planned-grid">${plan.cards.map(([label,title,description])=>`<section class="planned-card"><span class="eyebrow">${esc(label)}</span><h3>${esc(title)}</h3><p>${esc(description)}</p></section>`).join("")}</div>`:""}</div>`;
+/** The heading of a Veri screen: the page heading and, under it, the Veri tabs with their names written out. */
+function veriHeading(title, description, actions="") {
+  return pageHeading(title, description, actions) + veriTabs(state.route?.tab || "sources");
 }
 
 function pageHeading(title, description, actions="") {
-  return `<div class="breadcrumb">30A STUDIO <span>/</span> ÇALIŞMA ALANI <span>/ ${esc(title.toLocaleUpperCase("tr"))}</span></div>
+  const layer=state.route?.layer==="video"?`VİDEO <span>/</span> ${esc((state.workflow?.video?.display_name || "").toLocaleUpperCase("tr"))}`:state.route?.layer==="ayarlar"?"PROGRAM":`PROJE${state.route?.screen==="veri"?" <span>/</span> VERİ":""}`;
+  return `<div class="breadcrumb">30A STUDIO <span>/</span> ${layer} <span>/ ${esc(title.toLocaleUpperCase("tr"))}</span></div>
     <div class="page-heading"><div><h1>${esc(title)}</h1><p>${esc(description)}</p></div>${actions ? `<div class="heading-actions">${actions}</div>` : ""}</div>`;
 }
 
 function render() {
   if (!state.data) return;
-  state.page = isSettingsHash(location.hash) ? "settings" : (location.hash.slice(1).split("/")[0] || "sources");
-  if (![...state.data.steps.map(step=>step.id),"settings","videos","adim"].includes(state.page)) state.page="sources";
+  const moved=redirectOf(location.hash,state.videoId);          // GÖREV-21: old addresses go to their new places
+  if(moved) {location.replace(moved);return;}
+  state.route = routeOf(location.hash) || routeOf("#sources");
+  state.page = state.route.page;
   navigation();
   beachScreen.invalidate();
   weatherScreen.invalidate();
@@ -184,16 +181,26 @@ function render() {
   referencesScreen.invalidate();
   evidenceScreen.invalidate();
   videosScreen.invalidate();
-  const title = currentStep()?.title || state.data.steps.find(step=>step.id===state.page)?.title || (state.page==="videos"?"Konu ve başlık":"Ayarlar");
+  videoListScreen.invalidate();
+  stepScreen.invalidate();
+  const step=currentStep();
+  const title = step?`${step.number} · ${step.title}`:({sources:"Veri · Kaynaklar",collect:"Veri · Toplama",quality:"Veri · Kalite",evidence:"Veri · Kanıt paketi",veri:"Veri · Okuma denemeleri",konu:"Konu bankası",kanal:"Kanal",videolar:"Videolar",video:"Video",settings:"Ayarlar"})[state.page];
   document.title = `30A Studio · ${title}`;
   if (state.page === "sources") renderSources();
-  else if (state.page === "collect") (collectionScreens[location.hash] || beachScreen).render($("#main"),state.data,pageHeading);
+  else if (state.page === "collect") (collectionScreens[location.hash] || beachScreen).render($("#main"),state.data,veriHeading);
   else if (state.page === "quality") renderQuality();
-  else if (state.page === "evidence") evidenceScreen.render($("#main"),state.data,pageHeading);
-  else if (state.page === "videos") videosScreen.render($("#main"),state.data,(title,description,actions)=>pageHeading(title,description,actions)+nextTaskSlot(currentStep()));
-  else if (state.page === "adim") renderStep();
+  else if (state.page === "evidence") evidenceScreen.render($("#main"),state.data,veriHeading);
+  else if (state.page === "veri") renderReadingTrials();
+  else if (state.page === "konu") videosScreen.render($("#main"),state.data,pageHeading);
+  else if (state.page === "videolar") videoListScreen.render($("#main"),state.data,pageHeading,state.route.archived);
+  else if (state.page === "video") renderStep();
+  else if (state.page === "kanal") {
+    if(!document.getElementById("channel-screen")) renderChannel();
+    else if(location.hash!==lastSettingsHash) goToSettingsSection(channelSectionOfHash(location.hash));
+    lastSettingsHash=location.hash;
+  }
   else if (state.page === "settings") {
-    // GÖREV-17: an address change inside Settings (#settings/tonlar) only goes to the section; the screen is not drawn again, so
+    // GÖREV-17: an address change inside Settings (#settings/claude) only goes to the section; the screen is not drawn again, so
     // nothing typed into a section is lost
     if(!document.getElementById("settings-screen")) renderSettings();
     else if(location.hash!==lastSettingsHash) goToSettingsSection(sectionOfHash(location.hash));
@@ -205,7 +212,7 @@ function render() {
 function renderSources() {
   const sources = state.data.sources.filter(source=>source.enabled);
   const categories = new Set(sources.map(source=>source.category));
-  $("#main").innerHTML = pageHeading("Veri kaynakları", `${state.data.selected_destination.name} hakkında bildiğimiz her şeyin başlangıç noktası. Kaynakları seç, düzenle ve veri toplamaya hazırla.`,
+  $("#main").innerHTML = veriHeading("Veri kaynakları", `${state.data.selected_destination.name} hakkında bildiğimiz her şeyin başlangıç noktası. Kaynakları seç, düzenle ve veri toplamaya hazırla.`,
     `<button data-action="audit">✓ Kayıtları kontrol et</button><button data-action="add" class="primary"><span class="plus">+</span> Kaynak ekle</button>`) +
     `<section class="overview" aria-label="Kaynak özeti">
       <div class="metric"><span class="metric-icon" aria-hidden="true">▤</span><div><div class="metric-number"><strong>${sources.length.toLocaleString("tr")}</strong><span class="metric-label">etkin kaynak</span></div><small>Kütüphaneye eklenen kaynak adayları</small></div></div>
@@ -261,7 +268,7 @@ function reportStale(report) {
 function renderQuality() {
   const completed = state.data.jobs.find(job=>job.kind==="catalog_audit" && job.status==="done" && job.result);
   const report = completed?.result;
-  $("#main").innerHTML = pageHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları, restoranların kimlik, mahalle ve detay alanları ve mahallelerin kimlik, ad ve sayfa eşleşmesi doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
+  $("#main").innerHTML = veriHeading("Veri kontrolü", "Kaynak kayıtlarındaki hazırlık eksikleri. Toplama sırasında plaj kayıtlarının alan, kimlik ve koordinatları; hava verilerinin NWS yanıtları, restoranların kimlik, mahalle ve detay alanları ve mahallelerin kimlik, ad ve sayfa eşleşmesi doğrulanır.", '<button class="primary" data-action="audit">✓ Kayıtları kontrol et</button>') +
     (report ? `<section class="quality-result">${reportStale(report)?'<div class="stale-notice">Kaynak kayıtları bu kontrolden sonra değişti. Güncel sonuç için kontrolü yeniden çalıştır.</div>':""}
       <div class="quality-summary"><span class="eyebrow">SON KATALOG KONTROLÜ · ${esc(date(completed.finished_at))}</span><h2 style="margin-top:10px">${report.checked} kayıt incelendi · ${report.needs_attention} kayıtta eksik bilgi</h2><p>${esc(report.scope)}</p></div>
       ${report.findings.map(finding=>`<div class="quality-row"><strong>${esc(finding.name)}</strong><span>${finding.issues.length?finding.issues.map(esc).join(" "):"Kayıt bilgileri tamam."}</span></div>`).join("")}</section>` :
@@ -277,14 +284,11 @@ function renderSettings() {
     const link=event.target.closest("[data-settings-section]");
     if(link && link.getAttribute("href")===location.hash) {event.preventDefault();goToSettingsSection(link.dataset.settingsSection);}   // same address: no hashchange
   });
-  const loads=[
+  const loads=[                                    // GÖREV-21: only the program's settings; Kanal and Veri hold the rest
     new ExtensionSettings($("#extension-slot")).load(),
     new ProxySettings($("#proxy-slot")).load(),
     renderClaudeSettings($("#claude-settings-slot")),
-    renderSuffixSettings($("#suffix-settings-slot")),
     api("claude/usage").then(view=>{const slot=$("#usage-settings-slot");if(slot) slot.innerHTML=usageCard(view);}).catch(()=>{}),
-    new InstructionEditor($("#instructions-slot")).load(),
-    new ToneSettings($("#tones-slot"),$("#warnings-slot")).load(),
   ];
   goToSettingsSection(sectionOfHash(location.hash),{smooth:false});
   // the sections above the wanted one grow as they load: go to it again when they are all there
@@ -563,8 +567,9 @@ window.addEventListener("hashchange",render);
 async function start(destinationId=storedDestination(localStorage)) {
   events?.close();events=null;
   const ticket=setDestination(destinationId);
-  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen,evidenceScreen,videosScreen]);
+  resetDestinationState(state,[beachScreen,weatherScreen,restaurantScreen,neighborhoodScreen,lodgingScreen,agencyPrices,climateScreen,referencesScreen,evidenceScreen,videosScreen,videoListScreen]);
   lodgingScreen.agency=agencyPrices;   // the reset rebuilds each screen from its constructor; the price section is attached again
+  stepScreen.reset();
   lastCollectionId=lastWeatherId=lastRestaurantId=lastNeighborhoodId=lastLodgingId=lastAgencyId=lastSiteId=null;climateDoneIds=new Set();
   $("#source-dialog").close();
   $("#main").innerHTML='<p role="status">Destinasyon yükleniyor…</p>';
@@ -582,9 +587,9 @@ async function start(destinationId=storedDestination(localStorage)) {
     // Resolve the server default before opening requests and event stream.
     if(!destinationId) { setDestination(data.selected_destination.id); return start(data.selected_destination.id); }
     persistDestination(localStorage,data.selected_destination.id);
-    $("#destination-subtitle").textContent=data.selected_destination.subtitle || data.selected_destination.name;
-    $("#destination-workspace").textContent=`${data.selected_destination.name} İçerik Stüdyosu`;
-    $("#destination-select").innerHTML=destinationOptions(data.destinations,data.selected_destination.id);
+    $("#destination-subtitle").textContent="";
+    $("#project-control").innerHTML=projectLabel(data.destinations,data.selected_destination);     // one project: only its name
+    $("#destination-select")?.addEventListener("change",event=>start(event.target.value));
     lastCollectionId=state.data.collections[0]?.id || null;
     lastWeatherId=state.data.weather_runs[0]?.id || null;
     lastRestaurantId=state.data.restaurant_runs?.[0]?.id || null;
@@ -597,12 +602,16 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastFareId=state.data.airfare_runs?.[0]?.id || null;
     climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
-    state.workflow=null;state.videoId=storedVideo(localStorage,data.selected_destination.id);lastWorkflowKey="";
-    $("#video-select").innerHTML=videoOptions(null,"");$("#workflow-progress").textContent="";
+    // GÖREV-21: the open video is remembered by the server (the browser's own memory only bridges an old version's choice)
+    state.workflow=null;state.videoId=data.open_video_id || "";state.projectOpen=false;lastWorkflowKey="";
+    persistVideo(localStorage,data.selected_destination.id,state.videoId);
     state.hiddenJobs=[];state.showHidden=false;lastHiddenKey="";
-    render();renderJobs();
+    renderJobs();
     loadHiddenJobs().catch(()=>{});
-    loadWorkflow().catch(error=>{if(!error.stale) toast(error.message);});
+    try {await loadWorkflow();} catch(error) {if(!error.stale) toast(error.message);}
+    if(ticket!==destinationRevision()) return;
+    if(state.videoId && (!location.hash || location.hash==="#sources")) location.hash=stepHref(state.videoId,state.workflow.steps.find(s=>!["approved","done"].includes(s.status) && !s.planned)?.id || "baslik");
+    render();
     events=new EventSource(`/api/${destinationPath("events")}`);
     events.addEventListener("open",()=>{
       if(ticket!==destinationRevision()) return;
@@ -614,9 +623,9 @@ async function start(destinationId=storedDestination(localStorage)) {
       state.data.jobs=JSON.parse(event.data).filter(job=>job.destination_id===state.data.selected_destination.id);renderJobs();
       if(state.page==="quality") {renderQuality();updateAuditButtons();}
       const jobKey=state.data.jobs.map(j=>`${j.id}:${j.status}`).join(",");     // the section changes only when a job starts or ends
-      if(["sources","adim"].includes(state.page) && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
-      if(jobKey!==lastWorkflowKey) {lastWorkflowKey=jobKey;loadWorkflow().catch(()=>{});}   // statuses come from the records
-      if(textScreen.jobsChanged(state.data.jobs) && state.page==="adim" && stepOfHash(location.hash)==="metin") textScreen.rerender();   // GÖREV-15
+      if(state.page==="sources" && jobKey!==lastJobKey) {lastJobKey=jobKey;updateRefresh().catch(()=>{});}
+      if(jobKey!==lastWorkflowKey) {lastWorkflowKey=jobKey;loadWorkflow().catch(()=>{});}   // a job started or ended: the steps' statuses moved
+      if(state.page==="video") stepScreen.jobsChanged();                                    // the running panel and the link table follow the job
       if(state.data.jobs.some(j=>j.kind==="claude_metin" && active(j)) && Date.now()-lastUsageLoad>15000) {lastUsageLoad=Date.now();usagePanel.load();}
       const claudeJobs=state.data.jobs.filter(j=>j.kind==="claude_run");
       if(claudeJobs.some(active) && Date.now()-lastUsageLoad>15000) {lastUsageLoad=Date.now();usagePanel.load();}   // measurements come live
@@ -625,8 +634,8 @@ async function start(destinationId=storedDestination(localStorage)) {
         const finished=lastClaudeKey && claudeJobs.find(j=>!active(j) && !lastClaudeKey.includes(`${j.id}:${j.status}`));
         lastClaudeKey=claudeKey;
         usagePanel.load();
-        if(state.page==="videos") videosScreen.refresh($("#main"));
-        if(finished) toast(finished.status==="done"?"Claude bitti: başlık önerileri Konu ve başlık ekranında onay bekliyor.":`Claude çalışması bitmedi: ${finished.message}`);
+        if(state.page==="konu") videosScreen.refresh($("#main"));
+        if(finished) toast(finished.status==="done"?"Claude bitti: adaylar Konu bankasında.":`Claude çalışması bitmedi: ${finished.message}`);
       }
       const restaurantLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="south-walton-restaurants");
       if(restaurantLatest && restaurantLatest.id!==lastRestaurantId) {
@@ -723,8 +732,11 @@ async function start(destinationId=storedDestination(localStorage)) {
   }
 }
 
-$("#destination-select").addEventListener("change",event=>start(event.target.value));
-$("#video-select").addEventListener("change",event=>selectVideo(event.target.value).catch(error=>{if(!error.stale) toast(error.message);}));
+// GÖREV-21: the sidebar's own buttons — "Videoyu kapat" and the collapsed "← Proje" row
+$("#navigation").addEventListener("click",event=>{
+  if(event.target.closest("[data-video-close]")) {closeVideo().catch(error=>{if(!error.stale) toast(error.message);});return;}
+  if(event.target.closest("[data-project-toggle]")) {state.projectOpen=!state.projectOpen;navigation();}
+});
 // GÖREV-14: the Claude bar moves every second between job events; the usage panel fades an old measurement without a reload.
 setInterval(()=>{
   if($("#jobs-panel").hidden || !state.data) return;
@@ -739,7 +751,8 @@ setInterval(()=>{
 },1000);
 setInterval(()=>usagePanel.load(),60000);
 usagePanel.draw();usagePanel.load();
-document.addEventListener("studio:video-chosen",event=>selectVideo(event.detail).catch(()=>{}));
+document.addEventListener("studio:video-opened",event=>openVideo(event.detail.id,event.detail.step).catch(error=>{if(!error.stale) toast(error.message);}));
+document.addEventListener("studio:videos-changed",()=>{if(state.videoId) loadWorkflow().catch(()=>{});});
 document.addEventListener("studio:workflow-changed",()=>loadWorkflow().catch(()=>{}));
 startHeartbeat();
 start();

@@ -24,6 +24,10 @@ from ..text import marks
 from . import steps, title
 
 PREVIOUS = "onceki_cikti.json"
+# GÖREV-21: "Düzeltme iste" — the user's note is given to the step that runs again as material (the instruction files do not change);
+# with a plan correction also the plan the note is about.
+NOTE_FILE = "kullanicinin_duzeltme_notu.md"
+PREVIOUS_PLAN = "onceki_plan.json"
 TITLES = {"metin_plan": "Video metni · plan", "metin_plan_elestiri": "Video metni · plan eleştirisi", "metin_bolum": "Video metni · bölüm",
           "metin_birlestirme": "Video metni · birleştirme", "metin_giris_kapanis": "Video metni · giriş ve kapanış",
           "metin_son_okuma": "Video metni · son okuma", "metin_ceviri": "Video metni · çeviri"}
@@ -35,7 +39,13 @@ DESCRIPTIONS = {"baslik_analizi.md": "seçilen başlık ve analizi", "paket_ozet
                 "sayilar.csv": "videonun sayıları (sayı listesi)", "kanal_plani.md": "kanalın planı", "plan.json": "videonun planı",
                 "plan_elestirisi.json": "planın eleştirisi", "bolum.md": "senin bölümün", "bolumler.md": "bölümler sırasıyla",
                 "metin.md": "birleşmiş metin", "yayinlanan_videolar.md": "kanalın yayınlanmış videoları",
-                "cumleler.md": "numaralı İngilizce cümleler", PREVIOUS: "önceki çıktın (yeniden deneme)"}
+                "cumleler.md": "numaralı İngilizce cümleler", PREVIOUS: "önceki çıktın (yeniden deneme)",
+                NOTE_FILE: "kullanıcının düzeltme notu (kullanıcı önceki çıktıyı okudu ve bunu istedi; bu nota göre yaz)",
+                PREVIOUS_PLAN: "kullanıcının düzeltme istediği önceki plan"}
+
+
+def note_text(note):
+    return f"# Kullanıcının düzeltme notu\n\n{(note or '').strip()}\n"
 
 
 def prepare(ctx):

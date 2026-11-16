@@ -88,7 +88,7 @@ def task(ctx):
               "- Başlıklar birbirini ve `onceki_oneriler.md`'dekileri tekrar etmez; büyük-küçük harf ve noktalama farkı tekrar sayılır.",
               "- Kısa Türkçe özetini (fikir doluyor mu, kaç aday, önemli eksik veri) `notlar` alanına yaz."]
     if ctx.correction:
-        lines += ["", "Düzeltme: kullanıcının notu aşağıda. Önceki çıktın `onceki_cikti.json` bölümünde. Notu uygula ve "
+        lines += ["", "Düzeltme: kullanıcının düzeltme notu aşağıda. Önceki çıktın `onceki_cikti.json` bölümünde. Notu uygula ve "
                       f"`{OUTPUT}`'u baştan ve eksiksiz yaz.", *steps.note_block(ctx.correction["note"])]
     return "\n".join(lines) + "\n"
 

@@ -15,7 +15,7 @@ from studio.app import create_app
 from studio.database import Database
 from studio.destinations import thirty_a
 from studio.evidence import video as V
-from tests.legacy import V17_TABLES, V18_TABLES, V19_TABLES, V20_TABLES, drop_v17
+from tests.legacy import V17_TABLES, V18_TABLES, V19_TABLES, V20_TABLES, V21_TABLES, drop_v17
 from tests.test_beaches import HEADERS
 
 FAKE = Path(__file__).with_name("fake_claude.py")
@@ -261,6 +261,9 @@ def test_choosing_a_title_makes_a_video_record_with_the_whole_analysis(app):
 def test_a_videos_evidence_pack_starts_with_its_analysis_and_maps_the_cited_rows(app):
     view = start(app, bolge="Rosemary Beach")
     video = app.post(f"/api/claude/runs/{view['id']}/select", json={"aday": 0}).json()
+    early = app.post(f"/api/videos/{video['id']}/evidence-pack")             # GÖREV-21: the pack is made only after the title is approved
+    assert early.status_code == 409 and "1 · Başlık ve vaat" in early.json()["detail"]
+    assert app.post(f"/api/videos/{video['id']}/adimlar/baslik/onayla", json={}).status_code == 200
     response = app.post(f"/api/videos/{video['id']}/evidence-pack")
     assert response.status_code == 201
     pack_id = response.json()["id"]
@@ -277,6 +280,7 @@ def test_a_videos_evidence_pack_starts_with_its_analysis_and_maps_the_cited_rows
     general = start(app)
     no_template = next(c for c in general["candidates"] if c["sablon"] is None)
     other = app.post(f"/api/claude/runs/{general['id']}/select", json={"aday": no_template["sira"]}).json()
+    assert app.post(f"/api/videos/{other['id']}/adimlar/baslik/onayla", json={}).status_code == 200
     made = app.post(f"/api/videos/{other['id']}/evidence-pack")             # GÖREV-14: "yeni şablon gerekir" no longer stops the pack
     assert made.status_code == 201 and made.json()["template_key"] == "video-plani"
     assert "yeni şablon gerekir” yazıyordu" in app.get(f"/api/evidence-packs/{made.json()['id']}/markdown").text
@@ -332,11 +336,11 @@ def test_v14_to_v15_adds_runs_videos_and_the_pack_link_and_keeps_rows(tmp_path):
                   con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 21
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-        assert after == {**before, "claude_runs": 0, "videos": 0, "claude_usage": 0, "job_progress": 0, **V17_TABLES, **V18_TABLES, **V19_TABLES, **V20_TABLES}
+        assert after == {**before, "claude_runs": 0, "videos": 0, "claude_usage": 0, "job_progress": 0, **V17_TABLES, **V18_TABLES, **V19_TABLES, **V20_TABLES, **V21_TABLES}
         assert "video_id" in [r[1] for r in con.execute("PRAGMA table_info(evidence_packs)")]
     assert list((tmp_path / "backups").glob("*-v14-*.sqlite3"))
 
