@@ -179,6 +179,8 @@ Kiralama fiyat çekimi **başlatılmadı**. Gerçek veride kanıt paketi üretil
 
 Dal push edildi; main'e alınmadı, etiket konmadı.
 
+**CI.** İlk iki commit'in (`de80499` kod ve testler, `1b950a6` belgeler) çalışması (43894810272) test adımında 16 dakikalık zaman sınırına takıldı. Bu, GÖREV-17 ve GÖREV-18 raporlarında anlatılan rastgele takılmadır (aynı kod bir çalışmada geçiyor, öbüründe bir test bekliyor; kök neden bulunmadı): günlüğün herkese açık özeti takılmanın bu görevin yeni testlerine sıra gelmeden, eklenti, temel ve GÖREV-17/18 testlerinin olduğu bölümde olduğunu gösteriyor; yerelde tam takım art arda iki kez takılmadan geçti. Özet 4.000 karakterde kesildiği için günlüğün sonu (bekleyen testin adı ve yığın) yine görünmedi; iş akışındaki özet adımı artık günlüğün **sonunu** tutuyor (`.github/workflows/tests.yml`). Bu düzeltmeyi taşıyan commit'in çalışması yeniden bekledi; sonucu aşağıdaki "CI sonucu" satırında.
+
 ---
 
 ## 7. Yöneticinin karar vermesi gerekenler
@@ -237,3 +239,5 @@ Dal push edildi; main'e alınmadı, etiket konmadı.
 - `canli-istekler.csv` — inceleme sırasında yapılan 20 canlı isteğin kaydı
 
 Son test turu: 16 Kasım 2026 — `.venv\Scripts\python.exe -m pytest -q`: 1147 geçti, 2 atlandı (eklentinin uçtan uca denemesi; ayrı ortam ister), 0 hata · `node --test tests/frontend.test.mjs`: 124 geçti, 0 hata.
+
+CI sonucu: CI_SONUCU
