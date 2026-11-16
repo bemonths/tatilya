@@ -1,6 +1,6 @@
 # 30A Studio
 
-30A veri ve içerik üretim uygulaması · **v0.19.0 (geliştirme dalı `gorev-17-arayuz`) — arayüz düzeltmeleri: İşler panelinde biten işleri kaldırma, Ayarlar'da bölüm düğmeleri, bir iş boyunca tek ve odak almayan tarayıcı penceresi** · son stable etiket ve main: v0.18.0 (eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si).
+30A veri ve içerik üretim uygulaması · **v0.21.0 (geliştirme dalı `gorev-20-eksik-veri`) — ilk videodan önce eksik veriler: yol üzerinden mesafe ve tahmini sürüş süresi, havalimanı süreleri, BTS uçak bileti ortalaması, kanıt paketinde kapsanan şirketler ve kapsam dışı satırları** · önceki: **v0.19.0 (geliştirme dalı `gorev-17-arayuz`) — arayüz düzeltmeleri: İşler panelinde biten işleri kaldırma, Ayarlar'da bölüm düğmeleri, bir iş boyunca tek ve odak almayan tarayıcı penceresi** · son stable etiket ve main: v0.18.0 (eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si).
 
 ## Açılış
 
@@ -158,6 +158,15 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 **Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model ve efor (v0.20.0'dan beri tur sınırı yok; yerine son çalışmaların ortanca harcaması, çıktı varsayımı ve token sınırları). Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
+
+## Yol mesafesi, sürüş süresi ve uçak bileti ortalaması · v0.21.0
+
+**Veri toplama → Mahalleler** sekmesinin altında iki yeni bölüm (GÖREV-20):
+
+- **Yol üzerinden mesafe ve tahmini sürüş süresi** — "Yol mesafelerini hesapla" düğmesi OpenStreetMap yol ağını tek bir sorguyla indirir (ham kopyası saklanır) ve son konaklama çekimindeki her ilandan günlük ihtiyaç noktalarına, halka açık plaj erişimlerine ve iki havalimanına (VPS, ECP) en hızlı yolu **programın içinde** hesaplar; API anahtarı ya da yol tarifi servisi yoktur. "En yakın" nokta yol mesafesine göre seçilir; kuş uçuşu değer yanında kalır. Süre, yolun hız sınırından ya da yol türünün ayardaki varsayılan hızından hesaplanır: **trafik hesaba katılmadan tahmindir**, "yürüme mesafesi" değildir. Yaklaşık 1 dakika sürer. Ayrıntı: [M19](docs/M19-YOL-MESAFESI.md).
+- **Havalimanından başlayan iç hat yolculuklarının ortalama bilet ücreti** — "Uçak bileti ortalamalarını topla" düğmesi ABD Ulaştırma İstatistikleri Bürosu'nun (BTS) "Average Domestic Airline Itinerary Fares" tablosundan VPS ve ECP için son beş çeyreği okur. Değer o havalimanından **başlayan** yolculukların ortalamasıdır; belirli bir şehirden bilet fiyatı değildir. Ayrıntı: [M20](docs/M20-UCAK-BILETI.md).
+
+İkisi de **Güncelleme zamanı gelenler** tablosundadır (yol mesafesi 1 ay ve her yeni konaklama çekiminden sonra; uçak bileti 3 ay). Kanıt paketinde yol mesafesi ve süre kuş uçuşu değerle yan yana, havalimanı süreleri, uçak bileti ortalaması, fiyat ortancalarına giren ve fiyatı okunamayan kiralama şirketleri (nedenleriyle) ve **"kapsam dışı"** satırları (araç kiralama, market fiyatı, anlık trafik, Vrbo) vardır ([M14](docs/M14-KANIT-PAKETI.md)). Fiyatı okunamayan şirketlerin incelemesi: [M11](docs/M11-KONAKLAMA-FIYATLARI.md).
 
 ## Claude'da token kontrolü, işletme adı ve başlık uyarıları · v0.20.0
 

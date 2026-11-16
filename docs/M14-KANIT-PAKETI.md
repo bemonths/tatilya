@@ -60,6 +60,10 @@ Bir videonun (ya da makalenin) ana sorusuna, veritabanındaki ve referans tablos
 | `lodging_bedrooms` | aynı | oda grubuna göre ortanca (`months` ile seçilen pencereler) | bizim hesabımız | M11 |
 | `restaurants` | son işletme siteleri çekimi | mahalle başına restoran sayısı, seviyesi hesaplanan sayı ($…$$$$), çevrimiçi rezervasyon ve çocuk menüsü sayısı; `list: true` ile restoran başına seviye, rezervasyon, çocuk menüsü, saatler, ana yemek ortancası; `list: "seviyeli"` ile yalnız fiyat seviyesi olan restoranlar (ad, mahalle, seviye, ortanca) | kaynak gerçeği; seviye ve ortanca bizim hesabımız | M12 |
 | `daily_needs` | son günlük ihtiyaç çekimi | mahalle × kategori kuş uçuşu mesafe ortancası (mil, km), 1 mil içindeki pay ek değer olarak; `list_points` ile kategorideki noktalar | bizim hesabımız | M13 |
+| `road_distances` (GÖREV-20) | son yol mesafesi çekimi | mahalle × nokta türü: yol üzerinden mesafe ortancası (mil; km dönüşümü), ek değer olarak tahmini sürüş dakikası (`sure_dk`), aynı ilanların kuş uçuşu ortancası (`kus_ucusu`) ve 1 yol mili içindeki pay; ek noktalar (havalimanları) ayrı tabloda, yalnız mil ve dakika; `checks` ile yol ağının uzunluk sağlaması | bizim hesabımız | M19 |
+| `airfare` (GÖREV-20) | son BTS çekimi | havalimanı × çeyrek: o havalimanından başlayan iç hat yolculuklarının ortalama bilet ücreti (USD); havalimanı başına bir yıl önceki aynı çeyrekle fark (tutar; yüzde `degisim` ek değeri) | kaynak gerçeği; fark bizim hesabımız | M20 |
+| `lodging_coverage` (GÖREV-20) | son kiralama şirketi fiyat çekimi + `AGENCY_UNREAD` | fiyatlı ilan sayısı; fiyat ortancalarına giren her şirket (fiyatlı ilan, n = şirketin ilanı); fiyatı okunamayan şirketler (Book>Direct ilan sayısı, neden, bakıldığı tarih) | bizim hesabımız | M11 |
+| `out_of_scope` (GÖREV-20) | profil sabiti `OUT_OF_SCOPE` | programın hiç toplamadığı her konu için bir "veri yok" satırı ("Kapsam dışı: …", nedeniyle) | — | M14 (aşağıda) |
 | `traffic` | `TRAFFIC_TABLE` | `kinds`: `aadt` (sayım noktası başına 2025 AADT), `season` (kategori başına aylık oran ve yoğun sezon haftaları, haftaların başı ve sonu ek değer); `categories` ile süzme | kaynak gerçeği; aylık oran bizim hesabımız | M9 (trafik, GÖREV-11) |
 
 Bir blok kendi kaynağının **son başarılı çekimini** okur; çekim yoksa ya da bir hücre boşsa satır düşürülmez, **"veri yok"** satırı nedeniyle yazılır (ör. "Bu çekimde bu kategori yok (kategori ayrımından önceki çekim)", "Bu hücrede fiyatı okunan ilan yok").
@@ -71,7 +75,7 @@ Her satır (JSON'da bütün alanlarıyla):
 - `id` (`K0001…`), `bolum`, `blok`
 - `ifade` — Türkçe ifade; referans satırlarında ayrıca `ifade_en` (tablonun İngilizce cümlesi, videoda söylenebilecek biçim)
 - `deger`, `birim` — ABD birimleri (°F, inç, mil, USD); `deger_ek` — °C, mm, km karşılığının okunur metni (dönüşüm bizim hesabımız)
-- `ek_degerler` — satırın değerden başka sayıları, ayrı alanlar olarak: `[{"tur", "deger", "birim"}]`; `tur` şunlardan biri: `alt_ceyrek`, `ust_ceyrek`, `orneklem`, `pay`, `aralik_alt`, `aralik_ust`, `donusum` (GÖREV-12). İfade metni değişmedi; sayılar ifadeden okunmaz, bu alanlardan okunur.
+- `ek_degerler` — satırın değerden başka sayıları, ayrı alanlar olarak: `[{"tur", "deger", "birim"}]`; `tur` şunlardan biri: `alt_ceyrek`, `ust_ceyrek`, `orneklem`, `pay`, `aralik_alt`, `aralik_ust`, `donusum` (GÖREV-12); GÖREV-20: `sure_dk` (tahmini sürüş dakikası), `kus_ucusu` (yol değerinin yanındaki kuş uçuşu değer), `degisim` (yüzde değişim). İfade metni değişmedi; sayılar ifadeden okunmaz, bu alanlardan okunur.
 - `kapsam` — mahalle, ilçe, istasyon ve dönem
 - `kaynak` — ad, url, belge tarihi, erişim tarihi, çekim kimliği, SHA-256 (çekimin ham dosyası ya da referans belgesi); referans ve trafik satırlarında satır kimliği
 - `etiket` — **kaynak gerçeği** (kaynak bunu söylüyor), **bizim hesabımız** (kaynak verisinden hesapladığımız sayı: ortanca, pay, dönüşüm, sayım), **türetilmiş** (birden çok kaynaktan ya da bizim kuralımızla çıkardığımız sonuç: mahalle eşlemesi, kapsam kuralı, özet), **yaklaşık** (yaklaşık konum ya da eşleme)
@@ -146,6 +150,13 @@ planın bütün kanıtları yeni pakette aynı değerle bulundu.
 - Restoran tablolarında mahalle satırlarının toplamı restoran sayısından büyükse nedeni yazılır: dizinde birden çok mahalleye bağlı
   restoran bağlı olduğu her mahallede sayılır (`blocks.overlap_note`). Sayılar sabit yazılmaz, üretim anında hesaplanır; tek mahalle
   paketinde başka mahalleye de bağlı restoran sayısı yazılır.
+
+## Yeni veriler ve "kapsam dışı" (GÖREV-20)
+
+- **Şablonlar (sürüm 2):** `ilk-video` → "Konaklama maliyeti" bölümünün sonunda `lodging_coverage`; "Araba ve ulaşım" bölümünde `daily_needs`'in hemen ardından `road_distances` (büyük süpermarket, yerel market, eczane, acil servis, acil bakım ve iki havalimanı; yol ağı sağlamasıyla), `airfare` ve `out_of_scope`. `mahalle-rehberi` → "Günlük ihtiyaç mesafeleri" bölümünde `daily_needs`'in ardından `road_distances` (mahallenin bütün nokta türleri, plaj erişimi ve havalimanları).
+- **Yan yana:** yazar özetinde yol tablosunun hücresi "yol mil · dakika · kuş <kuş uçuşu mil> · %<1 yol mili içindeki pay>" biçimindedir; satırın (n) sütunu yol ağına bağlanan ilan sayısıdır. Kuş uçuşu değer yola bağlanabilen aynı ilanlar içindir; günlük ihtiyaç tablosundaki kuş uçuşu değer koordinatı olan bütün ilanları sayar, ikisi küçük farkla ayrılabilir.
+- **Bilinen boşluklar:** fiyatı okunamayan şirketler artık gözden geçirilmiş dosyadaki her şirketi (ilan sayısı 20'nin altında olsa da) adlandırır; "engelli ilan" satırı bunların yayından kalkmış ilanlar olduğunu söyler; yol mesafesi ve uçak bileti için ya verinin sınırı ya da "veri yok" yazar; sonda **"Kapsam dışı"** satırı: araç kiralama fiyatları, market fiyatları, anlık trafik ve trafikli sürüş süresi, Vrbo ilanlarının fiyatları.
+- **Kapsam dışı kuralı (video dili):** kapsam dışı konu hakkında sayı, fiyat ya da karşılaştırma söylenmez; gerekiyorsa "bu videoda bunun verisi yok" denir. Liste destinasyon profilindedir (`OUT_OF_SCOPE`: anahtar, başlık, neden).
 
 ## Yeni şablon nasıl yazılır
 

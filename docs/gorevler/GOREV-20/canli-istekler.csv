@@ -1,0 +1,22 @@
+﻿sirket,no,zaman_utc,yol,yontem,adres,http_durumu_ya_da_sayfa_durumu,baslik_ya_da_hata,ham_sha256,not
+360blue,1,2026-11-16T14:07:54,http,GET,https://www.360blue.com/rentals/properties/blue-mountain-beach-sea-esta-391-blue-mountain-road/,403,,f3710a4a7d3f3988c8b40dbf1c53e6a7adc57a1c2646c3d64f0951e88eb10c41,"ilan sayfası, doğrudan"
+360blue,2,2026-11-16T14:11:20,browser,GET,https://www.360blue.com/rentals/properties/blue-mountain-beach-sea-esta-391-blue-mountain-road/,blocked,Attention Required! | Cloudflare,60d37d0af557a23d8b74cb919802c7afb86cf08f3e39c94d3a7d3a989c22cf3f,"ilan sayfası, programın kendi tarayıcısı"
+beachgirls,1,2026-11-16T14:07:56,http,GET,https://30a-beachgirls.com/476532/,308,,b578ccd71df8a48983ae736d32182352c9691baae1faa513c485546f904b2498,"ilan bağlantısı, doğrudan"
+beachgirls,2,2026-11-16T14:08:36,http,GET,https://30a-beachgirls.com/476532,404,,e40028bca2a47edfd2bcaafea94bb2509fb31b6021b6b6a8cfb74fbc01068896,yönlendirmenin hedefi
+beachgirls,3,2026-11-16T14:08:49,http,GET,https://30a-beachgirls.com/,200,,6fc105bbb0e2c0c16cfc85341db243a0b1ea484c69f66ca45b923b76dae405a4,ana sayfa
+beachgirls,4,2026-11-16T14:09:46,http,GET,https://30a-beachgirls.com/vacation-rental/606545,200,,53d656f2eb9f27b5a3ea13c94ed801b10e9010e870a6f1dde33ee9e0413b1ee8,ilan sayfası
+beachgirls,5,2026-11-16T14:09:54,http,GET,https://30a-beachgirls.com/alphabetical-property-list,200,,28e2b5e9159722e339442fde9c43a852c0283e386e929c14495d50ef0a6f2942,şirketin ilan listesi
+beachgirls,6,2026-11-16T14:10:19,http,GET,https://30a-beachgirls.com/vacation-rental/609625,200,,32394271aff37f3da87deb42a4b3aaf331ca03a78982352e277a6c69032eb68c,Book>Direct'te de olan ilan (Barefoot Paradise)
+benchmark30a,1,2026-11-16T14:27:29,http,GET,https://www.benchmark30a.com/rentals/beachside-villas-613,404,,0c308aecbd80731dced78255829dd131e46620dafe1a4bdf2b819a037e66f285,403 veren ilan (engelli 51'den)
+cra,1,2026-11-16T14:08:19,http,GET,https://rentals.cottagerentalagency.com/rentals/SeasideRentalsDetails.aspx?UnitID=506,,ConnectError: getaddrinfo failed,,"ilan bağlantısı, doğrudan"
+cra,2,2026-11-16T14:08:58,http,GET,https://www.cottagerentalagency.com/,301,,44b0e732410c7a99b67d8640ddb60de61a5014ae4775fc1646acf46c09774bab,ana alan adı
+cra,3,2026-11-16T14:10:30,http,GET,https://www.sandestin.com/accommodations/cottage-rental-agency,403,,4ff53c1e500ed3182433a62298c54154dbb80e90478d8c2207cad0f920d9f873,yönlendirmenin hedefi
+graytoncoast,1,2026-11-16T14:27:41,http,GET,https://www.graytoncoastrentals.com/30a-vacation-rentals/conch-out,403,,b62b6f3c0f6d9027c28c316cf05d3ddf9183e22bcbbb1f80ef5b21de06cd70f7,403 veren ilan (engelli 51'den)
+outdoorshower,1,2026-11-16T14:08:17,http,GET,https://www.outdoorshower30a.com/property/petite-maison,,ConnectTimeout,,"ilan bağlantısı, doğrudan"
+outdoorshower,2,2026-11-16T14:09:20,http,GET,http://outdoorshower30a.com/,,"ConnectTimeout: [WinError 10060] Bağlanılan uygun olarak belli bir süre içinde yanıt vermediğinden veya kurulan
+bağlantı bağlanılan ana bilgisayar yanıt vermediğinden bir bağlantı kurulamadı",,"http, ana sayfa"
+realjoy,1,2026-11-16T14:07:55,http,GET,https://www.realjoy.com/beach-rentals/30a-vacation-rentals,403,,77f3b18a8987f8613d40401b2070721f4f49a6e0930afe9c71b2634a33f26449,"30A ilan listesi, doğrudan"
+realjoy,2,2026-11-16T14:26:44,browser,GET,https://realjoy.com/northwest-florida/south-walton-30a-miramar-beach-sandestin/30a/seagrove-beach/rental/stay-salty/340270,challenge,Bir dakika lütfen...,,"ilan sayfası, programın kendi tarayıcısı"
+sandersbeach,1,2026-11-16T14:27:30,http,GET,https://www.sandersbeachrentals.com/,200,,741f38ffc18b6b0c33653a5b5c0e0520bb976b2e08ac47ece561eef6613f74c9,ana sayfa (bağlantı örneği için)
+sandersbeach,2,2026-11-16T14:27:39,http,GET,https://www.sandersbeachrentals.com/property/203-wisteria-way,301,,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,403 veren ilan (engelli 51'den)
+vacasa,1,2026-11-16T14:08:18,http,GET,https://www.vacasa.com/usa/Dunes-Of-Seagrove-Santa-Rosa-Beach/,403,,8586b41ed4c5bde99f4a188b836645349f619ef90339b2d0c3b14ae2b287999f,"ilan bağlantısı, doğrudan"

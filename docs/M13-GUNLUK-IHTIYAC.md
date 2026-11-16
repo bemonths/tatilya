@@ -8,6 +8,8 @@ GÖREV-10: toplayıcı, şema, arayüz ve testler; gerçek veritabanında ilk ç
 
 GÖREV-11: "Süpermarket ve market" kategorisi **büyük süpermarket** ve **yerel ve gurme market** diye ikiye ayrıldı; "acil sağlık" kategorisi **acil servis** ve **acil bakım (urgent care)** diye ikiye ayrıldı ve bu iki kategori yalnız resmî kaynakla doğrulanan noktaları sayar; eczane zincirleri (CVS, Walgreens) kontrol edildi. Sayılar ve mahalle ölçüleri `docs/gorevler/GOREV-11/RAPOR.md`, `gunluk-ihtiyac-mahalle.csv` ve `gunluk-ihtiyac-noktalar.csv` içinde.
 
+GÖREV-20 (16 Kasım 2026): kuş uçuşu ölçülerin yanına **yol üzerinden mesafe ve tahmini sürüş süresi** eklendi; ayrı bir toplayıcıdır ve ayrı belgededir: `docs/M19-YOL-MESAFESI.md`. Bu belgedeki ölçüler kuş uçuşu olarak aynen kalır; "en yakın" noktanın yol mesafesine göre seçimi M19'dadır.
+
 ## Amaç
 
 "Arabasız bir 30A tatili mümkün mü, hangi mahallede?" sorusuna kanıt: konaklama ilanlarından en yakın büyük süpermarkete, yerel markete, eczaneye, acil servise, acil bakım merkezine, bisiklet kiralamaya ve halka açık plaj erişimine olan mesafe. Ölçüler **kuş uçuşudur** (iki nokta arasındaki büyük daire uzaklığı); yol, kaldırım, bisiklet yolu ya da yürüme süresi hesaplanmaz.
@@ -75,9 +77,9 @@ Mahalleler sekmesinin altında: "Günlük ihtiyaç noktalarını topla" düğmes
 - OpenStreetMap gönüllülerin haritasıdır; bir noktanın olmaması işletmenin olmadığı anlamına gelmez, olan bir nokta da kapanmış olabilir. Süpermarketler ve eczaneler zincirlerin siteleriyle kısmen doğrulandı; bu bilgisayardan okunamayan siteler (Publix, Winn-Dixie, The Fresh Market, CVS: ABD dışı bağlantıya kapalı ya da engelli; HCA Florida: konum engeli) raporda. Yönetici kararı (GÖREV-12): HCA Florida ve CVS "bu bilgisayardan okunamadı" olarak kalır; başka bir yol denenmez (vekil sunucu, başka ağ ya da üçüncü taraf dizin kullanılmaz).
 - Acil servis ve acil bakım ölçüleri yalnız resmî sayfası okunan noktalara dayanır; resmî sayfası okunamayan bir acil servis (ör. HCA Florida Breakfast Point Emergency) ölçüde yoktur ve en yakın acil servis mesafesi bu yüzden olduğundan uzun görünebilir.
 - Adres servisinden alınan koordinat (ABD Nüfus Bürosu adres aralığı eşlemesi) yaklaşıktır; notunda yazılır.
-- Mesafe kuş uçuşudur; yol üzerinden mesafe, yürüme ya da bisiklet süresi değildir. "Yürüme mesafesi" denmez.
+- Bu toplayıcının mesafesi kuş uçuşudur; yol üzerinden mesafe ve tahmini sürüş süresi M19'daki toplayıcıdan gelir. Yürüme ya da bisiklet süresi hiçbir yerde hesaplanmaz. "Yürüme mesafesi" denmez.
 - Mahalle ölçüsü yalnız Book>Direct'te görünen ilanlara göredir (tarihli arama; tam envanter değil).
 
 ## Video dili
 
-Kullanılabilir: "OpenStreetMap'e göre, Seaside'daki ilanların ortancası en yakın büyük süpermarkete kuş uçuşu yaklaşık X mil", "ilanların yüzde Y'si bir eczaneye kuş uçuşu bir milden yakın", "hastane sistemlerinin kendi sitelerinde listelenen en yakın acil servise kuş uçuşu ortanca X mil". Kullanılmaz: "markete yürüme mesafesi", "her yere bisikletle gidilir" gibi yol ve süre iddiaları; "en yakın hastane X dakika"; özel topluluk plaj erişimleri hakkında listede olmayan bilgi.
+Kullanılabilir: "OpenStreetMap'e göre, Seaside'daki ilanların ortancası en yakın büyük süpermarkete kuş uçuşu yaklaşık X mil", "ilanların yüzde Y'si bir eczaneye kuş uçuşu bir milden yakın", "hastane sistemlerinin kendi sitelerinde listelenen en yakın acil servise kuş uçuşu ortanca X mil". Kullanılmaz: "markete yürüme mesafesi", "her yere bisikletle gidilir" gibi iddialar; kuş uçuşu mesafeden süre çıkarmak; "en yakın hastane X dakika" (sürüş süresi yalnız M19'un yol mesafesi kanıtıyla, "tahmini" ve "trafik hesaba katılmadan" diye söylenir); özel topluluk plaj erişimleri hakkında listede olmayan bilgi.

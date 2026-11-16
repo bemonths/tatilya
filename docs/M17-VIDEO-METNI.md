@@ -278,7 +278,8 @@ bulgu sayısı karşılaştırma ekranında görünür.
 
 **Kırmızı (bilgiyi yanlış söyler).** Bloklarla ilgili kurallar kanıt bloklarının kullanım notlarından gelir (`studio/evidence/blocks.py`
 `USAGE`); her biri kodda tanımlı ve testli:
-- mesafe (M13): "walking distance", "walkable", "a short walk", "minute walk", "minutes away", "minute drive" …;
+- mesafe (M13): "walking distance", "walkable", "a short walk", "minute walk" …;
+- sürüş süresi (M19; GÖREV-20): "minutes away", "minute drive", "minutes to drive" — cümle bir yol mesafesi kanıtını (`road_distances` satırı) işaret ediyorsa serbesttir (tahmini sürüş süresi, "tahmini" ve "trafik hesaba katılmadan" diye söylenir), etmiyorsa kırmızıdır;
 - fiyat (M11): "a week costs", "a week in … costs", "costs about $… a week", "per week it costs";
 - envanter (M10): "full inventory", "full list", "complete list", "every rental", "all the rentals", "there are … homes in";
 - iklim (M8): "30A's climate", "the climate in 30A", "climate of 30A";

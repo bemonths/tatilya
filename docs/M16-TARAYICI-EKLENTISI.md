@@ -126,7 +126,7 @@ işi `eklenti_deneme`; bu düğmeye kullanıcı basar).
 - Oturumlar bellekte tutulur; program kapanırsa bekleyen öğeler düşer (iş zaten yarıda kalır).
 - Service worker Chrome tarafından durdurulursa eklenti oturumu yeniden alır (45 sn sessiz kalan oturum yeniden verilir; yarım öğe yeniden
   sorulur).
-- realjoy.com için kiralama okuyucusu (adaptör) yok: eklenti sayfayı okuyabilir ama fiyat çıkarılamaz (yönetici kararı).
+- realjoy.com için kiralama okuyucusu (adaptör) yok: eklenti sayfayı okuyabilir ama fiyat çıkarılamaz (yönetici kararı). GÖREV-20 (16 Kasım 2026): site ICND rezervasyon motorunu kullanıyor (arkada Track); doğrulaması programın kendi tarayıcısında geçmedi. Okuyucunun yazılabilmesi için deneme listesinin sonuna bir **ilan sayfası** eklendi (`https://www.realjoy.com/beach-rentals/sea-la-vie-seaside-main-house`, 11 Kasım ham kaydının bağlantılarından); kullanıcı "Sorunlu sitelerden birer sayfa dene"ye basınca ham kopyası alınır. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`.
 - Bildirim ve pencereyi öne getirme Chrome'un ve Windows'un izin verdiği kadardır.
 
 ## Testler

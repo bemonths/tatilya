@@ -1,0 +1,131 @@
+﻿mahalle,nokta_turu,olculen_ilan,kus_ucusu_ortanca_mil,yol_ortanca_mil,surus_ortanca_dk,bir_yol_mili_icindeki_pay,en_yakini_degisen_pay,en_sik_en_yakin_nokta
+Dune Allen,Büyük süpermarket,113,2.35,3.13,5.8,0.0,0.133,Walmart Supercenter
+Gulf Place,Büyük süpermarket,30,2.17,3.11,5.9,0.0,0.0,Publix
+Santa Rosa Beach,Büyük süpermarket,237,2.06,3.25,6.2,0.042,0.042,Publix
+Blue Mountain Beach,Büyük süpermarket,171,2.45,3.54,6.6,0.0,0.0,Publix
+Grayton Beach,Büyük süpermarket,84,2.5,3.76,7.7,0.0,0.036,Publix
+WaterColor,Büyük süpermarket,258,0.64,0.94,2.5,0.55,0.0,Publix
+Seaside,Büyük süpermarket,210,0.85,1.4,3.1,0.0,0.01,Publix
+Seagrove,Büyük süpermarket,486,1.32,2.0,4.7,0.101,0.008,Publix
+WaterSound,Büyük süpermarket,162,2.54,3.65,6.9,0.006,0.123,Publix
+Seacrest,Büyük süpermarket,296,1.25,2.45,4.7,0.0,0.003,Publix
+Alys Beach,Büyük süpermarket,7,1.1,1.9,3.9,0.0,0.0,Publix
+Rosemary Beach,Büyük süpermarket,158,1.34,2.12,3.5,0.006,0.0,Publix
+Inlet Beach,Büyük süpermarket,97,1.65,2.11,3.5,0.0,0.093,Publix
+Dune Allen,Yerel ve gurme market,113,2.85,3.51,8.2,0.0,0.0,For The Health Of It
+Gulf Place,Yerel ve gurme market,30,1.72,2.27,5.6,0.0,0.0,For The Health Of It
+Santa Rosa Beach,Yerel ve gurme market,237,1.47,2.0,4.9,0.215,0.051,For The Health Of It
+Blue Mountain Beach,Yerel ve gurme market,171,0.26,0.38,1.5,0.795,0.0,For The Health Of It
+Grayton Beach,Yerel ve gurme market,84,1.77,2.64,4.9,0.06,0.571,For The Health Of It
+WaterColor,Yerel ve gurme market,258,0.53,1.16,2.7,0.391,0.0,Modica Market
+Seaside,Yerel ve gurme market,210,0.14,0.22,0.6,0.976,0.005,Modica Market
+Seagrove,Yerel ve gurme market,486,1.46,1.62,4.3,0.15,0.0,Modica Market
+WaterSound,Yerel ve gurme market,162,3.18,3.48,6.7,0.025,0.0,Seacrest Sundries
+Seacrest,Yerel ve gurme market,296,0.44,0.57,1.5,0.541,0.0,Seacrest Sundries
+Alys Beach,Yerel ve gurme market,7,0.75,0.83,2.0,1.0,0.0,Seacrest Sundries
+Rosemary Beach,Yerel ve gurme market,158,0.24,0.35,0.9,0.956,0.0,Seacrest Sundries
+Inlet Beach,Yerel ve gurme market,97,0.72,0.94,2.3,0.536,0.0,Seacrest Sundries
+Dune Allen,Küçük market,113,0.7,0.93,1.8,0.549,0.018,
+Gulf Place,Küçük market,30,0.61,0.7,1.9,0.8,0.0,
+Santa Rosa Beach,Küçük market,237,0.91,1.09,2.6,0.405,0.114,
+Blue Mountain Beach,Küçük market,171,0.29,0.42,1.5,0.807,0.047,Sally's
+Grayton Beach,Küçük market,84,0.54,0.73,1.6,0.798,0.012,Grayton Corner Store
+WaterColor,Küçük market,258,1.58,1.99,4.3,0.0,0.128,Tom Thumb
+Seaside,Küçük market,210,1.55,1.7,4.2,0.005,0.029,Tom Thumb
+Seagrove,Küçük market,486,0.65,0.84,1.9,0.572,0.0,Tom Thumb
+WaterSound,Küçük market,162,2.89,3.25,6.0,0.006,0.006,Tom Thumb
+Seacrest,Küçük market,296,3.32,3.7,6.4,0.0,0.057,AMI
+Alys Beach,Küçük market,7,3.68,4.04,6.9,0.0,0.0,AMI
+Rosemary Beach,Küçük market,158,2.75,3.17,4.9,0.013,0.0,AMI
+Inlet Beach,Küçük market,97,2.28,2.64,4.2,0.01,0.0,AMI
+Dune Allen,Eczane,113,1.2,1.5,3.2,0.398,0.0,Santa Rosa Pharmacy
+Gulf Place,Eczane,30,0.16,0.25,0.8,0.8,0.0,Santa Rosa Pharmacy
+Santa Rosa Beach,Eczane,237,1.65,2.0,4.7,0.367,0.127,Santa Rosa Pharmacy
+Blue Mountain Beach,Eczane,171,1.71,2.18,5.7,0.17,0.012,Santa Rosa Pharmacy
+Grayton Beach,Eczane,84,3.91,4.79,9.9,0.0,0.036,Santa Rosa Pharmacy
+WaterColor,Eczane,258,4.06,6.55,10.2,0.0,0.403,Walmart Pharmacy
+Seaside,Eczane,210,4.23,6.66,13.5,0.0,0.99,Santa Rosa Pharmacy
+Seagrove,Eczane,486,3.28,7.98,12.4,0.004,0.187,Walmart Pharmacy
+WaterSound,Eczane,162,2.97,7.43,11.4,0.0,0.975,CVS Pharmacy
+Seacrest,Eczane,296,3.25,3.7,6.4,0.003,0.399,CVS Pharmacy
+Alys Beach,Eczane,7,3.61,3.99,6.9,0.0,0.0,CVS Pharmacy
+Rosemary Beach,Eczane,158,2.7,3.12,4.9,0.006,0.013,CVS Pharmacy
+Inlet Beach,Eczane,97,2.22,2.59,4.2,0.01,0.052,CVS Pharmacy
+Dune Allen,Acil servis,113,3.89,4.41,7.4,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+Gulf Place,Acil servis,30,5.04,5.5,9.7,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+Santa Rosa Beach,Acil servis,237,5.68,6.55,11.3,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+Blue Mountain Beach,Acil servis,171,6.68,9.0,13.1,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+Grayton Beach,Acil servis,84,8.91,11.36,15.8,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+WaterColor,Acil servis,258,10.78,13.47,17.7,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+Seaside,Acil servis,210,10.9,14.07,18.6,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+Seagrove,Acil servis,486,12.37,14.89,20.5,0.0,0.0,Sacred Heart Hospital on the Emerald Coast
+WaterSound,Acil servis,162,15.31,18.09,25.7,0.0,0.148,Sacred Heart Hospital on the Emerald Coast
+Seacrest,Acil servis,296,14.14,14.75,20.0,0.0,0.027,Ascension Sacred Heart Emergency Care - Panama City Beach
+Alys Beach,Acil servis,7,14.47,15.04,20.5,0.0,0.0,Ascension Sacred Heart Emergency Care - Panama City Beach
+Rosemary Beach,Acil servis,158,13.56,14.17,18.4,0.0,0.0,Ascension Sacred Heart Emergency Care - Panama City Beach
+Inlet Beach,Acil servis,97,13.07,13.65,17.7,0.0,0.0,Ascension Sacred Heart Emergency Care - Panama City Beach
+Dune Allen,Acil bakım (urgent care),113,1.98,2.76,4.8,0.0,0.0,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+Gulf Place,Acil bakım (urgent care),30,2.96,3.84,7.1,0.1,0.0,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+Santa Rosa Beach,Acil bakım (urgent care),237,3.6,5.44,8.6,0.008,0.101,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+Blue Mountain Beach,Acil bakım (urgent care),171,4.56,7.09,10.3,0.0,0.0,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+Grayton Beach,Acil bakım (urgent care),84,6.8,9.45,13.0,0.0,0.0,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+WaterColor,Acil bakım (urgent care),258,8.43,11.55,14.9,0.0,0.411,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+Seaside,Acil bakım (urgent care),210,8.68,11.45,15.8,0.0,0.471,Ascension Sacred Heart Primary Care & Urgent Care - South Walton
+Seagrove,Acil bakım (urgent care),486,7.33,9.04,14.6,0.002,0.16,Emerald Coast Urgent Care Inlet Beach
+WaterSound,Acil bakım (urgent care),162,4.41,6.01,9.3,0.0,0.0,Emerald Coast Urgent Care Inlet Beach
+Seacrest,Acil bakım (urgent care),296,1.63,2.27,4.2,0.003,0.0,Emerald Coast Urgent Care Inlet Beach
+Alys Beach,Acil bakım (urgent care),7,1.96,2.56,4.8,0.0,0.0,Emerald Coast Urgent Care Inlet Beach
+Rosemary Beach,Acil bakım (urgent care),158,1.05,1.69,2.7,0.013,0.0,Emerald Coast Urgent Care Inlet Beach
+Inlet Beach,Acil bakım (urgent care),97,0.59,1.2,2.0,0.289,0.0,Emerald Coast Urgent Care Inlet Beach
+Dune Allen,Bisiklet kiralama,113,2.84,3.52,8.2,0.0,0.0,Big Daddy’s Bike Shop
+Gulf Place,Bisiklet kiralama,30,1.71,2.28,5.7,0.0,0.0,Big Daddy’s Bike Shop
+Santa Rosa Beach,Bisiklet kiralama,237,1.51,2.07,5.0,0.186,0.008,Big Daddy’s Bike Shop
+Blue Mountain Beach,Bisiklet kiralama,171,0.26,0.39,1.6,0.795,0.0,Big Daddy’s Bike Shop
+Grayton Beach,Bisiklet kiralama,84,1.56,2.33,4.6,0.06,0.0,
+WaterColor,Bisiklet kiralama,258,0.37,0.96,2.6,0.543,0.0,
+Seaside,Bisiklet kiralama,210,0.44,0.8,2.2,0.9,0.0,
+Seagrove,Bisiklet kiralama,486,1.9,2.29,6.0,0.004,0.0,
+WaterSound,Bisiklet kiralama,162,3.13,3.51,6.7,0.025,0.0,Peddlers 30A
+Seacrest,Bisiklet kiralama,296,0.38,0.58,1.5,0.541,0.0,Peddlers 30A
+Alys Beach,Bisiklet kiralama,7,0.69,0.85,2.0,1.0,0.0,Peddlers 30A
+Rosemary Beach,Bisiklet kiralama,158,0.29,0.43,1.1,0.956,0.0,Peddlers 30A
+Inlet Beach,Bisiklet kiralama,97,0.78,1.03,2.4,0.464,0.0,Peddlers 30A
+Dune Allen,Halka açık plaj erişimi (ilçe listesi),113,0.11,0.17,0.5,0.938,0.248,Dune Allen Regional Beach Access
+Gulf Place,Halka açık plaj erişimi (ilçe listesi),30,0.18,0.27,0.8,0.967,0.167,Ed Walline Regional Beach Access - 39
+Santa Rosa Beach,Halka açık plaj erişimi (ilçe listesi),237,0.26,0.39,1.0,0.738,0.342,Ed Walline Regional Beach Access - 39
+Blue Mountain Beach,Halka açık plaj erişimi (ilçe listesi),171,0.25,0.39,1.3,0.918,0.111,Blue Mountain Regional Beach Access - 36
+Grayton Beach,Halka açık plaj erişimi (ilçe listesi),84,0.25,0.34,0.8,0.631,0.488,"Bets ""Beachmama"" Haynes Regional Beach Access"
+WaterColor,Halka açık plaj erişimi (ilçe listesi),258,0.65,1.01,2.4,0.488,0.593,Highway 395 - 25
+Seaside,Halka açık plaj erişimi (ilçe listesi),210,0.32,0.4,1.0,0.995,0.019,Dogwood/Thyme - 29
+Seagrove,Halka açık plaj erişimi (ilçe listesi),486,0.12,0.2,0.6,0.969,0.358,Beachwood Villas - 14
+WaterSound,Halka açık plaj erişimi (ilçe listesi),162,0.95,1.18,2.3,0.08,0.302,Gulf Lakes Estates - 7
+Seacrest,Halka açık plaj erişimi (ilçe listesi),296,0.56,1.06,2.4,0.456,0.564,Wall Street - 3
+Alys Beach,Halka açık plaj erişimi (ilçe listesi),7,1.05,1.15,2.2,0.143,0.143,Seacrest Dr - 5
+Rosemary Beach,Halka açık plaj erişimi (ilçe listesi),158,0.36,0.88,1.9,0.823,0.968,Wall Street - 3
+Inlet Beach,Halka açık plaj erişimi (ilçe listesi),97,0.16,0.26,0.8,0.918,0.381,Wall Street - 3
+Dune Allen,Destin–Fort Walton Beach Havalimanı (VPS),113,20.45,29.05,40.6,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Gulf Place,Destin–Fort Walton Beach Havalimanı (VPS),30,21.59,30.15,43.0,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Santa Rosa Beach,Destin–Fort Walton Beach Havalimanı (VPS),237,22.22,31.19,44.5,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Blue Mountain Beach,Destin–Fort Walton Beach Havalimanı (VPS),171,23.17,33.63,46.3,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Grayton Beach,Destin–Fort Walton Beach Havalimanı (VPS),84,25.41,35.99,49.0,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+WaterColor,Destin–Fort Walton Beach Havalimanı (VPS),258,27.25,38.1,50.9,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Seaside,Destin–Fort Walton Beach Havalimanı (VPS),210,27.39,38.7,51.8,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Seagrove,Destin–Fort Walton Beach Havalimanı (VPS),486,28.87,39.52,53.7,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+WaterSound,Destin–Fort Walton Beach Havalimanı (VPS),162,31.77,42.75,59.1,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Seacrest,Destin–Fort Walton Beach Havalimanı (VPS),296,34.55,45.75,58.1,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Alys Beach,Destin–Fort Walton Beach Havalimanı (VPS),7,34.23,45.21,57.3,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Rosemary Beach,Destin–Fort Walton Beach Havalimanı (VPS),158,35.14,45.42,57.0,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Inlet Beach,Destin–Fort Walton Beach Havalimanı (VPS),97,35.63,45.43,56.9,0.0,0.0,Destin–Fort Walton Beach Havalimanı (VPS)
+Dune Allen,Northwest Florida Beaches Uluslararası Havalimanı (ECP),113,26.8,38.4,47.2,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Gulf Place,Northwest Florida Beaches Uluslararası Havalimanı (ECP),30,25.72,37.64,45.4,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Santa Rosa Beach,Northwest Florida Beaches Uluslararası Havalimanı (ECP),237,25.08,37.29,45.3,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Blue Mountain Beach,Northwest Florida Beaches Uluslararası Havalimanı (ECP),171,24.09,36.05,43.9,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Grayton Beach,Northwest Florida Beaches Uluslararası Havalimanı (ECP),84,22.02,33.6,41.1,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+WaterColor,Northwest Florida Beaches Uluslararası Havalimanı (ECP),258,20.19,32.65,40.0,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Seaside,Northwest Florida Beaches Uluslararası Havalimanı (ECP),210,20.29,33.09,40.6,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Seagrove,Northwest Florida Beaches Uluslararası Havalimanı (ECP),486,18.98,28.03,38.7,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+WaterSound,Northwest Florida Beaches Uluslararası Havalimanı (ECP),162,16.33,24.99,33.4,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Seacrest,Northwest Florida Beaches Uluslararası Havalimanı (ECP),296,14.28,21.26,28.4,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Alys Beach,Northwest Florida Beaches Uluslararası Havalimanı (ECP),7,14.66,21.55,28.9,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Rosemary Beach,Northwest Florida Beaches Uluslararası Havalimanı (ECP),158,13.88,20.68,26.8,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)
+Inlet Beach,Northwest Florida Beaches Uluslararası Havalimanı (ECP),97,13.59,20.16,26.1,0.0,0.0,Northwest Florida Beaches Uluslararası Havalimanı (ECP)

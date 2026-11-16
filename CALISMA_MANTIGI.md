@@ -16,7 +16,8 @@
 | Stable branch | `main` @ `a49c6d0` (GÖREV-17: arayüz düzeltmeleri; 11 Kasım 2026'da GÖREV-18 Adım 1 ile fast-forward; uygulama 0.19.0, şema 19) |
 | Stable tag | `v0.19.0` → `a49c6d0` — **v0.19.0 — arayüz düzeltmeleri: İşler panelinde temizleme, Ayarlar düzeni, tek pencere** (önceki: `v0.18.0` → `988ca8d`, `v0.17.0` → `6cfab84`, `v0.16.0` → `984ca72`, `v0.15.0` → `a59ec65`, `v0.14.0` → `9adc235`, `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
 | Stable uygulama sürümü / şema | `0.19.0` / `19` (main ve `v0.19.0`) |
-| Aktif geliştirme dalı | `gorev-18-token-kontrolu` — Claude adımlarında token kontrolü: bütün adımlar tek çağrılı ve araçsız (malzeme istemin içinde), başlamadan önce tahmin ve onay, tek çağrı ve iş başına token sınırı, tahmin ile gerçek ve kırmızı uyarı, adım başına harcama; işletme adı denetimi; başlık ve kapak uyarıları |
+| En yeni görev dalı | `gorev-20-eksik-veri` — GÖREV-20: yol üzerinden mesafe ve tahmini sürüş süresi, BTS uçak bileti ortalaması, okunamayan kiralama şirketlerinin incelemesi, kanıt paketinde yeni bloklar; uygulama `0.21.0`, şema `20`; main'e alınmadı (main = `v0.20.0` @ `7af4f1f`, GÖREV-18 ve GÖREV-19 dahil). Ayrıntı §9.15 |
+| Önceki geliştirme dalı | `gorev-18-token-kontrolu` — Claude adımlarında token kontrolü: bütün adımlar tek çağrılı ve araçsız (malzeme istemin içinde), başlamadan önce tahmin ve onay, tek çağrı ve iş başına token sınırı, tahmin ile gerçek ve kırmızı uyarı, adım başına harcama; işletme adı denetimi; başlık ve kapak uyarıları |
 | Aktif dal durumu | Uygulama `0.20.0`, şema `19` (değişmedi); tek gerçek ölçüm (başlık değerlendirme, geçici kopyada): Opus 111 bin okudu (eskiden 416 bin), Claude Code'un yan Haiku çağrısı ayrıca 105 bin; gerçek veride yalnız açılış (satır değişmedi); main'e alınmadı |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
 | Son CI | main ve etiket `v0.19.0` @ a49c6d0: main CI 43053256607 başarılı; etiket CI 43053261163 ve görev dalı CI 43032939565 takıldı (aynı commit bir çalışmada geçiyor, öbüründe bir test bekliyor; GÖREV-18'de iş akışına zaman sınırı ve pytest `faulthandler_timeout` eklendi); görev dalının sonucu `docs/gorevler/GOREV-18/RAPOR.md` içinde |
@@ -445,6 +446,35 @@ fikrinde; liste her denetimde veriden kurulur, Ayarlar'dan ekleme ve hariç tutm
 kapak yazısı 3 kelimeden uzun ya da başlığı tekrar ediyor, 2'den fazla tamamı büyük harfli kelime). Ayarlar → Hakkında kartı güncellendi. Uygulama
 0.20.0; şema değişmedi (19). Ayrıntı: `docs/M15-CLAUDE-ADIMLARI.md`, `docs/M17-VIDEO-METNI.md`.
 
+### 9.15 İlk videodan önce eksik veriler: yol mesafesi, sürüş süresi, uçak bileti, okunamayan şirketler (GÖREV-20, şema 20)
+
+Kanalın ilk videosundan önce üç eksik ele alındı (`gorev-20-eksik-veri`, uygulama 0.21.0, şema 20):
+
+- **Yol üzerinden mesafe ve tahmini sürüş süresi** (generic `openstreetmap-road-network/1`; `studio/sources/road_network.py`, `road_graph.py`): OpenStreetMap
+  yol ağı çekim başına tek Overpass sorgusuyla indirilir (ham kopya ve SHA-256), en hızlı yollar programın içinde hesaplanır; API anahtarı ve yol
+  tarifi servisi yok. Son konaklama çekimindeki her ilandan günlük ihtiyaç noktalarına, halka açık plaj erişimlerine ve yapılandırmadaki ek noktalara
+  (30A: VPS ve ECP yolcu terminalleri) yol km'si ve dakika; ilan ve kategori başına yol mesafesine göre en yakın nokta saklanır, kuş uçuşu değer
+  yanında kalır; tablo yol mesafesinin kuş uçuşundan kısa olmasını reddeder. Süre `maxspeed`'den, o yoksa yol türünün **ayardaki** varsayılan hızından;
+  trafik yok. Alan, hızlar, erişim kuralları, bağlama sınırı, ek noktalar ve uzunluk sağlaması `destination_road_networks.settings` içindedir. Sağlama:
+  CR 30A OpenStreetMap'te 19,06 mil, FDOT envanterinde 18,561 mil. Ayrıntı: `docs/M19-YOL-MESAFESI.md`.
+- **Uçak bileti** (generic `bts-airport-fares/1`; `studio/sources/airfare.py`): BTS "Average Domestic Airline Itinerary Fares" sayfası; son yayımlanan
+  çeyrek ve formla önceki dört çeyrek, VPS ve ECP. Değer o havalimanından **başlayan** iç hat yolculuklarının ortalamasıdır (kaynağın tablosu "By
+  Origin City"); belirli bir şehirden bilet fiyatı değildir. Ayrıntı: `docs/M20-UCAK-BILETI.md`.
+- **Fiyatı okunamayan kiralama şirketleri:** 360 Blue (Cloudflare engel sayfası; tarayıcıda da), Cottage Rental Agency (site yok), Vacasa (ABD dışına
+  kapalı), Outdoor Shower (site yanıt vermiyor) okunamadı; 30A Beach Girls doğrudan okunuyor ama sitesi adres vermediği ve koordinatı yuvarladığı
+  için mevcut eşleme kurallarıyla eşlenemiyor; RealJoy (ICND rezervasyon motoru, arkada Track) doğrulama programın kendi tarayıcısında geçmediği için
+  tamamlanamadı (eklenti deneme listesine bir ilan sayfası eklendi). Yeni uyarlayıcı ve yeni şirket yok. "Engelli 51 ilan" site engeli değil,
+  ResCMS sitelerinde yayından kalkmış ilanlardır. Nedenler `thirty_a_agency_unread.csv`'de; ayrıntı `docs/M11-KONAKLAMA-FIYATLARI.md`.
+- **Kanıt paketi:** yeni bloklar `road_distances` (yol mil · dakika · kuş uçuşu yan yana; havalimanları ayrı tabloda), `airfare`, `lodging_coverage`
+  (fiyatlara giren şirketler ve okunamayanlar nedenleriyle) ve `out_of_scope` ("kapsam dışı": araç kiralama, market fiyatı, anlık trafik, Vrbo);
+  şablonlar sürüm 2; bilinen boşluklar güncellendi. Metin denetiminde sürüş süresi ifadeleri yalnız yol mesafesi kanıtı işaretliyse serbest
+  (`surus_suresi`). Ayrıntı: `docs/M14-KANIT-PAKETI.md`.
+- **Güncelleme zamanı:** yol mesafesi 1 ay ve her yeni konaklama ya da günlük ihtiyaç çekiminden sonra ("girdisi yenilendi"), uçak bileti 3 ay;
+  kiralama fiyatı tahmini son çekimden sonra eklenen şirketleri de sayar.
+- **Gerçek veri (16 Kasım 2026):** tam yedekten (`work/yedek/20261116-1805/`) sonra program gerçek veri klasörüyle açıldı (şema 19 → 20, uygulamanın kendi yedeği
+  `data/backups/studio-v19-*`), yalnız yol mesafesi ve uçak bileti toplayıcıları çalıştırıldı; kiralama fiyat çekimini kullanıcı programdan
+  başlatacak. Ayrıntı ve tablolar: `docs/gorevler/GOREV-20/RAPOR.md`.
+
 ### 9.14 Referans tablosu genişlemesi ve trafik (GÖREV-11)
 
 Referans tablosu 152 satır: plaj erişimi hukuku (anayasa, 2016 ilçe kararı, 2018 kanunu, dava, 2025'te kanunun kaldırılması, 18 Şubat 2026 temyiz kararı; "yeni yasa, özel plaj kalmadı" iddiası doğrulanamadı), erişilebilirlik, ziyaretçi kökeni ve beş okul bölgesinin 2026–27 tatilleri, 13 tekrarlayan etkinlik, kasabaların tarihçesi; her satırın Türkçe ifadesi `thirty_a_references_tr.csv`. FDOT 2025 AADT ve Walton mevsim faktörleri `thirty_a_traffic.csv` (aylık oran bizim hesabımız). GÖREV-14'te `plaj-erisimi` konusuna toplulukların kendi plaj erişimi için 13 satır eklendi (Seaside, WaterColor, Alys Beach, Rosemary Beach, Watersound; topluluğun ya da resmî kiralama şirketinin sitesinden, kısa alıntı ve belgenin SHA-256'sıyla); tablo 165 satır. Ayrıntı: `docs/M9-REFERANS-TABLOSU.md`.
@@ -732,9 +762,11 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M16-TARAYICI-EKLENTISI.md`
 - `docs/M17-VIDEO-METNI.md`
 - `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`
+- `docs/M19-YOL-MESAFESI.md`
+- `docs/M20-UCAK-BILETI.md`
 
 ---
 
-**Son güncelleme:** 11 Kasım 2026  
+**Son güncelleme:** 16 Kasım 2026 (GÖREV-20: §1'de en yeni görev dalı, §9.15, belge indeksi)  
 **Stable:** main ve etiket v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si (`988ca8d`, uygulama 0.18.0)  
 **Aktif geliştirme:** `gorev-17-arayuz` — arayüz düzeltmeleri (İşler panelinde biten işleri kaldırma, Ayarlar'ın bölüm düzeni, bir iş boyunca tek pencere, küçük düzeltmeler); uygulama 0.19.0, şema 19 (yönetici incelemesinde)

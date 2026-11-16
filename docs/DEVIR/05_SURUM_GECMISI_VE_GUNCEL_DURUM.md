@@ -42,6 +42,27 @@ schema 19
 ## Aktif branch
 
 ```text
+gorev-20-eksik-veri
+app 0.21.0
+schema 20
+```
+
+Bu dal (GÖREV-20, 16 Kasım 2026; main'e alınmadı, etiket konmadı):
+- yol üzerinden mesafe ve tahmini sürüş süresi: `openstreetmap-road-network/1` (OpenStreetMap yol ağı tek sorgu, rota programın içinde; ilanlardan günlük ihtiyaç noktalarına, plaj erişimlerine ve VPS/ECP terminallerine; en yakın nokta yol mesafesine göre, kuş uçuşu yanında; hızlar ve erişim kuralları ayarda) — M19,
+- uçak bileti: `bts-airport-fares/1` (BTS "Average Domestic Airline Itinerary Fares", VPS ve ECP, son beş çeyrek; havalimanından başlayan yolculukların ortalaması) — M20,
+- kiralama şirketleri: altı hedef şirket incelendi, hiçbiri okunabilir hale gelmedi (nedenleriyle `thirty_a_agency_unread.csv` ve M11); RealJoy doğrulama geçilemediği için tamamlanamadı; "engelli 51 ilan" yayından kalkmış ilanlar,
+- kanıt paketi: `road_distances`, `airfare`, `lodging_coverage`, `out_of_scope` blokları, şablonlar sürüm 2, bilinen boşluklar; metin denetiminde `surus_suresi` kuralı,
+- güncelleme tablosunda iki yeni toplayıcı; yol mesafesi girdisi yenilenince zamanı gelir; kiralama tahmini yeni şirketleri sayar,
+- şema 20 (yedi yeni tablo; eski satırlar aynı), CloudFront ülke engeli bölge engeli olarak tanınıyor, eklenti deneme listesinde RealJoy ilan sayfası,
+- gerçek veri: tam yedek `work/yedek/20261116-1805/`, şema 19 → 20, yalnız yol mesafesi ve uçak bileti çekimleri; rapor `docs/gorevler/GOREV-20/RAPOR.md`.
+
+Test:
+- 1147 Python
+- 124 frontend
+
+Önceki dal `gorev-19-yan-cagri-onbellek` (v0.20.0 olarak main'de):
+
+```text
 gorev-19-yan-cagri-onbellek
 app 0.20.0
 schema 19

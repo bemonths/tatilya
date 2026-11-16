@@ -22,7 +22,7 @@ taraf aynı fikstürlerde (`tests/fixtures/sayfa_turleri/beklenen.json`) aynı s
 | `tamam` | sıradan sayfa | okunur |
 | `dogrulama` | Cloudflare "Just a moment", "Checking your browser", sayfa betiği; PerimeterX (px-captcha, "Press & Hold"); başlıklar "Just a moment", "Attention Required", "Verify you are human" | kullanıcı geçer; eklenti en çok 15 dk bekler ("Bu sayfayı atla" ile atlanabilir) |
 | `erisim_reddedildi` | Akamai "Access Denied" / "You don't have permission to access", Cloudflare "Sorry, you have been blocked", "You are unable to access", başlık "Access Denied" / "403 Forbidden", görünür metni çok kısa 403 | beklenmez, hemen atlanır |
-| `bolge_engeli` | "outside of the United States", "outside the U.S.", "not available in your country/region", "unable to service customers outside", başlık "International \| Publix", adresinde "geo-block" geçen yönlenme | beklenmez, hemen atlanır; alan adı bölge engelli listeye girer; ABD proxy'si varsa onunla okunur |
+| `bolge_engeli` | "outside of the United States", "outside the U.S.", "not available in your country/region", "unable to service customers outside", Amazon CloudFront'un "configured to block access from your country" cümlesi (GÖREV-20: vacasa.com), başlık "International \| Publix", adresinde "geo-block" geçen yönlenme | beklenmez, hemen atlanır; alan adı bölge engelli listeye girer; ABD proxy'si varsa onunla okunur |
 
 Sıra: bölge engeli → güçlü ret ifadesi → doğrulama → ret başlığı ya da boş 403 → tamam. "Access denied" başlığı artık doğrulama sayılmaz
 (Winn-Dixie'de 15 dk boşuna beklenmişti). Bir bölge ifadesi tek başına ancak kısa bir sayfada (görünür metin 4.000 karakterden az) ya
