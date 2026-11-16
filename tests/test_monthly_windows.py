@@ -23,7 +23,7 @@ from tests.test_beaches import HEADERS
 from tests.test_lodging import URL, BookDirectMock, fast, inventory, start  # noqa: F401  (fast: autouse fixture)
 
 REAL_COLLECT = bl.collect
-DUE = ["bookdirect-lodging", "agency-lodging-rates", "south-walton-restaurants", "restaurant-sites"]
+DUE = ["bookdirect-lodging", "agency-lodging-rates", "south-walton-restaurants", "restaurant-sites", "openstreetmap-road-network", "bts-airport-fares"]
 
 
 def use(monkeypatch, mock, today):
@@ -140,12 +140,12 @@ def test_status_lists_due_collectors_in_order_and_the_interval_starts_at_the_las
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         db = client.app.state.db
         current = client.get("/api/refresh").json()
-        assert [i["connector"] for i in current["items"] if i["due"]] == DUE and current["due_count"] == 4
+        assert [i["connector"] for i in current["items"] if i["due"]] == DUE and current["due_count"] == 6
         assert {i["due_reason"] for i in current["items"] if i["due"]} == {"hiç çekilmedi"} and current["estimate_seconds"] is None
-        assert [i["interval_months"] for i in current["items"][:4]] == [1, 1, 3, 3] and current["estimate_complete"] is False
-        assert all(i["interval_months"] is None and not i["due"] for i in current["items"][4:])
+        assert [i["interval_months"] for i in current["items"][:6]] == [1, 1, 3, 3, 1, 3] and current["estimate_complete"] is False
+        assert all(i["interval_months"] is None and not i["due"] for i in current["items"][6:])
         assert "kendiliğinden çalışmaz" in current["note"]
-        assert client.get("/api/bootstrap").json()["refresh"]["due_count"] == 4
+        assert client.get("/api/bootstrap").json()["refresh"]["due_count"] == 6
 
         use(monkeypatch, BookDirectMock(), date(2026, 10, 7))
         job = start(client)
@@ -175,6 +175,8 @@ def test_batch_backs_up_runs_due_collectors_in_order_and_skips_one_whose_input_d
     use(monkeypatch, BookDirectMock(), date(2026, 10, 7))
     fail("agency-lodging-rates", monkeypatch)
     fail("south-walton-restaurants", monkeypatch)
+    fail("openstreetmap-road-network", monkeypatch)
+    fail("bts-airport-fares", monkeypatch)
     with TestClient(create_app(tmp_path), headers=HEADERS) as client:
         db, runner = client.app.state.db, client.app.state.batches
         runner.poll = 0.02
@@ -185,9 +187,9 @@ def test_batch_backs_up_runs_due_collectors_in_order_and_skips_one_whose_input_d
         assert [s["connector"] for s in batch["plan"]] == DUE
         runner.thread.join(60)
         batch = runner.batch(batch["id"])
-        assert [s["status"] for s in batch["plan"]] == ["done", "failed", "failed", "skipped"]
+        assert [s["status"] for s in batch["plan"]] == ["done", "failed", "failed", "skipped", "failed", "failed"]
         assert batch["plan"][3]["message"] == "girdisini üreten toplayıcı bu çalıştırmada tamamlanmadı" and batch["plan"][3]["job_id"] is None
-        assert batch["status"] == "failed" and batch["message"] == "1/4 toplayıcı tamamlandı." and batch["finished_at"]
+        assert batch["status"] == "failed" and batch["message"] == "1/6 toplayıcı tamamlandı." and batch["finished_at"]
         copy = tmp_path / batch["backup_file"]
         assert copy.parent == tmp_path / "backups" and copy.is_file()
         with sqlite3.connect(copy) as con:

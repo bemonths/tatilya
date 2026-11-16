@@ -15,6 +15,8 @@ BLOCK_TITLES = {
     "tdt_season": "Turist vergisi sezon deseni", "lodging_inventory": "Book>Direct ilan sayıları",
     "lodging_prices": "Kiralama şirketlerinin haftalık fiyatları", "lodging_bedrooms": "Oda grubuna göre haftalık fiyat",
     "restaurants": "Restoranlar", "daily_needs": "Günlük ihtiyaç mesafeleri", "traffic": "Trafik (FDOT)",
+    "road_distances": "Yol üzerinden mesafe ve tahmini sürüş süresi", "airfare": "Havalimanı ortalama bilet ücreti (BTS)",
+    "lodging_coverage": "Kiralama fiyatlarının kapsadığı şirketler", "out_of_scope": "Kapsam dışı (veri toplanmıyor)",
 }
 SENTENCE = "Bu özet tam paketten türetilmiştir; asıl kanıt tam pakettir; kimlikler aynıdır."
 
@@ -100,6 +102,10 @@ def value_cell(evidence, with_unit, with_sample=True):
     text = unit_value(evidence["deger"], evidence.get("birim"), with_unit or bool(conversions)) if evidence["deger"] is not None else "—"
     for item in conversions:
         text += f" / {value_text(item['deger'])} {item['birim']}"
+    for item in extras_of(evidence, "sure_dk"):
+        text += f" · {value_text(item['deger'])} dk"
+    for item in extras_of(evidence, "kus_ucusu"):
+        text += f" · kuş {value_text(item['deger'])}"
     for item in extras_of(evidence, "pay"):
         text += f" · %{value_text(item['deger'])}"
     if with_sample and evidence.get("orneklem") is not None:

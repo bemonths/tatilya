@@ -8,8 +8,8 @@ or a region block (the site serves only visitors inside the United States).
   have been blocked", "You are unable to access", the titles "Access Denied" / "403 Forbidden", and a 403 page with (almost) nothing to
   read. Nobody passes it: it is skipped at once, never sent to the user.
 - Bölge engeli ("bolge_engeli"): "outside of the United States", "outside the U.S.", "not available in your country/region",
-  "unable to service customers outside", the title "International | Publix", and an address with "geo-block" in it (a redirect to a
-  geo-block page). Skipped at once; the domain goes on the region-blocked list and is read through the user's US proxy when one is set
+  "unable to service customers outside", Amazon CloudFront's "configured to block access from your country" (GÖREV-20: vacasa.com), the
+  title "International | Publix", and an address with "geo-block" in it (a redirect to a geo-block page). Skipped at once; the domain goes on the region-blocked list and is read through the user's US proxy when one is set
   (studio/proxy.py, studio/sources/region_reader.py). A phrase alone counts only on a short page or a 403/451 answer: an ordinary page
   may say "we do not ship outside the United States" in its footer.
 
@@ -33,7 +33,7 @@ DENIED = re.compile(r"Sorry, you have been blocked|You are unable to access|You 
 DENIED_TITLES = re.compile(r"^(access denied|403 forbidden|forbidden|error 403)\b", re.I)
 # The site serves only visitors inside the United States.
 REGION = re.compile(r"outside of the United States|outside the United States|outside the U\.S\.|not available in your country|"
-                    r"not available in your region|unable to service customers outside", re.I)
+                    r"not available in your region|unable to service customers outside|block access from your country", re.I)
 REGION_TITLES = re.compile(r"^International \| Publix", re.I)
 REGION_ADDRESS = re.compile(r"geo-?block", re.I)
 

@@ -45,6 +45,13 @@ SEEDS = [
      "OpenStreetMap'te (Overpass API) destinasyonun alanındaki süpermarket ve marketler, küçük marketler, eczaneler, acil sağlık noktaları ve "
      "bisiklet kiralama noktaları; süpermarketler zincirlerin kendi mağaza bulucularıyla gözden geçirilir. Kiralık evlerden kuş uçuşu "
      "mesafeler okuma anında hesaplanır. © OpenStreetMap katkıcıları, ODbL.", "API"),
+    ("OpenStreetMap · Yol ağı ve sürüş süreleri", "https://www.openstreetmap.org/?kaynak=yol-agi", "Ulaşım",
+     "OpenStreetMap yol ağı (Overpass API, çekim başına tek sorgu; ham kopyası saklanır). Son konaklama çekimindeki ilanlardan günlük ihtiyaç "
+     "noktalarına, halka açık plaj erişimlerine ve iki havalimanına yol üzerinden mesafe ve trafik hesaba katılmadan tahmini sürüş süresi "
+     "programın içinde hesaplanır; en yakın nokta yol mesafesine göre seçilir, kuş uçuşu değer yanında kalır. © OpenStreetMap katkıcıları, ODbL.", "API"),
+    ("BTS · Havalimanı ortalama bilet ücreti", "https://www.transtats.bts.gov/AverageFare/", "Ulaşım",
+     "ABD Ulaştırma İstatistikleri Bürosu'nun \"Average Domestic Airline Itinerary Fares\" tablosu: VPS ve ECP'den başlayan iç hat "
+     "yolculuklarının çeyreklik ortalama bilet ücreti (son çeyrekler ve bir yıl önceki aynı çeyrek). Belirli bir şehirden bilet fiyatı değildir.", "HTML"),
 ]
 
 # Visit South Walton spells a few neighborhoods differently from the canonical regions.
@@ -113,6 +120,9 @@ EXTENSION_TRIAL_SITES = (
     ("publix.com", "https://www.publix.com/locations", "süpermarket zinciri"),
     ("winndixie.com", "https://www.winndixie.com/locator", "süpermarket zinciri"),
     ("thefreshmarket.com", "https://www.thefreshmarket.com/your-market/store-locator", "süpermarket zinciri"),
+    # GÖREV-20: one listing page of realjoy.com, last in the list so the site's two pages are read well apart (its address is a link of the list page's raw copy of 11 November 2026). The site
+    # shows a verification the program's own browser does not pass; a price reader can be written only from this page's raw copy.
+    ("realjoy.com", "https://www.realjoy.com/beach-rentals/sea-la-vie-seaside-main-house", "kiralama şirketinin ilan sayfası (fiyat okuyucusu için örnek)"),
 )
 
 ANCHOR_PROVENANCE = {
@@ -259,3 +269,59 @@ DAILY_NEEDS_CATEGORIES = (
 CHAIN_STORE_CHECKS = Path(__file__).with_name("thirty_a_chain_stores.csv")
 HEALTH_POINTS = Path(__file__).with_name("thirty_a_health_points.csv")
 REVIEWED_POINT_FILES = ((CHAIN_STORE_CHECKS, "zincirin kendi sitesi"), (HEALTH_POINTS, "kurumun kendi sitesi"))
+
+# GÖREV-20 (migration v20; docs/M19-YOL-MESAFESI.md). Road distances and driving times on the OpenStreetMap road network (generic
+# collector openstreetmap-road-network): the area whose roads are downloaded once per run (the daily-need area widened to both
+# airports and the roads that reach them: the Mid-Bay Bridge and SR 20 to VPS, SR 79 and CR 388 to ECP), the highway types that count
+# as roads with their default speeds in mph (used only where a way has no readable `maxspeed`; our assumptions, in the range of
+# Florida's statutory limits: 30 mph in residence districts, 55 mph on other roads, up to 70 mph on limited-access highways), the
+# access values that close a road to visitors' cars or allow it only at the two ends of a trip, the service roads left out, how far a
+# listing or a point may be from a road, and the speed assumed on that last straight leg. All of it is configuration in SQLite.
+ROAD_NETWORK = {
+    "area": {"south": 30.14, "west": -86.62, "north": 30.56, "east": -85.72,
+             "note": "Günlük ihtiyaç alanı, iki havalimanını ve onlara giden yolları (VPS için Mid-Bay Köprüsü ve SR 20, ECP için SR 79 ve "
+                     "CR 388) içine alacak kadar genişletildi."},
+    "speeds_mph": {"motorway": 65, "trunk": 55, "primary": 45, "secondary": 40, "tertiary": 35, "unclassified": 30, "residential": 25,
+                   "living_street": 15, "service": 10, "motorway_link": 40, "trunk_link": 35, "primary_link": 30, "secondary_link": 30,
+                   "tertiary_link": 25},
+    "closed_access": ["no", "military", "agricultural", "forestry", "emergency", "delivery"],
+    "restricted_access": ["private", "customers", "destination", "permit", "residents"],
+    "skipped_service": ["parking_aisle", "driveway", "drive-through", "emergency_access"],
+    "no_snap": ["motorway", "motorway_link", "trunk_link", "primary_link", "secondary_link", "tertiary_link"],
+    "snap_limit_m": 500,
+    "snap_speed_mph": 10,
+    # Extra destinations every listing is measured to (besides the daily-need points and the public beach accesses): the passenger
+    # terminals of the two airports, at the terminal building's centre in OpenStreetMap.
+    "extra_points": [
+        {"key": "VPS", "label": "Destin–Fort Walton Beach Havalimanı (VPS)", "latitude": 30.4949594, "longitude": -86.5498534,
+         "source": "OpenStreetMap way/162782748 (yolcu terminali), 16 Kasım 2026"},
+        {"key": "ECP", "label": "Northwest Florida Beaches Uluslararası Havalimanı (ECP)", "latitude": 30.3549284, "longitude": -85.799093,
+         "source": "OpenStreetMap way/122421519 (yolcu terminali), 16 Kasım 2026"},
+    ],
+    # Known lengths the network is checked against in every run (the result is stored with the run, never corrected by it).
+    "length_checks": [
+        {"label": "CR 30A", "refs": ["CR 30A"], "expected_miles": 18.561, "reference_id": "genel-30a-ilce-yolu",
+         "source": "FDOT Roadway Characteristics Inventory, yol 60660100 (kilometre taşı 0–18,561)"},
+    ],
+}
+# GÖREV-20 (docs/M20-UCAK-BILETI.md). Airports whose average domestic itinerary fare is read from the BTS table (generic collector
+# bts-airport-fares) and how many quarters: the latest published one, the three before it and the same quarter a year earlier.
+AIRFARE = {
+    "airports": [{"code": "VPS", "label": "Destin–Fort Walton Beach Havalimanı (VPS)"},
+                 {"code": "ECP", "label": "Northwest Florida Beaches Uluslararası Havalimanı (ECP)"}],
+    "quarters": 5,
+}
+# GÖREV-20. Reviewed table of the rental companies whose prices cannot be read (one row per domain: platform, how it was tried, why it
+# cannot be read, the date a person looked); the evidence pack names them with the reason next to their Book>Direct listing counts.
+AGENCY_UNREAD = Path(__file__).with_name("thirty_a_agency_unread.csv")
+# Topics the program does not collect at all (key, title, why). The evidence pack writes one "veri yok" row for each and names them in
+# its known gaps, so a text says nothing about them instead of guessing.
+OUT_OF_SCOPE = (
+    ("arac-kiralama", "araç kiralama fiyatları", "Rezervasyon sitelerinde tarihe ve teslim yerine bağlı aramalar gerektirir."),
+    ("market-fiyati", "market fiyatları", "Alışveriş sitelerinde adrese ve mağazaya bağlı aramalar gerektirir."),
+    ("anlik-trafik", "anlık trafik ve trafikli sürüş süresi", "Ücretli veri gerektirir; sürüş süreleri trafik hesaba katılmadan tahmindir."),
+    ("vrbo", "Vrbo ilanlarının fiyatları", "Pazar yeri; okumak bot korumasını aşmayı gerektirir."),
+)
+# Suggested refresh intervals added by migration v20: road distances follow the monthly lodging run (its listings are the origins);
+# BTS publishes the fares quarterly.
+REFRESH_INTERVALS_V20 = (("openstreetmap-road-network", 1), ("bts-airport-fares", 3))

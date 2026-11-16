@@ -23,8 +23,9 @@ from .migration_v16 import upgrade_v16
 from .migration_v17 import upgrade_v17
 from .migration_v18 import upgrade_v18
 from .migration_v19 import upgrade_v19
+from .migration_v20 import upgrade_v20
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 19
+SCHEMA_VERSION = 20
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -65,14 +66,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -103,7 +104,9 @@ class Database:
                     upgrade_v17(con)
                 if version < 18:
                     upgrade_v18(con, self.path.parent)
-                upgrade_v19(con)
+                if version < 19:
+                    upgrade_v19(con)
+                upgrade_v20(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -165,6 +168,7 @@ class Database:
             upgrade_v17(con)
             upgrade_v18(con, self.path.parent)
             upgrade_v19(con)
+            upgrade_v20(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):
@@ -212,7 +216,30 @@ class Database:
                 "SELECT category_key,label,filters,brands,verified_only FROM destination_poi_categories WHERE destination_id=? AND enabled=1 ORDER BY sort_order",(identifier,))]
             reviewed=getattr(profile,"REVIEWED_POINT_FILES",None) or ((getattr(profile,"CHAIN_STORE_CHECKS",None),"zincirin kendi sitesi"),)
             daily_needs={"area":dict(area),"categories":categories,"reviewed_files":[(path,label) for path,label in reviewed if path]} if area and categories else None
-        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts,daily_needs)
+            row=con.execute("SELECT settings FROM destination_road_networks WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
+            road_network={"settings":json.loads(row["settings"])} if row else None
+            if road_network and "road_inputs" in inputs:
+                road_network["input"]=self.road_input(con,identifier)
+            row=con.execute("SELECT airports,quarters FROM destination_airfare_sources WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
+            airfare={"airports":json.loads(row["airports"]),"quarters":row["quarters"]} if row else None
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts,daily_needs,road_network,airfare)
+
+    @staticmethod
+    def road_input(con, destination_id):
+        """What the road collector measures between: the listings of the latest lodging run (with coordinates), the points of the
+        latest daily-need run and the accesses of the latest beach run; each with its run id. None without a lodging run."""
+        lodging=con.execute("""SELECT r.id FROM source_runs r JOIN lodging_snapshots s ON s.run_id=r.id
+            WHERE r.destination_id=? AND r.status='done' ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+        if not lodging:
+            return None
+        poi=con.execute("""SELECT r.id FROM source_runs r JOIN poi_snapshots s ON s.run_id=r.id
+            WHERE r.destination_id=? AND r.status='done' ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+        beach=con.execute("""SELECT c.id FROM collections c JOIN source_runs r ON r.id=c.id WHERE r.destination_id=? AND r.status='done'
+            ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+        return {"lodging_run_id":lodging["id"],"poi_run_id":poi["id"] if poi else None,"beach_run_id":beach["id"] if beach else None,
+                "listings":[dict(r) for r in con.execute("SELECT lodging_id,latitude,longitude FROM lodging_listings WHERE run_id=? ORDER BY lodging_id",(lodging["id"],))],
+                "points":[dict(r) for r in con.execute("SELECT point_id,category_key,name,brand,latitude,longitude FROM poi_points WHERE run_id=? ORDER BY category_key,point_id",(poi["id"],))] if poi else [],
+                "beaches":[dict(r) for r in con.execute("SELECT external_id,name,latitude,longitude FROM beach_records WHERE run_id=? ORDER BY external_id",(beach["id"],))] if beach else []}
 
     @staticmethod
     def restaurant_input(con, destination_id):

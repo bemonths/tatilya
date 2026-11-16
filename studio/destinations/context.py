@@ -15,4 +15,6 @@ class ConnectorContext:
     restaurants: dict | None = None
     browser_hosts: tuple[str, ...] = ()        # hosts read only with the computer's browser (they once showed a verification page)
     daily_needs: dict | None = None            # OpenStreetMap area, categories and the reviewed chain-store check file
+    road_network: dict | None = None           # GÖREV-20: road settings (area, speeds, access, extra points); for a job also its inputs
+    airfare: dict | None = None                # GÖREV-20: airports and number of quarters of the airport fare table
 

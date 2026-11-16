@@ -8,6 +8,11 @@ A batch first takes the app's own database backup (SQLite backup API, data/backu
 kept, older ones are deleted by the app), then submits the due collectors one at a time through the normal job queue, waiting for
 each; a collector whose input collector in the same batch did not finish is skipped. The estimate is the last successful run's
 duration (scaled by the number of date windows for window collectors) — our estimate, not a promise.
+
+GÖREV-20: the rental price estimate also counts the companies configured since the last run (their Book>Direct listings × the pages
+and price questions a company needs, at the company's own pace; `agency_rates.new_site_estimate`), and a collector that measures
+another collector's records (`follows`: road distances follow the lodging listings) is due when that collector is due or has a newer
+run than the one it measured.
 """
 import json
 import sqlite3
@@ -17,6 +22,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from .database import Conflict
+from .sources import agency_rates
 from .sources.windows import DEFAULT_RULE
 
 BACKUP_PREFIX = "toplu"
@@ -98,13 +104,34 @@ def status(db, destination_id, today=None):
                     seconds = int(seconds * current_windows / old_windows)
                 elif seconds is not None:
                     note = "son başarılı çekimin süresi; bizim tahminimiz"
+            added = []
+            if connector.name == agency_rates.AgencyRatesConnector.name and last and context.agency:
+                read = {r[0] for r in con.execute("SELECT domain FROM agency_rate_companies WHERE run_id=?", (last["id"],))}
+                listings = (db.lodging_input(con, destination_id) or {}).get("listings") or []
+                added = [a for a in agency_rates.new_site_estimate(context.agency["sites"], listings, read, current_windows or 0) if a["requests"]]
+                if added and seconds is not None:
+                    seconds += sum(a["seconds"] for a in added)
+                    note = (f"{note}; son çekimden sonra eklenen {len(added)} şirket için +{sum(a['requests'] for a in added)} istek, "
+                            f"+{sum(a['seconds'] for a in added) // 60} dk ({', '.join(a['company'] for a in added)})")
             items.append({"connector": connector.name, "source_id": source["id"], "source_name": source["name"],
                           "interval_months": interval["months"] if interval else None, "sort_order": interval["sort_order"] if interval else None,
                           "last_run_id": last["id"] if last else None, "last_done_on": last_day.isoformat() if last_day else None,
                           "next_due_on": next_due.isoformat() if next_due else None,
                           "due": reason is not None, "due_reason": reason,
-                          "estimate_seconds": seconds, "estimate_note": note,
+                          "estimate_seconds": seconds, "estimate_note": note, "added_companies": added,
+                          "last_finished_at": (last["finished_at"] or last["fetched_at"]) if last else None,
+                          "follows": list(getattr(connector, "follows", ())),
                           "inputs": list(getattr(connector, "inputs", ())), "produces": getattr(connector, "produces", None)})
+    by_connector = {i["connector"]: i for i in items}
+    for item in items:                           # a collector that measures another's records follows it
+        if item["due"] or item["interval_months"] is None or not item["last_run_id"]:
+            continue
+        for name in item["follows"]:
+            other = by_connector.get(name)
+            if other and other["due"]:
+                item["due"], item["due_reason"] = True, f"girdisi yenilenecek ({other['source_name']})"
+            elif other and other["last_finished_at"] and other["last_finished_at"] > item["last_finished_at"]:
+                item["due"], item["due_reason"] = True, f"girdisi yenilendi ({other['source_name']})"
     items.sort(key=lambda i: (i["interval_months"] is None, i["sort_order"] if i["sort_order"] is not None else 0, i["source_name"]))
     due = [i for i in items if i["due"]]
     known = [i["estimate_seconds"] for i in due if i["estimate_seconds"] is not None]

@@ -94,15 +94,16 @@ def known_gaps(data, focus=None, references=None):
     run, summary = B.agency_summary(data)
     if summary:
         with data.db.connect() as con:
-            missing = con.execute("""SELECT REPLACE(COALESCE(domain, url_host), 'www.', ''), COUNT(*) FROM agency_rate_listings
-                WHERE run_id=? AND page_status='no_adapter' AND COALESCE(domain, url_host) IS NOT NULL
-                GROUP BY 1 HAVING COUNT(*) >= 20 ORDER BY COUNT(*) DESC""", (run["id"],)).fetchall()
+            hosts = B.unread_counts(con, run["id"])
             blocked = con.execute("SELECT COUNT(*) FROM agency_rate_listings WHERE run_id=? AND page_status='blocked'", (run["id"],)).fetchone()[0]
+        reasons = B.unread_companies(data.profile)
+        missing = [(domain, count) for domain, count in hosts.items() if count >= B.SMALL_SAMPLE or domain in reasons]
         if missing:
-            gaps.append("Fiyatı okunamayan kiralama şirketleri (sitesi için okuyucu yok, Book>Direct ilan sayısıyla): "
+            gaps.append("Fiyatı okunamayan kiralama şirketleri (Book>Direct ilan sayısıyla; fiyat ortancalarında yoklar): "
                         + ", ".join(f"{domain} {count}" for domain, count in missing) + ".")
         if blocked:
-            gaps.append(f"Sitesi doğrudan isteği engellediği için fiyatı okunamayan ilan: {blocked}.")
+            gaps.append(f"Şirket sitesinde ilan sayfası erişime kapalı olduğu için (HTTP 403; sitenin ana sayfası açılıyor, ilan yayından "
+                        f"kaldırılmış) fiyatı okunamayan ilan: {blocked}.")
         for region in [r for r in data.order if not focus or r in focus]:
             cells = [c for c in summary["cells"] if c["region_id"] == region]
             counts = [c["priced_count"] for c in cells]
@@ -119,7 +120,8 @@ def known_gaps(data, focus=None, references=None):
     run = data.run("openstreetmap-daily-needs")
     if run:
         meta = run["metadata"] or {}
-        gaps.append("Günlük ihtiyaç noktaları OpenStreetMap'e dayanır; OpenStreetMap eksik ya da eski olabilir. Mesafeler kuş uçuşudur.")
+        gaps.append("Günlük ihtiyaç noktaları OpenStreetMap'e dayanır; OpenStreetMap eksik ya da eski olabilir. Günlük ihtiyaç tablosundaki "
+                    "mesafeler kuş uçuşudur.")
         if meta.get("osm_unconfirmed"):
             gaps.append(f"Resmî kaynakta doğrulanamadığı için acil sağlık ölçülerine girmeyen OpenStreetMap noktası: {meta['osm_unconfirmed']}.")
         with data.db.connect() as con:
@@ -135,6 +137,20 @@ def known_gaps(data, focus=None, references=None):
     lodging_run, lodging = B.lodging_summary(data)
     if lodging:
         gaps.append("Book>Direct ilan sayıları tarihli aramalarda görünen ilanlardır; tam envanter değildir.")
+    if data.run("openstreetmap-road-network"):
+        gaps.append("Yol mesafeleri ve sürüş süreleri OpenStreetMap yol ağında programın hesabıdır; süre trafik, ışık ve dönüş beklemesi olmadan "
+                    "tahmindir (gerçek süre, özellikle yoğun sezonda, daha uzundur). Yürüme ve bisiklet süresi hesaplanmadı.")
+    else:
+        gaps.append("Yol üzerinden mesafe ve sürüş süresi yok (yol ağı çekimi yapılmadı); mesafeler yalnız kuş uçuşudur.")
+    if data.run("bts-airport-fares"):
+        gaps.append("Uçak bileti verisi yalnız BTS'nin havalimanı ortalamasıdır (o havalimanından başlayan iç hat yolculukları, çeyreklik); belirli "
+                    "bir şehirden bilet fiyatı, tarihli fiyat ya da havayolu karşılaştırması yok.")
+    else:
+        gaps.append("Uçak bileti hakkında veri yok (BTS çekimi yapılmadı).")
+    topics = getattr(data.profile, "OUT_OF_SCOPE", ())
+    if topics:
+        gaps.append("Kapsam dışı (program bu verileri toplamıyor; metin bunlar hakkında sayı ya da iddia söylemez): "
+                    + ", ".join(title for _, title, _ in topics) + ".")
     return gaps
 
 

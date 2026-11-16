@@ -1408,3 +1408,40 @@ test('GÖREV-18 Ayarlar: business names beside the warning phrases, the spending
   assert.doesNotMatch(about,/Sonraki aşama<\/span><p style="margin-top:12px">Claude ile video metni/);
   assert.match(about,/video metni, Türkçe karşılığı ve programın denetimi kullanılabilir/);
 });
+
+// --- GÖREV-20: road distances, airport fares, new companies in the estimate ------------------------------------------------------
+import {roadCell, checkLine, speedList, Transport} from '../studio/web/transport.js';
+test('road cell shows road miles with estimated minutes and the great-circle value under it',()=>{
+  const cell=roadCell({count:113,road_median_mi:3.13,minutes_median:5.8,crow_median_mi:2.35,within_1mi_share:0.042});
+  assert.match(cell,/<strong>3,13 mil · 6 dk<\/strong><small>kuş uçuşu 2,35 mil · 1 yol mili içinde %4<\/small>/);
+  assert.equal(roadCell({count:0}),'<span class="muted">—</span>');assert.equal(roadCell(undefined),'<span class="muted">—</span>');
+  assert.match(roadCell({count:5,road_median_mi:0.2,minutes_median:0.4,crow_median_mi:0.1,within_1mi_share:1}),/· 1 dk/);   // under a minute is written as 1
+  assert.ok(!roadCell({count:7,road_median_mi:45.2,minutes_median:57.3},false).includes('kuş uçuşu'));                      // airports: no straight line
+});
+test('length check and default speeds are shown as the run stored them',()=>{
+  assert.equal(checkLine({label:'CR 30A',osm_miles:19.057,expected_miles:18.561,difference_percent:2.7,source:'FDOT'}),'CR 30A: OpenStreetMap 19,057 mil · FDOT 18,561 mil · fark %2,7');
+  assert.match(checkLine({label:'<b>',difference_percent:null}),/&lt;b&gt;: OpenStreetMap'te bu adla yol bulunamadı/);
+  assert.equal(speedList({trunk:55,service:10}),'trunk 55 · service 10');
+});
+test('transport section offers both collectors, names missing runs and draws the fare table',()=>{
+  const sources=[{id:'s1',enabled:1,destination_id:'30a',connector:{name:'openstreetmap-road-network'}},{id:'s2',enabled:1,destination_id:'30a',connector:{name:'bts-airport-fares'}}];
+  const target={innerHTML:'',querySelector(){return null;}};
+  new Transport().render(target,{sources,jobs:[{source_id:'s1',status:'running',destination_id:'30a'}],road_runs:[],airfare_runs:[],selected_destination:{id:'30a'}});
+  assert.match(target.innerHTML,/data-action="collect-roads" disabled>Hesap sürüyor…/);
+  assert.match(target.innerHTML,/data-action="collect-airfare" >↓ Uçak bileti ortalamalarını topla/);
+  assert.match(target.innerHTML,/Henüz yol mesafesi çekimi yok/);assert.match(target.innerHTML,/trafik hesaba katılmadan tahmindir/);
+  const box={innerHTML:''};
+  const screen=new Transport();
+  screen.fare={label:'BTS etiketi',note:'başlayan yolculuklar',source_url:'https://www.transtats.bts.gov/AverageFare/',snapshot:{queried_on:'2026-11-16',latest_year:2026,latest_quarter:2,fare_note:'<i>'},
+    airports:[{label:'VPS',quarters:[{year:2026,quarter:2,listed:1,average_fare:376.1},{year:2025,quarter:2,listed:0,average_fare:null}],change:{amount:-16.48,percent:-4.6}}]};
+  screen.drawFare({querySelector:selector=>selector==='#airfare-body'?box:null});
+  assert.match(box.innerHTML,/<th>2026 Q2<\/th><th>2025 Q2<\/th><th>BİR YIL ÖNCEYE GÖRE<\/th>/);
+  assert.match(box.innerHTML,/<td>\$376\.10<\/td><td><span class="muted">tabloda yok<\/span><\/td><td>−\$16\.48<small>%-4,6<\/small>/);
+  assert.ok(!box.innerHTML.includes('<i>'));
+});
+test('refresh table names the companies added since the last run under the estimate',()=>{
+  const items=[{connector:'agency-lodging-rates',source_name:'Kiralama',interval_months:1,due:true,due_reason:'önerilen aralık doldu',estimate_seconds:30000,last_done_on:'2026-10-10',
+    added_companies:[{company:'Yeni <Şirket>',listings:61,requests:1525}]}];
+  const html=refreshSection({items,note:'',estimate_seconds:30000,estimate_complete:true,batch:null});
+  assert.match(html,/yeni şirketler dahil: Yeni &lt;Şirket&gt; 61 ilan, \+1525 istek/);
+});

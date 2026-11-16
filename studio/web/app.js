@@ -37,7 +37,7 @@ let lastRestaurantId=null;
 const restaurantScreen=new RestaurantScreen();
 let lastNeighborhoodId=null;
 const neighborhoodScreen=new NeighborhoodScreen();
-let lastLodgingId=null, lastAgencyId=null, lastSiteId=null, lastDailyId=null;
+let lastLodgingId=null, lastAgencyId=null, lastSiteId=null, lastDailyId=null, lastRoadId=null, lastFareId=null;
 const agencyPrices=new AgencyPrices();
 const lodgingScreen=new LodgingScreen(agencyPrices);
 // The three climate jobs can be queued together; refresh on every newly finished one, not only the newest.
@@ -55,7 +55,7 @@ let lastWorkflowKey="";
 let workflowSequence=0;
 let packSequence=0;
 const collectionScreens={"#collect":beachScreen,"#collect/weather":weatherScreen,"#collect/restaurants":restaurantScreen,"#collect/neighborhoods":neighborhoodScreen,"#collect/lodging":lodgingScreen,"#collect/climate":climateScreen,"#collect/references":referencesScreen};
-const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
+const collectionActions={"collect-daily-needs":"openstreetmap-daily-needs","collect-roads":"openstreetmap-road-network","collect-airfare":"bts-airport-fares","collect-beaches":"south-walton-beaches","collect-weather":"nws-weather","collect-restaurants":"south-walton-restaurants","collect-neighborhoods":"south-walton-neighborhoods","collect-lodging":LODGING_CONNECTOR,"collect-agency-rates":AGENCY_CONNECTOR,"collect-restaurant-sites":SITE_CONNECTOR,
   ...Object.fromEntries(Object.entries(CLIMATE_ACTIONS).map(([action,key])=>[action,CLIMATE_CONNECTORS[key]]))};
 
 function toast(text) {
@@ -477,6 +477,8 @@ $("#main").addEventListener("click", async event=>{
       case "collect-storms":
       case "collect-neighborhoods":
       case "collect-daily-needs":
+      case "collect-roads":
+      case "collect-airfare":
       case "collect-lodging":
       case "collect-agency-rates":
       case "collect-restaurant-sites":
@@ -591,6 +593,8 @@ async function start(destinationId=storedDestination(localStorage)) {
     lastAgencyId=state.data.agency_runs?.[0]?.id || null;
     lastSiteId=state.data.restaurant_site_runs?.[0]?.id || null;
     lastDailyId=state.data.daily_needs_runs?.[0]?.id || null;
+    lastRoadId=state.data.road_runs?.[0]?.id || null;
+    lastFareId=state.data.airfare_runs?.[0]?.id || null;
     climateDoneIds=new Set(climateDone(state.data.jobs));
     $("#app-version").textContent=`v${state.data.version}`;
     state.workflow=null;state.videoId=storedVideo(localStorage,data.selected_destination.id);lastWorkflowKey="";
@@ -647,6 +651,17 @@ async function start(destinationId=storedDestination(localStorage)) {
           if(location.hash==="#collect/neighborhoods") render();
           toast("Mahalle verileri kaydedildi. Mahalleler sekmesinden inceleyebilirsin.");
         } catch(error) {toast(error.message);}
+      }
+      for(const [connector,key,path,last,set,message] of [["openstreetmap-road-network","road_runs","road-runs",lastRoadId,id=>{lastRoadId=id;},"Yol mesafeleri kaydedildi. Mahalleler sekmesinden inceleyebilirsin."],
+          ["bts-airport-fares","airfare_runs","airfare-runs",lastFareId,id=>{lastFareId=id;},"Uçak bileti ortalamaları kaydedildi. Mahalleler sekmesinden inceleyebilirsin."]]) {
+        const latest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name===connector);
+        if(latest && latest.id!==last) {
+          try {
+            state.data[key]=await api(path);set(latest.id);
+            if(location.hash==="#collect/neighborhoods") render();
+            toast(message);
+          } catch(error) {toast(error.message);}
+        }
       }
       const dailyLatest=state.data.jobs.find(j=>j.kind==="source_collection" && j.status==="done" && j.result?.connector_name==="openstreetmap-daily-needs");
       if(dailyLatest && dailyLatest.id!==lastDailyId) {

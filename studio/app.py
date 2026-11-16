@@ -28,7 +28,7 @@ from .watchdog import Watchdog
 from . import extension as ext
 from . import proxy as proxy_mod
 from .sources import page_kinds, region_reader
-from .sources import agency_rates, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, storm_proximity, water_temperature, weather, windows
+from .sources import agency_rates, airfare, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, road_network, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
 from .destinations import DEFAULT_DESTINATION_ID, PROFILES, beach_neighborhoods as beach_mapping, references as reference_table
 
@@ -181,6 +181,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                 "daily_needs_runs": daily_needs_runs(destination_id),
                 "daily_needs_connector": {"name": daily_needs.DailyNeedsConnector.name, "method": "API", "attribution": daily_needs.ATTRIBUTION,
                                           "config": context.daily_needs and {k: context.daily_needs[k] for k in ("area", "categories")}},
+                "road_runs": road_runs(destination_id),
+                "road_connector": {"name": road_network.RoadNetworkConnector.name, "method": "API", "attribution": road_network.ATTRIBUTION,
+                                   "settings": (context.road_network or {}).get("settings")},
+                "airfare_runs": airfare_runs(destination_id),
+                "airfare_connector": {"name": airfare.AirfareConnector.name, "method": "HTML", "source_url": airfare.SOURCE_URL,
+                                      "label": airfare.LABEL, "config": context.airfare},
                 "agency_runs": agency_runs(destination_id),
                 "agency_connector": {"name": agency_rates.AgencyRatesConnector.name, "method": "HTML/JSON", "scope": agency_rates.SCOPE,
                                      "sites": (context.agency or {}).get("sites", [])},
@@ -794,6 +800,63 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
             raise HTTPException(404, "Ham OpenStreetMap manifesti bulunamadı.")
         return FileResponse(path, media_type="application/json", filename=f"30a-gunluk-ihtiyac-{identifier[:8]}.json")
+
+    # --- Road distances and airport fares (GÖREV-20) -----------------------------------------------------------------------------
+
+    def runs_of(destination_id, connector_name):
+        selected(destination_id)
+        return [run for run in db.source_runs(destination_id=destination_id) if run["connector_name"] == connector_name and run["status"] == "done"]
+
+    def find_run(identifier, connector_name, missing):
+        run = db.source_run(identifier)
+        if not run or run["connector_name"] != connector_name or run["status"] != "done":
+            raise HTTPException(404, missing)
+        return run
+
+    def raw_manifest(run, identifier, missing, filename):
+        path = (db.path.parent / (run["raw_path"] or "")).resolve()
+        root = (db.path.parent / "raw" / identifier).resolve()
+        if not path.is_relative_to(root) or path.name != "manifest.json" or not path.is_file():
+            raise HTTPException(404, missing)
+        return FileResponse(path, media_type="application/json", filename=filename)
+
+    @app.get("/api/road-runs")
+    def road_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        return runs_of(destination_id, road_network.RoadNetworkConnector.name)
+
+    @app.get("/api/road-runs/{identifier}")
+    def road_run(identifier: str):
+        """Per neighborhood the median road distance and driving time to the point nearest by road, beside the great-circle median."""
+        run = find_run(identifier, road_network.RoadNetworkConnector.name, "Bu yol mesafesi sürümü bulunamadı.")
+        regions = db.context(run["destination_id"]).canonical_regions
+        with db.connect() as con:
+            summary = road_network.summarize(con, identifier, [r["id"] for r in regions], {r["id"]: r["name"] for r in regions})
+        if summary is None:
+            raise HTTPException(404, "Bu sürümün özeti bulunamadı.")
+        return {"run": run, **summary}
+
+    @app.get("/api/road-runs/{identifier}/raw")
+    def raw_road_run(identifier: str):
+        run = find_run(identifier, road_network.RoadNetworkConnector.name, "Bu yol mesafesi sürümü bulunamadı.")
+        return raw_manifest(run, identifier, "Ham yol ağı manifesti bulunamadı.", f"30a-yol-agi-{identifier[:8]}.json")
+
+    @app.get("/api/airfare-runs")
+    def airfare_runs(destination_id: str = DEFAULT_DESTINATION_ID):
+        return runs_of(destination_id, airfare.AirfareConnector.name)
+
+    @app.get("/api/airfare-runs/{identifier}")
+    def airfare_run(identifier: str):
+        run = find_run(identifier, airfare.AirfareConnector.name, "Bu uçak bileti sürümü bulunamadı.")
+        with db.connect() as con:
+            summary = airfare.summarize(con, identifier)
+        if summary is None:
+            raise HTTPException(404, "Bu sürümün özeti bulunamadı.")
+        return {"run": run, **summary}
+
+    @app.get("/api/airfare-runs/{identifier}/raw")
+    def raw_airfare_run(identifier: str):
+        run = find_run(identifier, airfare.AirfareConnector.name, "Bu uçak bileti sürümü bulunamadı.")
+        return raw_manifest(run, identifier, "Ham BTS manifesti bulunamadı.", f"30a-ucak-bileti-{identifier[:8]}.json")
 
     @app.get("/api/neighborhood-runs")
     def neighborhood_runs(destination_id: str = DEFAULT_DESTINATION_ID):

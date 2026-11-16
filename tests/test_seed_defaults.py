@@ -37,7 +37,7 @@ def test_migration_updates_only_exact_nws_defaults(tmp_path, notes, method, url,
         expected = list(before); expected[5] = expected_method; expected[7] = expected_notes
         assert list(after) == expected + ["30a",None]
         assert con.execute('SELECT * FROM source_history').fetchall() == history
-        assert con.execute('PRAGMA user_version').fetchone()[0] == 19
+        assert con.execute('PRAGMA user_version').fetchone()[0] == 20
     backup, = (tmp_path / 'backups').glob('*.sqlite3')
     with sqlite3.connect(backup) as con:
         assert con.execute("SELECT * FROM sources WHERE id='nws'").fetchone() == before
@@ -65,7 +65,8 @@ def test_fresh_seed_methods_and_nws_description(tmp_path):
                                                                               "https://visitsouthwalton.bookdirect.net/",
                                                                               "https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri",
                                                                               "https://www.visitsouthwalton.com/listings/culinary-experiences/?kaynak=isletme-siteleri",
-                                                                              "https://www.openstreetmap.org/?kaynak=gunluk-ihtiyac"))
+                                                                              "https://www.openstreetmap.org/?kaynak=gunluk-ihtiyac",
+                                                                              "https://www.openstreetmap.org/?kaynak=yol-agi", "https://www.transtats.bts.gov/AverageFare/"))
     assert sources["https://visitsouthwalton.bookdirect.net/"]['method'] == 'JSON'
     assert sources["https://visitsouthwalton.bookdirect.net/?kaynak=kiralama-sirketleri"]['method'] == 'HTML'
 

@@ -24,6 +24,14 @@
   "kaynak": "HCA'nın yönlendiği adres (11 Ekim 2026 denemesi)"
  },
  {
+  "dosya": "cloudfront-ulke-engeli.html",
+  "baslik": "ERROR: The request could not be satisfied",
+  "adres": "https://www.vacasa.com/usa/Dunes-Of-Seagrove-Santa-Rosa-Beach/",
+  "http": 403,
+  "tur": "bolge_engeli",
+  "kaynak": "GÖREV-20 incelemesi, 16 Kasım 2026 (ham yanıt)"
+ },
+ {
   "dosya": "akamai-access-denied.html",
   "baslik": "Access Denied",
   "adres": "https://www.example.test/locator",

@@ -34,8 +34,8 @@ PRICE = pack(row("K0001", 7223, "USD (7 gece)"), checklist=[{"kanit": "K0001", "
     ("The beach is within walking distance [K0001].", "mesafe"),
     ("Seaside is walkable [K0001].", "mesafe"),
     ("It is a short walk to the sand [K0001].", "mesafe"),
-    ("The store is ten minutes away [K0001].", "mesafe"),
-    ("It is a five-minute drive [K0001].", "mesafe"),
+    ("The store is ten minutes away [K0001].", "surus_suresi"),
+    ("It is a five-minute drive [K0001].", "surus_suresi"),
     ("A week costs more here [K0001].", "fiyat"),
     ("A week in Rosemary Beach costs a lot [K0001].", "fiyat"),
     ("It costs about $7,200 a week [K0001].", "fiyat"),
@@ -57,8 +57,21 @@ def test_each_red_rule_of_the_usage_notes(sentence, rule):
 
 def test_the_red_rules_know_their_blocks_and_documents():
     blocks = {code: (block, document) for code, block, document, _, _ in audit.RED_RULES}
-    assert blocks == {"mesafe": ("daily_needs", "M13"), "fiyat": ("lodging_prices", "M11"), "envanter": ("lodging_inventory", "M10"),
+    assert blocks == {"mesafe": ("daily_needs", "M13"), "surus_suresi": ("road_distances", "M19"), "fiyat": ("lodging_prices", "M11"), "envanter": ("lodging_inventory", "M10"),
                       "iklim": ("climate", "M8"), "restoran": ("restaurants", "M12"), "trafik": ("traffic", "M9")}
+
+
+def test_a_road_distance_mark_allows_the_driving_time_but_never_a_walking_claim():
+    """GÖREV-20: with the road-distance row marked, the estimated driving time may be said; walking stays red, and so does a driving
+    time whose mark is some other row."""
+    road = row("K0002", 3.25, "mil", block="road_distances", extras=[{"tur": "sure_dk", "deger": 6, "birim": "dk (tahmini sürüş, trafik yok)"}])
+    both = pack(row("K0001", 7223, "USD (7 gece)"), road,
+                checklist=[{"kanit": "K0001", "tur": "ana", "deger": 7223, "birim": "USD (7 gece)"}, {"kanit": "K0002", "tur": "ana", "deger": 3.25, "birim": "mil"},
+                           {"kanit": "K0002", "tur": "sure_dk", "deger": 6, "birim": "dk (tahmini sürüş, trafik yok)"}])
+    said = "On OpenStreetMap roads that is about a 6-minute drive without traffic, by our estimate [K0002]."
+    assert "surus_suresi" not in rules(audit.check(doc((said, ["K0002"])), both)) and "rakam" not in rules(audit.check(doc((said, ["K0002"])), both))
+    assert "surus_suresi" in rules(audit.check(doc((said.replace("K0002", "K0001"), ["K0001"])), both), audit.RED)
+    assert "mesafe" in rules(audit.check(doc(("It is a 6-minute walk [K0002].", ["K0002"])), both), audit.RED)
 
 
 def test_a_clean_sentence_has_no_finding():

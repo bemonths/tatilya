@@ -328,6 +328,28 @@ def site_options(site):
             "own_region_id": site.get("own_region_id"), "own_city": site.get("own_city")}
 
 
+QUOTE_REQUESTS = 2          # requests assumed per price question on a company no run has measured yet (availability, then price)
+ANSWER_SECONDS = 1.0        # time assumed for one answer besides the gap between two requests
+
+
+def new_site_estimate(sites, listings, read_domains, window_count):
+    """What the enabled companies no earlier run read add to a run (GÖREV-20): per company its Book>Direct listings, the requests
+    (one page per listing, QUOTE_REQUESTS per listing and window) and the seconds at the company's own pace. Our estimate: a company
+    may answer with fewer requests (a listing whose link is dead asks nothing more) or be stopped at its first refusal."""
+    added = []
+    for site in sites:
+        if not site["enabled"] or site["domain"] in read_domains:
+            continue
+        options = site_options(site)
+        hosts = (options["domain"], *options["aliases"])
+        count = sum(1 for item in listings if (host := site_domain(item.get("url"))) and any(host == h or host.endswith("." + h) for h in hosts))
+        requests = count * (1 + window_count * QUOTE_REQUESTS)
+        gap = PROTECTED_GAP if options["protected"] else REQUEST_GAP
+        added.append({"domain": options["domain"], "company": options["company"], "listings": count, "requests": requests,
+                      "seconds": int(requests * (gap + ANSWER_SECONDS)), "protected": bool(options["protected"])})
+    return added
+
+
 def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None, region=None):
     """Ask every configured company site the price of every future window for each listing tied to it (and for its own inventory).
     Companies whose site waits for a human verification are read last, after one shared wait (see the module text)."""

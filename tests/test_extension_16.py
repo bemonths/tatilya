@@ -220,7 +220,10 @@ def test_with_a_proxy_the_region_blocked_sites_are_read_through_it(client, monke
 
 def test_the_trial_list_has_realjoys_30a_listing_page():
     sites = dict((d, u) for d, u, _ in thirty_a.EXTENSION_TRIAL_SITES)
-    assert sites["realjoy.com"] == "https://www.realjoy.com/beach-rentals/30a-vacation-rentals"
+    realjoy = [u for d, u, _ in thirty_a.EXTENSION_TRIAL_SITES if d == "realjoy.com"]
+    assert realjoy == ["https://www.realjoy.com/beach-rentals/30a-vacation-rentals",              # GÖREV-20: and one listing page, read last
+                       "https://www.realjoy.com/beach-rentals/sea-la-vie-seaside-main-house"]
+    assert thirty_a.EXTENSION_TRIAL_SITES[-1][0] == "realjoy.com" and thirty_a.EXTENSION_TRIAL_SITES[0][0] == "realjoy.com"
     assert {"cvs.com", "publix.com", "hcafloridahealthcare.com", "winndixie.com", "thefreshmarket.com", "order.online"} <= set(sites)
 
 

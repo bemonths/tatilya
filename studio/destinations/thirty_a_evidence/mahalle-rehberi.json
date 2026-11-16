@@ -1,6 +1,6 @@
 {
   "key": "mahalle-rehberi",
-  "version": "1",
+  "version": "2",
   "title": "Mahalle rehberi",
   "question": "Bu mahallede kalmak nasıl bir deneyim: plaja, yemeğe ve günlük ihtiyaçlara erişim, konaklama fiyatı ve sezon? (Paket yalnız kanıtı verir.)",
   "dimensions": {"bolge": "mahalle", "karar": "mahalle seçimi", "donem": "tüm yıl", "gezgin_tipi": "genel"},
@@ -34,9 +34,10 @@
        {"block": "restaurants", "region": "{mahalle}", "list": true}
      ]},
     {"key": "gunluk", "title": "Günlük ihtiyaç mesafeleri",
-     "question": "Market, eczane, acil sağlık, bisiklet kiralama ve plaj erişimi kuş uçuşu ne kadar uzak?",
+     "question": "Market, eczane, acil sağlık, bisiklet kiralama, plaj erişimi ve havalimanları kuş uçuşu ve yol üzerinden ne kadar uzak, tahmini sürüş ne kadar?",
      "blocks": [
-       {"block": "daily_needs", "region": "{mahalle}"}
+       {"block": "daily_needs", "region": "{mahalle}"},
+       {"block": "road_distances", "region": "{mahalle}"}
      ]},
     {"key": "mahalleye-ozgu", "title": "Mahalleye özgü referanslar",
      "question": "Otopark, servis, kurallar ve tarih hakkında bu mahalleyi anan kaynaklı satırlar neler?",

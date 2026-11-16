@@ -18,13 +18,14 @@ from datetime import date
 
 from ..destinations import beach_neighborhoods as beach_mapping
 from ..destinations import references as reference_table
-from ..sources import agency_rates, bookdirect_lodging, daily_needs, restaurant_sites
+from ..sources import agency_rates, airfare, bookdirect_lodging, daily_needs, restaurant_sites, road_network
 
 LABELS = ("kaynak gerçeği", "bizim hesabımız", "türetilmiş", "yaklaşık")
 MISSING = "veri yok"
 MONTHS = ("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
 MONTHS_SHORT = ("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
-EXTRA_TYPES = ("alt_ceyrek", "ust_ceyrek", "orneklem", "pay", "aralik_alt", "aralik_ust", "donusum")
+# GÖREV-20: sure_dk (estimated driving minutes), kus_ucusu (the great-circle value beside a road value), degisim (a change in percent)
+EXTRA_TYPES = ("alt_ceyrek", "ust_ceyrek", "orneklem", "pay", "aralik_alt", "aralik_ust", "donusum", "sure_dk", "kus_ucusu", "degisim")
 MILE_KM = 1.609344
 SMALL_SAMPLE = 20         # fewer priced listings per window than this is a small sample (our threshold, M11)
 
@@ -64,6 +65,17 @@ USAGE = {
     "traffic": "FDOT AADT bir sayım noktasındaki yıllık ortalama günlük araç sayısıdır (iki yön); \"<yer> sayım noktasında 2025 yıllık ortalaması\" "
                "denir, yolun tamamı için tek sayı söylenmez. Aylık oranlar FDOT'un haftalık mevsim faktörlerinden bizim hesabımızdır ve "
                "kategori söylenir; sıkışıklık ya da yolculuk süresi iddiası yapılmaz. (M9)",
+    "road_distances": "\"OpenStreetMap yol ağına göre, <mahalle>'deki ilanların ortancası en yakın <yer>'e yol üzerinden yaklaşık X mil; trafik hesaba "
+                      "katılmadan tahmini sürüş yaklaşık Y dakika\" gibi; süre her zaman \"tahmini\" ve \"trafik hesaba katılmadan\" diye söylenir. "
+                      "\"Yürüme mesafesi\", \"X dakikada varırsınız\" ya da trafikli gerçek süre iddiası kullanılmaz; yoğun sezon trafiği süreyi "
+                      "uzatır. (M19)",
+    "airfare": "\"ABD Ulaştırma İstatistikleri Bürosu'na göre, <dönem>'de <havalimanı>'ndan başlayan iç hat yolculuklarının ortalama bilet ücreti "
+               "yaklaşık $X'ti\" biçiminde, dönem ve \"bu havalimanından başlayan yolculuklar\" tanımı söylenerek. \"30A'ya uçak bileti $X\", "
+               "\"<şehir>'den bilet $X\" ya da \"bilet fiyatları şu kadar\" diye genelleştirilmez; iki havalimanı arasındaki fark "
+               "\"daha ucuz havalimanı\" diye yorumlanmaz. (M20)",
+    "lodging_coverage": "Fiyat ortancaları yalnız fiyatı okunan şirketlerin ilanlarından gelir; fiyatı okunamayan şirketler videoda adlarıyla "
+                        "anılmaz, \"fiyatını okuyamadığımız şirketler\" denir ve onların yoğun olduğu mahallede \"mahallenin fiyatı\" denmez. (M11)",
+    "out_of_scope": "Kapsam dışı konu hakkında sayı, fiyat ya da karşılaştırma söylenmez; gerekiyorsa \"bu videoda bunun verisi yok\" denir. (M14)",
 }
 
 # What "(n)" means in each block's tables (the writer's summary prints it once in the table header).
@@ -76,6 +88,9 @@ SAMPLE_RULES = {
     "tdt_season": "(n) = ortalamaya giren mali yıl sayısı.",
     "daily_needs": "Hücre: ilanların en yakın noktaya kuş uçuşu mesafe ortancası · 1 mil içindeki ilan payı; (n) = ölçülen ilan sayısı.",
     "restaurants": "Ana yemek ortancası: (n) = fiyatı okunan ana yemek sayısı.",
+    "road_distances": "Hücre: yol üzerinden mesafe ortancası (mil) · tahmini sürüş (dk, trafik yok) · kuş = aynı ilanların kuş uçuşu ortancası (mil) · "
+                      "1 yol mili içindeki ilan payı; (n) = yol ağına bağlanan ilan sayısı.",
+    "lodging_coverage": "(n) = şirketin Book>Direct'teki ilan sayısı.",
 }
 
 
@@ -834,6 +849,184 @@ def traffic(data, spec):
     return rows
 
 
+# --- Road distances, airports and airfare (GÖREV-20) -----------------------------------------------------------------------------
+
+def minutes_text(value):
+    """Whole minutes (a time estimate without traffic is not precise to a tenth); under one minute is written as 1."""
+    return max(1, round(value))
+
+
+def road_distances(data, spec):
+    """Per neighborhood and category: the median road distance of its listings to the point nearest by road, with the estimated
+    driving time and the great-circle median of the same listings beside it; extra destinations (airports) in a table of their own."""
+    run = data.run("openstreetmap-road-network")
+    if not run:
+        return [missing("Yol üzerinden mesafe ve tahmini sürüş süresi", "Yol mesafesi çekimi yok.", scope="30A", usage=USAGE["road_distances"])]
+    def compute():
+        with data.db.connect() as con:
+            return road_network.summarize(con, run["id"], data.order, data.names)
+    summary = data.cached("road_distances", compute)
+    if not summary:
+        return [missing("Yol üzerinden mesafe ve tahmini sürüş süresi", "Bu çekimin özeti okunamadı.", scope="30A", usage=USAGE["road_distances"])]
+    labels = summary["labels"]
+    wanted = spec.get("categories") or summary["categories"]
+    source = source_of(run, name="OpenStreetMap · Yol ağı ve sürüş süreleri")
+    regions = {r["region_id"]: r for r in summary["regions"]}
+    snapshot = summary["snapshot"]
+    note = (f"{summary['note']} Ölçülen ilanlar, koordinatı yol ağına {snapshot['settings']['snap_limit_m']} m içinde bağlanabilen ilanlardır "
+            f"({summary['unmeasured_count']} ilan ölçülmedi); kuş uçuşu değer aynı ilanlar içindir.")
+    if summary["stale_inputs"]:
+        note += f" Bu yol çekiminden sonra yeni bir {' ve '.join(summary['stale_inputs'])} yapıldı; yol mesafeleri önceki çekimin ilan ve noktalarıyladır."
+    title = "Yol üzerinden mesafe ortancası (mil) · tahmini sürüş süresi · kuş uçuşu"
+    airports = "Havalimanlarına yol mesafesi ortancası (mil) · tahmini sürüş süresi"
+    rows = []
+    for region in data.region_ids(spec):
+        name = data.names.get(region, region)
+        info = regions.get(region)
+        for key in wanted:
+            label = labels.get(key)
+            extra_point = key.startswith("extra:")
+            table = place(airports if extra_point else title, name, label or key)
+            if label is None or key not in summary["categories"]:
+                rows.append(missing(f"{name}: '{label or key}' için yol mesafesi", "Bu yol çekiminde bu nokta türü yok.", scope=name,
+                                    usage=USAGE["road_distances"], table=table))
+                continue
+            measure = (info or {}).get("measures", {}).get(key)
+            if not measure or not measure["count"]:
+                rows.append(missing(f"{name}: {label} için yol mesafesi ortancası", "Bu mahallede yol ağına bağlanan ilan ya da ulaşılan nokta yok.",
+                                    scope=name, usage=USAGE["road_distances"], table=table))
+                continue
+            minutes = minutes_text(measure["minutes_median"])
+            extras = [extra("sure_dk", minutes, "dk (tahmini sürüş, trafik yok)")]
+            if extra_point:
+                statement = (f"{name}: ilanlardan {label} yolcu terminaline yol üzerinden mesafe ortancası (tahmini sürüş {minutes} dk, "
+                             "trafik hesaba katılmadan)")
+            else:
+                share = round(measure["within_1mi_share"] * 100)
+                statement = (f"{name}: ilanların yol üzerinden en yakın {label.lower()} noktasına mesafe ortancası (tahmini sürüş {minutes} dk, trafik "
+                             f"hesaba katılmadan; aynı ilanların kuş uçuşu ortancası {number(measure['crow_median_mi'], 2)} mil; ilanların "
+                             f"%{number(share, 0)}'i 1 yol mili içinde)")
+                extras += [extra("kus_ucusu", measure["crow_median_mi"], "mil (kuş uçuşu)"), extra("pay", share, "% (1 yol mili içinde)")]
+            rows.append(row(statement, measure["road_median_mi"], "mil", scope=name, source=source, label="bizim hesabımız", sample=measure["count"],
+                            usage=USAGE["road_distances"], metric=converted(measure["road_median_km"], 2, "km"), note=note, table=table, extras=extras))
+    if spec.get("checks"):
+        for check in snapshot["checks"]:
+            if check.get("difference_percent") is None:
+                continue
+            rows.append(row(f"Sağlama: OpenStreetMap yol ağında {check['label']} adlı yolun toplam uzunluğu (karşılaştırma: {check['source']}: "
+                            f"{number(check['expected_miles'], 3)} mil; fark %{number(check['difference_percent'], 1)})", check["osm_miles"], "mil",
+                            scope="yol ağı", source=source, label="bizim hesabımız", usage=USAGE["road_distances"],
+                            note="Yol ağının bilinen bir uzunlukla sağlaması; videoda söylenecek bir değer değildir.",
+                            extras=[extra("degisim", check["difference_percent"], "% (resmî uzunluğa göre fark)")]))
+    return rows
+
+
+def airfare_block(data, spec):
+    """Average domestic itinerary fare of the configured airports per quarter (BTS, by origin airport), and the change from the same
+    quarter a year earlier (our calculation)."""
+    run = data.run("bts-airport-fares")
+    if not run:
+        return [missing("Havalimanı ortalama bilet ücreti (BTS)", "Uçak bileti çekimi yok.", scope="havalimanları", usage=USAGE["airfare"])]
+    def compute():
+        with data.db.connect() as con:
+            return airfare.summarize(con, run["id"])
+    summary = data.cached("airfare", compute)
+    if not summary:
+        return [missing("Havalimanı ortalama bilet ücreti (BTS)", "Bu çekimin özeti okunamadı.", scope="havalimanları", usage=USAGE["airfare"])]
+    title = "Havalimanından başlayan iç hat yolculuklarının ortalama bilet ücreti (BTS, çeyreklik)"
+    name = "BTS — Average Domestic Airline Itinerary Fares"
+    rows = []
+    for airport in summary["airports"]:
+        for quarter in airport["quarters"]:
+            period = f"{quarter['year']} Q{quarter['quarter']}"
+            table = place(title, airport["label"], period, head="Havalimanı")
+            if not quarter["listed"] or quarter["average_fare"] is None:
+                rows.append(missing(f"{airport['label']} · {period}: ortalama iç hat bilet ücreti", "BTS tablosunda bu çeyrekte bu havalimanı yok.",
+                                    scope=airport["label"], usage=USAGE["airfare"], table=table))
+                continue
+            rows.append(row(f"{airport['label']} · {period}: bu havalimanından başlayan iç hat yolculuklarının ortalama bilet ücreti (BTS; "
+                            "gidiş-dönüş ya da dönüşü alınmamış tek yön; satın almadaki vergi ve ücretler dahil, bagaj gibi sonradan ödenenler hariç)",
+                            quarter["average_fare"], "USD", scope=f"{airport['label']} · {period}",
+                            source=source_of(run, name=name, url=airfare.SOURCE_URL, sha=quarter["raw_sha256"]),
+                            usage=USAGE["airfare"], quote=quarter["title"], note=summary["note"], table=table))
+        if airport["change"] and airport["latest"] and airport["year_before"]:
+            latest, before = airport["latest"], airport["year_before"]
+            rows.append(row(f"{airport['label']}: {latest['year']} Q{latest['quarter']} ortalamasının {before['year']} Q{before['quarter']} "
+                            "ortalamasından farkı (nominal dolar; enflasyon düzeltmesi yok)", airport["change"]["amount"], "USD", scope=airport["label"],
+                            source=source_of(run, name=name, url=airfare.SOURCE_URL), label="bizim hesabımız", usage=USAGE["airfare"],
+                            note=summary["note"], extras=[extra("degisim", airport["change"]["percent"], "% (bir yıl önceki aynı çeyreğe göre)")]))
+    return rows
+
+
+# --- Which rental companies the prices cover, and what is out of scope (GÖREV-20) -------------------------------------------------
+
+def unread_companies(profile):
+    """Reviewed rows of the companies whose prices cannot be read ({domain: row}): the reason and the date a person looked."""
+    path = getattr(profile, "AGENCY_UNREAD", None)
+    if not path or not path.is_file():
+        return {}
+    with open(path, encoding="utf-8-sig", newline="") as handle:
+        return {item["alan_adi"]: item for item in csv.DictReader(handle)}
+
+
+def unread_counts(con, run_id):
+    """{domain: Book>Direct listings} of the listings whose link goes to a site no reader is configured for (www. dropped)."""
+    return dict(con.execute("""SELECT REPLACE(COALESCE(domain, url_host), 'www.', ''), COUNT(*) FROM agency_rate_listings
+        WHERE run_id=? AND page_status='no_adapter' AND COALESCE(domain, url_host) IS NOT NULL GROUP BY 1 ORDER BY COUNT(*) DESC, 1""",
+                            (run_id,)).fetchall())
+
+
+def lodging_coverage(data, spec):
+    """Companies whose prices are in the medians (with their listings and priced listings) and companies whose prices could not be
+    read (Book>Direct listing count and the reviewed reason)."""
+    run, summary = agency_summary(data)
+    if not run or not summary:
+        return [missing("Kiralama fiyatlarına giren şirketler", "Kiralama şirketleri fiyat çekimi yok.", scope="30A", usage=USAGE["lodging_coverage"])]
+    source = source_of(run)
+    queried = summary["snapshot"]["queried_on"]
+    with data.db.connect() as con:
+        priced = dict(con.execute("""SELECT l.domain, COUNT(DISTINCT l.lodging_id) FROM agency_rate_listings l JOIN agency_rate_quotes q
+            ON q.run_id=l.run_id AND q.lodging_id=l.lodging_id WHERE l.run_id=? AND q.status='priced' AND l.domain IS NOT NULL GROUP BY l.domain""",
+                                  (run["id"],)).fetchall())
+        hosts = unread_counts(con, run["id"])
+    included, left_out = "Fiyat ortancalarına giren kiralama şirketleri", "Fiyatı okunamayan kiralama şirketleri"
+    coverage = summary.get("coverage")
+    if not coverage:
+        return [missing("Kiralama fiyatlarına giren şirketler", "Bu çekimin şirket dökümü yok.", scope="30A", usage=USAGE["lodging_coverage"])]
+    rows = [row(f"Kiralama şirketlerinin sitelerinde {queried} tarihinde en az bir haftası fiyatlanan Book>Direct ilanı (çekimdeki "
+                f"{number(coverage['listings'])} ilandan)", coverage["priced_listings"], "ilan", scope="30A", source=source, label="bizim hesabımız",
+                sample=coverage["listings"], usage=USAGE["lodging_coverage"])]
+    for company in summary.get("companies") or []:
+        count = priced.get(company["domain"], 0)
+        if not count:
+            continue
+        rows.append(row(f"{company['company']} ({company['domain']}): fiyatı okunan Book>Direct ilanı", count, "ilan", scope="30A", source=source,
+                        label="bizim hesabımız", sample=company["listing_count"], usage=USAGE["lodging_coverage"],
+                        table=place(included, company["company"], "Fiyatlı ilan", {"Site": company["domain"]}, head="Şirket")))
+    reasons = unread_companies(data.profile)
+    minimum = int(spec.get("minimum", SMALL_SAMPLE))
+    for domain, count in hosts.items():
+        reason = reasons.get(domain) or {}
+        if count < minimum and not reason:
+            continue
+        why = reason.get("neden") or "sitesi için okuyucu yok (incelenmedi)"
+        company = reason.get("sirket") or domain
+        rows.append(row(f"{company} ({domain}): fiyatı okunamayan Book>Direct ilanı — {why}", count, "ilan", scope="30A", source=source,
+                        label="bizim hesabımız", usage=USAGE["lodging_coverage"],
+                        table=place(left_out, domain, "Book>Direct ilanı", {"Şirket": company, "Neden": why, "Bakıldığı tarih": reason.get("kontrol_tarihi") or "—"},
+                                    head="Site")))
+    return rows
+
+
+def out_of_scope(data, spec):
+    """Topics the program does not collect at all: one "veri yok" row each, so a text says nothing about them instead of guessing."""
+    topics = getattr(data.profile, "OUT_OF_SCOPE", ())
+    wanted = spec.get("topics")
+    rows = [missing(f"Kapsam dışı: {title}", f"Kapsam dışı; program bu veriyi toplamıyor. {reason}", scope="30A", usage=USAGE["out_of_scope"])
+            for key, title, reason in topics if not wanted or key in wanted]
+    return rows or [missing("Kapsam dışı konular", "Bu destinasyon için kapsam dışı konu listesi yok.", scope="30A", usage=USAGE["out_of_scope"])]
+
+
 BLOCKS = {
     "neighborhoods": neighborhoods,
     "beach_accesses": beach_accesses,
@@ -849,4 +1042,8 @@ BLOCKS = {
     "restaurants": restaurants,
     "daily_needs": daily_needs_block,
     "traffic": traffic,
+    "road_distances": road_distances,
+    "airfare": airfare_block,
+    "lodging_coverage": lodging_coverage,
+    "out_of_scope": out_of_scope,
 }

@@ -1,6 +1,6 @@
 {
   "key": "ilk-video",
-  "version": "1",
+  "version": "2",
   "title": "30A'ya ilk kez gidecekler için tam karar rehberi",
   "question": "30A'ya ilk kez gidecek biri hangi mahallede, hangi ayda, ne kadar bütçeyle ve nelere dikkat ederek kalmalı? (Paket yalnız bu sorunun kanıtını verir; karar editoryal katmandadır.)",
   "dimensions": {"bolge": "30A", "karar": "ilk ziyaret planı", "donem": "tüm yıl", "gezgin_tipi": "ilk kez gelen"},
@@ -52,7 +52,8 @@
      "question": "Mahalle ve aya göre bir haftalık kiralık evin toplam fiyatı ve oda gruplarına göre fiyatlar ne?",
      "blocks": [
        {"block": "lodging_prices"},
-       {"block": "lodging_bedrooms", "months": ["01", "07"]}
+       {"block": "lodging_bedrooms", "months": ["01", "07"]},
+       {"block": "lodging_coverage"}
      ]},
     {"key": "yemek", "title": "Yemek",
      "question": "Mahalle başına kaç restoran var, fiyat seviyeleri ve rezervasyon durumu ne?",
@@ -60,9 +61,12 @@
        {"block": "restaurants", "list": "seviyeli"}
      ]},
     {"key": "ulasim", "title": "Araba ve ulaşım",
-     "question": "Büyük süpermarket, eczane ve acil sağlık ne kadar uzak; golf arabası, park, havalimanı ve trafik kuralları neler?",
+     "question": "Büyük süpermarket, eczane ve acil sağlık kuş uçuşu ve yol üzerinden ne kadar uzak, tahmini sürüş ne kadar; havalimanları ne kadar uzak ve oradan başlayan uçuşların ortalama bilet ücreti ne; golf arabası, park ve trafik kuralları neler; hangi konular kapsam dışı?",
      "blocks": [
        {"block": "daily_needs", "categories": ["big_supermarket", "local_market", "pharmacy", "emergency", "urgent_care"], "list_points": ["emergency", "urgent_care"]},
+       {"block": "road_distances", "categories": ["big_supermarket", "local_market", "pharmacy", "emergency", "urgent_care", "extra:VPS", "extra:ECP"], "checks": true},
+       {"block": "airfare"},
+       {"block": "out_of_scope"},
        {"block": "references", "topics": ["ulasim"]},
        {"block": "references", "topics": ["parklar"]},
        {"block": "traffic", "kinds": ["aadt"]}

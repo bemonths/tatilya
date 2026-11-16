@@ -5,8 +5,9 @@ them: red ("kırmızı": says the information wrongly) or yellow ("sarı": needs
 the number of red findings is shown on the comparison screen.
 
 Red, from the usage notes of the evidence blocks (`studio/evidence/blocks.py` `USAGE`; one rule per block, each with a test):
-- distance (M13, `daily_needs`): "walking distance", "walkable", "a short walk", "minute walk", "minutes' walk", "minutes away",
-  "minute drive", "minutes to drive";
+- distance (M13, `daily_needs`): "walking distance", "walkable", "a short walk", "minute walk", "minutes' walk";
+- driving time (M19, `road_distances`; GÖREV-20): "minutes away", "minute drive", "minutes to drive" — unless one of the sentence's marks
+  points at a road-distance row (the estimated driving time on the OpenStreetMap road network, said as an estimate without traffic);
 - price (M11, `lodging_prices`): "a week costs", "a week in … costs", "costs about $… a week", "per week it costs";
 - inventory (M10, `lodging_inventory`): "full inventory", "full list", "complete list", "every rental", "all the rentals",
   "there are … homes in";
@@ -47,9 +48,10 @@ def phrase(*patterns):
 
 # (code, block, M document, title, pattern) — the red phrase rules of Ek O
 RED_RULES = (
-    ("mesafe", "daily_needs", "M13", "Mesafe: yürüme mesafesi ya da yol ve süre iddiası kullanılmaz",
-     phrase(r"\bwalking distance\b", r"\bwalkable\b", r"\ba short walk\b", r"\bminutes?[- ]walk\b", r"\bminutes['’] walk\b",
-            r"\bminutes? away\b", r"\bminutes?[- ]drive\b", r"\bminutes to drive\b")),
+    ("mesafe", "daily_needs", "M13", "Mesafe: yürüme mesafesi iddiası kullanılmaz",
+     phrase(r"\bwalking distance\b", r"\bwalkable\b", r"\ba short walk\b", r"\bminutes?[- ]walk\b", r"\bminutes['’] walk\b")),
+    ("surus_suresi", "road_distances", "M19", "Sürüş süresi: yol mesafesi kanıtı işaretlenmeden süre iddiası kullanılmaz",
+     phrase(r"\bminutes? away\b", r"\bminutes?[- ]drive\b", r"\bminutes to drive\b")),
     ("fiyat", "lodging_prices", "M11", "Fiyat: “bir hafta $X tutar” denmez",
      phrase(r"\ba week costs\b", r"\ba week in\b[^.!?]{1,60}?\bcosts\b", r"\bcosts about \$[\d,.]+[^.!?]{0,30}?\ba week\b",
             r"\bper week it costs\b")),
@@ -63,6 +65,8 @@ RED_RULES = (
     ("trafik", "traffic", "M9", "Trafik: sıkışıklık ya da yolculuk süresi iddiası yapılmaz",
      phrase(r"\btraffic jams?\b", r"\bgridlock(?:ed)?\b", r"\bbumper[- ]to[- ]bumper\b", r"\btakes\b[^.!?]{0,30}?\bminutes to get\b")),
 )
+# A red phrase rule that does not apply when the sentence is marked with a row of this block (the block's usage note allows the phrase).
+EVIDENCE_LIFTS = {"surus_suresi": "road_distances"}
 SOURCE_CUES = re.compile(r"\baccording to\b|\bcounty\b|\bwalton\b|\bvisit south walton\b|\blists?\b|\blisted\b|\bguide\b|\brecords?\b|"
                          r"\bmap\b|\bofficial\b|\bsays\b|\bshows?\b|\bdata\b|\bsurvey\b|\bfaq\b|\bwebsite\b|\bsite\b", re.I)
 NO_PUBLIC = re.compile(r"\bno public beach access\b", re.I)
@@ -135,6 +139,8 @@ def check(document, pack, *, regions=(), phrases=(), plan=None, businesses=None)
             found.append(finding(RED, "isletme", f"işletme adı: {name} (videoda işletme adı geçmez; genel olarak söylenir).", no))
         for code, block, doc, title, pattern in RED_RULES:
             match = pattern.search(en)
+            if match and code in EVIDENCE_LIFTS and any((pack.rows.get(i) or {}).get("blok") == EVIDENCE_LIFTS[code] for i in ids):
+                continue                 # the sentence carries the evidence that allows the phrase (GÖREV-20: road distances)
             if match:
                 found.append(finding(RED, code, f"{title} (“{match.group(0)}”; {doc} kullanım notu).", no, blok=block))
         for evidence_id in ids:
