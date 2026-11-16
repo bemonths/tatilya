@@ -266,4 +266,8 @@ Tamamlanamayan adım yok. Bilinmesi gerekenler:
 - Çalışma panelinin "çalışırken" ekran görüntüsü alınamadı (yukarıda açıklandı).
 - Belge adı M19 yerine M21 oldu (yukarıda açıklandı).
 - 6 · Yayın paketi, 7 · Seslendirme ve 8 · Kurgu paketi adımları yalnız yer tutuyor ("Sonraki görevde gelecek").
-- CI sonucu bu raporun sonuna eklenecek (dal push edildikten sonra).
+- Yukarıdaki maddelerin hiçbiri bir adımın yapılmadığı anlamına gelmez; bilgi içindir.
+
+## CI
+
+Dal push edildi. `1bf0486` commit'inin CI çalışması (43930846443, push) **başarılı** bitti. Bu bölümü ekleyen son commit yalnız bu raporu değiştirir.
