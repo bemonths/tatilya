@@ -2,6 +2,27 @@
 
 Tarih: 11 Kasım 2026 · Görev: GÖREV-13; GÖREV-14 (kullanım paneli, ilerleme çubuğu, talimat düzenleyici, model takma adları, başlık eki, başlık değerlendirme, seçmeden önce düzenleme); GÖREV-15 (video metninin yedi adımı, oturum sınırı, kullanım eşikleri); GÖREV-18 (tek çağrı düzeni, tahmin, sınırlar, işletme adı ve başlık uyarıları) · Dal: `gorev-18-token-kontrolu` · Şema `19` · Uygulama `0.20.0`
 
+## GÖREV-21 ile değişenler (16 Kasım 2026, v0.22.0)
+
+Bu belgenin Claude çalıştırıcısı, adım çerçevesi, tek çağrı düzeni, tahmin ve sınırlar bölümleri aynen geçerlidir. Değişen, adımların
+**ekranı ve durum yönetimidir** (`docs/M21-IS-AKISI-KATMANLAR.md`):
+
+- "Videolar" ekranı ikiye ayrıldı: başlık önerileri ve adayları proje katmanındaki **Konu bankası** ekranındadır ("Konu ve başlık önerisi al"
+  düğmesinin adı **Öneri al**; "Kendi başlığını yaz" → **Kendi başlığını değerlendir**); videolar **Videolar** ekranındadır.
+- "Bu başlığı seç" düğmesi **Bu başlıkla video aç** oldu: video açılır, aday "kullanıldı" işaretlenir, videonun 1 · Başlık ve vaat adımı
+  "onay bekliyor" başlar. Başlığın onayı o adımdaki ortak onay bileşeniyle verilir (Onayla, Düzeltme iste, Reddet). Bir çalışmanın bütünü
+  için "Düzeltme iste" ve "Reddet" Konu bankasında çalışmanın ekranında durur.
+- Videodan başlatılan değerlendirme ya da düzeltme çalışması `params.video_id` taşır; çalışırken videonun 1. adımı "çalışıyor", bitince
+  "hazır" (adaylar o ekranda seçilir), hata verirse "hata", iptal edilirse yeniden "hazır" olur. İptal edilen çalışma listelerde
+  "iptal edildi" diye görünür.
+- Düzeltme görev metnindeki cümle "Düzeltme: kullanıcının düzeltme notu aşağıda." oldu (talimat dosyaları değişmedi).
+- Veri paketi yalnız başlık onaylandıktan sonra üretilir (`POST /api/videos/<video>/evidence-pack`, aksi hâlde 409).
+- **Talimatlar, Tonlar, Uyarı ifadeleri ve Başlık eki Ayarlar'dan Kanal ekranına taşındı**; bu belgede "Ayarlar → Talimatlar" ya da
+  "Ayarlar → Tonlar" diye geçen yerler artık "Kanal → Talimatlar", "Kanal → Tonlar"dır (eski adresler yönlenir).
+- Ayarlar → Claude tablosunda her satır adımın ekrandaki adını ve ait olduğu yeri yazar; **"Plandan sonra dur" ayarı kalktı** (zincir planı
+  yazınca her zaman durur, yazım plan onaylanınca başlar). Eski `claude_stop_after_plan` anahtarı ayar dosyasında kalsa da okunmaz.
+- Tahmin, harcama ve iptal her Claude adımında aynı yerde ve biçimde gösterilir (`studio/web/claude-step.js`).
+
 ## Amaç
 
 Video için yapılacak her şey programın içinden yapılır (kullanıcı kararı, 10 Ekim 2026). Program arka planda bilgisayardaki Claude Code'u çağırır;
@@ -223,7 +244,8 @@ kimliği ilk çalışmanın kimliğidir; düzeltmeleri aynı hazırlıkta durur.
 Videolar ekranında bir çalışma açılınca Claude'un çıktısı okunur biçimde görünür: önce başlık listesi, bir başlığa tıklanınca ayrıntısı.
 Doğrulama sorunları ayrı listelenir (genel sorunlar başta, adayın sorunları kendi ayrıntısında; hatalı aday seçilemez). Bir not alanı ve üç işlem:
 
-- **Seç (Bu başlığı seç):** seçilen aday bir video kaydı olur; aynı çalışmadan başka başlık da seçilebilir.
+- **Seç (GÖREV-21'den beri "Bu başlıkla video aç"):** seçilen aday bir video kaydı olur ve "kullanıldı" işaretlenir; aynı çalışmadan başka
+  adayla başka video açılabilir. Başlığın onayı videonun 1. adımındadır.
 - **Düzeltme iste:** yeni bir oturum açar (`--resume` yok); kullanıcının notu ve önceki çıktı (`onceki_cikti.json`) görev metninde verilir.
 - **Reddet:** yalnız onay bekleyen çalışmada.
 
@@ -356,8 +378,8 @@ Ayarlar → Claude:
 - yedi adımın modeli, eforu ve tur sınırı; başlangıç değerleri: plan opus/high, plan eleştirisi opus/medium, bölüm opus/high,
   birleştirme opus/medium, giriş ve kapanış opus/high, son okuma opus/medium, çeviri sonnet/medium (aile takma adları), 30 tur;
 - "Video metni çalışması" bölümü: "Aynı anda en çok Claude oturumu" (`claude_max_sessions`, 1–6, varsayılan 3), "5 saatlik pencere
-  eşiği" (`claude_limit_five_hour`, varsayılan %90), "Haftalık pencere eşiği" (`claude_limit_week`, varsayılan %95), "Plandan sonra dur"
-  (`claude_stop_after_plan`, kapalı).
+  eşiği" (`claude_limit_five_hour`, varsayılan %90), "Haftalık pencere eşiği" (`claude_limit_week`, varsayılan %95). "Plandan sonra dur"
+  (`claude_stop_after_plan`) GÖREV-21'de kalktı: yazım her zaman plan onayını bekler.
 
 Ayarlar → Talimatlar listesine "Anlatıcının sesi (bütün tonlarda aynı)" ve yedi `metin_*.md` dosyası eklendi; adımların sırası
 `settings.CLAUDE_STEPS`'ten gelir (modüllerin yüklenme sırasından bağımsız). Tonlar bu listede değil, Ayarlar → Tonlar'dadır; uyarı

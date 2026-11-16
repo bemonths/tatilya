@@ -3,11 +3,13 @@
 ## Stable durum
 
 ```text
-tag v0.20.0 -> GÖREV-19'un son commit'i (gorev-19-yan-cagri-onbellek)
+tag v0.21.0 -> 57088be (GÖREV-20'nin son commit'i, gorev-20-eksik-veri)
 main -> aynı commit
-app 0.20.0
-schema 19
+app 0.21.0
+schema 20
 ```
+
+16 Kasım 2026'da GÖREV-21 Adım 1 ile (yönetici GÖREV-20'yi kabul etti) main, `gorev-20-eksik-veri` dalının son commit'ine fast-forward edildi (`7af4f1f..57088be`) ve bu commit'e açıklamalı `v0.21.0` etiketi konuldu ("v0.21.0 — eksik veri: yol ağı üzerinden yol mesafesi ve tahmini sürüş, havalimanı bilet ücretleri, kanıt paketinde yeni bloklar"); main ve etiket push edildi.
 
 12 Kasım 2026'da GÖREV-19 Adım 4 ile main, GÖREV-18 ve GÖREV-19'u içeren `gorev-19-yan-cagri-onbellek` dalının son commit'ine fast-forward edildi (`a49c6d0..`) ve bu commit'e açıklamalı `v0.20.0` etiketi konuldu ("v0.20.0 — Claude adımları tek çağrılı: tahmin, sınırlar, işletme adı ve başlık denetimleri"). Main'e alma, son commit'in görev dalı CI'ı başarıyla bittikten sonra yapıldı; önceki commit `0e662ee`'nin CI'ı (43230789721) başarılı. Commit kimliği ve son CI: `docs/gorevler/GOREV-19/RAPOR.md`.
 
@@ -42,12 +44,28 @@ schema 19
 ## Aktif branch
 
 ```text
-gorev-20-eksik-veri
-app 0.21.0
-schema 20
+gorev-21-katmanlar
+app 0.22.0
+schema 21
 ```
 
-Bu dal (GÖREV-20, 16 Kasım 2026; main'e alınmadı, etiket konmadı):
+Bu dal (GÖREV-21, 16 Kasım 2026; main'e alınmadı, etiket konmadı):
+- program iki katman: proje katmanı (Veri — sekmelerle —, Konu bankası, Kanal, Videolar) ve video katmanı (videonun sekiz adımı); video açık değilken menüde yalnız proje ekranları ve Ayarlar, video açıkken yalnız o videonun adımları, "Videoyu kapat" ve daraltılmış "← Proje"; üst çubukta video seçici yok — M21,
+- adımlar: 1 Başlık ve vaat · 2 Veri paketi · 3 Plan · 4 Yazım · 5 Kontrol ve ton seçimi · 6 Yayın paketi · 7 Seslendirme · 8 Kurgu paketi (6–8 "Sonraki görevde gelecek"); "Veri" ve "Konu ve başlık" proje katmanına taşındı, "Görsel plan" ve "Video üretimi" kalktı (Kurgu Motoru),
+- durumlar saklanıyor (`video_steps`, `video_step_log`): bekliyor, hazır, çalışıyor, onay bekliyor, onaylandı, tamamlandı, hata, eskidi; eskime sebebi Türkçe, "Bu değişiklik etkilemiyor", yarıda kapanan adım "hata" ve "Kaldığı yerden sürdür",
+- tek onay bileşeni (1, 3, 5. adım): Onayla, Düzeltme iste (not Claude'a malzeme olarak; talimat dosyası değişmez), Reddet; "Bu başlığı seç", "Devam", "Bu tonla devam et" kalktı,
+- "Plandan sonra dur" kalktı: yazım zinciri plan onaylanmadan başlamaz; zincirin sürdürme, sınır bekleme ve kaldığı yerden devam özellikleri aynı,
+- konu bankası: çalışmalar ve adayları projeye bağlı; "Bu başlıkla video aç" adayı "kullanıldı" işaretler; "Yeni video" başlıksız video açar; "Arşive kaldır" (silme yok),
+- Claude adımlarında maliyet aynı yerde: düğmenin üstünde tahmin, "Başlat", o ana kadarki harcama ve "İptal" ("iptal edildi" kaydı), 3 ve 4. adımda halka tablosu,
+- Ayarlar yalnız program ayarı (Claude tablosunda adımın ekrandaki adı ve ait olduğu yer); Talimatlar, Tonlar, Uyarı ifadeleri, Başlık eki → Kanal; eklenti ve proxy deneme okumaları, ısınma listesi → Veri → Okuma denemeleri; eski adresler yönlenir,
+- şema 21 (`videos` yeniden kuruldu: başlıksız video, `name`, `archived_at`; `video_steps`, `video_step_log`, `project_state`),
+- gerçek veri: tam yedekten sonra uygulamanın normal açılışıyla şema 20 → 21; satır sayıları aynı; dört başlık çalışması Konu bankasında; Claude çalıştırılmadı; rapor `docs/gorevler/GOREV-21/RAPOR.md`.
+
+Test (GÖREV-21): 1162 Python (2 atlanan) + 135 frontend.
+
+Önceki dal `gorev-20-eksik-veri` (uygulama 0.21.0, şema 20) main'de ve `v0.21.0` etiketindedir:
+
+GÖREV-20 (16 Kasım 2026):
 - yol üzerinden mesafe ve tahmini sürüş süresi: `openstreetmap-road-network/1` (OpenStreetMap yol ağı tek sorgu, rota programın içinde; ilanlardan günlük ihtiyaç noktalarına, plaj erişimlerine ve VPS/ECP terminallerine; en yakın nokta yol mesafesine göre, kuş uçuşu yanında; hızlar ve erişim kuralları ayarda) — M19,
 - uçak bileti: `bts-airport-fares/1` (BTS "Average Domestic Airline Itinerary Fares", VPS ve ECP, son beş çeyrek; havalimanından başlayan yolculukların ortalaması) — M20,
 - kiralama şirketleri: altı hedef şirket incelendi, hiçbiri okunabilir hale gelmedi (nedenleriyle `thirty_a_agency_unread.csv` ve M11); RealJoy doğrulama geçilemediği için tamamlanamadı; "engelli 51 ilan" yayından kalkmış ilanlar,

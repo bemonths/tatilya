@@ -57,6 +57,7 @@ v0.1–v0.12 veritabanı açılırken önce `data/backups/` içine SQLite yedeğ
 - [Tarayıcı eklentisi](docs/M16-TARAYICI-EKLENTISI.md) · [kurulum rehberi](eklenti/KURULUM.md)
 - [Video metni: yazım zinciri, tonlar ve program denetimi](docs/M17-VIDEO-METNI.md)
 - [ABD proxy'si ve sayfa türleri: bölge engeli](docs/M18-ABD-PROXY-BOLGE-ENGELI.md)
+- [İş akışı katmanları: proje ve video; adımlar, durumlar, onay bileşeni](docs/M21-IS-AKISI-KATMANLAR.md)
 
 ## Geliştirme
 
@@ -158,6 +159,56 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 **Videolar** ekranında (İçerik atölyesi) bölge (30A geneli ya da bir mahalle), isteğe bağlı içerik ailesi ve not seçilip **Konu ve başlık önerisi al** düğmesine basılır. Program bilgisayardaki Claude Code'u arka planda çağırır: Claude kanal planını, kanal araştırmasını, verinin yazar özetlerini, şablonları ve daha önce önerilen başlıkları okur ve 8–12 başlık önerir (İngilizce, Türkçe karşılığıyla; her biri için neden önerildiği, izleyicinin sorusu, kanca, kanıtlarıyla içerik planı, eksik veri, şablon ve kapak fikri). İlerleme İşler panelinde görünür. Öneriler onay ekranında önce liste olarak görünür; bir başlığa tıklanınca ayrıntısı açılır. **Bu başlığı seç** başlığı video kaydı yapar; **Düzeltme iste** notla yeni bir çalışma açar; **Reddet** çalışmayı kapatır. Video kaydından **Kanıt paketi üret** ile kaydın şablonuyla paket kurulur; paketin ve yazar özetinin başında videonun başlığı, sorusu, kancası ve içerik planı yazar.
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model ve efor (v0.20.0'dan beri tur sınırı yok; yerine son çalışmaların ortanca harcaması, çıktı varsayımı ve token sınırları). Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
+
+## Proje ve video katmanları · v0.22.0
+
+Program iki katmandır ve katmanlar karışmaz (GÖREV-21). Aşağıdaki eski bölümlerde geçen "video seçici", "Videolar ekranı", "Ayarlar → Tonlar",
+"Metni yaz" ve "Bu tonla devam et" gibi yollar bu sürümden önceki düzeni anlatır; güncel yerler bu bölümdedir. Ayrıntı:
+[M21](docs/M21-IS-AKISI-KATMANLAR.md).
+
+**Video açık değilken sol menüde yalnız proje ekranları vardır** (en altta Ayarlar):
+
+- **Veri** — sekmeler: *Kaynaklar*, *Toplama*, *Kalite*, *Kanıt paketi*, *Okuma denemeleri* (eklentinin deneme okuması, ısınma listesi, proxy'nin
+  deneme okuması ve bölge engelli alan adları; bunlar eskiden Ayarlar'daydı).
+- **Konu bankası** — **Öneri al** (Claude 8–12 başlık önerir) ve **Kendi başlığını değerlendir**; öneri çalışmaları ve adayları (Türkçesi
+  büyük, İngilizcesi küçük). Her adayda **Bu başlıkla video aç**: video açılır, aday "kullanıldı" olur ve hangi videoda kullanıldığı yazar;
+  öbür adaylar havuzda kalır.
+- **Kanal** — Talimatlar, Tonlar, Uyarı ifadeleri (işletme adlarıyla), Başlık eki. Bunlar kanalın içerik kurallarıdır; eskiden Ayarlar'daydı.
+  Eski adresler (`#settings/tonlar` gibi) yeni yerlerine yönlenir.
+- **Videolar** — projenin videoları (başlığın Türkçesi büyük, İngilizcesi küçük; oluşturma tarihi; adım ilerlemesi, ör. "3/8"), **Yeni video**
+  (isteğe bağlı çalışma adıyla; başlık 1. adımda seçilir ya da yazılır), **Arşive kaldır** ve **Arşivdekileri göster**. Silme yoktur.
+
+**Bir video açılınca sol menüde yalnız o videonun sekiz adımı vardır**; en üstte videonun adı ve **Videoyu kapat**, altında daraltılmış
+**← Proje** satırı. Program bir dahaki açılışta açık videoyla açılır.
+
+| No | Adım | Ne yapılır | Onay |
+|---|---|---|---|
+| 1 | Başlık ve vaat | Başlık, Türkçesi, izleyicinin sorusu ve vaat okunur | Evet |
+| 2 | Veri paketi | **Veri paketini üret** (Claude çalışmaz) | — |
+| 3 | Plan | **Planı çıkar**; plan Türkçe okunur | Evet |
+| 4 | Yazım | Tonlar seçilir, **Yazımı başlat** | — |
+| 5 | Kontrol ve ton seçimi | Denetim bulguları ve tonların karşılaştırması; onaylarken devam edilecek ton seçilir | Evet |
+| 6–8 | Yayın paketi, Seslendirme, Kurgu paketi | Henüz yok: "Sonraki görevde gelecek" | — |
+
+Adımların durumları: bekliyor, hazır, çalışıyor, onay bekliyor, onaylandı, tamamlandı, hata, eskidi. Bir adım onaylanmadan sonraki başlamaz;
+**plan onaylanmadan yazım başlamaz** ("Plandan sonra dur" ayarı kalktı). Onaylanan bir çıktı değişince sonraki adımlar "eskidi" olur ve sebebi
+yazar ("Plan onayı değişti."); adımı yeniden çalıştırırsınız ya da **Bu değişiklik etkilemiyor** dersiniz. Program yarıda kapanırsa adım
+"hata" olur ve **Kaldığı yerden sürdür** ile devam eder.
+
+**Onay her yerde aynıdır** (1, 3 ve 5. adım): not alanı ve üç düğme. **Onayla** adımı onaylar. **Düzeltme iste** notunuzu, adım yeniden
+çalıştırılırken Claude'a "kullanıcının düzeltme notu" olarak verir (talimat dosyaları değişmez; 5. adımda not 4 · Yazım adımını hazır yapar).
+**Reddet** adımı hazır durumuna döndürür (1. adımda başlık seçimi kalkar).
+
+**Claude'un harcaması her Claude adımında aynı yerdedir:** düğmenin üstünde tahmin (kaç çağrı, okunacak ve yazılacak token, model), **Başlat**
+onayı, iş sürerken o ana kadarki harcama ve **İptal** (iptal edilen iş kayda "iptal edildi" diye düşer, harcaması sayılır), bitince gerçek ile
+tahmin yan yana. 3 ve 4. adımda **halka tablosu** her halkanın durumunu, çağrı sayısını, gerçek ve tahmini tokenini gösterir.
+
+**Ayarlar** yalnız program ayarıdır: Kayıt klasörü; Claude (bütün Claude adımlarının modeli, eforu ve sınırları tek tabloda, adımın ekrandaki
+adı ve ait olduğu yerle); Claude kullanımı; Tarayıcı eklentisi (yalnız eşleşme kodu ve bağlantı durumu); ABD proxy'si (yalnız bağlantı bilgileri
+ve parolanın kasada olup olmadığı); Hakkında.
+
+**İlk videoyu açmaktan plan onayına kadar:** Sol menü → Konu bankası → bir çalışmanın adayında **Bu başlıkla video aç** → 1 · Başlık ve vaat →
+**Onayla** → 2 · Veri paketi → **Veri paketini üret** → 3 · Plan → **Planı çıkar** → **Başlat** → plan gelince **Onayla**.
 
 ## Yol mesafesi, sürüş süresi ve uçak bileti ortalaması · v0.21.0
 

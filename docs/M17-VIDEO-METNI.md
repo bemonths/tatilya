@@ -1,5 +1,25 @@
 # M17 — Video metni: yazım zinciri, tonlar, ton yönetimi ve program denetimi (GÖREV-15, v0.17.0, şema 17)
 
+## GÖREV-21 ile değişenler (16 Kasım 2026, v0.22.0)
+
+Yazım zincirinin içeriği, talimatları ve tek çağrı düzeni değişmedi. Değişen, zincirin **adımlara bölünmesi ve ekranlarıdır**
+(`docs/M21-IS-AKISI-KATMANLAR.md`):
+
+- Tek "Video metni" adımı üç adım oldu: **3 · Plan** (planlayıcı ve eleştirmen), **4 · Yazım** (bölümler … çeviri; tonlar bu adımın
+  ekranında seçilir), **5 · Kontrol ve ton seçimi** (programın denetimi, işletme adı denetimi, tonların karşılaştırması).
+- **Zincir plan onaylanmadan yazmaz.** "Plandan sonra dur" ayarı kalktı; zincir planı yazınca her zaman `plan_hazir` ile durur ve 3. adım
+  "onay bekliyor" olur. "Metni yaz" düğmesi yerine 3. adımda **Planı çıkar**, 4. adımda **Yazımı başlat** vardır
+  (`POST /api/videos/<video>/plan`, `…/yazim`; eski `POST …/metin` ve `…/yeniden-planla` kalktı). Planın çalışması yazıma aynı çalışmayla
+  devam eder; yeniden yazım onaylı planı taşıyan yeni bir çalışma açar.
+- "Bu tonla devam et" düğmesi kalktı: ton, 5. adımdaki ortak onay bileşeninde **Onayla** ile birlikte seçilir. 5. adımda **Düzeltme iste**
+  notu 4. adımı hazır yapar; not yeniden yazımda bölüm yazarına, birleştirmeye, giriş ve kapanışa ve son okumaya
+  `kullanicinin_duzeltme_notu.md` dosyasıyla verilir. 3. adımda **Düzeltme iste** planı aynı dosya ve `onceki_plan.json` ile yeniden yazdırır.
+- "Devam" düğmesinin adı **Kaldığı yerden sürdür**; "Durdur" yerine adım ekranındaki **İptal** (durdurulan çalışma listelerde
+  "iptal edildi" diye görünür, harcaması sayılır).
+- 3 ve 4. adım ekranında **halka tablosu** vardır: her halkanın durumu, çağrı sayısı, gerçek ve tahmini tokeni; altında toplam ve tahmin.
+- Tonlar ve uyarı ifadeleri **Kanal** ekranındadır (eskiden Ayarlar → Tonlar).
+- Aşağıdaki "İş akışındaki durumlar" tablosu GÖREV-15 dönemini anlatır; durumlar artık saklanır ve M21 §4'teki kurallarla değişir.
+
 ## Amaç
 
 İş akışının 4. adımı "Video metni" artık çalışıyor. Seçilen başlık ve video paketiyle program, Claude'u adım adım çağırarak
@@ -77,7 +97,8 @@ Bir metin çalışması İşler panelinde tek bir iş olarak görünür (iş tü
      çalışma hata verir. Öbür bulgular uyarıdır.
    - Plan eleştirmeni (`metin_plan_elestiri`) planı okur. `yeniden_yap` derse plan notlarla birlikte planlayıcıya bir kez geri gider.
      İkinci plan program denetiminden yine geçer ama yeniden eleştirilmez.
-   - Plan kesinleşir ve çalışmada saklanır. Ayarlar → Claude'daki "Plandan sonra dur" açıksa çalışma burada durur. Kullanıcı planı
+   - Plan kesinleşir ve çalışmada saklanır. GÖREV-21'den beri çalışma burada her zaman durur ve kullanıcının plan onayını bekler
+     (eskiden yalnız Ayarlar → Claude'daki "Plandan sonra dur" açıksa dururdu). Kullanıcı planı
      görür ve "Devam" ile sürdürür.
 3. **Her ton için ayrı metin.** Seçilen her ton için sırayla:
    1. bölüm yazıcıları (`metin_bolum`) yan yana çalışır; aynı anda en çok "Aynı anda en çok Claude oturumu" kadar oturum açılır;

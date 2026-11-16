@@ -16,12 +16,13 @@
 | Stable branch | `main` @ `a49c6d0` (GÖREV-17: arayüz düzeltmeleri; 11 Kasım 2026'da GÖREV-18 Adım 1 ile fast-forward; uygulama 0.19.0, şema 19) |
 | Stable tag | `v0.19.0` → `a49c6d0` — **v0.19.0 — arayüz düzeltmeleri: İşler panelinde temizleme, Ayarlar düzeni, tek pencere** (önceki: `v0.18.0` → `988ca8d`, `v0.17.0` → `6cfab84`, `v0.16.0` → `984ca72`, `v0.15.0` → `a59ec65`, `v0.14.0` → `9adc235`, `v0.13.0` → `4187c1c`, `v0.12.0` → `fdd59f6`, `v0.11.0` → `9f2d65a`, `v0.10.0` → `1f4e80b`, `v0.9.0` → `7110f88`, `v0.8.0` → `de6685f`, `v0.7.0` → `7f25e3c`, `v0.6.0` → `a938367`) |
 | Stable uygulama sürümü / şema | `0.19.0` / `19` (main ve `v0.19.0`) |
-| En yeni görev dalı | `gorev-20-eksik-veri` — GÖREV-20: yol üzerinden mesafe ve tahmini sürüş süresi, BTS uçak bileti ortalaması, okunamayan kiralama şirketlerinin incelemesi, kanıt paketinde yeni bloklar; uygulama `0.21.0`, şema `20`; main'e alınmadı (main = `v0.20.0` @ `7af4f1f`, GÖREV-18 ve GÖREV-19 dahil). Ayrıntı §9.15 |
+| En yeni görev dalı | `gorev-21-katmanlar` — GÖREV-21: program iki katmana ayrıldı (proje katmanı: Veri, Konu bankası, Kanal, Videolar; video katmanı: videonun sekiz adımı); adım durumları saklanıyor (bekliyor … eskidi), 1, 3 ve 5. adımlarda tek onay bileşeni (Onayla, Düzeltme iste, Reddet), plan onaylanmadan yazım başlamıyor, Ayarlar yalnız program ayarı; uygulama `0.22.0`, şema `21`; main'e alınmadı (main = `v0.21.0` @ `57088be`, GÖREV-20 dahil; 16 Kasım 2026'da GÖREV-21 Adım 1 ile fast-forward) |
+| Önceki görev dalı | `gorev-20-eksik-veri` — GÖREV-20: yol üzerinden mesafe ve tahmini sürüş süresi, BTS uçak bileti ortalaması, okunamayan kiralama şirketlerinin incelemesi, kanıt paketinde yeni bloklar; uygulama `0.21.0`, şema `20`; main'de (`v0.21.0`) |
 | Önceki geliştirme dalı | `gorev-18-token-kontrolu` — Claude adımlarında token kontrolü: bütün adımlar tek çağrılı ve araçsız (malzeme istemin içinde), başlamadan önce tahmin ve onay, tek çağrı ve iş başına token sınırı, tahmin ile gerçek ve kırmızı uyarı, adım başına harcama; işletme adı denetimi; başlık ve kapak uyarıları |
 | Aktif dal durumu | Uygulama `0.20.0`, şema `19` (değişmedi); tek gerçek ölçüm (başlık değerlendirme, geçici kopyada): Opus 111 bin okudu (eskiden 416 bin), Claude Code'un yan Haiku çağrısı ayrıca 105 bin; gerçek veride yalnız açılış (satır değişmedi); main'e alınmadı |
 | Eski araştırma dalı | `v0.7-lodging-inventory` — yalnız konaklama keşif belgeleri; main'e alındı. Adı v0.7.0 sürümüyle ilgili değildir. |
 | Son CI | main ve etiket `v0.19.0` @ a49c6d0: main CI 43053256607 başarılı; etiket CI 43053261163 ve görev dalı CI 43032939565 takıldı (aynı commit bir çalışmada geçiyor, öbüründe bir test bekliyor; GÖREV-18'de iş akışına zaman sınırı ve pytest `faulthandler_timeout` eklendi); görev dalının sonucu `docs/gorevler/GOREV-18/RAPOR.md` içinde |
-| Test tabanı | Görev dalında 1115 Python testi + 120 frontend testi (main: 1095 + 115) |
+| Test tabanı | `gorev-21-katmanlar` dalında 1162 Python testi (2 atlanan) + 135 frontend testi (main, v0.21.0: 1147 + 124) |
 | Gerçek connector'lar | Plaj erişimleri, NWS hava, restoran dizini, mahalle dizini, NCEI iklim normalleri, NDBC deniz suyu sıcaklığı, HURDAT2 kasırga geçişleri (`/2`: yalnız tropikal/subtropikal evreler); Book>Direct konaklama aramaları (main'de `bookdirect-lodging/1`, görev dalında `/2`); görev dalında ayrıca kiralama şirketi fiyatları (`agency-lodging-rates/1`) |
 | Plaj–mahalle eşlemesi | Ayrı, gözden geçirilebilir katman `studio/destinations/thirty_a_beach_neighborhoods.csv`. v0.7.0'da v1, v0.8.0/main'de v3 (9 resmî rehber + 6 ilçe alt bölüm + 16 ilçe alt bölüm (bitişik) + 13 komşu erişimlerle tutarlı + 9 program türetimi; kilitli) |
 | Gerçek veritabanı | 11 Kasım 2026'da (GÖREV-18) tam yedekten (`work/yedek/20261111-2024/`) sonra masaüstü kısayoluyla 0.20.0 ile açıldı; şema değişmedi (19), hiçbir satır değişmedi, `foreign_key_check` boş; Ayarlar → Claude'da token sınırları ve oturum ayarı 6 göründü; Claude çalıştırılmadı, program kapatıldı. Önceki: 11 Ekim 2026'da (GÖREV-16) tam yedekten (`work/yedek/20261011-1621/`) sonra masaüstü kısayoluyla açılıp normal kullanımla şema 18'e yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v17-*`); yalnız yeni `region_blocked_hosts` tablosuna ham kayıtlardan 3 satır (cvs.com, hcafloridahealthcare.com, publix.com), eski satırlar aynı; proxy girilmedi, gerçek siteye gidilmedi. Şema 18 dosyasını main'deki 0.17.0 açmaz; program bu dal main'e alınana kadar `gorev-16-eklenti-proxy` dalından çalıştırılır. Önceki: 11 Ekim 2026'da (GÖREV-15) tam yedekten (`work/yedek/20261011-0211/`) sonra masaüstü kısayoluyla açılıp normal kullanımla şema 17'ye yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v16-*`); dört yeni tablo boş, eski satırlar aynı; Claude çalışmadı, başlık seçilmedi, video kaydı yok. Daha önce: 10 Ekim 2026'da (GÖREV-14) tam yedekten (`work/yedek/20261010-2330/`) sonra masaüstü kısayoluyla açılıp normal kullanımla şema 16'ya yükseltildi (uygulamanın kendi yedeği `data/backups/studio-v15-*`); bir kullanım ölçümü ve bir başlık değerlendirme çalışması (Rosemary Beach'e köpekle gitme fikri; "dolmuyor"), veri özetleri için iki kanıt paketi; toplayıcı çalışmadı, başlık seçilmedi. GÖREV-13'te şema 15 ve iki konu ve başlık çalışması (ikisi de onay bekliyor). |
@@ -315,6 +316,8 @@ Video için yapılacak her şey programın içinden yapılır (kullanıcı karar
 
 ### 9.13c Masaüstü programı, iş akışı paneli, Claude kullanımı ve talimatlar, kendi başlık, içerik planından video paketi (GÖREV-14, şema 16)
 
+> **GÖREV-21'den beri (şema 21) sol menü ve iş akışı değişti:** aşağıdaki "video seçici", "ADIMLAR/VERİ grupları" ve "kayıtlardan hesaplanan durumlar" anlatımı GÖREV-14–20 dönemini anlatır. Güncel düzen §9.16'da ve `docs/M21-IS-AKISI-KATMANLAR.md` içindedir.
+
 Masaüstü programı §5'te. Sol menüde videonun iş akışı (`studio/workflow.py`, `studio/web/workflow.js`): üst çubukta video seçici ve
 "●●○○○○○○ 2/8 adım"; ADIMLAR grubu (1 Veri · 2 Konu ve başlık · 3 Veri paketi · 4 Video metni · 5 Kontrol · 6 Görsel plan · 7 Video
 üretimi · 8 Yayın hazırlığı) ve her adımın canlı durumu; durumlar ayrı dosyada tutulmaz, her seferinde kayıtlardan hesaplanır (video
@@ -474,6 +477,39 @@ Kanalın ilk videosundan önce üç eksik ele alındı (`gorev-20-eksik-veri`, u
 - **Gerçek veri (16 Kasım 2026):** tam yedekten (`work/yedek/20261116-1805/`) sonra program gerçek veri klasörüyle açıldı (şema 19 → 20, uygulamanın kendi yedeği
   `data/backups/studio-v19-*`), yalnız yol mesafesi ve uçak bileti toplayıcıları çalıştırıldı; kiralama fiyat çekimini kullanıcı programdan
   başlatacak. Ayrıntı ve tablolar: `docs/gorevler/GOREV-20/RAPOR.md`.
+
+### 9.16 İş akışı katmanları: proje ve video; tek adım düzeni ve tek onay bileşeni (GÖREV-21, şema 21)
+
+Program iki katmandır ve katmanlar karışmaz (kullanıcı kararı, 16 Kasım 2026; örnek: Rota Stüdyo). **Proje katmanı** bir kez yapılan ve bütün
+videoların kullandığı işleri tutar; sol menüde video açık değilken yalnız dört ekran görünür: **Veri** (sekmeler: Kaynaklar, Toplama, Kalite,
+Kanıt paketi, Okuma denemeleri), **Konu bankası** (başlık önerisi "Öneri al", kendi başlığın değerlendirmesi, çalışmalar ve adayları, "Bu
+başlıkla video aç"), **Kanal** (Talimatlar, Tonlar, Uyarı ifadeleri, Başlık eki) ve **Videolar** ("Yeni video", "Arşive kaldır",
+"Arşivdekileri göster"; silme yok); en altta **Ayarlar**. **Video katmanı**: video açılınca sol menüde videonun adı, "Videoyu kapat",
+daraltılmış "← Proje" satırı ve yalnız o videonun sekiz adımı görünür: 1 Başlık ve vaat · 2 Veri paketi · 3 Plan · 4 Yazım · 5 Kontrol ve ton
+seçimi · 6 Yayın paketi · 7 Seslendirme · 8 Kurgu paketi (6–8 henüz yok: "Sonraki görevde gelecek"; stok görüntü, animasyon ve kurgu Kurgu
+Motoru'nda yapılır). Üst çubukta video seçici yoktur; açık video sunucuda saklanır (`project_state`) ve bir dahaki açılışta hatırlanır.
+
+Adım durumları artık saklanır (`video_steps`; `studio/workflow.py`, Rota Stüdyo `rota/state.py`'den uyarlandı): bekliyor, hazır, çalışıyor,
+onay bekliyor, onaylandı, tamamlandı, hata, eskidi. İlk adım hazır başlar; bir adım onaylanınca (onaysız adım bitince) sonraki hazır olur;
+onaylanan çıktı değişince sonraki adımlar Türkçe sebebiyle eskir ("Plan onayı değişti.") ve kullanıcı yeniden çalıştırır ya da "Bu değişiklik
+etkilemiyor" der (adım önceki durumuna döner, not `video_step_log` günlüğüne yazılır); yarıda kapanan adım "hata" olur ve kaldığı yerden
+sürdürülür. 1, 3 ve 5. adımlarda aynı onay bileşeni vardır: **Onayla**, **Düzeltme iste** (not, adım yeniden çalışırken Claude'a "kullanıcının
+düzeltme notu" malzemesi olarak verilir; talimat dosyası değişmez; 5. adımda not 4. adımı hazır yapar), **Reddet** (adım hazır; 1. adımda
+başlık seçimi kalkar). "Plandan sonra dur" ayarı kalktı: yazım zinciri plan onaylanmadan 4. adıma geçmez. Her adımın çıktısı dosyadır ve
+"Sürümler" bölümünde görülür.
+
+Claude adımlarında maliyet her yerde aynı yerde ve biçimdedir (`studio/web/claude-step.js`): düğmenin üstünde tahmin (çağrı, okunan ve
+yazılan token, model), "Başlat" onayı, iş sürerken o ana kadarki harcama ve "İptal" (iptal edilen iş kayda "iptal edildi" diye düşer,
+harcaması sayılır), 3 ve 4. adımda halka tablosu (durum, çağrı, gerçek ve tahmini token; toplam ve tahmin). **Ayarlar yalnız program
+ayarıdır**: Kayıt klasörü, Claude (bütün Claude adımları tek tabloda, ekrandaki adı ve ait olduğu yerle), Claude kullanımı, Tarayıcı eklentisi
+(yalnız eşleşme kodu ve bağlantı), ABD proxy'si (yalnız bağlantı bilgileri ve parolanın kasada olup olmadığı), Hakkında. Taşınan bölümlerin eski
+adresleri (`#settings/tonlar` gibi) yeni yerlerine yönlenir.
+
+Şema 21 (`studio/migration_v21.py`): `videos` yeniden kuruldu (başlıksız video açılabilir; `name`, `archived_at`), yeni tablolar `video_steps`,
+`video_step_log`, `project_state`; başlık çalışmaları ve adayları destinasyona bağlı kalır, video yalnız kullandığı adayı gösterir. Gerçek
+veride 16 Kasım 2026'da tam yedekten (`work/yedek/`) sonra uygulamanın normal açılışıyla çalıştı; satır sayıları aynı, dört başlık çalışması
+Konu bankasında. Bu görevde Claude çalıştırılmadı. Ayrıntı: `docs/M21-IS-AKISI-KATMANLAR.md`, rapor `docs/gorevler/GOREV-21/RAPOR.md`.
+
 
 ### 9.14 Referans tablosu genişlemesi ve trafik (GÖREV-11)
 
@@ -710,10 +746,7 @@ Ayrıntı: `docs/DEVIR/04_GELISTIRME_TEST_RELEASE_AKISI.md`
 - Otomatik entity matching
 - Mahalle sınırı poligonları (plaj–mahalle eşlemesi ilçe alt bölüm poligonları, komşuluk ve boylam yöntemleriyle ayrı katmandadır; mahalle sınırı yoktur)
 - Metnin Türkçe düzeltme ve İngilizceye uyarlama ekranı (Housing Atlas MS1'den sonraki görevde; video metni GÖREV-15'te var)
-- Kontrol adımı (iş akışının 5. adımı)
-- Görsel plan
-- Video render
-- Yayın paketi
+- Yayın paketi (6. adım), Seslendirme (7. adım), Kurgu paketi (8. adım; Kurgu Motoru'na gidecek paket): adımları menüde var, "Sonraki görevde gelecek" notuyla (GÖREV-21). Görsel plan ve video render bu programın işi değildir (Kurgu Motoru).
 
 ## 15. Sonraki geliştirici / AI için ilk kurallar
 
@@ -764,9 +797,10 @@ Mevcut ayrıntılı domain belgeleri de korunmalıdır:
 - `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`
 - `docs/M19-YOL-MESAFESI.md`
 - `docs/M20-UCAK-BILETI.md`
+- `docs/M21-IS-AKISI-KATMANLAR.md`
 
 ---
 
-**Son güncelleme:** 16 Kasım 2026 (GÖREV-20: §1'de en yeni görev dalı, §9.15, belge indeksi)  
+**Son güncelleme:** 16 Kasım 2026 (GÖREV-21: §1'de en yeni görev dalı, §9.13c notu, §9.16, §14, belge indeksi)  
 **Stable:** main ve etiket v0.18.0 — eklentinin düzeltilmesi ve bölge engeli için ABD proxy'si (`988ca8d`, uygulama 0.18.0)  
 **Aktif geliştirme:** `gorev-17-arayuz` — arayüz düzeltmeleri (İşler panelinde biten işleri kaldırma, Ayarlar'ın bölüm düzeni, bir iş boyunca tek pencere, küçük düzeltmeler); uygulama 0.19.0, şema 19 (yönetici incelemesinde)
