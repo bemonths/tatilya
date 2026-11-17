@@ -236,4 +236,4 @@ fiyat adresi yok, betikler bir kez okundu, site başına bekleme), `docs/DEVIR/0
 
 ## CI sonucu
 
-CI_SONUCU
+- Commit `1c7cbfd` (kod, testler, belgeler ve rapor): çalışma 44130588650 **başarılı** (pytest ve arayüz testleri).
