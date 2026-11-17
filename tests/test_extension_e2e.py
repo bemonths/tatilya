@@ -259,3 +259,76 @@ def test_one_window_for_the_whole_job_and_it_closes_when_the_job_ends(program, t
         finally:
             context.close()
             site.shutdown()
+
+
+def query_site(seen):
+    """A local site that answers the page's own queries (POST) with what it got: method, content type and body."""
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = b"<!doctype html><html><head><title>Ev sayfasi</title></head><body><form id='pdpDatesForm'></form></body></html>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length") or 0)
+            body = self.rfile.read(length)
+            seen.append((self.command, self.path, self.headers.get("Content-Type"), self.headers.get("X-Requested-With"), body))
+            answer = b"No" if b"checkin=01%2F01%2F2027" in body else b"<div class='pdp-quote-total'>ok</div>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(answer)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def test_the_extension_sends_only_allowed_queries_with_exactly_the_given_fields(program, tmp_path):
+    """GÖREV-25: the page's own query from the extension's tab on the site: an allowed POST goes with exactly the given fields (the
+    page's form encoding); a forbidden path, a query off the list and a plain request that is not a GET are refused by the extension
+    itself (sent past the program's own check here), and nothing reaches the site for them. Local pages only."""
+    from playwright.sync_api import sync_playwright
+    app, port = program
+    bridge = app.state.extension
+    seen = []
+    site = query_site(seen)
+    base = f"http://127.0.0.1:{site.server_address[1]}"
+    fields = ["checkin", "checkout", "propertyID", "roomTypeID", "propertyName", "hash"]
+    bridge.queries = lambda: [{"alan_adi": "127.0.0.1", "yol": "/ajax/quote", "yontem": "POST", "alanlar": fields, "amac": "fiyat"}]
+    with sync_playwright() as playwright:
+        context = extension_context(playwright, tmp_path)
+        try:
+            pair_extension(context, bridge, port).close()
+            session = bridge.open("127.0.0.1", purpose="sorgu denemesi")
+            page = session.page(f"{base}/ev", {"saniye": 1})
+            given = {"checkin": "01/09/2027", "checkout": "01/16/2027", "propertyID": "1806", "roomTypeID": "", "propertyName": "Sea & Vie", "hash": ""}
+            priced = session.query("/ajax/quote", "POST", given)
+            taken = session.query("/ajax/quote", "POST", {**given, "checkin": "01/01/2027"})
+            with pytest.raises(ext.QueryRefused):
+                session.query("/ajax/addToCart", "POST", {"x": "1"})                   # the program's own check
+            raw = lambda **item: session.submit({"tur": "sorgu", "adres": base, "alan_adi": "127.0.0.1", **item}, lambda: False, 60)
+            cart = raw(yol="/ajax/addToCart", yontem="POST", alanlar={"x": "1"})
+            unlisted = raw(yol="/ajax/other", yontem="POST", alanlar={"x": "1"})
+            extra = raw(yol="/ajax/quote", yontem="POST", alanlar={**given, "email": "a@b.c"})
+            plain = session.submit({"tur": "istek", "yontem": "POST", "adres": f"{base}/ajax/quote", "basliklar": {}, "govde": "a=1"}, lambda: False, 60)
+            session.close()
+            assert page["durum"] == "tamam"
+            assert priced["durum"] == "tamam" and priced["govde"] == b"<div class='pdp-quote-total'>ok</div>" and taken["govde"] == b"No"
+            assert priced["sorgu"]["yontem"] == "POST" and priced["sorgu"]["alanlar"] == given and priced["sorgu"]["zaman"]
+            assert len(seen) == 2                                                     # nothing else reached the site
+            method, path, kind, xhr, body = seen[0]
+            assert (method, path, xhr) == ("POST", "/ajax/quote", "XMLHttpRequest") and kind.startswith("application/x-www-form-urlencoded")
+            assert body == b"checkin=01%2F09%2F2027&checkout=01%2F16%2F2027&propertyID=1806&roomTypeID=&propertyName=Sea+%26+Vie&hash="
+            assert cart["durum"] == "reddedildi" and "yasak listede" in cart["not"]
+            assert unlisted["durum"] == "reddedildi" and "izinli sorgu listesinde değil" in unlisted["not"]
+            assert extra["durum"] == "reddedildi" and "alanları" in extra["not"]
+            assert plain["durum"] == "reddedildi" and "yalnız GET" in plain["not"]
+        finally:
+            context.close()
+            site.shutdown()

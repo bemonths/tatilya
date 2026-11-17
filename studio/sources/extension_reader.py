@@ -128,7 +128,11 @@ class ExtensionPages:
 
 
 class ExtensionTransport:
-    """Requests made with the page's own fetch inside the extension's tab on the company's site (same origin as the page)."""
+    """Requests made with the page's own fetch inside the extension's tab on the company's site (same origin as the page).
+
+    GÖREV-25: a GET is a plain request; a request that sends fields (POST with form fields) is the page's own query: it goes only when
+    it is on the allowed list (studio.extension_queries), with exactly those fields; otherwise nothing is sent and the adapter gets an
+    AdapterError (recorded on the quote, never fatal for the run)."""
 
     kind = "eklenti"
 
@@ -139,6 +143,8 @@ class ExtensionTransport:
         if params:
             url = str(httpx.URL(url, params=params))
         headers = {k: v for k, v in (headers or {}).items() if k.lower() not in ("user-agent", "referer", "origin", "accept-language", "cookie", "host")}
+        if str(method).upper() != "GET":
+            return self.query(method, url, data, json_body)
         body = None
         if data is not None:
             body = urlencode(data)
@@ -150,6 +156,21 @@ class ExtensionTransport:
             return self.session.request(method, url, headers=headers, body=body, canceled=self.canceled)
         except ExtensionError as exc:
             raise httpx.NetworkError(str(exc)[:200]) from exc
+
+    def query(self, method, url, data, json_body):
+        from ..extension import QueryRefused
+        from .agency_adapters import AdapterError
+        parts = httpx.URL(url)
+        if json_body is not None or parts.query or domain_of(parts.host) != self.session.domain:
+            raise AdapterError("Eklenti yalnız izinli sorguyu (sitenin kendi adresine, form alanlarıyla) gönderir; bu istek gönderilmedi.")
+        fields = {str(k): str(v) for k, v in (data or {}).items()}
+        try:
+            result = self.session.query(parts.path, method, fields, canceled=self.canceled)
+        except QueryRefused as exc:
+            raise AdapterError(f"Sorgu gönderilmedi: {exc}") from exc
+        except ExtensionError as exc:
+            raise httpx.NetworkError(str(exc)[:200]) from exc
+        return int(result.get("http_durumu") or 0), result.get("son_adres") or url, result.get("basliklar") or {}, result["govde"]
 
     def close(self):
         self.session.close()

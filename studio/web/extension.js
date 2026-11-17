@@ -7,10 +7,19 @@ import {linkSettingsMentions} from "./settings.js";
 // data work and live in Veri → Okuma denemeleri.
 
 const STATE_LABELS={tamam:"okundu",dogrulama:"doğrulama geçilmedi",giris:"giriş gerekiyor",odeme:"ödeme sayfası",izin_yok:"izin yok",hata:"hata",
-  erisim_reddedildi:"erişim reddedildi",bolge_engeli:"bölge engeli",yonlendi:"başka siteye yönlendi",atlandi:"kullanıcı atladı"};
+  erisim_reddedildi:"erişim reddedildi",bolge_engeli:"bölge engeli",yonlendi:"başka siteye yönlendi",atlandi:"kullanıcı atladı",
+  reddedildi:"sorgu reddedildi"};
 // GÖREV-16: the page's kind in the trial table
-export const KIND_LABELS={tamam:"tamam",dogrulama:"doğrulama",erisim_reddedildi:"erişim reddedildi",bolge_engeli:"bölge engeli",yonlendi:"başka siteye yönlendi"};
+export const KIND_LABELS={tamam:"tamam",dogrulama:"doğrulama",erisim_reddedildi:"erişim reddedildi",bolge_engeli:"bölge engeli",yonlendi:"başka siteye yönlendi",
+  sorgu:"sayfanın kendi sorgusu"};
 const METHOD_LABELS={eklenti:"eklenti",proxy:"proxy","tarayici+proxy":"tarayıcı + proxy"};
+
+/** GÖREV-25: the page's own queries the extension may send (the program's allowed list; read-only here). */
+export function queryList(queries) {
+  if(!queries?.length) return "";
+  return `<p><strong>İzinli sorgular</strong> <small class="muted">Eklenti yalnız bu sorguları, sitenin kendi sekmesinden ve yalnız bu alanlarla gönderir; giriş, hesap, ödeme, rezervasyon, sepet ve iletişim adresleri her zaman reddedilir.</small></p>
+    <ul class="extension-queries">${queries.map(q=>`<li><span class="tag">${esc(q.alan_adi)}</span> <code>${esc(q.yontem)} ${esc(q.yol)}</code> · ${esc(q.amac || "")}${q.alanlar?`<small class="source-host">alanlar: ${esc(q.alanlar.join(", "))}</small>`:""}</li>`).join("")}</ul>`;
+}
 
 /** GÖREV-17: the kind of a trial row in words. A region-blocked site says how it ended: "bölge engeli · proxy'yle okundu",
  *  "bölge engeli · proxy'yle de okunamadı" or "bölge engeli · ABD proxy'si tanımlı değil" (the same words as the job log). */
@@ -72,6 +81,7 @@ export function extensionReading(view, {message="", trial=null, problems=null}={
     <p class="stage-note"><span class="note-mark">●</span><span><strong>Bağlantı:</strong> <span class="tag ${state.tone}" id="extension-connection">${esc(state.text)}</span> · eşleştirme kodu <a href="#settings/eklenti">Ayarlar → Tarayıcı eklentisi</a> bölümünde.</span></p>
     <p><strong>İzin verilen siteler:</strong> ${list(view.izinli_alan_adlari)}</p>
     <p><strong>İzin bekleyen siteler:</strong> ${list(view.izin_bekleyen_alan_adlari)} <small class="muted">İzni Chrome'da eklenti simgesine tıklayıp “İzin ver” ile siz verirsiniz.</small></p>
+    ${queryList(view.izinli_sorgular)}
     <form id="extension-speed" class="toolbar video-form"><label>Aynı sitede iki sayfa arası en az (saniye)<input type="number" id="extension-gap" min="${view.aralik_sinirlari[0]}" max="${view.aralik_sinirlari[1]}" value="${esc(view.aralik_saniye)}"></label><button type="submit">Hızı kaydet</button></form>
     <div class="decision-actions"><button class="primary" id="extension-trial">Deneme</button><small class="muted">Eklentiyle programın kendi yerel deneme sayfasını açar (gerçek bir site değildir).</small></div>
     ${trial?`<div class="extension-trial-result">${trial.error?`<p class="stage-note claude-warning">${esc(trial.error)}</p>`:`<p><span class="tag ${trial.durum==="tamam"?"green":"warm"}">${esc(STATE_LABELS[trial.durum] || trial.durum)}</span> ${esc(trial.baslik || "")} · ${Math.round((trial.bayt||0)/1024)} KB · SHA-256 <code>${esc((trial.sha256||"").slice(0,16))}</code><small class="source-host">${esc(trial.dosya || "")}</small></p>`}</div>`:""}

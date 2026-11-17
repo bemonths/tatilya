@@ -8,7 +8,10 @@
 // gereken bir doğrulama çıkınca öne gelir. Program işin bittiğini (ya da iptal edildiğini) söyleyince pencere kapanır; program
 // kapanırsa da kapanır.
 // İş sürerken programa en çok 5 sn arayla ne yaptığını bildirir (sayfa açılıyor, sayfa okunuyor, doğrulama bekleniyor, bekleme).
-// Ne yapmaz: tıklamaz, yazı yazmaz, form doldurmaz, çerez/geçmiş/yer imi/indirme okumaz, CDP (debugger) kullanmaz, proxy kullanmaz ve
+// Sayfanın kendi sorgusu (GÖREV-25, kullanıcı kararı 17 Kasım 2026): programın izinli listesindeki bir sorguyu (fiyat sorusu, ev
+// listesinin devamı) o sitenin kendi sekmesinden, sayfanın betiği gibi ve yalnız verilen alanlarla gönderir; giriş, hesap, ödeme,
+// rezervasyon, sepet, iletişim ve kişisel bilgi adreslerini reddeder (logic.js queryRefusal).
+// Ne yapmaz: tıklamaz, yazı yazmaz, sayfadaki formu doldurmaz, çerez/geçmiş/yer imi/indirme okumaz, CDP (debugger) kullanmaz, proxy kullanmaz ve
 // Chrome'un proxy ayarına dokunmaz. İzin verilmemiş bir siteye gitmez; giriş ve ödeme sayfalarını okumadan atlar. Doğrulama sayfasında
 // pencereyi öne getirir, bildirim gösterir ve kullanıcıyı en çok 15 dk bekler (kullanıcı "Bu sayfayı atla" diyebilir); erişim reddedildi
 // ve bölge engeli sayfalarında beklemez. İzin verilmemiş başka bir siteye yönlenen sayfa "başka siteye yönlendi" diye bildirilir.
@@ -182,7 +185,8 @@ async function runJob(port, kod, job) {
       let result;
       try {
         const win = await ensureWindow(L.windowKey(job));      // the same window and tab through the whole job; opened again only if the user closed it
-        result = item.tur === "istek" ? await doRequest(win.tabId, item, pacer) : await doPage(port, kod, win.id, win.tabId, item, pacer, job);
+        result = item.tur === "sorgu" ? await doQuery(win.tabId, item, pacer, job)
+          : item.tur === "istek" ? await doRequest(win.tabId, item, pacer) : await doPage(port, kod, win.id, win.tabId, item, pacer, job);
       } catch (error) {
         result = {durum: "hata", not: String(error?.message || error).slice(0, 300)};
       }
@@ -314,6 +318,9 @@ async function doPage(port, kod, windowId, tabId, item, pacer, job) {
 /** A request with the page's own fetch from the extension's tab on that site (the tab is first opened on the site if it is elsewhere). */
 async function doRequest(tabId, item, pacer) {
   const target = new URL(item.adres);
+  // GÖREV-25: a plain request only reads (GET: a document, a JSON address); anything that sends fields is a query ("sorgu") and must
+  // be on the program's allowed list.
+  if (String(item.yontem || "GET").toUpperCase() !== "GET") return {durum: "reddedildi", not: "Eklenti yalnız GET isteği yapar; alan gönderen istek izinli sorgu olmalı."};
   if (!(await permitted(L.domainOf(target.href)))) return {durum: "izin_yok", not: `${target.hostname} için izin yok.`};
   const tab = await chrome.tabs.get(tabId);
   let here = null;
@@ -333,6 +340,43 @@ async function doRequest(tabId, item, pacer) {
       return {status: response.status, url: response.url, headers: Object.fromEntries(response.headers.entries()), body: btoa(binary)};
     }});
   return {durum: "tamam", http_durumu: result.status, son_adres: result.url, basliklar: result.headers, govde_base64: result.body};
+}
+
+/** GÖREV-25: the page's own query (a price question, the next part of a listing) sent with the page's fetch from the extension's tab on
+ *  that site: only a query on the program's allowed list (job.izinli_sorgular), never a forbidden address, only the given fields,
+ *  only to the tab's own origin. The tab is first opened on the site (item.sayfa, else the site's home page) if it is elsewhere. */
+async function doQuery(tabId, item, pacer, job) {
+  const query = {alan_adi: item.alan_adi, yol: item.yol, yontem: item.yontem, alanlar: item.alanlar};
+  const refused = L.queryRefusal(query, job.izinli_sorgular);
+  if (refused) return {durum: "reddedildi", not: refused};
+  const domain = L.domainOf(item.alan_adi);
+  if (!(await permitted(domain))) return {durum: "izin_yok", not: `${domain} için izin yok.`};
+  let tab = await chrome.tabs.get(tabId);
+  if (L.domainOf(tab.url || "") !== domain) {
+    const start = item.sayfa && L.domainOf(item.sayfa) === domain ? item.sayfa : `https://${domain}/`;
+    await pace(pacer, start);
+    await setStage("aciliyor", start);
+    await navigate(tabId, start);
+    tab = await chrome.tabs.get(tabId);
+  }
+  let origin = "";
+  try { origin = new URL(tab.url).origin; } catch { origin = ""; }
+  if (L.domainOf(origin) !== domain) return {durum: "yonlendi", not: `Sekme ${L.domainOf(origin) || "başka bir adres"} adresinde; sorgu gönderilmedi.`};
+  const request = L.queryRequest(origin, query);
+  await pace(pacer, origin);
+  await setStage("okunuyor", request.url);
+  const sent = new Date().toISOString();
+  const [{result}] = await chrome.scripting.executeScript({target: {tabId}, world: "MAIN", args: [request.url, request.method, request.headers, request.body],
+    func: async (url, method, headers, body) => {
+      const response = await fetch(url, {method, headers, body: body === null ? undefined : body, credentials: "same-origin", redirect: "follow"});
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return {status: response.status, url: response.url, headers: Object.fromEntries(response.headers.entries()), body: btoa(binary)};
+    }});
+  if (L.domainOf(result.url) !== domain) return {durum: "yonlendi", not: `Sorgunun cevabı başka siteye yönlendi: ${L.domainOf(result.url)}`};
+  return {durum: "tamam", http_durumu: result.status, son_adres: result.url, basliklar: result.headers, govde_base64: result.body,
+          gonderilen: {yontem: request.method, adres: request.url, alanlar: item.alanlar, zaman: sent}};
 }
 
 // The popup asks the worker to pair (the code is checked by the program), to look for work now, or to skip the page waiting for

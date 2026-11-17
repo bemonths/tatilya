@@ -119,10 +119,22 @@ EXTENSION_TRIAL_SITES = (
     ("publix.com", "https://www.publix.com/locations", "süpermarket zinciri"),
     ("winndixie.com", "https://www.winndixie.com/locator", "süpermarket zinciri"),
     ("thefreshmarket.com", "https://www.thefreshmarket.com/your-market/store-locator", "süpermarket zinciri"),
-    # GÖREV-16/20/24: realjoy.com's 30A listing page. GÖREV-24 (17 November 2026) read, through this trial, the listing page and the
-    # three scripts it loads (z_pdp.js, datepicker.js, z_global.js): the price comes only from a POST (/ajax/quote, the dates form), so
-    # no reader is written (docs/M11-KONAKLAMA-FIYATLARI.md). The scripts left the list; the site's pages stay EXTENSION_TRIAL_GAP_S apart.
-    ("realjoy.com", "https://www.realjoy.com/beach-rentals/30a-vacation-rentals", "kiralama şirketinin 30A ilan listesi (fiyatı POST ile geliyor; okuyucu yok)"),
+    # GÖREV-16/20/24/25: realjoy.com's 30A listing page. GÖREV-24 (17 November 2026) read, through this trial, the scripts of a listing
+    # page (z_pdp.js, datepicker.js, z_global.js: the price is POST /ajax/quote); GÖREV-25 read the listing page's scripts (z_srp.js,
+    # map.js: the next part of the list is POST /ajax/results/scroll). The scripts left the list; the site's pages stay
+    # EXTENSION_TRIAL_GAP_S apart and its query samples (EXTENSION_TRIAL_QUERIES) follow the pages.
+    ("realjoy.com", "https://www.realjoy.com/beach-rentals/30a-vacation-rentals", "kiralama şirketinin 30A ilan listesi"),
+)
+# GÖREV-25: one sample of each allowed query of the page itself (the allowed list is the companies' `extension_queries`), sent by the
+# extension from the site's tab after the pages ("Sorunlu sitelerden birer sayfa dene"). Values are what the page sends: the listing's
+# second part (its home numbers from the listing page of 17 November 2026) and one home's price for one week (home 1806, "Sea La Vie
+# Seaside Main House"; the week of the destination's January window, free in the home's calendar of 17 November 2026).
+EXTENSION_TRIAL_QUERIES = (
+    {"alan_adi": "realjoy.com", "yol": "/ajax/results/scroll", "yontem": "POST", "aciklama": "ev listesinin devamı (2. kısım)",
+     "alanlar": {"page": "2", "propertyIDs": "1806,1451,504,278,191,1701,267,1521,189,1473,105,2176", "sortBy": "Random"}},
+    {"alan_adi": "realjoy.com", "yol": "/ajax/quote", "yontem": "POST", "aciklama": "bir evin bir haftalık fiyatı (1806, 9–16 Ocak 2027)",
+     "alanlar": {"checkin": "01/09/2027", "checkout": "01/16/2027", "propertyID": "1806", "roomTypeID": "",
+                 "propertyName": "Sea La Vie Seaside Main House", "hash": ""}},
 )
 # GÖREV-24: the least time between two trial pages of one site, above the extension's own gap (seconds); realjoy.com answered 429
 EXTENSION_TRIAL_GAP_S = {"realjoy.com": 20}
@@ -265,6 +277,29 @@ AGENCY_SITE_OPTIONS_V23 = {
                 "quotes": True}}},
 }
 AGENCY_SITES_V23 = ()
+# Added by migration v24 (GÖREV-25, 17 November 2026; the user's decision of that day: the extension may send, from the site's own tab,
+# the public queries the page itself sends for its visitor). realjoy.com (ICND booking engine, Track behind it) shows its price only
+# for the dates form's POST /ajax/quote and gives its listing in parts of 12 (POST /ajax/results/scroll); both are the page's own
+# queries (`extension_queries`: the allowed list, with exactly the fields the page sends). The site answers direct requests with 429
+# and verification pages, so it is read only through the user's Chrome extension (`extension_only`): when the extension is not
+# connected the company is skipped in that run and the reason recorded; the program's own browser never sends these queries.
+# `gap_s`: at least 20 s between two requests (one at a time); `retry_429`: on 429 wait Retry-After (else 60 s), at most two retries,
+# then stop the company in that run and keep what was read. The Book>Direct links are its old addresses (`dead_links`); the
+# listings are tied by the address rule to the site's own list.
+AGENCY_SITES_V24 = (
+    ("realjoy.com", "RealJoy Vacations", "realjoy"),
+)
+REALJOY_QUOTE_FIELDS = ["checkin", "checkout", "propertyID", "roomTypeID", "propertyName", "hash"]
+REALJOY_SCROLL_FIELDS = ["page", "propertyIDs", "sortBy"]
+AGENCY_SITE_OPTIONS_V24 = {
+    "realjoy.com": {"protected": 1, "inventory": {
+        "source": "platform", "origin": "https://www.realjoy.com", "list_path": "/beach-rentals/30a-vacation-rentals",
+        "dead_links": "17 Kasım 2026", "extension_only": True, "gap_s": 20, "retry_429": {"wait_s": 60, "retries": 2},
+        "extension_queries": [
+            {"yol": "/ajax/quote", "yontem": "POST", "alanlar": REALJOY_QUOTE_FIELDS, "amac": "fiyat sorusu (ev sayfasının tarih formu)"},
+            {"yol": "/ajax/results/scroll", "yontem": "POST", "alanlar": REALJOY_SCROLL_FIELDS,
+             "amac": "ev listesinin devamı (liste sayfasını kaydırınca)"}]}},
+}
 # Reviewed files read by the restaurant-sites collector (GÖREV-09): the official site found by a web search for restaurants whose
 # directory entry has no working website (accepted only when the site shows the same address or phone), and menu items read by a
 # person from image menus or text-less PDFs, each tied to the document's SHA-256.

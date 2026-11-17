@@ -48,7 +48,7 @@ from urllib.parse import urlsplit
 PAIRING_FILE = "eklenti.json"
 CONNECTED_S = 20.0
 CONNECTED_BUSY_S = 60.0            # while a job runs the extension may be busy with one page for a while; it reports every ≤5 s
-EXPECTED_VERSION = "0.19.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
+EXPECTED_VERSION = "0.20.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
 DEFAULT_GAP_S, MIN_GAP_S, MAX_GAP_S = 8, 3, 120
 VERIFY_WAIT_S = 15 * 60
 PAGE_TIMEOUT_S = VERIFY_WAIT_S + 240
@@ -60,7 +60,8 @@ ORIGIN_PREFIX = "chrome-extension://"
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 HEADER = "x-studio-eklenti"
-RESULT_STATES = ("tamam", "dogrulama", "giris", "odeme", "izin_yok", "hata", "erisim_reddedildi", "bolge_engeli", "yonlendi", "atlandi")
+RESULT_STATES = ("tamam", "dogrulama", "giris", "odeme", "izin_yok", "hata", "erisim_reddedildi", "bolge_engeli", "yonlendi", "atlandi",
+                 "reddedildi")        # GÖREV-25: a query the rules refuse
 KEEP_HTML = ("tamam", "dogrulama", "erisim_reddedildi", "bolge_engeli")      # the page is kept as the raw copy (also as evidence)
 STAGES = ("aciliyor", "okunuyor", "dogrulama", "bekleme")
 MAX_HTML_BYTES = 12_000_000
@@ -86,6 +87,10 @@ def stage_text(stage, now=None):
 
 class ExtensionError(Exception):
     """The extension could not give the page (Turkish reason)."""
+
+
+class QueryRefused(ExtensionError):
+    """GÖREV-25: the query is not on the allowed list or goes to a forbidden address; nothing was sent."""
 
 
 class HandedOver(ExtensionError):
@@ -152,6 +157,29 @@ class Session:
         return (int(result.get("http_durumu") or 0), result.get("son_adres") or url, result.get("basliklar") or {},
                 base64.b64decode(result.get("govde_base64") or ""))
 
+    def query(self, path, method, fields, *, page=None, canceled=lambda: False, timeout=REQUEST_TIMEOUT_S):
+        """GÖREV-25: the page's own query (a price question, the next part of a listing) from the session's tab on its site: only a
+        query on the allowed list (studio.extension_queries), with exactly the given fields. Refused here before it reaches the
+        extension, and again by the extension. Returns the result with "sorgu": {yontem, yol, alanlar, adres, zaman} and "govde" (bytes)."""
+        from . import extension_queries as eq
+        query = {"alan_adi": self.domain, "yol": path, "yontem": str(method).upper(), "alanlar": dict(fields)}
+        refused = eq.refusal(query, self.bridge.allowed_queries())
+        if refused:
+            raise QueryRefused(refused)
+        item = {"tur": "sorgu", **query, "adres": f"https://{self.domain}{path}"}
+        if page:
+            item["sayfa"] = page
+        result = self.submit(item, canceled, timeout)
+        if result.get("durum") == "reddedildi":
+            raise QueryRefused(result.get("not") or "Eklenti sorguyu reddetti.")
+        if result.get("durum") != "tamam":
+            raise ExtensionError(result.get("not") or f"Eklenti sorguyu gönderemedi ({result.get('durum')}).")
+        sent = result.get("gonderilen") if isinstance(result.get("gonderilen"), dict) else {}
+        result["sorgu"] = {"yontem": query["yontem"], "yol": path, "alanlar": query["alanlar"], "adres": sent.get("adres") or item["adres"],
+                           "zaman": sent.get("zaman") or result.get("okundu")}
+        result["govde"] = base64.b64decode(result.get("govde_base64") or "")
+        return result
+
     def submit(self, item, canceled, timeout):
         with self.bridge.lock:
             if self.state == "devredildi":
@@ -203,7 +231,8 @@ class Session:
 
     def view(self):
         return {"id": self.id, "alan_adi": self.domain, "aralik_saniye": self.bridge.gap(), "amac": self.purpose,
-                "dogrulama_bekleme_saniye": VERIFY_WAIT_S, "pencere": self.window_key}
+                "dogrulama_bekleme_saniye": VERIFY_WAIT_S, "pencere": self.window_key,
+                "izinli_sorgular": [q for q in self.bridge.allowed_queries() if q["alan_adi"] == self.domain]}
 
 
 class ExtensionBridge:
@@ -217,6 +246,7 @@ class ExtensionBridge:
         self.pending = {}                      # domain -> first time a job waited for its permission
         self.handed_over = {}                  # job id -> reason
         self.job_alive = None                  # GÖREV-17: job id -> is the job still queued or running? (the app gives it)
+        self.queries = lambda: []              # GÖREV-25: the allowed list of the page's own queries (the app gives it from the configuration)
         self.config = self.load()
 
     # ---- pairing file ----
@@ -253,6 +283,12 @@ class ExtensionBridge:
             self.save(self.config)
             self.last_seen, self.version, self.allowed = None, None, []
             return self.config["kod"]
+
+    def allowed_queries(self):
+        try:
+            return list(self.queries() or [])
+        except Exception:
+            return []
 
     def gap(self):
         value = self.config.get("aralik_saniye")
@@ -338,6 +374,7 @@ class ExtensionBridge:
                     "beklenen_surum": EXPECTED_VERSION, "eski_surum": bool(self.version) and self.version != EXPECTED_VERSION,
                     "kod_olusturuldu": self.config.get("olusturuldu"), "eslesme_zamani": self.config.get("eslesti"),
                     "izinli_alan_adlari": list(self.allowed), "izin_bekleyen_alan_adlari": sorted(self.pending),
+                    "izinli_sorgular": self.allowed_queries(),
                     "aralik_saniye": self.gap(), "aralik_sinirlari": [MIN_GAP_S, MAX_GAP_S],
                     "calisiyor": working, "bagli_esigi_saniye": int(CONNECTED_BUSY_S if self.busy else CONNECTED_S),
                     "acik_oturumlar": [{"alan_adi": s.domain, "durum": s.state, "dogrulama": s.verifying,
@@ -426,7 +463,8 @@ class ExtensionBridge:
             session.results[item_id] = {"durum": state, "tur": item["tur"], "adres": item["adres"], "son_adres": result.get("son_adres") or item["adres"],
                                         "baslik": str(result.get("baslik") or "")[:300], "http_durumu": result.get("http_durumu"),
                                         "html": html, "not": str(result.get("not") or "")[:500] or None, "basliklar": result.get("basliklar"),
-                                        "govde_base64": result.get("govde_base64"), "okundu": now_iso(), "yontem": "eklenti"}
+                                        "govde_base64": result.get("govde_base64"), "okundu": now_iso(), "yontem": "eklenti",
+                                        "gonderilen": result.get("gonderilen") if item["tur"] == "sorgu" else None}
             if session.verifying:
                 session.verifying = None
                 session.notify("dogrulama_bitti", None)
@@ -511,7 +549,7 @@ class ExtensionBridge:
         folder = self.data_dir / "raw" / "eklenti" / datetime.now(timezone.utc).strftime("%Y%m%d")
         folder.mkdir(parents=True, exist_ok=True)
         stem = f"{datetime.now(timezone.utc).strftime('%H%M%S')}-{uuid.uuid4().hex[:8]}"
-        body = result.get("html") or b""
+        body = result.get("html") or result.get("govde") or b""
         if isinstance(body, str):
             body = body.encode("utf-8")
         digest = hashlib.sha256(body).hexdigest()
@@ -519,6 +557,8 @@ class ExtensionBridge:
         record = {"yontem": result.get("yontem") or "eklenti", "etiket": label, "adres": result.get("adres"), "son_adres": result.get("son_adres"),
                   "baslik": result.get("baslik"), "durum": result.get("durum"), "http_durumu": result.get("http_durumu"),
                   "okundu": result.get("okundu") or now_iso(), "sha256": digest, "bayt": len(body), "not": result.get("not")}
+        if result.get("sorgu"):
+            record["sorgu"] = result["sorgu"]          # GÖREV-25: the query's method, path, fields and time beside the answer's raw copy
         if result.get("proxy"):
             record["proxy"] = True              # GÖREV-16: read through the user's US proxy (its address is never written)
         (folder / f"{stem}.json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")

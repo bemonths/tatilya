@@ -247,6 +247,87 @@ export function lastJobText(last, now = Date.now()) {
   return `${head} · ${stage}${waiting} · son ilerleme ${minutes < 1 ? "az önce" : `${minutes} dk önce`}`;
 }
 
+// ---- The page's own queries (GÖREV-25, user decision of 17 November 2026) ----
+// The extension may send, from the site's own tab, a public query the page itself sends for its visitor (a price question, the next
+// part of a listing), with exactly the fields the program gives. Only queries on the program's allowed list; never a login, account,
+// payment, reservation, cart, contact or personal-data address. The lists are the same as studio/extension_queries.py (a Python test
+// keeps them equal).
+export const QUERY_METHODS = ["GET", "POST"];
+export const FORBIDDEN_WORDS = ["login", "logon", "logout", "signin", "signup", "sign", "register", "registration", "account", "accounts", "password",
+  "auth", "oauth", "checkout", "payment", "payments", "pay", "card", "cart", "basket", "order", "orders", "reserve",
+  "reservation", "reservations", "confirm", "contact", "inquiry", "inquire", "enquiry", "subscribe", "newsletter",
+  "profile", "wallet", "guest", "owner", "save", "favorite", "favorites", "lead", "message", "email", "phone", "review"];
+export const FORBIDDEN_SEGMENTS = ["book", "booking", "bookings", "booknow", "my"];
+export const FORBIDDEN_HOSTS = ["paypal.com", "stripe.com", "squareup.com", "authorize.net", "braintreegateway.com", "accounts.google.com",
+  "login.microsoftonline.com", "appleid.apple.com", "facebook.com"];
+export const FORBIDDEN_HOST_LABELS = ["login", "auth", "account", "accounts", "checkout", "pay", "payment", "payments", "secure", "book", "booking",
+  "my", "sso", "id"];
+export const MAX_FIELDS = 40;
+export const MAX_VALUE = 2000;
+
+/** "/ajax/addToCart" -> ["ajax", "add", "to", "cart"] (split at "/", "-", "_", "." and camelCase). */
+export function pathWords(path) {
+  const words = [];
+  for (const segment of String(path || "").split("/")) {
+    for (const part of segment.split(/[-_.]+/)) words.push(...(part.match(/[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+/g) || []).map(w => w.toLowerCase()));
+  }
+  return words;
+}
+
+export function forbiddenPath(path) {
+  const segments = String(path || "").split("/").filter(Boolean).map(s => s.toLowerCase());
+  return segments.some(s => FORBIDDEN_SEGMENTS.includes(s)) || pathWords(path).some(w => FORBIDDEN_WORDS.includes(w));
+}
+
+export function forbiddenHost(host) {
+  const d = domainOf(host);
+  if (FORBIDDEN_HOSTS.some(h => d === h || d.endsWith("." + h))) return true;
+  return d.split(".").slice(0, -2).some(label => FORBIDDEN_HOST_LABELS.includes(label));
+}
+
+/** null when the query may be sent, else the reason. query: {alan_adi, yol, yontem, alanlar: {name: value}}; allowed: the program's
+ *  list [{alan_adi, yol, yontem, alanlar: [names] | null}]. */
+export function queryRefusal(query, allowed) {
+  const domain = domainOf(query?.alan_adi || "");
+  const path = String(query?.yol || "");
+  const method = String(query?.yontem || "").toUpperCase();
+  const fields = query?.alanlar;
+  if (!QUERY_METHODS.includes(method)) return `Sorgu yöntemi ${method || "—"}; yalnız GET ya da POST gönderilir.`;
+  if (!domain || !/^[a-z0-9.-]+$/.test(domain)) return "Sorgunun alan adı geçersiz.";
+  if (!path.startsWith("/") || path.includes("//") || path.includes("..") || /[?#\\\s]/.test(path)) {
+    return "Sorgunun yolu geçersiz (yol '/' ile başlamalı; soru işareti, '#' ve '..' içermez; alanlar ayrı verilir).";
+  }
+  if (forbiddenHost(domain)) return `${domain} yasak listede (giriş, ödeme ya da hesap alan adı); sorgu gönderilmedi.`;
+  if (forbiddenPath(path)) return `${path} yasak listede (giriş, hesap, ödeme, rezervasyon, sepet, iletişim ya da kişisel bilgi adresi); sorgu gönderilmedi.`;
+  if (!fields || typeof fields !== "object" || Array.isArray(fields) || Object.keys(fields).length > MAX_FIELDS) return "Sorgunun alanları bir ad → değer listesi olmalı.";
+  if (Object.values(fields).some(v => typeof v !== "string" || v.length > MAX_VALUE)) return "Sorgunun alan değerleri yazı olmalı.";
+  const match = (allowed || []).find(a => domainOf(a.alan_adi) === domain && a.yol === path && String(a.yontem).toUpperCase() === method);
+  if (!match) return `${method} ${domain}${path} programın izinli sorgu listesinde değil; gönderilmedi.`;
+  if (Array.isArray(match.alanlar)) {
+    const names = Object.keys(fields);
+    const expected = match.alanlar.filter(n => names.includes(n));
+    if (names.length !== expected.length || names.some((n, i) => n !== expected[i])) {
+      return `Sorgunun alanları izinli listedekilerle aynı değil (${match.alanlar.join(", ")}); gönderilmedi.`;
+    }
+  }
+  return null;
+}
+
+/** The form body the page's own script sends (jQuery's serialize: name=value&..., in the given order). */
+export function queryBody(fields) {
+  return new URLSearchParams(Object.entries(fields || {})).toString();
+}
+
+/** The address and the fetch options of a query sent from the tab's origin; GET carries the fields in the address. */
+export function queryRequest(origin, query) {
+  const method = String(query.yontem).toUpperCase();
+  const body = queryBody(query.alanlar);
+  const url = origin + query.yol + (method === "GET" && body ? `?${body}` : "");
+  const headers = {"Accept": "*/*", "X-Requested-With": "XMLHttpRequest"};
+  if (method === "POST") headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8";
+  return {url, method, headers, body: method === "POST" ? body : null};
+}
+
 export function bytesToBase64(bytes) {
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));

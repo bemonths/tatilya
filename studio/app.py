@@ -84,6 +84,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     app.state.watchdog = watchdog or Watchdog.from_env(has_active_jobs=db.has_active_work, on_waiting=db.note_active_jobs)
     app.state.extension = ext.ExtensionBridge(db.path.parent)
     app.state.extension.job_alive = lambda job_id: (db.job(job_id) or {}).get("status") in ("queued", "running")
+    app.state.extension.queries = db.extension_queries      # GÖREV-25: the allowed list of the page's own queries (the configuration)
     app.state.region_access = lambda: region_reader.RegionAccess(db, db.path.parent)     # GÖREV-16 (tests give another)
     app.state.proxy_test = proxy_mod.test
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
@@ -315,7 +316,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             raise Conflict("Eklenti eşleşmemiş: önce eşleşme kodunu eklentiye yazın.")
         job_id = db.add_job("eklenti_deneme", "Tarayıcı eklentisi · sorunlu sitelerden birer sayfa", destination_id=destination_id)
         gaps = dict(getattr(profile, "EXTENSION_TRIAL_GAP_S", {}) or {})
-        threading.Thread(target=problem_sites_work, args=(job_id, sites, gaps), name="eklenti-deneme", daemon=True).start()
+        queries = list(getattr(profile, "EXTENSION_TRIAL_QUERIES", ()))       # GÖREV-25: a sample of each allowed query, after the pages
+        threading.Thread(target=problem_sites_work, args=(job_id, sites, gaps, queries), name="eklenti-deneme", daemon=True).start()
         return db.job(job_id)
 
     def trial_pause(domain, last, gaps, canceled):
@@ -326,7 +328,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         while not canceled() and time.monotonic() - last[domain] < need:
             time.sleep(min(1.0, max(0.05, need - (time.monotonic() - last[domain]))))
 
-    def problem_sites_work(job_id, sites, gaps=None):
+    def problem_sites_work(job_id, sites, gaps=None, queries=()):
         """GÖREV-16: each site's page and its kind (tamam, doğrulama, erişim reddedildi, bölge engeli, başka siteye yönlendi). A domain on
         the region-blocked list is not given to the extension: it is read through the US proxy (proxy, then the program's browser with
         the proxy) or skipped when no proxy is set. A region block the extension meets puts the domain on the list and, with a proxy,
@@ -343,7 +345,9 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         region = app.state.region_access()
         reader = region.reader(canceled=canceled, waiting=waiting)
         rows = []
-        db.update_job(job_id, status="running", progress=1, message=f"{len(sites)} site denenecek.")
+        steps = len(sites) + len(queries)
+        db.update_job(job_id, status="running", progress=1, message=f"{len(sites)} site denenecek." +
+                      (f" Ardından {len(queries)} izinli sorgu örneği." if queries else ""))
         from .sources.browser_verification import JobWindows
         windows = JobWindows(lambda key, text: db.set_job_window(job_id, key, text))     # GÖREV-17: closes what the job started
         windows.__enter__()
@@ -381,7 +385,17 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                     label = proxy_mod.region_outcome(row["durum"], row.get("not"), bool(row.get("proxy")))
                 else:
                     label = ext_states.get(row.get("tur") or row["durum"], row["durum"])
-                db.update_job(job_id, progress=int(100 * number / len(sites)), message=f"{number}/{len(sites)} · {domain}: {label}")
+                db.update_job(job_id, progress=int(100 * number / steps), message=f"{number}/{steps} · {domain}: {label}")
+            for number, query in enumerate(queries, len(sites) + 1):
+                if canceled():
+                    return
+                domain = query["alan_adi"]
+                trial_pause(domain, last, gaps, canceled)
+                row = trial_query(access, query, canceled)
+                last[domain] = time.monotonic()
+                rows.append(row)
+                db.update_job(job_id, progress=int(100 * number / steps),
+                              message=f"{number}/{steps} · {domain} sorgu {query['yontem']} {query['yol']}: {ext_states.get(row['durum'], row['durum'])}")
         finally:
             reader.close()
             windows.__exit__(None, None, None)
@@ -391,7 +405,26 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                       message=f"{read}/{len(rows)} site okundu" + (f" ({proxied} bölge engelli site proxy'yle)." if proxied else "."))
 
     ext_states = {**page_kinds.LABELS, "giris": "giriş gerekiyor", "odeme": "ödeme sayfası", "izin_yok": "izin yok", "hata": "hata",
-                  "atlandi": "kullanıcı atladı"}
+                  "atlandi": "kullanıcı atladı", "reddedildi": "sorgu reddedildi"}
+
+    def trial_query(access, query, canceled):
+        """GÖREV-25: one sample of an allowed query (the page's own price question or listing continuation), sent by the extension from
+        the site's tab; the answer is kept with the query's method, path, fields and time."""
+        domain, note = query["alan_adi"], query.get("aciklama") or "izinli sorgu"
+        base = {"alan_adi": domain, "aciklama": note, "tur": "sorgu", "yontem": "eklenti", "baslik": f"{query['yontem']} {query['yol']}",
+                "sorgu": {"yontem": query["yontem"], "yol": query["yol"], "alanlar": query["alanlar"]}}
+        session = access.open(domain, purpose="izinli sorgu denemesi")
+        try:
+            result = session.query(query["yol"], query["yontem"], query["alanlar"], page=query.get("sayfa"), canceled=canceled)
+        except ext.QueryRefused as exc:
+            return {**base, "durum": "reddedildi", "http_durumu": None, "not": str(exc)}
+        except ext.ExtensionError as exc:
+            return {**base, "durum": "hata", "http_durumu": None, "not": str(exc)[:300]}
+        finally:
+            session.close()
+        record = bridge().save_raw({**result, "adres": result["sorgu"]["adres"]}, f"izinli sorgu · {domain} {query['yol']}")
+        return {**base, "durum": "tamam", "http_durumu": result.get("http_durumu"), "bayt": record["bayt"], "sha256": record["sha256"],
+                "dosya": record["dosya"], "sorgu": record.get("sorgu"), "not": None}
 
     def trial_row(domain, note, result, record):
         state = result["durum"]

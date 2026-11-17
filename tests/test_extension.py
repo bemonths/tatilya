@@ -289,10 +289,14 @@ def test_extension_verifier_and_transport_for_the_rental_collector():
     verifier = ExtensionVerifier(access)
     transport = verifier("kira.test", "https://kira.test/", lambda: False, 20)
     assert isinstance(transport, ExtensionTransport) and transport.kind == "eklenti"
-    status, final, headers, body = transport.send("POST", "https://kira.test/api", params={"a": "1"}, json_body={"q": 2},
+    status, final, headers, body = transport.send("GET", "https://kira.test/api", params={"a": "1"},
                                                   headers={"User-Agent": "x", "Accept": "application/json"})
     method, url, sent_headers, sent_body = access.opened[0][1].requests[0]
-    assert (method, url, sent_body) == ("POST", "https://kira.test/api?a=1", '{"q": 2}') and "User-Agent" not in sent_headers
+    assert (method, url, sent_body) == ("GET", "https://kira.test/api?a=1", None) and "User-Agent" not in sent_headers
+    from studio.sources.agency_adapters import AdapterError
+    with pytest.raises(AdapterError, match="izinli sorgu"):          # GÖREV-25: a request that sends fields is a query on the allowed list
+        transport.send("POST", "https://kira.test/api", json_body={"q": 2})
+    assert len(access.opened[0][1].requests) == 1
     with pytest.raises(bv.SiteBlocked):
         verifier("engel.test", "https://engel.test/", lambda: False, 20)
     with pytest.raises(bv.SiteBlocked, match="giriş gerekiyor"):

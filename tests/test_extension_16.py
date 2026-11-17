@@ -154,6 +154,7 @@ def trial_pages(url):
 
 def run_trial(client, monkeypatch, sites, pages=trial_pages):
     monkeypatch.setattr(thirty_a, "EXTENSION_TRIAL_SITES", sites)
+    monkeypatch.setattr(thirty_a, "EXTENSION_TRIAL_QUERIES", ())         # GÖREV-25's query samples: tests/test_gorev25.py
     fake = TrialExtension(client, pages)
     fake.start()
     job = client.post("/api/tarayici-eklentisi/sorunlu-siteler").json()
