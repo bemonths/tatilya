@@ -1534,7 +1534,7 @@ test('refresh table names the companies added since the last run under the estim
   const items=[{connector:'agency-lodging-rates',source_name:'Kiralama',interval_months:1,due:true,due_reason:'önerilen aralık doldu',estimate_seconds:30000,last_done_on:'2026-10-10',
     added_companies:[{company:'Yeni <Şirket>',listings:61,requests:1525}]}];
   const html=refreshSection({items,note:'',estimate_seconds:30000,estimate_complete:true,batch:null});
-  assert.match(html,/yeni şirketler dahil: Yeni &lt;Şirket&gt; 61 ilan, \+1525 istek/);
+  assert.match(html,/yeni şirketler dahil: Yeni &lt;Şirket&gt; 61 ilan, en çok \+1525 istek/);
 });
 
 // --- GÖREV-21: the shared parts of every Claude step (cost in the same place, one approval component), the step screens, the topic bank
@@ -1717,4 +1717,23 @@ test('GÖREV-21 Videolar: başlığın Türkçesi büyük, İngilizcesi küçük
   assert.match(list,/<h2>Yeni video<\/h2>.*Çalışma adı \(isteğe bağlı\).*id="new-video">Yeni video<\/button>.*Projenin videoları.*id="show-archived">Arşivdekileri göster \(2\)/s);
   assert.doesNotMatch(list+row,/>Sil<|data-delete/);                                 // nothing is deleted
   assert.match(videoList({videolar:[],arsiv:true,arsivdeki:0,acik:null},{name:''}),/Arşivdeki videolar.*Arşivde video yok\..*← Projenin videoları/s);
+});
+
+// GÖREV-22: the estimate names the new companies (listings, own homes, the proxy); the company's own inventory across the neighbourhoods
+import {addedCompany} from '../studio/web/refresh.js';
+import {ownCompanies} from '../studio/web/agency.js';
+test('the estimate line of a new company says its listings, its own homes and the proxy',()=>{
+  assert.equal(addedCompany({company:'360 Blue',listings:256,own_homes:0,requests:3840,proxy:true}),"360 Blue 256 ilan, en çok +3840 istek (ABD proxy'siyle)");
+  assert.equal(addedCompany({company:'30A Beach Girls',listings:48,own_homes:145,requests:145,proxy:false}),'30A Beach Girls 48 ilan, kendi sitesinde 145 ev, en çok +145 istek');
+  assert.equal(addedCompany({company:'Yeni',listings:0,own_homes:0,requests:5}),'Yeni 0 ilan, en çok +5 istek');
+});
+test('homes on a company\'s own site are shown apart, with the ones the site gives no neighbourhood',()=>{
+  assert.equal(ownCompanies([]),'');
+  assert.equal(ownCompanies([{company:'Alys Beach',domain:'alysbeach.com',homes:73,with_region:73,unassigned:0,priced:73,regions:[{region_name:'Alys Beach',homes:73}]}]),'');   // one community's program: shown in its neighbourhood
+  const html=ownCompanies([{company:'30A Beach Girls',domain:'30a-beachgirls.com',homes:120,with_region:40,unassigned:80,outside:25,on_bookdirect:2,priced:0,
+    regions:[{region_name:'Seagrove',homes:30},{region_name:'Seacrest',homes:10}]}]);
+  assert.match(html,/Şirketin kendi sitesindeki evler/);
+  assert.match(html,/Book>Direct ilanlarına bağlanmadı/);
+  assert.match(html,/<td>120<small>30A bölgesi dışında 25 ev alınmadı<\/small><small>Book>Direct ilanına bağlanan 2 ev ayrıca sayılmadı<\/small><\/td><td>40<small>Seagrove 30 · Seacrest 10<\/small><\/td><td>80<\/td><td>0<\/td>/);
+  assert.match(html,/MAHALLESİ BELİRTİLMEMİŞ/);
 });

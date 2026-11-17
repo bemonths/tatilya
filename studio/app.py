@@ -468,7 +468,9 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         with db.connect() as con:
             if host in proxy_mod.listed_hosts(con):
                 raise HTTPException(409, f"{host} zaten listede.")
-            proxy_mod.mark(con, host, added_by="kullanici")
+            # GÖREV-22: a domain added after a measurement may carry what was seen (the page asked, its title, the evidence)
+            note = {key: body[key].strip() for key in ("baslik", "adres", "kanit") if isinstance(body.get(key), str) and body[key].strip()}
+            proxy_mod.mark(con, host, title=note.get("baslik"), url=note.get("adres"), evidence=note.get("kanit"), added_by="kullanici")
         return proxy_view()
 
     @app.delete("/api/abd-proxy/bolge-engelli/{host}")

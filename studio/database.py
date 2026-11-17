@@ -25,8 +25,9 @@ from .migration_v18 import upgrade_v18
 from .migration_v19 import upgrade_v19
 from .migration_v20 import upgrade_v20
 from .migration_v21 import upgrade_v21
+from .migration_v22 import upgrade_v22
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 21
+SCHEMA_VERSION = 22
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -67,14 +68,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -109,7 +110,9 @@ class Database:
                     upgrade_v19(con)
                 if version < 20:
                     upgrade_v20(con)
-                upgrade_v21(con)
+                if version < 21:
+                    upgrade_v21(con)
+                upgrade_v22(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -173,6 +176,7 @@ class Database:
             upgrade_v19(con)
             upgrade_v20(con)
             upgrade_v21(con)
+            upgrade_v22(con)
             reconcile_connector_defaults(con)
 
     def destinations(self):

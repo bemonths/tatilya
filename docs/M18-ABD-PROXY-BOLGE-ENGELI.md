@@ -102,6 +102,42 @@ Ham kayıtlarda `yontem` alanı `proxy` ya da `tarayici+proxy` olur ve `proxy: t
   alanları ve toplayıcıların atlama notları (`NO_PROXY_SKIP`, `PROXY_FAILED_SKIP`) değişmedi.
 - Proxy'nin yalnız bölge engelli alan adlarında kullanılması, hız kuralı ve doğrulamayı kullanıcının geçmesi değişmedi.
 
+## Bölge engeli ölçümü (GÖREV-22, 17 Kasım 2026, v0.23.0)
+
+Bir alan adı listeye "bence bölge engelli" diye girmez; ölçülür. Kural `studio/sources/region_probe.py` içindedir (hiçbir siteye
+istek yapmaz, yalnız iki yanıtı karşılaştırır): aynı sayfa bir kez doğrudan, bir kez proxy üzerinden istenir.
+
+| Sınıf | Ne zaman | Ne yapılır |
+|---|---|---|
+| `bolge_engeli` | Doğrudan istek ret, engel sayfası, doğrulama ya da ülke engeli alıyor ya da hiç yanıt almıyor; proxy üzerinden site normal yanıt veriyor | Alan adı listeye eklenir (Veri → Okuma denemeleri → Bölge engelli alan adları) |
+| `bolge_engeli_degil` | Proxy üzerinden de aynı ret, engel sayfası ya da doğrulama geliyor; ya da site iki yoldan da normal yanıt veriyor | Site bırakılır; proxy kullanılmaz |
+| `site_yok` | İki yoldan da siteye ulaşılamıyor (DNS kaydı yok, bağlantı yok, sunucu hatası) ya da gelen sayfa alan adı kayıt firmasının / park şirketinin sayfası | Şirketin güncel sitesi aranır; bulunursa o adres ölçülür |
+
+"Normal yanıt": sitenin kendisi engelsiz yanıt verdi — sıradan bir sayfa, bir yönlendirme ya da sitenin kendi "bulunamadı" sayfası.
+Ölçüm kuralı: alan adı başına en çok 3 istek, aynı sitede iki istek arası en az 8 sn, yönlendirme izlenmez (her adım ayrı istektir),
+programın kendi tarayıcısı kullanılmaz. Ölçümü kullanıcı izin verdiğinde Claude Code yapar; programda bunun için bir düğme yoktur.
+
+17 Kasım 2026 ölçümünün sonucu (ayrıntı ve ham kopyaların adları: `docs/gorevler/GOREV-22/RAPOR.md`, `olcum-istekleri.csv`):
+
+| Alan adı | Doğrudan | Proxy | Sınıf |
+|---|---|---|---|
+| 360blue.com | 403, Cloudflare engel sayfası | sitenin kendi sayfaları (301, sitenin "Error Page"i; incelemede 200) | bölge engeli → listede |
+| vacasa.com | 403, CloudFront ülke engeli | 200, sitenin sayfası | bölge engeli → listede |
+| wyndhamvacationrentals.com | 301 → vacasa.com | 301 → vacasa.com | bölge engeli değil (yalnız yönlendiriyor) |
+| cottagerentalagency.com | 301 → sandestin.com | 301 → sandestin.com | bölge engeli değil |
+| rentals.cottagerentalagency.com | DNS kaydı yok | bağlantı kurulamadı | site yok |
+| sandestin.com | 403 "Access denied" | 403 "Access denied" | bölge engeli değil (kaldırılmış sayfa) |
+| outdoorshower30a.com | zaman aşımı | bağlantı kurulamadı; http'de alan adı kayıt firmasının sayfası | site yok (alan adı askıda) |
+| golocalvr.com (Outdoor Shower'ı devralan şirket) | 301 (kendi sitesine) | 301 (aynı) | bölge engeli değil |
+
+Listeye ekleme isteği (`POST /api/abd-proxy/bolge-engelli`) artık isteğe bağlı olarak ölçümde görüleni de alır (`baslik`, `adres`,
+`kanit`); ekrandaki kutu yalnız alan adını gönderir.
+
+**Kiralama toplayıcısında yalnız listedeki alan adları proxy'den gider (GÖREV-22).** Bölge engelli bir şirketin bütün istekleri
+artık proxy'den gitmez: şirketin listede olmayan alan adları (bağlantıların başladığı başka bir alan adı, altyapının API adresi)
+doğrudan gider (`agency_rates.proxy_client(proxy, hosts)`; `HttpTransport.proxied`). Örnek: wyndhamvacationrentals.com bağlantısı
+doğrudan istenir, yönlendiği vacasa.com adresi proxy'den. Ham kayıtta `transport` her istek için ayrı yazılır (`http` ya da `proxy`).
+
 ## Gizli bilgi nerede durur
 
 | Bilgi | Nerede | Nerede durmaz |
@@ -123,8 +159,10 @@ kalıbıyla 127.0.0.1'e bağlanabilir.
 
 ## Sınırlar
 
-- Gerçek proxy ve gerçek sitelerle hiç denenmedi (bu görevde yasak). Kullanıcı proxy'sini Ayarlar'a girip "Proxy'yi dene" ve "Sorunlu
-  sitelerden birer sayfa dene" ile ilk denemeyi kendisi yapacak.
+- GÖREV-16'da gerçek proxy ve gerçek sitelerle denenmemişti. GÖREV-22'de (17 Kasım 2026) kullanıcının izniyle proxy modülü gerçek
+  proxy'yle kullanıldı: yukarıdaki ölçüm (18 istek) ve iki bölge engelli şirketin incelemesi (şirket başına 10 sayfa). Programın proxy
+  tarayıcısı gerçek sitede henüz denenmedi (bu iki şirket doğrudan istekle okunuyor); kiralama toplayıcısının proxy'li ilk çekimini
+  kullanıcı başlatacak.
 - Proxy tarayıcısı (Chrome) yalnız PAC'teki alan adlarını proxy'ye gönderir; Chrome'un kendi arka plan istekleri doğrudan gider.
 - Günlük ihtiyaç zincir kontrolleri (CVS, Publix, Winn-Dixie, The Fresh Market, HCA) toplayıcıda canlı okunmuyor, gözden geçirilmiş
   dosyadan geliyor; proxy'yle okunan sayfalardan bu dosyanın güncellenmesi ayrı bir iş.

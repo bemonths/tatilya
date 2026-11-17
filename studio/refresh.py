@@ -108,10 +108,12 @@ def status(db, destination_id, today=None):
             if connector.name == agency_rates.AgencyRatesConnector.name and last and context.agency:
                 read = {r[0] for r in con.execute("SELECT domain FROM agency_rate_companies WHERE run_id=?", (last["id"],))}
                 listings = (db.lodging_input(con, destination_id) or {}).get("listings") or []
-                added = [a for a in agency_rates.new_site_estimate(context.agency["sites"], listings, read, current_windows or 0) if a["requests"]]
+                blocked = [r[0] for r in con.execute("SELECT host FROM region_blocked_hosts")]
+                added = [a for a in agency_rates.new_site_estimate(context.agency["sites"], listings, read, current_windows or 0, blocked)
+                         if a["requests"]]
                 if added and seconds is not None:
                     seconds += sum(a["seconds"] for a in added)
-                    note = (f"{note}; son çekimden sonra eklenen {len(added)} şirket için +{sum(a['requests'] for a in added)} istek, "
+                    note = (f"{note}; son çekimden sonra eklenen {len(added)} şirket için en çok +{sum(a['requests'] for a in added)} istek, "
                             f"+{sum(a['seconds'] for a in added) // 60} dk ({', '.join(a['company'] for a in added)})")
             items.append({"connector": connector.name, "source_id": source["id"], "source_name": source["name"],
                           "interval_months": interval["months"] if interval else None, "sort_order": interval["sort_order"] if interval else None,

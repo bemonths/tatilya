@@ -12,6 +12,14 @@ runs the official rental program of one community (configured with that communit
 homes Book>Direct does not show read from its own list ("own inventory"); they are stored and summarized apart. A site that
 publishes a seasonal rent range instead of a working price display has it stored apart as a published rent, never as a quote.
 
+GÖREV-22: a company whose site gives no street address and only rounded coordinates cannot be tied to Book>Direct listings; its
+homes are read as "the company's own inventory" across the neighbourhoods (`inventory.own` of the company's configuration): the
+neighbourhood is only the one the site itself names for the home, a home whose site names none stays without a neighbourhood
+(counted apart, never in a neighbourhood's medians), and a home that is also a Book>Direct listing is not counted twice. A company
+whose old Book>Direct links are known to be dead (`inventory.dead_links`) is not asked for them. A Book>Direct link that names a
+unit number the company's own list gives for exactly one home (its present or former number) ties the listing to that home
+("link"). Of a region-blocked company only the listed domains go through the user's US proxy; its other domains go directly.
+
 Requests to one company are sequential and spaced; a few companies are read side by side. A protected company (e.g. behind
 Cloudflare), and any company whose host once showed a verification page (browser_hosts), is read only through the computer's own
 browser (studio.sources.browser_verification: the installed Chrome started as an ordinary application with one persistent
@@ -144,6 +152,7 @@ class CompanyStopped(Exception):
 class Reply:
     def __init__(self, status, url, headers, body, sha256, *, location=None):
         self.status, self.url, self.headers, self.body, self.sha256, self.location = status, url, headers, body, sha256, location
+        self.hops = []                 # GÖREV-22: every address asked on the way to this answer (the first one and each redirect)
 
     @property
     def text(self):
@@ -155,12 +164,16 @@ class HttpTransport:
 
     kind = "http"
 
-    def __init__(self, client, kind=None):
+    def __init__(self, client, kind=None, proxied=None):
         self.client = client
+        self.base_kind = self.kind
         if kind:
-            self.kind = kind                      # GÖREV-16: "proxy" for a region-blocked company through the user's US proxy
+            self.kind = self.base_kind = kind     # GÖREV-16: "proxy" for a region-blocked company through the user's US proxy
+        self.proxied = proxied                    # GÖREV-22: url -> True when this request goes through the proxy (the listed domains only)
 
     def send(self, method, url, *, params=None, data=None, json_body=None, headers=None):
+        if self.proxied is not None:              # a request to a domain off the list (an alias the links start at) goes directly
+            self.kind = self.base_kind if self.proxied(url) else HttpTransport.kind
         request = self.client.build_request(method, url, params=params, data=data, json=json_body, headers=headers)
         response = self.client.send(request, stream=True, follow_redirects=False)
         try:
@@ -243,8 +256,9 @@ class SiteSession:
     def request(self, method, url, *, note, params=None, data=None, json=None, headers=None):
         if not self.allows(url):
             raise AdapterError("Uyarlayıcı şirketin alan adı dışındaki bir adrese istek yapmak istedi; yapılmadı.")
-        current, hops = url, 0
+        current, hops, asked = url, 0, []
         while True:
+            asked.append(str(httpx.URL(current, params=params)) if params else current)
             check(self.canceled)
             if self.last is not None:
                 pause(max(0.0, self.gap - (time.monotonic() - self.last)), self.canceled)
@@ -259,6 +273,7 @@ class SiteSession:
                                         request_body=data if data is not None else json)
             lowered = {k.lower(): v for k, v in response_headers.items()}
             reply = Reply(status, final, lowered, body, digest)
+            reply.hops = list(asked)
             if status in (301, 302, 303, 307, 308) and lowered.get("location"):
                 target = urljoin(final, lowered["location"])
                 if not self.allows(target):
@@ -332,21 +347,41 @@ QUOTE_REQUESTS = 2          # requests assumed per price question on a company n
 ANSWER_SECONDS = 1.0        # time assumed for one answer besides the gap between two requests
 
 
-def new_site_estimate(sites, listings, read_domains, window_count):
+def own_everywhere(site):
+    """The `inventory.own` options of a company read as its own inventory across the neighbourhoods (GÖREV-22), else None."""
+    own = (site.get("inventory") or {}).get("own")
+    return own if isinstance(own, dict) else None
+
+
+def new_site_estimate(sites, listings, read_domains, window_count, region_hosts=()):
     """What the enabled companies no earlier run read add to a run (GÖREV-20): per company its Book>Direct listings, the requests
-    (one page per listing, QUOTE_REQUESTS per listing and window) and the seconds at the company's own pace. Our estimate: a company
-    may answer with fewer requests (a listing whose link is dead asks nothing more) or be stopped at its first refusal."""
+    (per listing the adapter's `page_requests` to open its link — none when the company's links are known to be dead — and its
+    `listing_requests`, e.g. a calendar; per listing and window its `quote_requests`; one page, none and QUOTE_REQUESTS unless the
+    adapter says otherwise) and the seconds at the company's own pace. GÖREV-22: a region-blocked company is paced as the proxy is
+    (PROXY_GAP); a company read as its own inventory adds the homes its configuration expects (`inventory.own.expected_homes`, one
+    page each); a company whose prices are not asked adds no price request. Our estimate, an upper bound: a listing that ties to no home asks nothing more,
+    a window the site's calendar shows as taken is not asked, and a company may be stopped at its first refusal."""
+    listed = {host_key(h) for h in region_hosts or ()}
     added = []
     for site in sites:
         if not site["enabled"] or site["domain"] in read_domains:
             continue
         options = site_options(site)
+        adapter = ADAPTERS.get(options["adapter"])
         hosts = (options["domain"], *options["aliases"])
         count = sum(1 for item in listings if (host := site_domain(item.get("url"))) and any(host == h or host.endswith("." + h) for h in hosts))
-        requests = count * (1 + window_count * QUOTE_REQUESTS)
-        gap = PROTECTED_GAP if options["protected"] else REQUEST_GAP
-        added.append({"domain": options["domain"], "company": options["company"], "listings": count, "requests": requests,
-                      "seconds": int(requests * (gap + ANSWER_SECONDS)), "protected": bool(options["protected"])})
+        own = own_everywhere(options)
+        asked = not own or own.get("quotes", True)
+        pages = 0 if (options["inventory"] or {}).get("dead_links") else getattr(adapter, "page_requests", 1)
+        extra = getattr(adapter, "listing_requests", 0) if asked else 0
+        per_window = getattr(adapter, "quote_requests", QUOTE_REQUESTS) if asked else 0
+        requests = count * (pages + extra + window_count * per_window)
+        homes = int(own.get("expected_homes") or 0) if own else 0
+        requests += homes * (1 + extra + window_count * per_window)
+        region = any(host_key(h) in listed for h in hosts)
+        gap = max(PROTECTED_GAP if options["protected"] else REQUEST_GAP, PROXY_GAP if region else 0)
+        added.append({"domain": options["domain"], "company": options["company"], "listings": count, "own_homes": homes, "requests": requests,
+                      "seconds": int(requests * (gap + ANSWER_SECONDS)), "protected": bool(options["protected"]), "proxy": region})
     return added
 
 
@@ -389,7 +424,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                 row["domain"] = domain
                 groups[domain].append(row)
         listings[row["lodging_id"]] = row
-    order = sorted((d for d in sites if groups[d] or sites[d]["own_region_id"]), key=lambda d: (-len(groups[d]), d))
+    order = sorted((d for d in sites if groups[d] or sites[d]["own_region_id"] or own_everywhere(sites[d])), key=lambda d: (-len(groups[d]), d))
     store = RawStore(raw_path)
     owns = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(45, connect=15), verify=True)
@@ -501,8 +536,10 @@ class CompanyRun:
         self.region = region if region is not None and region.listed(site["domain"]) else None     # GÖREV-16
         transport, gap = HttpTransport(shared.client), PROTECTED_GAP if self.protected else REQUEST_GAP
         if self.region is not None and self.region.proxy is not None:
-            transport, gap = HttpTransport(proxy_client(self.region.proxy),
-                                           kind="proxy"), max(gap, PROXY_GAP)
+            from ..proxy import is_listed
+            hosts = sorted(self.region.hosts)      # GÖREV-22: only the listed domains through the proxy, the company's other domains directly
+            transport, gap = HttpTransport(proxy_client(self.region.proxy, hosts), kind="proxy",
+                                           proxied=lambda url: is_listed(hosts, url)), max(gap, PROXY_GAP)
         self.session = SiteSession(shared.store, site["domain"], transport, shared.canceled,
                                    allowed=(*site["aliases"], *getattr(self.adapter, "api_hosts", ())), gap=gap, protected=self.protected)
         self.result = {"domain": site["domain"], "company": site["company"], "adapter": site["adapter"], "status": "done",
@@ -588,17 +625,24 @@ class CompanyRun:
                 if self.protected:
                     first = next((m["listing_url"] for m in members if self.session.allows(m["listing_url"])), None)
                     self.open_browser(first or (site["inventory"] or {}).get("origin") or f"https://www.{site['domain']}/")
+                dead = (site["inventory"] or {}).get("dead_links")
                 for index, row in enumerate(members):
                     check(shared.canceled)
-                    self.link(row)
+                    if dead:        # GÖREV-22: the company's old listing addresses are known not to work; none is asked
+                        row.update({"page_status": "not_found", "link_status": "not_found",
+                                    "message": f"Book>Direct bağlantısı sorulmadı: şirketin eski ilan adresleri çalışmıyor ({dead} ölçümü); "
+                                               "ilan şirketin kendi listesinden eşlenir."})
+                    else:
+                        self.link(row)
                     shared.tracker.step(1, f"{site['company']}: {index + 1}/{len(members)} ilan.")
                 waiting_rows = [r for r in members if r["page_status"] in FALLBACK_STATUSES]
-                if site["inventory"] and (waiting_rows or site["own_region_id"]):
+                own = own_everywhere(site)
+                if site["inventory"] and (waiting_rows or site["own_region_id"] or own):
                     units, hashes = read_inventory(self.session, self.adapter, site, self.ask)
                     self.result["inventory_count"], self.result["inventory_raw_sha256"] = len(units), hashes
                     shared.tracker.step(0, f"{site['company']}: şirketin listesinde {len(units)} ilan.")
                     self.fallback(waiting_rows, units)
-                    if site["own_region_id"]:
+                    if site["own_region_id"] or own:
                         self.own_inventory(units)
                 if hasattr(self.adapter, "published"):
                     self.published_rents()
@@ -649,6 +693,10 @@ class CompanyRun:
         return self.cache[key]
 
     def price(self, row, info):
+        own = own_everywhere(self.site)
+        if own and not own.get("quotes", True):      # GÖREV-22: this company's prices are not asked yet; the tie is still recorded
+            row["message"] = own.get("quotes_note") or "Bu şirketin fiyatı sorulmuyor (yapılandırma)."
+            return
         guests = guests_for(self.site, row["bedrooms"], self.facts[row["lodging_id"]]["sleeps"])
         for window in self.shared.active:
             self.quotes.append({**self.quote_once(info, window, guests), "lodging_id": row["lodging_id"], "window_key": window["window_key"]})
@@ -689,10 +737,15 @@ class CompanyRun:
         """Listings whose link did not reach a listing, tied by the address rule (or, when the company's list has no street
         addresses, by the location rule)."""
         by_address = sum(bool(u.get("address")) for u in units) * 2 >= max(1, len(units))
+        linker = getattr(self.adapter, "link_unit", None)
         for row in rows:
             check(self.shared.canceled)
             facts = self.facts[row["lodging_id"]]
-            if by_address:
+            unit, note = (linker([row["listing_url"], *(self.pages.get(row["listing_url"]) or {}).get("hops", ())], units)
+                          if linker else (None, None))
+            if unit is not None:        # GÖREV-22: the link names a unit number the company's own list gives for exactly one home
+                kind, method = "matched", "link"
+            elif by_address:
                 kind, unit, note = address_match(facts, units)
                 method = "address"
             else:
@@ -712,10 +765,23 @@ class CompanyRun:
     def own_inventory(self, units):
         """The community's homes from the company's own list that Book>Direct does not show: the community is the configured name
         the site itself gives (its City field); a home the site places elsewhere is left out, and a home already on Book>Direct
-        (same company page, same url or the address rule) is not counted twice."""
+        (same company page, same url or the address rule) is not counted twice. GÖREV-22 (`inventory.own`): the same for a
+        company's homes in every neighbourhood, each under the neighbourhood the site itself names for it, or under none."""
         site, everyone = self.site, self.shared.everyone
-        city = (site["own_city"] or "").strip().lower()
-        community = [u for u in units if (u.get("city") or "").strip().lower() == city]
+        own = own_everywhere(site)
+        if own:
+            # GÖREV-22: the company's own inventory across the neighbourhoods. A home belongs here when the site places it in the
+            # configured region of the site (`site_region`); its neighbourhood is the one the configuration maps the site's own
+            # place name to (`regions`), else none. Never taken from the coordinates.
+            wanted = (own.get("site_region") or "").strip().lower()
+            names = {str(name).strip().lower(): region for name, region in (own.get("regions") or {}).items()}
+            community = [u for u in units if not wanted or (u.get("site_region") or "").strip().lower() == wanted]
+            region_of = lambda unit: names.get((unit.get("city") or "").strip().lower())
+        else:
+            city = (site["own_city"] or "").strip().lower()
+            community = [u for u in units if (u.get("city") or "").strip().lower() == city]
+            region_of = lambda unit: site["own_region_id"]
+        ask_prices = not own or own.get("quotes", True)
         self.result["own_outside"] = len(units) - len(community)
         matched = {r["site_listing_id"] for r in self.members if r["page_status"] == "matched"}
         on_bookdirect = 0
@@ -726,11 +792,14 @@ class CompanyRun:
                 continue
             page = unit.get("page") or open_listing(self.session, self.adapter, unit["url"], self.ask)
             row = {"domain": site["domain"], "site_listing_id": unit["site_id"], "title": unit.get("title") or unit["url"], "page_url": page["page_url"] or unit["url"],
-                   "address": unit.get("address"), "city": unit.get("city"), "region_id": site["own_region_id"], "bedrooms": unit.get("bedrooms"),
+                   "address": unit.get("address"), "city": unit.get("city"), "region_id": region_of(unit), "bedrooms": unit.get("bedrooms"),
                    "bathrooms": unit.get("bathrooms"), "sleeps": unit.get("sleeps"), "latitude": unit.get("latitude"), "longitude": unit.get("longitude"),
                    "page_status": page["page_status"], "message": page["message"]}
             self.own_rows.append(row)
             if page["page_status"] != "matched":
+                continue
+            if not ask_prices:
+                row["message"] = own.get("quotes_note") or "Bu şirketin fiyatı sorulmuyor (yapılandırma)."
                 continue
             guests = guests_for(site, unit.get("bedrooms"), unit.get("sleeps"))
             for window in self.shared.active:
@@ -822,7 +891,7 @@ def open_listing(session, adapter, url, ask, keep_html=False):
         reply = ask(lambda: session.request("GET", url, note="listing-page", headers={"Accept": "text/html,application/xhtml+xml"}))
     except AdapterError as exc:
         return {**base, "page_status": "error", "message": str(exc)}
-    base.update({"page_url": reply.url, "http_status": reply.status})
+    base.update({"page_url": reply.url, "http_status": reply.status, "hops": list(getattr(reply, "hops", ()) or ())})
     if reply.location:
         return {**base, "page_status": "off_site", "page_url": reply.location, "message": "Bağlantı başka bir siteye yönlendi."}
     if reply.status in (404, 410):
@@ -950,7 +1019,7 @@ def summarize(con, run_id, region_order=(), region_names=None):
         own_by_window.setdefault(quote["window_key"], {})[(quote["domain"], quote["site_listing_id"])] = quote
     for row in published:
         published_by_window.setdefault(row["window_key"], {})[row["lodging_id"]] = row
-    region_ids = {region for listing in listings.values() for region in listing["region_ids"]} | {o["region_id"] for o in own}
+    region_ids = {region for listing in listings.values() for region in listing["region_ids"]} | {o["region_id"] for o in own if o["region_id"]}
     order = {region: index for index, region in enumerate(region_order)}
     regions = sorted(region_ids, key=lambda r: (order.get(r, len(order)), r))
     names = region_names or {}
@@ -990,18 +1059,62 @@ def summarize(con, run_id, region_order=(), region_names=None):
     priced_ids = {q["lodging_id"] for q in quotes if q["status"] == "priced"}
     regions_priced = {r for l in listings.values() if l["lodging_id"] in priced_ids for r in l["region_ids"]}
     own_priced = {(q["domain"], q["site_listing_id"]) for q in own_quotes if q["status"] == "priced"}
+    own_companies = own_company_summary(own, own_by_window, windows, companies, names)
     return {"snapshot": dict(snapshot), "windows": windows, "regions": [{"region_id": r, "region_name": names.get(r, r)} for r in regions],
             "cells": cells, "companies": companies, "seasons": seasons, "comparison": comparison,
             "coverage": {**coverage, "listings": len(listings), "priced_listings": len(priced_ids), "regions": len(regions),
                          "regions_with_price": len(regions_priced), "methods": methods, "own_listings": len(own), "own_priced": len(own_priced),
+                         "own_unassigned": sum(o["region_id"] is None for o in own),
                          "published": len({r["lodging_id"] for r in published})},
+            "own_companies": own_companies,
             "label": total_label(quotes + own_quotes, snapshot["queried_on"]), "total_counts": total_counts(quotes + own_quotes),
             "guest_label": guest_label(companies),
             "source_note": ("Fiyatlı ilanlar Book>Direct ilanlarıdır (eşleme yöntemi: bağlantı, adres veya konum); 'kendi envanteri' "
-                            "sütunu tek bir topluluğun resmî kiralama programında Book>Direct'te olmayan evleri ayrı sayar."),
+                            "sütunu tek bir topluluğun resmî kiralama programında Book>Direct'te olmayan evleri ve sitesi adres vermediği için "
+                            "Book>Direct ilanlarına bağlanamayan şirketin kendi sitesindeki evleri ayrı sayar."),
             "published_note": "Yayımlanmış kira: sitenin sezon için yayımladığı kira aralığı × gece sayısı; vergi ve ücretler hariç, toplam fiyat ortancalarına karışmaz.",
             "nightly_note": "Gecelik ortalama = sitenin kira tutarı ÷ gece sayısı (bizim hesabımız; ücret ve vergiler hariç).",
             "bedroom_note": "Oda sayısı Book>Direct ilanından; 1–2 grubuna stüdyolar dahildir. Ortancalar 7 gecelik toplam fiyattandır."}
+
+
+OWN_SOURCE = "şirketin kendi sitesindeki evler; Book>Direct ilanlarına bağlanmadı"
+
+
+def own_company_summary(own, own_by_window, windows, companies, names):
+    """Per company its own-inventory homes (GÖREV-22): how many, how many the site places in a neighbourhood and in which, how many
+    in none, and per asked window the priced homes and the median total of all of them and of the homes without a neighbourhood.
+    The medians are ours, from the site's own totals; homes without a neighbourhood enter no neighbourhood's medians."""
+    result = []
+    for company in companies:
+        homes = [o for o in own if o["domain"] == company["domain"]]
+        if not homes:
+            continue
+        by_region = {}
+        for home in homes:
+            if home["region_id"]:
+                by_region[home["region_id"]] = by_region.get(home["region_id"], 0) + 1
+        loose = [h for h in homes if not h["region_id"]]
+        rows = []
+        for window in windows:
+            if window["status"] != "queried":
+                continue
+            asked = own_by_window.get(window["window_key"], {})
+            def totals(group):
+                found = [asked.get((h["domain"], h["site_listing_id"])) for h in group]
+                return [q["total"] for q in found if q is not None and q["status"] == "priced" and q["total"] is not None]
+            everything, apart = totals(homes), totals(loose)
+            rows.append({"window_key": window["window_key"], "priced_count": len(everything),
+                         "total_median": round(statistics.median(everything), 2) if everything else None,
+                         "unassigned_priced": len(apart), "unassigned_median": round(statistics.median(apart), 2) if apart else None})
+        result.append({"domain": company["domain"], "company": company["company"], "homes": len(homes), "with_region": len(homes) - len(loose),
+                       "unassigned": len(loose), "outside": company.get("own_outside"), "on_bookdirect": company.get("own_on_bookdirect"),
+                       "priced": sum(1 for h in homes if any((h["domain"], h["site_listing_id"]) in own_by_window.get(w["window_key"], {})
+                                                              and own_by_window[w["window_key"]][(h["domain"], h["site_listing_id"])]["status"] == "priced"
+                                                              for w in windows)),
+                       "regions": [{"region_id": region, "region_name": names.get(region, region), "homes": count}
+                                   for region, count in sorted(by_region.items(), key=lambda item: (-item[1], item[0]))],
+                       "unassigned_label": "mahallesi belirtilmemiş", "source": OWN_SOURCE, "windows": rows})
+    return result
 
 
 def run_totals(con, run_id):
@@ -1173,9 +1286,14 @@ class AgencyRatesConnector:
 PROXY_GAP = 8.0             # GÖREV-16: through the US proxy the extension's pacing rule holds (8 s between two pages of a site)
 
 
-def proxy_client(proxy):
-    """A client for one region-blocked company: every request through the user's US proxy; redirects followed by the session."""
-    return httpx.Client(transport=proxy.transport(), timeout=httpx.Timeout(45, connect=15), follow_redirects=False)
+def proxy_client(proxy, hosts=None):
+    """A client for one region-blocked company; redirects are followed by the session. With `hosts` (GÖREV-22) only requests to the
+    region-blocked domains (and their subdomains) go through the user's US proxy and every other request of the company (a domain its
+    links start at, a platform's API host) goes directly; without it every request goes through the proxy."""
+    timeout = httpx.Timeout(45, connect=15)
+    if hosts is None:
+        return httpx.Client(transport=proxy.transport(), timeout=timeout, follow_redirects=False)
+    return httpx.Client(mounts=proxy.mounts(hosts), timeout=timeout, follow_redirects=False)
 
 
 def default_verifier():

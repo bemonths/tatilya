@@ -977,8 +977,10 @@ def unread_counts(con, run_id):
 
 
 def lodging_coverage(data, spec):
-    """Companies whose prices are in the medians (with their listings and priced listings) and companies whose prices could not be
-    read (Book>Direct listing count and the reviewed reason)."""
+    """Companies whose prices are in the medians (with their listings and priced listings), companies read as their own inventory
+    (GÖREV-22: the homes on the company's own site, not tied to Book>Direct listings — how many, how many in a neighbourhood the site
+    names, how many in none, and their own medians, kept apart) and companies whose prices could not be read (Book>Direct listing
+    count and the reviewed reason)."""
     run, summary = agency_summary(data)
     if not run or not summary:
         return [missing("Kiralama fiyatlarına giren şirketler", "Kiralama şirketleri fiyat çekimi yok.", scope="30A", usage=USAGE["lodging_coverage"])]
@@ -1003,6 +1005,30 @@ def lodging_coverage(data, spec):
         rows.append(row(f"{company['company']} ({company['domain']}): fiyatı okunan Book>Direct ilanı", count, "ilan", scope="30A", source=source,
                         label="bizim hesabımız", sample=company["listing_count"], usage=USAGE["lodging_coverage"],
                         table=place(included, company["company"], "Fiyatlı ilan", {"Site": company["domain"]}, head="Şirket")))
+    own_table = "Şirketin kendi sitesindeki evler (Book>Direct ilanlarına bağlanmadı)"
+    labels = {w["window_key"]: w.get("label") or w["window_key"] for w in summary.get("windows") or []}
+    for company in summary.get("own_companies") or []:
+        if not company["unassigned"] and len(company["regions"]) <= 1:
+            continue                 # one community's official program: already shown as that neighbourhood's own inventory
+        where = ", ".join(f"{r['region_name']} {r['homes']}" for r in company["regions"]) or "yok"
+        name = f"{company['company']} ({company['domain']})"
+        rows.append(row(f"{name}: {company['source']} — evler", company["homes"], "ev", scope="30A", source=source, label="bizim hesabımız",
+                        usage=USAGE["lodging_coverage"],
+                        note=(f"Mahalle yalnız sitenin ev için kendi söylediği yer adından alındı (koordinattan çıkarılmadı). Mahallesi belirtilen "
+                              f"{company['with_region']} ev: {where}. Mahallesi belirtilmemiş {company['unassigned']} ev hiçbir mahallenin "
+                              "ortancasına girmez. Fiyatlar Book>Direct ilanlarının ortancalarına karışmaz."),
+                        table=place(own_table, company["company"], "Ev", {"Site": company["domain"], "Mahallesi belirtilen": number(company["with_region"]),
+                                                                          "Mahallesi belirtilmemiş": number(company["unassigned"]),
+                                                                          "Fiyatlı ev": number(company["priced"])}, head="Şirket")))
+        for window in company["windows"]:
+            if not window["priced_count"]:
+                continue
+            rows.append(row(f"{name}: {company['source']} — {labels.get(window['window_key'], window['window_key'])} haftası, 7 gecelik toplam "
+                            f"ortancası ({queried} tarihinde soruldu)", window["total_median"], "USD", scope="30A", source=source,
+                            label="bizim hesabımız", sample=window["priced_count"], usage=USAGE["lodging_coverage"],
+                            small=window["priced_count"] < SMALL_SAMPLE,
+                            note=(f"Mahallesi belirtilmemiş {window['unassigned_priced']} evin ortancası: {number(window['unassigned_median'], 2)} USD."
+                                  if window["unassigned_priced"] else None)))
     reasons = unread_companies(data.profile)
     minimum = int(spec.get("minimum", SMALL_SAMPLE))
     for domain, count in hosts.items():

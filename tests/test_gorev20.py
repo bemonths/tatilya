@@ -218,7 +218,7 @@ def test_coverage_block_names_the_companies_in_the_prices_and_the_unreadable_one
     left = {r["tablo"]["satir"]: r for r in rows if (r.get("tablo") or {}).get("ad") == "Fiyatı okunamayan kiralama şirketleri"}
     assert set(left) == {"360blue.com", "vacasa.com"}                                  # the small unreviewed site stays out; a reviewed one is named
     assert left["360blue.com"]["deger"] == 25 and "engel sayfası" in left["360blue.com"]["tablo"]["hucreler"]["Neden"]
-    assert left["vacasa.com"]["deger"] == 3 and left["vacasa.com"]["tablo"]["hucreler"]["Bakıldığı tarih"] == "2026-11-16"
+    assert left["vacasa.com"]["deger"] == 3 and left["vacasa.com"]["tablo"]["hucreler"]["Bakıldığı tarih"] == "2026-11-17"      # looked at again in GÖREV-22
     assert all(r["kullanim_notu"] == B.USAGE["lodging_coverage"] and r["etiket"] == "bizim hesabımız" for r in rows)
     gaps = P.known_gaps(data)
     assert any(g.startswith("Fiyatı okunamayan kiralama şirketleri") and "360blue.com 25" in g and "vacasa.com 3" in g and "kucuksirket" not in g for g in gaps)
@@ -227,7 +227,7 @@ def test_coverage_block_names_the_companies_in_the_prices_and_the_unreadable_one
 def test_reviewed_unreadable_companies_file_names_every_target_company_with_a_reason_and_a_date():
     rows = B.unread_companies(thirty_a)
     assert {"360blue.com", "rentals.cottagerentalagency.com", "realjoy.com", "30a-beachgirls.com", "vacasa.com", "outdoorshower30a.com"} <= set(rows)
-    assert all(item["neden"] and item["okuma_yolu"] and item["kontrol_tarihi"] == "2026-11-16" for item in rows.values())
+    assert all(item["neden"] and item["okuma_yolu"] and item["kontrol_tarihi"] in ("2026-11-16", "2026-11-17") for item in rows.values())
 
 
 def test_estimate_counts_the_companies_configured_since_the_last_run():

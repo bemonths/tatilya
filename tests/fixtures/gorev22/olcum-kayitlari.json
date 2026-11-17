@@ -1,0 +1,216 @@
+{
+ "360blue.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.360blue.com/rentals/properties/watersound-west-10-blue-moon-lane/",
+   "status": 403,
+   "error": null,
+   "location": null,
+   "title": "Attention Required! | Cloudflare",
+   "kind": "erisim_reddedildi",
+   "file": "olcum-360blue.com/01-dogrudan.bin"
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.360blue.com/rentals/properties/watersound-west-10-blue-moon-lane/",
+   "status": 301,
+   "error": null,
+   "location": "https://www.360blue.com/rentals/properties/watersound-west-10-blue-moon-lane",
+   "title": "301 Moved Permanently",
+   "kind": "tamam",
+   "file": "olcum-360blue.com/02-proxy.bin"
+  },
+  {
+   "no": 3,
+   "yol": "proxy",
+   "url": "https://www.360blue.com/rentals/properties/watersound-west-10-blue-moon-lane",
+   "status": 404,
+   "error": null,
+   "location": null,
+   "title": "Error Page",
+   "kind": "tamam",
+   "file": "olcum-360blue.com/03-proxy.bin"
+  }
+ ],
+ "cottagerentalagency.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.cottagerentalagency.com/",
+   "status": 301,
+   "error": null,
+   "location": "https://www.sandestin.com/accommodations/cottage-rental-agency",
+   "title": "301 Moved Permanently",
+   "kind": "tamam",
+   "file": "olcum-cottagerentalagency.com/01-dogrudan.bin"
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.cottagerentalagency.com/",
+   "status": 301,
+   "error": null,
+   "location": "https://www.sandestin.com/accommodations/cottage-rental-agency",
+   "title": "301 Moved Permanently",
+   "kind": "tamam",
+   "file": "olcum-cottagerentalagency.com/02-proxy.bin"
+  }
+ ],
+ "golocalvr.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.golocalvr.com/blog-all/localvr-expands-in-30a-florida-with-acquisition-of-outdoor-shower",
+   "status": 301,
+   "error": null,
+   "location": "https://golocalvr.com/blog/localvr-expands-in-30a-florida-with-acquisition-of-outdoor-shower",
+   "title": "301 Moved Permanently",
+   "kind": "tamam",
+   "file": "olcum-golocalvr.com/01-dogrudan.bin"
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.golocalvr.com/blog-all/localvr-expands-in-30a-florida-with-acquisition-of-outdoor-shower",
+   "status": 301,
+   "error": null,
+   "location": "https://golocalvr.com/blog/localvr-expands-in-30a-florida-with-acquisition-of-outdoor-shower",
+   "title": "301 Moved Permanently",
+   "kind": "tamam",
+   "file": "olcum-golocalvr.com/02-proxy.bin"
+  }
+ ],
+ "outdoorshower30a.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.outdoorshower30a.com/property/a-wave-from-it-all",
+   "status": null,
+   "error": "ConnectTimeout: [WinError 10060] Bağlanılan uygun olarak belli bir süre içinde yanıt vermediğinden veya kurulan\r\nbağlantı bağlanılan ana bilgisayar yanıt vermediğinden bir bağlantı kurulamadı",
+   "location": null,
+   "title": null,
+   "kind": null,
+   "file": null
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.outdoorshower30a.com/property/a-wave-from-it-all",
+   "status": null,
+   "error": "ProxyError: proxy bağlantıyı kurmadı (adres, port, kullanıcı adı ya da parola yanlış olabilir)",
+   "location": null,
+   "title": null,
+   "kind": null,
+   "file": null
+  },
+  {
+   "no": 3,
+   "yol": "proxy",
+   "url": "http://outdoorshower30a.com/",
+   "status": 200,
+   "error": null,
+   "location": null,
+   "title": "Registrant WHOIS contact information verification | Namecheap.com",
+   "kind": "tamam",
+   "file": "olcum-outdoorshower30a.com/03-proxy.bin"
+  }
+ ],
+ "rentals.cottagerentalagency.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://rentals.cottagerentalagency.com/rentals/SeasideRentalsDetails.aspx?UnitID=91",
+   "status": null,
+   "error": "ConnectError: [Errno 11001] getaddrinfo failed",
+   "location": null,
+   "title": null,
+   "kind": null,
+   "file": null
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://rentals.cottagerentalagency.com/rentals/SeasideRentalsDetails.aspx?UnitID=91",
+   "status": null,
+   "error": "ProxyError: proxy bağlantıyı kurmadı (adres, port, kullanıcı adı ya da parola yanlış olabilir)",
+   "location": null,
+   "title": null,
+   "kind": null,
+   "file": null
+  }
+ ],
+ "sandestin.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.sandestin.com/accommodations/cottage-rental-agency",
+   "status": 403,
+   "error": null,
+   "location": null,
+   "title": "Access denied | Sandestin Golf and Beach Resort",
+   "kind": "erisim_reddedildi",
+   "file": "olcum-sandestin.com/01-dogrudan.bin"
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.sandestin.com/accommodations/cottage-rental-agency",
+   "status": 403,
+   "error": null,
+   "location": null,
+   "title": "Access denied | Sandestin Golf and Beach Resort",
+   "kind": "erisim_reddedildi",
+   "file": "olcum-sandestin.com/02-proxy.bin"
+  }
+ ],
+ "vacasa.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.vacasa.com/usa/Dunes-Of-Seagrove-Santa-Rosa-Beach/",
+   "status": 403,
+   "error": null,
+   "location": null,
+   "title": "ERROR: The request could not be satisfied",
+   "kind": "bolge_engeli",
+   "file": "olcum-vacasa.com/01-dogrudan.bin"
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.vacasa.com/usa/Dunes-Of-Seagrove-Santa-Rosa-Beach/",
+   "status": 200,
+   "error": null,
+   "location": null,
+   "title": "Dunes of Seagrove | Santa Rosa Beach | Professionally Cleaned | Vacasa",
+   "kind": "tamam",
+   "file": "olcum-vacasa.com/02-proxy.bin"
+  }
+ ],
+ "wyndhamvacationrentals.com": [
+  {
+   "no": 1,
+   "yol": "dogrudan",
+   "url": "https://www.wyndhamvacationrentals.com/florida/santa-rosa-beach/abacos-0303-unit",
+   "status": 301,
+   "error": null,
+   "location": "https://www.vacasa.com/unit.php?UnitID=32791",
+   "title": null,
+   "kind": "tamam",
+   "file": "olcum-wyndhamvacationrentals.com/01-dogrudan.bin"
+  },
+  {
+   "no": 2,
+   "yol": "proxy",
+   "url": "https://www.wyndhamvacationrentals.com/florida/santa-rosa-beach/abacos-0303-unit",
+   "status": 301,
+   "error": null,
+   "location": "https://www.vacasa.com/unit.php?UnitID=32791",
+   "title": null,
+   "kind": "tamam",
+   "file": "olcum-wyndhamvacationrentals.com/02-proxy.bin"
+  }
+ ]
+}

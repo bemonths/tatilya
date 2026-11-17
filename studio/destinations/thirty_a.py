@@ -217,6 +217,38 @@ AGENCY_SITE_OPTIONS = {
     "alysbeach.com": {"inventory": {"source": "platform", "origin": "https://vacation.alysbeach.com"}, "own_region_id": "alys-beach",
                       "own_city": "Alys Beach"},
 }
+# Added by migration v22 (GÖREV-22, 17 November 2026). 360blue.com and vacasa.com serve only visitors inside the United States (measured:
+# docs/gorevler/GOREV-22/RAPOR.md); they are read through the user's US proxy once their domains are on the region-blocked list.
+# - 360blue.com: Natural Retreats' booking engine. The Book>Direct links are the site's old addresses (301 -> the site's own 404), so
+#   none is asked (`dead_links`); the listings are tied by the address rule to the site's own list of its 30A collection.
+# - vacasa.com: the Book>Direct links name the homes' old unit numbers; the site's search page of its "30A" place gives every unit with
+#   the number it had before (`link_unit`). wyndhamvacationrentals.com links redirect to vacasa.com (alias; not region-blocked itself).
+# - 30a-beachgirls.com (AvantStay): no street address and coordinates rounded to about 100 m, so its homes cannot be tied to Book>Direct
+#   listings (the manager's decision: no name matching). They are the company's own inventory (`own`): a home belongs to it when the
+#   site places it in its "Emerald Coast - 30A" region; its neighbourhood is the place name the site gives (`regions`). "Santa Rosa Beach"
+#   and "Inlet Beach" are left out on purpose: on this site they are the postal city of the address (a home the site describes as being
+#   in Prominence has the city "Inlet Beach"), not a neighbourhood; such a home stays without a neighbourhood. `quotes` is false: the
+#   site's price comes from AvantStay's GraphQL service and no answer of it has been seen yet (studio/sources/agency_adapters.py).
+AGENCY_SITES_V22 = (
+    ("360blue.com", "360 Blue", "nrbe"),
+    ("vacasa.com", "Vacasa", "vacasa"),
+    ("30a-beachgirls.com", "30A Beach Girls", "avantstay"),
+)
+AGENCY_SITE_OPTIONS_V22 = {
+    "360blue.com": {"inventory": {"source": "platform", "origin": "https://www.360blue.com", "brand_ids": ["193", "195"],
+                                  "resource_path": "/content/360blue/us/en/travel-collections/30A", "dead_links": "17 Kasım 2026"}},
+    "vacasa.com": {"aliases": ["wyndhamvacationrentals.com"],
+                   "inventory": {"source": "platform", "origin": "https://www.vacasa.com", "place": "/usa/Highway-30A/"}},
+    "30a-beachgirls.com": {"inventory": {
+        "source": "platform", "origin": "https://30a-beachgirls.com", "dead_links": "16 Kasım 2026",
+        "own": {"site_region": "Emerald Coast - 30A", "expected_homes": 145, "quotes": False,
+                "quotes_note": "Fiyat sorulmadı: sitenin fiyatı AvantStay'in ayrı servisinden geliyor ve bu servisin yanıtı henüz doğrulanmadı (GÖREV-22).",
+                "regions": {"Dune Allen": "dune-allen", "Dune Allen Beach": "dune-allen", "Gulf Place": "gulf-place",
+                            "Blue Mountain Beach": "blue-mountain-beach", "Grayton Beach": "grayton-beach", "WaterColor": "watercolor",
+                            "Seaside": "seaside", "Seagrove": "seagrove", "Seagrove Beach": "seagrove", "WaterSound": "watersound",
+                            "WaterSound Beach": "watersound", "Seacrest": "seacrest", "Seacrest Beach": "seacrest",
+                            "Alys Beach": "alys-beach", "Rosemary Beach": "rosemary-beach"}}}},
+}
 # Reviewed files read by the restaurant-sites collector (GÖREV-09): the official site found by a web search for restaurants whose
 # directory entry has no working website (accepted only when the site shows the same address or phone), and menu items read by a
 # person from image menus or text-less PDFs, each tied to the document's SHA-256.

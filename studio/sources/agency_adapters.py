@@ -12,6 +12,7 @@ and the listing details a page shows (unit_fields()) for the address/location ma
 """
 import json
 import re
+import uuid
 from datetime import date
 from html import unescape
 from urllib.parse import urlencode, urljoin, urlsplit
@@ -980,5 +981,366 @@ class Q4VR:
         return rows
 
 
+# --- Natural Retreats booking engine ("nrbe"; company sites on Adobe Experience Manager, seen on 360blue.com) ------------------
+
+def name_address(name):
+    """The street address a listing name ends with, when it has one: 'Seaside "Sea ya real soon" 73 Odessa Street' -> '73 Odessa
+    Street'; 'WaterColor 20 Goldenrod Circle #302' -> '20 Goldenrod Circle #302'; 'Blue Mtn. Adagio Unit B-304 - 2421 W. Hwy 30A' ->
+    '2421 W. Hwy 30A'. The part after the closing quote, else after ' - ', else from the first number on; None unless that part is
+    a street address (a street number first). Only the address is taken from the name; the name itself is never compared."""
+    text = clean(name) or ""
+    if '"' in text or "”" in text:
+        tail = re.split(r'["”]', text)[-1]
+    elif " - " in text:
+        tail = text.split(" - ")[-1]
+    else:
+        found = re.search(r"(?:^|\s)(\d+[A-Za-z]?\s.*)$", text)
+        tail = found.group(1) if found else ""
+    tail = tail.strip(" -")
+    return tail if tail and normalize_address(tail) else None
+
+
+def prepared_page(info, url, sha256=None, status=200):
+    """The page record of a unit whose platform identity came with the company's own list (no page request is needed)."""
+    if sha256:
+        info["page_sha256"] = sha256
+    return {"page_status": "matched", "page_url": url, "http_status": status, "site_listing_id": info["site_id"], "message": None, "info": info}
+
+
+class NaturalRetreats:
+    """Natural Retreats' booking engine behind a company's own site (seen on 360blue.com, 17 Nov 2026). The listing page's <body>
+    carries data-property-id; the site's search asks GET /api/nrbe/units.json (every unit of a page of the site: id, name, page,
+    coordinates, bedrooms, baths, sleeps), the page's calendar asks /api/nrbe/availability-calendar.json six months at a time, and
+    its booking box asks GET /api/nrbe/reservation-quotes.json?unitId&arrivalDate&departureDate&adults&children and shows subTotal,
+    taxes and total. The site answers dates it cannot sell with an error that names no reason, so a window whose nights the
+    calendar shows as taken is recorded as unavailable from the calendar and not asked. The sub-total is the site's own figure
+    (it shows no separate fee lines)."""
+
+    name = "nrbe"
+    sends_guests = True
+    listing_requests, quote_requests = 3, 1     # the estimate: up to three calendar halves per listing, one request per window
+
+    def parse_page(self, html, url):
+        body = re.search(r"<body\b[^>]*>", html)
+        unit = re.search(r'data-property-id="(\d+)"', body.group(0)) if body else None
+        if not unit or "property-detail-page" not in body.group(0):
+            return None
+        return {"site_id": unit.group(1), "origin": origin_of(url), "page_url": url}
+
+    def unit_fields(self, html):
+        title = re.search(r"<title[^>]*>([^<]*)</title>", html, re.I)
+        name = clean(title.group(1)) if title else None
+        return {**json_ld_unit(html), "title": name, **({"address": name_address(name)} if name_address(name) else {})}
+
+    def inventory(self, session, origin, options):
+        """Every unit the site's search lists for the configured page of the site (`resource_path`, `brand_ids`), in one request.
+        The list has no address field; a unit's street address is the one its name ends with (name_address)."""
+        params = [("brandId", str(brand)) for brand in options.get("brand_ids") or ()]
+        params += [("resourcePath", options["resource_path"]), ("pageSize", "-1")]
+        reply = session.request("GET", f"{origin}/api/nrbe/units.json?{urlencode(params)}", note="nrbe-inventory",
+                                headers={"Accept": "application/json", "sessionid": uuid.uuid4().hex[:24], "Referer": origin + "/"})
+        if reply.status != 200:
+            raise AdapterError(f"İlan listesi HTTP {reply.status} döndü.")
+        data = json_of(reply, "units.json")
+        rows = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(rows, list):
+            raise AdapterError("units.json yanıtında ilan listesi yok.")
+        if isinstance(data.get("resultTotal"), int) and data["resultTotal"] > len(rows):
+            raise AdapterError(f"units.json {data['resultTotal']} ilandan yalnız {len(rows)} tanesini verdi; liste eksik.")
+        units = []
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get("propertyID") or "").isdigit():
+                continue
+            site_id, title = str(row["propertyID"]), clean(row.get("propertyName"))
+            url = row.get("path") if str(row.get("path") or "").startswith("http") else origin + "/"
+            full, half = number(row.get("fullBathroomsNum")), number(row.get("halfBathroomsNum")) or 0
+            info = {"site_id": site_id, "origin": origin, "page_url": url}
+            units.append({"site_id": site_id, "url": url, "title": title, "address": name_address(title),
+                          "city": (clean(row.get("shortAddress")) or "").split(",")[0].strip() or None,
+                          "latitude": number(row.get("latitude")), "longitude": number(row.get("longitude")),
+                          "bedrooms": number(row.get("bedroomsNum")), "bathrooms": None if full is None else full + 0.5 * half,
+                          "sleeps": number(row.get("sleeps")), "page": prepared_page(info, url, reply.sha256)})
+        return units, [reply]
+
+    def half_year(self, session, info, year, half):
+        """The availability of one half of a year ({iso date: True/False}) and the reply it came from; asked once per listing."""
+        cache = info.setdefault("calendar", {})
+        key = f"{year}-{half}"
+        if key not in cache:
+            start, end = (date(year, 1, 1), date(year, 6, 30)) if half == 0 else (date(year, 7, 1), date(year, 12, 31))
+            reply = session.request("GET", info["origin"] + "/api/nrbe/availability-calendar.json",
+                                    params={"unitId": info["site_id"], "startDate": start.isoformat(), "endDate": end.isoformat()},
+                                    headers={"Accept": "application/json", "Referer": info["page_url"]}, note=f"nrbe-calendar-{info['site_id']}-{key}")
+            if reply.status != 200:
+                raise AdapterError(f"Takvim isteği HTTP {reply.status} döndü.")
+            rows = json_of(reply, "availability-calendar")
+            if not isinstance(rows, list):
+                raise AdapterError("Takvim yanıtı beklenen biçimde değil.")
+            cache[key] = {"days": {r["date"]: bool(r.get("available")) for r in rows if isinstance(r, dict) and isinstance(r.get("date"), str)},
+                          "reply": reply}
+        return cache[key]
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        nights = [date.fromordinal(window["checkin_date"].toordinal() + n) for n in range(window["nights"])]
+        days, replies = {}, []
+        for year, half in sorted({(night.year, (night.month - 1) // 6) for night in nights}):
+            block = self.half_year(session, info, year, half)
+            days.update(block["days"])
+            replies.append(block["reply"])
+        taken = [night.isoformat() for night in nights if days.get(night.isoformat()) is False]
+        if taken:
+            return {**outcome("unavailable", f"Sitenin müsaitlik takvimi bu pencerenin {len(taken)} gecesini dolu gösteriyor "
+                                             f"({taken[0]} …); fiyat sorulmadı.", available=0), "replies": replies}
+        reply = session.request("GET", info["origin"] + "/api/nrbe/reservation-quotes.json",
+                                params={"unitId": info["site_id"], "arrivalDate": window["checkin_date"].isoformat(),
+                                        "departureDate": window["checkout_date"].isoformat(), "adults": str(guests["adults"]),
+                                        "children": str(guests["children"])},
+                                headers={"Accept": "application/json", "Referer": info["page_url"]},
+                                note=f"nrbe-quote-{info['site_id']}-{window['window_key']}")
+        try:
+            data = json.loads(reply.text)
+            data = json.loads(data) if isinstance(data, str) else data          # the error answer is a JSON string holding JSON
+        except ValueError:
+            data = None
+        subtotal, total = (money(data.get("subTotal")), money(data.get("total"))) if isinstance(data, dict) else (None, None)
+        if reply.status != 200 or (subtotal is None and total is None):
+            message = clean(data.get("error")) if isinstance(data, dict) and isinstance(data.get("error"), str) else None
+            if message:
+                return {**outcome("no_price", f"Site: {message} (HTTP {reply.status}). Takvim bu geceleri boş gösteriyor; site sebebini "
+                                              "söylemiyor (en az konaklama kuralı olabilir)."), "replies": replies + [reply]}
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü; yanıtta fiyat yok.")
+        return {**breakdown(subtotal, [], money(data.get("taxes")), total, currency="USD"), "replies": replies + [reply]}
+
+
+# --- Vacasa (vacasa.com) ---------------------------------------------------------------------------------------------------
+
+class Vacasa:
+    """vacasa.com (seen 17 Nov 2026, through the user's US proxy: the site serves only visitors inside the United States). A unit
+    page carries Vacasa.Unit.UnitID and schema.org coordinates (no street address); its booking box asks GET
+    /guest-com-api/get-unit-price-quote?unit_id&check_in&check_out&adults&children&pets (dates as YYYY/MM/DD) and shows rent, the
+    fee lines, the tax lines and the total; an answer with "Error" names the reason (booked, min-stay-not-met). The search page of a
+    place carries every unit of the place with coordinates, bedrooms, baths and the unit number the home had before the site's
+    move to its present numbering (migrated_from_unit_id): a Book>Direct link that names that old number is the same home by the
+    site's own record (link_unit); titles are never compared."""
+
+    name = "vacasa"
+    sends_guests = True
+    page_requests, quote_requests = 3, 1        # the estimate: an old link redirects twice before the place page; one request per window
+
+    def parse_page(self, html, url):
+        unit = re.search(r"\bUnit:\s*\{\s*UnitID:\s*(\d+)", html)
+        if not unit or "get-unit-price-quote" not in html and "unit_reservation_bar" not in html:
+            return None
+        return {"site_id": unit.group(1), "origin": origin_of(url), "page_url": url}
+
+    def unit_fields(self, html):
+        return json_ld_unit(html)
+
+    @staticmethod
+    def search_results(text):
+        for match in re.finditer(r"SearchResults:\s*\{", text):
+            try:
+                data = json.JSONDecoder().raw_decode(text, match.end() - 1)[0]
+            except ValueError:
+                continue
+            if isinstance(data, dict) and isinstance(data.get("units"), list):
+                return data
+        return None
+
+    def inventory(self, session, origin, options):
+        """The units of the configured place (`place`, e.g. /usa/Highway-30A/) from the site's search page. The page shows 24 units;
+        its own address scheme takes page_limit, so a second request asks for all of them. A list that still comes short is an error
+        (an incomplete list could tie a listing to the wrong home)."""
+        address = f"{origin}/search?place={options['place']}"
+        replies = [session.request("GET", address, note="vacasa-inventory", headers={"Accept": "text/html,application/xhtml+xml"})]
+        data = self.search_results(replies[0].text) if replies[0].status == 200 else None
+        if data is None:
+            raise AdapterError(f"Arama sayfası okunamadı (HTTP {replies[0].status}).")
+        total = data.get("total_units") if isinstance(data.get("total_units"), int) else len(data["units"])
+        if total > len(data["units"]):
+            replies.append(session.request("GET", f"{address}&page_limit={total}", note="vacasa-inventory-all",
+                                           headers={"Accept": "text/html,application/xhtml+xml"}))
+            data = self.search_results(replies[1].text) if replies[1].status == 200 else None
+            if data is None or len(data["units"]) < total:
+                raise AdapterError(f"Arama sayfası {total} evden yalnız {len(data['units']) if data else 0} tanesini verdi; liste eksik.")
+        units = []
+        for row in data["units"]:
+            attributes = row.get("attributes") if isinstance(row, dict) and isinstance(row.get("attributes"), dict) else None
+            if attributes is None or not str(row.get("unit_id") or "").isdigit():
+                continue
+            site_id = str(row["unit_id"])
+            url = attributes.get("url") if str(attributes.get("url") or "").startswith("http") else f"{origin}/unit/{site_id}"
+            baths = attributes.get("bathrooms") if isinstance(attributes.get("bathrooms"), dict) else {}
+            legacy = sorted({str(value) for value in (attributes.get("migrated_from_unit_id"), attributes.get("display_unit_id"), row.get("display_unit_id"))
+                             if str(value or "").isdigit() and str(value) != site_id})
+            info = {"site_id": site_id, "origin": origin, "page_url": url}
+            units.append({"site_id": site_id, "url": url, "title": clean(attributes.get("name")), "address": None,
+                          "city": (clean(attributes.get("city_name")) or "").split(",")[0].strip() or None,
+                          "latitude": number(attributes.get("lat")), "longitude": number(attributes.get("lng")),
+                          "bedrooms": number(attributes.get("bedrooms")), "bathrooms": number(baths.get("total")),
+                          "sleeps": number(attributes.get("max_occupancy")), "legacy_ids": legacy,
+                          "page": prepared_page(info, url, replies[-1].sha256)})
+        return units, replies
+
+    @staticmethod
+    def link_unit(urls, units):
+        """(unit, note) when a unit number in the Book>Direct link (or in an address it redirected through) is the present or the
+        former number of exactly one unit of the company's list; else (None, None)."""
+        numbers = {n for url in urls for n in re.findall(r"(?:[?&]UnitID=|/unit/)(\d+)", url or "")}
+        found = [unit for unit in units if numbers & {unit["site_id"], *(unit.get("legacy_ids") or ())}]
+        if len(found) != 1:
+            return None, None
+        number_used = sorted(numbers & {found[0]["site_id"], *(found[0].get("legacy_ids") or ())})[0]
+        former = "" if number_used == found[0]["site_id"] else " eski"
+        return found[0], (f"Bağlantı: Book>Direct bağlantısındaki ilan numarası ({number_used}) şirketin kendi listesinde bu evin{former} "
+                          f"numarası olarak geçiyor; şirket ilanı: {found[0].get('title') or found[0]['url']}.")
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        params = {"unit_id": info["site_id"], "check_in": window["checkin_date"].strftime("%Y/%m/%d"),
+                  "check_out": window["checkout_date"].strftime("%Y/%m/%d"), "adults": str(guests["adults"]),
+                  "children": str(guests["children"]), "pets": "0"}
+        reply = session.request("GET", info["origin"] + "/guest-com-api/get-unit-price-quote", params=params,
+                                headers={"Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest",
+                                         "X-Recaptcha-Token": "", "Referer": info["page_url"]},
+                                note=f"vacasa-quote-{info['site_id']}-{window['window_key']}")
+        try:
+            data = json.loads(reply.text)
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü; yanıt JSON değil.")
+        if data.get("Error"):
+            first = data["Error"][0] if isinstance(data["Error"], list) and data["Error"] else data["Error"]
+            code = str(first.get("message") if isinstance(first, dict) else first or "").strip()
+            if code.replace("-", "_") == "booked":
+                return {**outcome("unavailable", "Home is booked for your selected dates (booked)", available=0), "replies": [reply]}
+            if code.replace("-", "_") == "min_stay_not_met":
+                return {**outcome("restricted", "Minimum stay not met (min-stay-not-met)"), "replies": [reply]}
+            return refusal(code or "Site fiyat vermedi.", [reply])
+        if reply.status != 200:
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü.")
+        return {**self.parse_quote(data), "replies": [reply]}
+
+    @staticmethod
+    def parse_quote(data):
+        def amount(value):
+            return money(value.get("unformatted")) if isinstance(value, dict) else money(value)
+        fees = [{"name": clean(f.get("name")) or "Fee", "amount": amount(f.get("fee"))} for f in data.get("feeBreakdown") or [] if isinstance(f, dict)]
+        if amount(data.get("serviceFee")):
+            fees.append({"name": "Vacasa Service Fee", "amount": amount(data.get("serviceFee"))})
+        taxes = [{"name": clean(t.get("name")) or "Tax", "amount": amount(t.get("tax"))} for t in data.get("taxBreakdown") or [] if isinstance(t, dict)]
+        excluded = [{"name": clean(f.get("name")) or "Fee", "amount": amount(f.get("fee")), "reason": "sitede tesiste ödenecek ücret; sitenin toplamına dahil değil"}
+                    for f in data.get("offlineFeesBreakdown") or [] if isinstance(f, dict) and amount(f.get("fee"))]
+        rent, total = amount(data.get("rent")), amount(data.get("total"))
+        if rent is None and total is None:
+            raise AdapterError("Fiyat yanıtında kira veya toplam yok.")
+        tax_items = [t for t in taxes if t["amount"] is not None]
+        return breakdown(rent, [f for f in fees if f["amount"] is not None], None if tax_items else amount(data.get("tax")), total,
+                         tax_items=tax_items, excluded=excluded, currency=clean(data.get("currency")) or "USD")
+
+
+# --- AvantStay sites on a company's own domain (seen on 30a-beachgirls.com) ----------------------------------------------------
+
+class AvantStay:
+    """A company site built by AvantStay (Next.js; seen on 30a-beachgirls.com, 16-17 Nov 2026). /alphabetical-property-list carries
+    every home (id, hash, name, bedrooms, capacity) and a home page (/vacation-rental/<hash>) carries the home's details in
+    __NEXT_DATA__: the city and the region name the site gives, coordinates rounded to three decimals (about 100 m), baths. There
+    is no street address, so these homes cannot be tied to Book>Direct listings by the address or location rule; they are read as
+    the company's own inventory (the destination configuration's `inventory.own`).
+
+    The price: the site's booking box asks AvantStay's GraphQL service (arriere.prod.avantstay.com/public/graphql, header
+    X-Distribution-Channel) - `home(homeId){calendar(from,to){date minStay rate season status ...}}` and `cartPrice(bookingRequest:{...})`.
+    GÖREV-22 could not send a trial request to that service, so quote() is not written: nobody has seen an answer (the amounts'
+    unit, the calendar's status words and the refusal texts are unknown). The configuration keeps `inventory.own.quotes` false until
+    it is."""
+
+    name = "avantstay"
+    sends_guests = True
+    page_requests = 1
+
+    @staticmethod
+    def next_data(html):
+        block = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+        try:
+            data = json.loads(block.group(1)) if block else None
+        except ValueError:
+            data = None
+        props = data.get("props") if isinstance(data, dict) else None
+        return props.get("pageProps") if isinstance(props, dict) and isinstance(props.get("pageProps"), dict) else None
+
+    def details(self, html):
+        props = self.next_data(html) or {}
+        home = props.get("home") if isinstance(props.get("home"), dict) else {}
+        found = home.get("homeDetails")
+        return found if isinstance(found, dict) and found.get("id") and str(found.get("hash") or "").isdigit() else None
+
+    def parse_page(self, html, url):
+        details = self.details(html)
+        if not details:
+            return None
+        return {"site_id": str(details["hash"]), "home_id": details["id"], "origin": origin_of(url), "page_url": url}
+
+    def unit_fields(self, html):
+        details = self.details(html) or {}
+        full, half = number(details.get("bathroomsCount")), number(details.get("halfBathroomsCount")) or 0
+        region = details.get("region") if isinstance(details.get("region"), dict) else {}
+        return {"title": clean(details.get("title")), "city": clean(details.get("city")), "site_region": clean(region.get("name")),
+                "latitude": number(details.get("latitude")), "longitude": number(details.get("longitude")),
+                "bedrooms": number(details.get("bedroomsCount")), "bathrooms": None if full is None else full + 0.5 * half,
+                "sleeps": number(details.get("maxOccupancy")),
+                "legacy_ids": [str(details["originalTSAId"])] if str(details.get("originalTSAId") or "").isdigit() else []}
+
+    def inventory(self, session, origin, options):
+        """Every home of the site's alphabetical list, each with the details of its own page (one page request per home)."""
+        listing = session.request("GET", origin + (options.get("list_path") or "/alphabetical-property-list"), note="avantstay-inventory",
+                                  headers={"Accept": "text/html,application/xhtml+xml"})
+        rows = (self.next_data(listing.text) or {}).get("listings") if listing.status == 200 else None
+        if not isinstance(rows, list):
+            raise AdapterError(f"Ev listesi okunamadı (HTTP {listing.status}).")
+        units, replies = [], [listing]
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get("hash") or "").isdigit() or row.get("redirect"):
+                continue
+            site_id, url = str(row["hash"]), f"{origin}/vacation-rental/{row['hash']}"
+            fields = row.get("homeFields") if isinstance(row.get("homeFields"), dict) else {}
+            unit = {"site_id": site_id, "url": url, "title": clean(row.get("name")), "address": None, "city": None, "site_region": None,
+                    "latitude": None, "longitude": None, "bedrooms": number(fields.get("bedroomsCount")), "bathrooms": None,
+                    "sleeps": number(fields.get("maxOccupancy")), "legacy_ids": []}
+            try:
+                page = session.request("GET", url, note=f"avantstay-home-{site_id}", headers={"Accept": "text/html,application/xhtml+xml"})
+            except AdapterError as exc:
+                unit["page"] = {"page_status": "error", "page_url": url, "http_status": None, "site_listing_id": site_id, "message": str(exc), "info": None}
+                units.append(unit)
+                continue
+            replies.append(page)
+            info = self.parse_page(page.text, page.url) if page.status == 200 else None
+            if info is None or info["site_id"] != site_id:
+                status = "not_found" if page.status in (404, 410) else "no_listing" if page.status == 200 else "error"
+                unit["page"] = {"page_status": status, "page_url": url, "http_status": page.status, "site_listing_id": site_id,
+                                "message": f"Ev sayfası okunamadı (HTTP {page.status}).", "info": None}
+            else:
+                details = {key: value for key, value in self.unit_fields(page.text).items() if value not in (None, [])}
+                unit.update({**details, "bedrooms": unit["bedrooms"] if unit["bedrooms"] is not None else details.get("bedrooms"),
+                             "title": unit["title"] or details.get("title")})
+                unit["page"] = prepared_page(info, page.url, page.sha256)
+            units.append(unit)
+        return units, replies
+
+    @staticmethod
+    def link_unit(urls, units):
+        """(unit, note) when the number a Book>Direct link names (https://<site>/<number>/) is the hash or the former id of exactly
+        one home of the list; else (None, None)."""
+        numbers = {n for url in urls for n in re.findall(r"^https?://[^/]+/(?:vacation-rental/)?(\d+)/?(?:[?#].*)?$", url or "")}
+        found = [unit for unit in units if numbers & {unit["site_id"], *(unit.get("legacy_ids") or ())}]
+        if len(found) != 1:
+            return None, None
+        return found[0], ("Bağlantı: Book>Direct bağlantısındaki numara şirketin kendi listesinde bu evin numarası olarak geçiyor; "
+                          f"şirket ilanı: {found[0].get('title') or found[0]['url']}.")
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        raise AdapterError("AvantStay fiyat sorgusu yazılmadı: sitenin fiyat servisinden örnek yanıt görülemedi (GÖREV-22).")
+
+
 ADAPTERS = {adapter.name: adapter for adapter in (ResCMS(), Track(), Streamline(), VacationRentalsRouter(), VRP(), PropertyQuoteV3(),
-                                                  ExceptionalStay(), AsmxGetQuote(), Wander(), Q4VR())}
+                                                  ExceptionalStay(), AsmxGetQuote(), Wander(), Q4VR(), NaturalRetreats(), Vacasa(),
+                                                  AvantStay())}

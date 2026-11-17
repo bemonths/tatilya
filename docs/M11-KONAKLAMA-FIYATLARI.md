@@ -138,6 +138,69 @@ Gerçek çekimde Oversee'nin (oversee.us) VRP liste servisi JSON yerine HTML son
 
 **Çekim süresi:** yeni şirket eklenmediği için aylık çekim aynı kaldı (son çekim 21.129 istek, 7 sa 42 dk). "Güncelleme zamanı gelenler" tablosundaki tahmin artık son çekimin okumadığı etkin şirketleri de sayar: şirketin Book>Direct ilan sayısı × (1 sayfa + pencere sayısı × 2 istek) × (şirketin istek aralığı + 1 sn); korumalı sitede aralık 6 sn (`agency_rates.new_site_estimate`; bizim tahminimiz). RealJoy eklenirse: 61 ilan × 25 = 1.525 istek, yaklaşık 3 saat.
 
+## Bölge engelli iki şirket, bağlantıdaki numara kuralı ve şirketin kendi sitesindeki evler (GÖREV-22, 17 Kasım 2026, şema 22, v0.23.0)
+
+GÖREV-20'de okunamayan altı şirketten ikisinin engeli **bölge engeli** çıktı (ölçüm: `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`); bunlar
+kullanıcının ABD proxy'si üzerinden incelendi (şirket başına 10 sayfa, iki istek arası en az 8 sn) ve okuyucuları yazıldı. Üç yeni
+şirket satırı migration v22 ile yapılandırmaya girer (`AGENCY_SITES_V22`, `AGENCY_SITE_OPTIONS_V22`); toplam 27 şirket.
+
+| Şirket | Uyarlayıcı | Site ne veriyor | Eşleme |
+|---|---|---|---|
+| 360 Blue (360blue.com; bölge engelli) | `nrbe` — Natural Retreats'in rezervasyon motoru (Adobe Experience Manager) | `GET /api/nrbe/units.json` (30A koleksiyonunun bütün evleri tek istekte: ad, koordinat, oda, banyo, kapasite), `availability-calendar.json` (altı aylık müsaitlik), `reservation-quotes.json?unitId&arrivalDate&departureDate&adults&children` (`subTotal`, `taxes`, `total`) | Adres kuralı. Listede adres alanı yok; evin sokak adresi adının sonundan alınır (`name_address`: `Seaside "Sea ya real soon" 73 Odessa Street` → `73 Odessa Street`). Yalnız adres alınır, ad karşılaştırılmaz |
+| Vacasa (vacasa.com; bölge engelli; wyndhamvacationrentals.com bağlantıları buraya yönleniyor) | `vacasa` | Arama sayfası (`/search?place=/usa/Highway-30A/`): her ev için koordinat, oda, banyo ve evin **eski ilan numarası** (`migrated_from_unit_id`); `GET /guest-com-api/get-unit-price-quote` (kira, ücret kalemleri, vergi kalemleri, toplam; `Error` yanıtı sebebi söyler) | Bağlantıdaki numara kuralı (aşağıda); olmazsa konum kuralı |
+| 30A Beach Girls (30a-beachgirls.com) | `avantstay` | Alfabetik ev listesi ve her evin sayfası (`__NEXT_DATA__`): şehir, sitenin bölge adı, 3 ondalığa yuvarlanmış koordinat; sokak adresi yok | Eşleme yok: şirketin kendi envanteri (aşağıda) |
+
+**Fiyat kalemleri sitenin gösterdiği gibidir.** 360 Blue ücret kalemi göstermez: `rent` sitenin ara toplamıdır (`subTotal`), vergi ve
+toplam sitenin kendi sayılarıdır. Vacasa'da temizlik ücreti ve vergi kalemleri ayrı gelir; tesiste ödenecek ücretler (varsa) toplama
+katılmadan "hariç" kalemlerde durur. **Müsait olmayan pencere ayrı tutulur:** 360 Blue satamadığı tarih için sebep söylemeyen bir hata
+döndürdüğünden, takvimin dolu gösterdiği pencere takvimden "müsait değil" yazılır ve fiyat sorulmaz; takvim boş gösterdiği halde hata
+gelirse satır "fiyat yok"tur (müsaitlik bilinmiyor), sitenin sözüyle. Vacasa'da `booked` → müsait değil, `min-stay-not-met` → kural.
+
+**Ölü bağlantılar (`inventory.dead_links`).** 360 Blue'nun Book>Direct'teki bağlantıları sitenin eski adresleridir (301, sonra sitenin
+kendi 404 sayfası); 30A Beach Girls'ünkiler 404. Bunlar yapılandırmada işaretlidir: bağlantı sorulmaz (ilan başına iki boş istek ve
+proxy hızında 8'er saniye harcanmaz), ilan doğrudan şirketin listesinden eşlenir; ilanın kaydında "Book>Direct bağlantısı sorulmadı"
+yazar.
+
+**Bağlantıdaki numara kuralı (`link_unit`; eşleme yöntemi "bağlantı").** Book>Direct bağlantısı (ya da yönlendiği adreslerden biri)
+bir ilan numarası taşıyorsa ve şirketin kendi listesi bu numarayı **tam bir ev** için — şimdiki ya da eski numarası olarak — veriyorsa
+ilan o eve bağlanır. Bu ad benzerliği değildir: numarayı bağlantı, karşılığını şirketin kendi kaydı söyler. Numara listede yoksa ya da
+birden çok evde varsa kural uygulanmaz ve adres/konum kuralına geçilir. `SiteSession` artık bir yanıta giderken sorulan bütün adresleri
+tutar (`Reply.hops`): Wyndham bağlantısı numarayı ancak yönlendiği `unit.php?UnitID=…` adresinde gösterir.
+
+**Şirketin kendi sitesindeki evler — mahalleler arası kendi envanter (`inventory.own`).** Sitesi sokak adresi vermeyen ve koordinatı
+yuvarlayan bir şirketin evleri Book>Direct ilanlarına bağlanamaz (yöneticinin kararı: ad benzerliğiyle eşleme yapılmaz). Bu evler,
+tek topluluğun resmî programındaki "kendi envanter" yoluyla (GÖREV-09, Alys Beach) aynı tablolara, ama mahalleler arası yazılır:
+
+- Ev, site onu yapılandırmadaki bölgesine koyuyorsa alınır (`site_region`; 30A Beach Girls'te "Emerald Coast - 30A"); başka bölgedeki
+  ev (Panama City Beach) alınmaz ve sayısı şirket satırında yazar.
+- **Mahalle yalnız sitenin ev için söylediği yer adından gelir** (`regions`: sitenin yer adı → mahalle). Koordinattan ya da adresten
+  mahalle çıkarılmaz. Yer adı bir mahalle adı değilse ev **mahallesiz** kalır (`region_id` boş; şema 22 buna izin verir): hiçbir
+  mahallenin ortancasına girmez, özetlerde "mahallesi belirtilmemiş" diye ayrı sayılır.
+- 30A Beach Girls sitesinde "Santa Rosa Beach" ve "Inlet Beach" bilerek eşlenmedi: bu sitede posta adresindeki şehirdir, mahalle
+  değil (site Prominence'ta diye anlattığı bir evin şehrine "Inlet Beach" yazıyor). Böyle evler mahallesiz kalır.
+- Bir ev Book>Direct ilanına bağlanmışsa (aynı şirket sayfası, aynı adres, adres kuralı ya da bağlantıdaki numara) kendi envantere
+  girmez; iki kez sayılmaz.
+- Kanıt paketinde ve ekranda kaynağıyla ayrı durur: "şirketin kendi sitesindeki evler; Book>Direct ilanlarına bağlanmadı".
+
+**30A Beach Girls'te fiyat henüz sorulmuyor (`inventory.own.quotes: false`).** Sitenin fiyatı kendi alan adından değil, AvantStay'in
+ayrı servisinden geliyor (`arriere.prod.avantstay.com/public/graphql`, başlık `X-Distribution-Channel: BEACH_GIRLS`): müsaitlik ve
+gecelik fiyat için `home(homeId){calendar(from,to){date minStay rate season status restrictions{…}}}`, fiyat dökümü için
+`cartPrice(bookingRequest:{adults,children,from,until,guests,homeId,infants,inputPaymentMode:CREDIT_CARD,pets,…}){creditCard{subtotal
+taxesAndFees{fees taxes total} totalOfStay …}}`. Sorguların biçimi sitenin betiğinden okundu; GÖREV-22'de bu servise deneme isteği
+yapılamadığı için hiçbir yanıt görülmedi (tutarların birimi, takvimdeki durum sözleri ve ret metinleri bilinmiyor). Görülmemiş bir
+yanıt için okuyucu yazılmadı: `AvantStay.quote` bilerek hata verir ve yapılandırma fiyat sormaz; evlerin listesi, yer adları ve
+mahalle dağılımı okunur, satırlarında "Fiyat sorulmadı" yazar. Ayrıca `cartPrice` yanıtında bir `cartId` dönüyor: sorgu sunucuda bir
+sepet kaydı açıyor olabilir; etkinleştirmeden önce buna da bakılmalı.
+
+**Okunamayan şirketlerin son durumu** (`thirty_a_agency_unread.csv`, 17 Kasım 2026): Cottage Rental Agency — site yok (DNS kaydı yok;
+ana alan adı sandestin.com'daki kaldırılmış sayfaya yönleniyor, proxy'den de aynı); Outdoor Shower — alan adı askıda, şirket LocalVR'ye
+devredilmiş (golocalvr.com bölge engelli değil; okuyucusu yok); RealJoy — Cloudflare doğrulaması (bot koruması; proxy kullanılmaz).
+
+**Çekim tahmini (`new_site_estimate`).** Yeni şirket için: ilan × (bağlantıyı açma istekleri — ölü bağlantıda 0 — + ilan başına ek
+istek + pencere × fiyat isteği), bölge engelli şirkette istek aralığı 8 sn (+1 sn yanıt). Uyarlayıcı ipuçları: `nrbe` ilan başına 3
+takvim isteği ve pencere başına 1; `vacasa` bağlantı başına 3 (iki yönlendirme ve yer sayfası) ve pencere başına 1. Kendi envanterde
+beklenen ev sayısı × 1 sayfa (`expected_homes`). Bu bir üst sınırdır: eşleşmeyen ilan fiyat sormaz, dolu pencere sorulmaz.
+
 ## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
 
 **Kural (bizim varsayımımız, kaynak gerçeği değil):** çekim ayından sonraki **12 ayın** her biri için ayın **15'ini içeren Cumartesi–Cumartesi haftası** (7 gece): hafta, 15'inden önceki ya da 15'i olan Cumartesi başlar, dolayısıyla her zaman ayın 9'u ile 22'si arasındadır. Başlangıcı çekim tarihine **21 günden yakın** olan pencere atlanır ve yerine 13. ay eklenir; her çekim aynı sayıda pencere sorar. Pencere anahtarı ayı adlandırır (`ay-2027-07`), etiket "Temmuz 2027 · 10–17 Temmuz". Kural destinasyon yapılandırmasındadır (`destination_lodging_sources.window_rule`, JSON: `kind, months, anchor_day, weekday, nights, min_lead_days`; 30A: `thirty_a.py` → `LODGING_WINDOW_RULE`); hesap `studio/sources/windows.py` içinde generic'tir. Book>Direct konaklama aramaları ve kiralama şirketi fiyatları aynı kuralı kullanır; her çekim kullandığı kuralı kaydına yazar (`metadata.window_rule`). Kural tanımlıyken eski sabit pencereler (`destination_lodging_windows`) kapalı kalır.

@@ -123,7 +123,7 @@ export class AgencyPrices {
       <section class="library climate-block"><div class="library-title"><h2>Fiyat · mahalle × tarih penceresi</h2><small>7 gecelik toplamın ortancası ve çeyrekler aralığı; bir mahalleye tıklayınca ilanlar açılır.</small></div>
       <div class="table-scroll"><table class="lodging-table agency-table"><thead><tr><th>MAHALLE</th>${snap.windows.map(w=>`<th>${windowHeader(w)}</th>`).join("")}</tr></thead>
       <tbody>${snap.regions.map(region=>`<tr class="${region.region_id===this.selectedRegion?"selected":""}"><td><button class="source-name" data-agency-region="${esc(region.region_id)}">${esc(region.region_name)}</button></td>${snap.windows.map(w=>`<td>${agencyCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>
-      ${seasonTable(snap.seasons,snap.regions,"7 gecelik toplam")}${comparisonTable(snap.comparison,snap.regions)}
+      ${ownCompanies(snap.own_companies)}${seasonTable(snap.seasons,snap.regions,"7 gecelik toplam")}${comparisonTable(snap.comparison,snap.regions)}
       <section class="library climate-block"><div class="library-title"><h2>Oda sayısına göre ortanca toplam</h2><small>${esc(snap.bedroom_note)}</small></div>
       <div class="table-scroll"><table class="lodging-table"><thead><tr><th>MAHALLE</th>${queried.map(w=>`<th>${windowHeader(w)}</th>`).join("")}</tr></thead>
       <tbody>${snap.regions.map(region=>`<tr><td>${esc(region.region_name)}</td>${queried.map(w=>`<td>${bedroomCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>
@@ -179,6 +179,15 @@ export function publishedTag(rent) {
 }
 export function publishedBreakdown(rent) {
   return rent?`<p class="source-stamp">Yayımlanmış kira (vergi ve ücret hariç; toplam fiyata karışmaz): ${usd(rent.rent_low)}–${usd(rent.rent_high)}. ${esc(rent.basis)}</p>`:"";
+}
+/** GÖREV-22: companies read as their own inventory across the neighbourhoods (the homes on the company's own site, not tied to
+ *  Book>Direct listings): how many homes, in which neighbourhoods the site itself names, how many in none. */
+export function ownCompanies(companies) {
+  const shown=(companies || []).filter(c=>c.unassigned || c.regions.length>1);
+  if(!shown.length) return "";
+  return `<section class="library climate-block"><div class="library-title"><h2>Şirketin kendi sitesindeki evler</h2><small>Book>Direct ilanlarına bağlanmadı; mahalle yalnız sitenin ev için söylediği yer adından alınır, mahallesi belirtilmemiş evler hiçbir mahallenin ortancasına girmez</small></div>
+    <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ŞİRKET</th><th>EV</th><th>MAHALLESİ BELİRTİLEN</th><th>MAHALLESİ BELİRTİLMEMİŞ</th><th>FİYATLI EV</th></tr></thead>
+    <tbody>${shown.map(c=>`<tr><td>${esc(c.company)}<small>${esc(c.domain)}</small></td><td>${c.homes}${c.outside?`<small>30A bölgesi dışında ${c.outside} ev alınmadı</small>`:""}${c.on_bookdirect?`<small>Book>Direct ilanına bağlanan ${c.on_bookdirect} ev ayrıca sayılmadı</small>`:""}</td><td>${c.with_region}<small>${esc(c.regions.map(r=>`${r.region_name} ${r.homes}`).join(" · ") || "—")}</small></td><td>${c.unassigned}</td><td>${c.priced}</td></tr>`).join("")}</tbody></table></div></section>`;
 }
 /** Homes from a community's official rental program that Book>Direct does not show, with their prices; counted apart. */
 export function ownTable(own, windows) {
