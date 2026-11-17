@@ -127,6 +127,11 @@ işi `eklenti_deneme`; bu düğmeye kullanıcı basar).
 - Service worker Chrome tarafından durdurulursa eklenti oturumu yeniden alır (45 sn sessiz kalan oturum yeniden verilir; yarım öğe yeniden
   sorulur).
 - realjoy.com için kiralama okuyucusu (adaptör) yok: eklenti sayfayı okuyabilir ama fiyat çıkarılamaz (yönetici kararı). GÖREV-20 (16 Kasım 2026): site ICND rezervasyon motorunu kullanıyor (arkada Track); doğrulaması programın kendi tarayıcısında geçmedi. Okuyucunun yazılabilmesi için deneme listesinin sonuna bir **ilan sayfası** eklendi (`https://www.realjoy.com/beach-rentals/sea-la-vie-seaside-main-house`, 11 Kasım ham kaydının bağlantılarından); kullanıcı "Sorunlu sitelerden birer sayfa dene"ye basınca ham kopyası alınır. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`.
+  GÖREV-24 (17 Kasım 2026): ilan sayfasının kaydı geldi; fiyat sayfanın betiklerinde olduğu için listeye bir kez sayfanın üç betiği
+  (`z_pdp.js`, `datepicker.js`, `z_global.js`; sayfa olarak açılıp okundu) kondu ve okunduktan sonra çıkarıldı. Fiyat yalnız
+  `POST /ajax/quote` ile geliyor; **deneme listesinde fiyat adresi yok** (GET bir fiyat adresi bulunmadı), okuyucu yazılmadı. Listede
+  realjoy.com'dan yalnız 30A ilan listesi kaldı (sonda). Deneme okuması bir sitenin iki sayfası arasında en az eklentinin aralığı
+  kadar, realjoy.com'da 20 sn bekler (`EXTENSION_TRIAL_GAP_S`; site 429 vermişti).
 - Bildirim ve pencereyi öne getirme Chrome'un ve Windows'un izin verdiği kadardır.
 
 ## Testler

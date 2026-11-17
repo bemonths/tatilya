@@ -114,23 +114,17 @@ TEXT = {
 # listing of 11 October 2026 was gone (404); its 30A listing page (a link of that day's raw copy) stays.
 EXTENSION_TRIAL_SITES = (
     ("order.online", "https://order.online/business/smallcakes-cupcakery-56407", "restoran menüsü (doğrulama geçmedi)"),
-    # GÖREV-24: the listing page's raw copy of 17 November 2026 (GÖREV-20 put it here) shows the house's calendar but not how its price
-    # comes: that is in the page's own scripts, which a DOM copy does not hold. The three scripts the listing page loads from the site
-    # (addresses as written in that raw copy) are read once, as pages, between other sites; realjoy.com's pages are at least
-    # EXTENSION_TRIAL_GAP_S apart (it answered 429 to the first page of that day's trial).
-    ("realjoy.com", "https://www.realjoy.com/bookingEngine/javascripts/pdp/z_pdp.js?v=17", "kiralama şirketinin ilan sayfası betiği (fiyat isteği için)"),
     ("hcafloridahealthcare.com", "https://www.hcafloridahealthcare.com/locations/breakfast-point-emergency", "acil sağlık noktası"),
-    ("realjoy.com", "https://www.realjoy.com/bookingEngine/javascripts/pdp/datepicker.js?v=17", "kiralama şirketinin takvim betiği (fiyat isteği için)"),
     ("cvs.com", "https://www.cvs.com/store-locator/cvs-pharmacy-locations/Florida/Miramar-Beach", "eczane zinciri"),
-    ("realjoy.com", "https://www.realjoy.com/bookingEngine/javascripts/be/z_global.js?v=17", "kiralama şirketinin genel betiği (fiyat isteği için)"),
     ("publix.com", "https://www.publix.com/locations", "süpermarket zinciri"),
     ("winndixie.com", "https://www.winndixie.com/locator", "süpermarket zinciri"),
     ("thefreshmarket.com", "https://www.thefreshmarket.com/your-market/store-locator", "süpermarket zinciri"),
-    # GÖREV-16/20: realjoy.com's 30A listing page (each house's street address, coordinates, bedrooms and unit code; the address match
-    # is made from it), last so it is far from the scripts.
-    ("realjoy.com", "https://www.realjoy.com/beach-rentals/30a-vacation-rentals", "kiralama şirketinin 30A ilan listesi (eşleme için)"),
+    # GÖREV-16/20/24: realjoy.com's 30A listing page. GÖREV-24 (17 November 2026) read, through this trial, the listing page and the
+    # three scripts it loads (z_pdp.js, datepicker.js, z_global.js): the price comes only from a POST (/ajax/quote, the dates form), so
+    # no reader is written (docs/M11-KONAKLAMA-FIYATLARI.md). The scripts left the list; the site's pages stay EXTENSION_TRIAL_GAP_S apart.
+    ("realjoy.com", "https://www.realjoy.com/beach-rentals/30a-vacation-rentals", "kiralama şirketinin 30A ilan listesi (fiyatı POST ile geliyor; okuyucu yok)"),
 )
-# GÖREV-24: the least time between two trial pages of one site, above the extension's own gap (seconds)
+# GÖREV-24: the least time between two trial pages of one site, above the extension's own gap (seconds); realjoy.com answered 429
 EXTENSION_TRIAL_GAP_S = {"realjoy.com": 20}
 
 ANCHOR_PROVENANCE = {

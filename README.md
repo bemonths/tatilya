@@ -168,6 +168,14 @@ kullanılmaz; kira, toplam fiyat ortancalarına karışmadan ayrı gösterilir (
 300 evin tamamını tek istekte veriyor. Outdoor Shower'ı devralan LocalVR'nin sitesinde 30A'da ev yok; okunacak site yok. RealJoy için
 eklentinin ilan sayfası kaydı bekleniyor. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`, `docs/gorevler/GOREV-23/RAPOR.md`.
 
+## RealJoy incelemesi · v0.25.0
+
+GÖREV-24: RealJoy'un ev sayfası ve betikleri tarayıcı eklentisiyle okundu. Müsaitlik ve en az konaklama sayfanın içinde geliyor; fiyat
+ise yalnız sayfanın tarih formu gönderilince (POST) geliyor. Program form göndermediği için RealJoy'un fiyatı okunmuyor; şirket "fiyatı
+okunamayan şirketler" tablosunda bu nedenle durur. Fiyat sorgusu yöneticinin izniyle ayrı bir görevde ele alınacak. Deneme okuması aynı
+sitenin iki sayfası arasında artık daha uzun bekliyor (RealJoy'da 20 saniye). Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`,
+`docs/gorevler/GOREV-24/RAPOR.md`.
+
 ## Kiralama fiyatlarının eksikleri · v0.23.0
 
 GÖREV-22 (şema 22): fiyatı okunamayan şirketlerden ikisi (360 Blue, Vacasa) yalnız ABD içinden gelen ziyaretçiye açıkmış. Bir sitenin

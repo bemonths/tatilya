@@ -3,11 +3,16 @@
 ## Stable durum
 
 ```text
-tag v0.23.0 -> 9ead6a8 (GÖREV-22'nin son commit'i, gorev-22-kiralama)
+tag v0.24.0 -> f87582c (GÖREV-23'ün son commit'i, gorev-23-okuyucular)
 main -> aynı commit
-app 0.23.0
-schema 22
+app 0.24.0
+schema 23
 ```
+
+17 Kasım 2026'da GÖREV-24 Adım 1 ile (yönetici GÖREV-23'ü kabul etti) main, `gorev-23-okuyucular` dalının son commit'ine fast-forward
+edildi (`9ead6a8..f87582c`) ve bu commit'e açıklamalı `v0.24.0` etiketi konuldu ("v0.24.0 — GÖREV-23: 30A Beach Girls haftalık kirası
+(AvantStay takvimi), Vacasa tam liste, LocalVR incelemesi (şema 23)"); main ve etiket push edildi. Önceki kararlı sürüm: `v0.23.0` →
+`9ead6a8`.
 
 17 Kasım 2026'da GÖREV-23 Adım 1 ile (yönetici GÖREV-22'yi kabul etti) main, `gorev-22-kiralama` dalının son commit'ine fast-forward
 edildi (`2848c6f..9ead6a8`) ve bu commit'e açıklamalı `v0.23.0` etiketi konuldu ("v0.23.0 — GÖREV-22: bölge engeli ölçümü, 360 Blue ve
@@ -52,12 +57,21 @@ edildi (`57088be..2848c6f`) ve bu commit'e açıklamalı `v0.22.0` etiketi konul
 ## Aktif branch
 
 ```text
-gorev-23-okuyucular
-app 0.24.0
+gorev-24-realjoy
+app 0.25.0
 schema 23
 ```
 
-Bu dal (GÖREV-23, 17 Kasım 2026; main'e alınmadı, etiket konmadı): kiralama okuyucularının tamamlanması.
+Bu dal (GÖREV-24, 17 Kasım 2026; main'e alınmadı, etiket konmadı): RealJoy incelemesi.
+
+- **RealJoy'un fiyat isteği** (`docs/M11-KONAKLAMA-FIYATLARI.md` "GÖREV-24"): ilan sayfası ve üç betiği kullanıcının Chrome eklentisiyle
+  okundu. Müsaitlik ve en az konaklama sayfada (GET); fiyat yalnız `POST /ajax/quote` (tarih formu) ile. Okuyucu yazılmadı, yapılandırma
+  satırı yok; `thirty_a_agency_unread.csv`'de neden güncellendi. Yönetici kararı: fiyat sorgusu izinle GÖREV-25'te.
+- **Deneme okuması:** bir sitenin iki deneme sayfası arasında en az eklentinin aralığı ya da sitenin kendi aralığı
+  (`EXTENSION_TRIAL_GAP_S`, realjoy.com 20 sn). Listede realjoy.com'dan yalnız 30A ilan listesi (sonda).
+- Şema değişmedi (23); gerçek veri değişmedi; çekim tahmini değişmedi (kiralama ~10 sa, hepsi ~11 sa 4 dk).
+
+Önceki dal (GÖREV-23, 17 Kasım 2026; main'de, `v0.24.0`): kiralama okuyucularının tamamlanması.
 
 - **30A Beach Girls'ün kirası** (`AvantStay.quote`, `docs/M11-KONAKLAMA-FIYATLARI.md`): AvantStay'in servisindeki takvimden haftalık
   kira (gecelik fiyatların toplamı, bizim toplamımız); ücret, vergi ve toplam boş. Sitenin fiyat kutusunun sorgusu (`cartPrice`) sepet

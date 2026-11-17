@@ -23,6 +23,12 @@ tamamını tek istekte veriyor; okuyucu değişmedi, tam listeyle sınandı. **O
 Florida'da ev yok; okunacak site yok. **RealJoy:** eklentinin ilan sayfası kaydı bekleniyor. Yapılandırma 27 şirket (değişmedi).
 Ayrıntı aşağıda: "GÖREV-23: AvantStay'in takvimi, Vacasa'nın tam listesi, LocalVR".
 
+GÖREV-24 (17 Kasım 2026, şema 23, uygulama 0.25.0): **RealJoy** incelendi. İlan sayfası ve betikleri kullanıcının Chrome eklentisiyle
+okundu; fiyat yalnız sayfanın tarih formunun **POST** isteğiyle (`/ajax/quote`) geliyor. Görev kuralı ("fiyat yalnız tıklama, form
+gönderme ya da POST ile geliyorsa okuyucu yazılmaz") gereği **okuyucu yazılmadı**, yapılandırmaya satır eklenmedi; RealJoy "fiyatı
+okunamayan şirketler"de yeni nedeniyle kalır. Yönetici kararı (17 Kasım 2026): fiyat sorgusu izinle ayrı bir görevde (GÖREV-25) ele
+alınacak. Ayrıntı aşağıda: "GÖREV-24: RealJoy'un fiyat isteği".
+
 ## Amaç
 
 Ziyaretçinin yer seçiminde "burada kalmak ne kadar tutar" sorusuna kanıt. Book>Direct fiyatı çok az ilan için veriyor (GÖREV-07: 9.189 arama satırının 12'sinde liste fiyatı; takvimlerin çoğu gizli). Book>Direct ilanlarının çoğu bir kiralama şirketine ait ve ilan kaydındaki `url` alanı şirketin kendi ilan sayfasını gösteriyor; bu şirketlerin siteleri belirli tarihler için kalem kalem fiyat gösteriyor. Bu toplayıcı o fiyatı sitenin kendi herkese açık fiyat/müsaitlik gösteriminden okur.
@@ -256,7 +262,41 @@ bir şirketin alan adı olmadığı için çekimde zaten sorulmaz.
 **Okunamayan şirketlerin son durumu** (`thirty_a_agency_unread.csv`, 17 Kasım 2026): Cottage Rental Agency — site yok (DNS kaydı yok;
 ana alan adı sandestin.com'daki kaldırılmış sayfaya yönleniyor, proxy'den de aynı); Outdoor Shower — alan adı askıda; devralan LocalVR'nin
 sitesinde 30A'da ev yok (GÖREV-23), okunacak site yok; RealJoy — Cloudflare doğrulaması (bot koruması; proxy kullanılmaz), okuma yolu
-eklenti.
+eklenti; sayfa eklentiyle okunuyor ama fiyat yalnız POST ile geliyor (GÖREV-24; aşağıda).
+
+## GÖREV-24: RealJoy'un fiyat isteği (17 Kasım 2026)
+
+**Kayıtlar** (eklentinin deneme okuması, kullanıcının Chrome'u; `data/raw/eklenti/20261117/`): ilan sayfası "Sea La Vie Seaside Main
+House" (`125425-8fbe6b7c`, 200, 311 KB); sayfanın yüklediği üç betik `/bookingEngine/javascripts/pdp/z_pdp.js?v=17` (`162317-6b22a8c5`),
+`/bookingEngine/javascripts/pdp/datepicker.js?v=17` (`162345-2d71f10a`), `/bookingEngine/javascripts/be/z_global.js?v=17`
+(`162412-ea2e093f`); 30A ilan listesi (`162516-206f0cd6`, 200; aynı günün ilk denemesinde `125337-e486b52f` **429** almıştı). Betikler
+deneme listesine bir kez eklendi ve okunduktan sonra çıkarıldı.
+
+**Ev sayfasında (GET, istek gerekmeden) gelenler:**
+
+- ev kimliği: `propertyID` = sitenin birim kodu (`data-unitcode`, örnek 1806); Track'in ilan numarası ayrıca (`item_id`/`mpn` 6198);
+- müsaitlik: `#pdpStoredDates` öğesinde dolu günler (`data-unavailable-dates`), giriş ve çıkış günleri (`data-checkin-dates`,
+  `data-checkout-dates`) ve kapalı günler, `AA/GG/YYYY` biçiminde;
+- en az konaklama: 400 gün için gün gün gizli alanlar (`min_night_AA/GG/YYYY`; örnek evde 3, Mart 2027'den itibaren 7 gece);
+- evin adresi, koordinatı (8 ondalık), oda ve kişi sayısı (`be-property-widget` öğesinin `data-` alanları).
+
+**Fiyat:** sayfada yok. Ziyaretçi takvimden iki tarih seçince `z_pdp.js`'teki `submitQuote()` şu isteği gönderir:
+`POST /ajax/quote`, gövde `#pdpDatesForm` formunun alanları (`checkin`, `checkout`, `propertyID`, `roomTypeID`, `propertyName`, boş
+`hash`). Cevap fiyat dökümü HTML'idir (`.pdp-quote-item` kalemleri, toplam `.pdp-quote-total .pdp-quote-item-price` ve `data-price`);
+uygun olmayan tarihte cevap `No`, servis hatasında `API Error`. Sayfa tarihlerle açılırsa (`dates-entered`) aynı istek açılışta da
+gönderilir; yine POST'tur. Vergi ve ücret kalemlerinin biçimi cevap görülmediği için bilinmiyor. Tarihli arama (liste sayfası,
+`#srpSubmitForm`) da `POST /beach-rentals` formuyla çalışır; liste sayfası 311 sonuç diyor ama ilk açılışta yalnız 12 evi veriyor
+(gerisi kaydırınca geliyor; o isteğin betiği okunmadı).
+
+**Karar:** fiyat yalnız POST ile geldiği için okuyucu yazılmadı (görev kuralı). Bu istek sepet ya da rezervasyon kaydı açmaz, kişisel
+bilgi istemez; yine de bir form gönderimidir. Yönetici kararı: izinle GÖREV-25'te. Çevrimdışı adres eşlemesi (liste sayfasının 12 evi ×
+son Book>Direct çekimindeki 61 RealJoy ilanı; programın kuralı): **1 ilan bağlanıyor**, 58 aday yok, 2 kullanılamaz (adres ya da oda
+sayısı yok). Tam liste olmadan gerçek sayı bilinmez.
+
+**429.** Sitenin 17 Kasım denemesindeki ilk sayfaya verdiği 429 (çok fazla istek) bir hız sınırıdır. Deneme okuması artık bir sitenin iki
+sayfası arasında eklentinin aralığından (8 sn) ya da sitenin kendi aralığından (`EXTENSION_TRIAL_GAP_S`; realjoy.com 20 sn) uzun olanı
+bekler. RealJoy'u okuyan bir toplayıcı olmadığı için çekimdeki 429 kuralı (bekle, en çok iki yeniden deneme, üst üste 429'da şirketi
+durdur) bu görevde koda girmedi; GÖREV-25'in işidir.
 
 **Çekim tahmini (`new_site_estimate`).** Yeni şirket için: ilan × (bağlantıyı açma istekleri — ölü bağlantıda 0 — + ilan başına ek
 istek + pencere × fiyat isteği), bölge engelli şirkette istek aralığı 8 sn (+1 sn yanıt). Uyarlayıcı ipuçları: `nrbe` ilan başına 3
