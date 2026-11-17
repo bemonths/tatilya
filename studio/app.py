@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import time
 import csv
 import io
 import json
@@ -313,10 +314,19 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         if not bridge().paired:
             raise Conflict("Eklenti eşleşmemiş: önce eşleşme kodunu eklentiye yazın.")
         job_id = db.add_job("eklenti_deneme", "Tarayıcı eklentisi · sorunlu sitelerden birer sayfa", destination_id=destination_id)
-        threading.Thread(target=problem_sites_work, args=(job_id, sites), name="eklenti-deneme", daemon=True).start()
+        gaps = dict(getattr(profile, "EXTENSION_TRIAL_GAP_S", {}) or {})
+        threading.Thread(target=problem_sites_work, args=(job_id, sites, gaps), name="eklenti-deneme", daemon=True).start()
         return db.job(job_id)
 
-    def problem_sites_work(job_id, sites):
+    def trial_pause(domain, last, gaps, canceled):
+        """GÖREV-24: two trial pages of one site are at least the extension's gap (8 s by default) or the site's own gap apart."""
+        if domain not in last:
+            return
+        need = max(bridge().gap(), gaps.get(domain, 0))
+        while not canceled() and time.monotonic() - last[domain] < need:
+            time.sleep(min(1.0, max(0.05, need - (time.monotonic() - last[domain]))))
+
+    def problem_sites_work(job_id, sites, gaps=None):
         """GÖREV-16: each site's page and its kind (tamam, doğrulama, erişim reddedildi, bölge engeli, başka siteye yönlendi). A domain on
         the region-blocked list is not given to the extension: it is read through the US proxy (proxy, then the program's browser with
         the proxy) or skipped when no proxy is set. A region block the extension meets puts the domain on the list and, with a proxy,
@@ -338,9 +348,11 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         windows = JobWindows(lambda key, text: db.set_job_window(job_id, key, text))     # GÖREV-17: closes what the job started
         windows.__enter__()
         try:
+            last, gaps = {}, gaps or {}
             for number, (domain, url, note) in enumerate(sites, 1):
                 if canceled():
                     return
+                trial_pause(domain, last, gaps, canceled)
                 try:
                     if region.listed(domain):
                         row = through_proxy(reader, domain, url, note)
@@ -363,6 +375,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                                 row["not"] = proxy_mod.NO_PROXY_SKIP
                 except Exception as exc:
                     row = {"alan_adi": domain, "aciklama": note, "durum": "hata", "tur": "hata", "not": f"{type(exc).__name__}: {str(exc)[:160]}"}
+                last[domain] = time.monotonic()
                 rows.append(row)
                 if row.get("tur") == "bolge_engeli":      # GÖREV-17: "bölge engeli · proxy'yle okundu" / "… proxy'yle de okunamadı"
                     label = proxy_mod.region_outcome(row["durum"], row.get("not"), bool(row.get("proxy")))

@@ -54,7 +54,7 @@ def test_pairing_binds_the_first_extension_origin_and_the_code_lives_in_the_data
     assert as_extension(client, "/api/eklenti/eslestir", origin=OTHER).status_code == 403          # another extension is refused
     status = client.get("/api/tarayici-eklentisi").json()
     assert status["eslesti"] and status["bagli"] and status["surum"] == "0.16.0" and len(status["kurulum"]) == 6
-    assert [s["alan_adi"] for s in status["sorunlu_siteler"]][:2] == ["realjoy.com", "order.online"]
+    assert [s["alan_adi"] for s in status["sorunlu_siteler"]][:2] == ["order.online", "realjoy.com"]
     assert status["kurulum_resimleri"] == ["1-uzantilar.png", "2-gelistirici-modu.png", "3-eklenti-penceresi.png"]
     assert client.get("/eklenti-kurulum/2-gelistirici-modu.png").headers["content-type"] == "image/png"
     assert client.get("/eklenti-kurulum/..%2Fmanifest.json").status_code == 404
