@@ -331,4 +331,4 @@ ve fiyat uygun bir istekle geliyorsa RealJoy da aynı çekime girebilir.
 ## CI sonucu
 
 - Commit `40aa1e9` (kod, testler, belgeler ve rapor): çalışma 44070770943 **başarısız** — Test adımı 16 dakikalık sınırda durduruldu (takıldı). Günlüğün sonu (herkese açık not): `tests/test_extension.py` içindeki `client` fixture'ının kapanışında bekliyordu. Bu, GÖREV-18'den beri bilinen rastgele takılmadır (aynı commit başka çalışmada geçer); bu görevin dokunduğu bir dosya değil. Aynı kod bu bilgisayarda iki tam turda geçti.
-CI_IKINCI
+- Commit `d865253` (aynı kod; yalnız rapora yukarıdaki satır eklendi): çalışma 44073540382 **başarılı** (pytest ve arayüz testleri).
