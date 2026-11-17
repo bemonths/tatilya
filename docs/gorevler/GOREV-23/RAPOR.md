@@ -243,7 +243,7 @@ Aynı düğme iki toplayıcıyı daha çalıştırır: Konaklama (Book>Direct) y
   kondu (`tests/text_helpers.py`, `start_plan`): plan başlatıldıktan sonra adımın "çalışıyor" durumundan çıkması beklenir (sabit bekleme
   değil). Planı başlatıp onaylayan bütün testler bundan yararlanır. Yukarıdaki iki tur bu düzeltmeden sonradır.
 - Göç gerçek verinin kopyasında denendi (yukarıda): satır kaybı yok, ilişki bütünlüğü hatası 0.
-- GitHub'daki test çalışması: CI_SONUCU
+- GitHub'daki test çalışması: aşağıda "CI sonucu".
 
 ### Belgeler
 
@@ -327,3 +327,8 @@ ve fiyat uygun bir istekle geliyorsa RealJoy da aynı çekime girebilir.
    sonucudur; Vacasa'da ve 30A Beach Girls'te gerçek sayılar çekimden sonra görülecek.
 5. **Gözlem (düzeltilmedi, kapsam dışı):** adres kuralı, sonda tek başına duran yön harfini ("… Blvd E") daire numarası gibi okuyor;
    karşı tarafta aynı adres "East" diye yazılmışsa ikisi bağlanmıyor. Bu yalnız eşleşme kaçırır, yanlış eşleme üretmez.
+
+## CI sonucu
+
+- Commit `40aa1e9` (kod, testler, belgeler ve rapor): çalışma 44070770943 **başarısız** — Test adımı 16 dakikalık sınırda durduruldu (takıldı). Günlüğün sonu (herkese açık not): `tests/test_extension.py` içindeki `client` fixture'ının kapanışında bekliyordu. Bu, GÖREV-18'den beri bilinen rastgele takılmadır (aynı commit başka çalışmada geçer); bu görevin dokunduğu bir dosya değil. Aynı kod bu bilgisayarda iki tam turda geçti.
+CI_IKINCI
