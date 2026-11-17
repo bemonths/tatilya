@@ -249,4 +249,6 @@ Bitince:
 
 ## Test sonuçları
 
-(aşağıya çalıştırıldıktan sonra eklendi)
+- `.venv\Scripts\python.exe -m pytest -q`: **1.183 geçti, 1 başarısız, 2 atlandı** (9 dk 18 sn). Başarısız olan `tests/test_gorev21.py::test_the_estimate_the_spending_and_the_link_table_of_plan_and_writing` bu görevin dokunmadığı, zamanlamaya bağlı bir test (arka plandaki işin bitmesini bekliyor); aynı dosya hemen ardından tek başına çalıştırıldığında **15/15 geçti**, bu görevin ilk tam turunda da geçmişti. Yeni dosya `tests/test_gorev22.py`: 22/22.
+- `node --test tests/frontend.test.mjs`: **137 geçti, 0 başarısız**.
+- Göç gerçek verinin kopyasında denendi (yukarıda): satır kaybı yok, ilişki bütünlüğü hatası 0.
