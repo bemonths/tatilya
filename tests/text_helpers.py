@@ -111,7 +111,16 @@ def start_plan(client, video_id="v1", wait=True, note=None):
     """3 · Plan: "Planı çıkar" (GÖREV-21). The run writes the plan and stops for the user's approval (paused, "plan_hazir")."""
     started = client.post(f"/api/videos/{video_id}/plan", json={"not": note} if note else {})
     assert started.status_code == 201, started.json()
-    return wait_run(client, started.json()["id"]) if wait else started.json()
+    if not wait:
+        return started.json()
+    view = wait_run(client, started.json()["id"])
+    # The run stops for the approval a moment before its job ends, and the step leaves "running" only when the job has ended
+    # (GÖREV-23): the plan is ready for a decision when the step says so; wait for the step itself, not for the clock.
+    end = time.monotonic() + 120
+    while step_status(client, "plan", video_id) == "running":
+        assert time.monotonic() < end, "3 · Plan adımı 120 saniyede 'çalışıyor' durumundan çıkmadı"
+        time.sleep(0.05)
+    return view
 
 
 def decide(client, step, action="onayla", video_id="v1", **body):

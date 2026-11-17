@@ -3,11 +3,15 @@
 ## Stable durum
 
 ```text
-tag v0.22.0 -> 2848c6f (GÖREV-21'in son commit'i, gorev-21-katmanlar)
+tag v0.23.0 -> 9ead6a8 (GÖREV-22'nin son commit'i, gorev-22-kiralama)
 main -> aynı commit
-app 0.22.0
-schema 21
+app 0.23.0
+schema 22
 ```
+
+17 Kasım 2026'da GÖREV-23 Adım 1 ile (yönetici GÖREV-22'yi kabul etti) main, `gorev-22-kiralama` dalının son commit'ine fast-forward
+edildi (`2848c6f..9ead6a8`) ve bu commit'e açıklamalı `v0.23.0` etiketi konuldu ("v0.23.0 — GÖREV-22: bölge engeli ölçümü, 360 Blue ve
+Vacasa okuyucuları, 30A Beach Girls kendi envanteri (şema 22)"); main ve etiket push edildi. Önceki kararlı sürüm: `v0.22.0` → `2848c6f`.
 
 17 Kasım 2026'da GÖREV-22 Adım 1 ile (yönetici GÖREV-21'i kabul etti) main, `gorev-21-katmanlar` dalının son commit'ine fast-forward
 edildi (`57088be..2848c6f`) ve bu commit'e açıklamalı `v0.22.0` etiketi konuldu ("v0.22.0 — GÖREV-21: proje ve video katmanları
@@ -48,12 +52,26 @@ edildi (`57088be..2848c6f`) ve bu commit'e açıklamalı `v0.22.0` etiketi konul
 ## Aktif branch
 
 ```text
-gorev-22-kiralama
-app 0.23.0
-schema 22
+gorev-23-okuyucular
+app 0.24.0
+schema 23
 ```
 
-Bu dal (GÖREV-22, 17 Kasım 2026; main'e alınmadı, etiket konmadı): kiralama fiyatlarının eksikleri.
+Bu dal (GÖREV-23, 17 Kasım 2026; main'e alınmadı, etiket konmadı): kiralama okuyucularının tamamlanması.
+
+- **30A Beach Girls'ün kirası** (`AvantStay.quote`, `docs/M11-KONAKLAMA-FIYATLARI.md`): AvantStay'in servisindeki takvimden haftalık
+  kira (gecelik fiyatların toplamı, bizim toplamımız); ücret, vergi ve toplam boş. Sitenin fiyat kutusunun sorgusu (`cartPrice`) sepet
+  kaydı açtığı için kullanılmaz. Özet, ekran ve kanıt paketi kirayı toplamdan ayrı tutar (`rent_count`, `rent_median`).
+- **Şema 23** (`studio/migration_v23.py`): tablo değişikliği yok; 30A Beach Girls'ün seçenekleri güncellenir (`channel`, `quotes: true`,
+  `expected_matches: 0`), yalnız satır hâlâ v22'nin verdiği seçenekleri taşıyorsa. Gerçek veri 17 Kasım 2026'da şema 23'e geçti (yedek
+  `work/yedek/20261117-1332`; satır sayıları aynı: 188.523).
+- **Vacasa:** `page_limit` ile tam liste doğrulandı (300/300); kod değişmedi. **Outdoor Shower / LocalVR:** LocalVR'nin 548 evlik
+  listesinde Florida'da ev yok; okuyucu ve yapılandırma yok. **RealJoy:** eklentinin ilan sayfası kaydı bekleniyor.
+- **Zamanlamaya bağlı test** (`test_gorev21.py::test_the_estimate_the_spending_and_the_link_table_of_plan_and_writing`): çalışma, işi
+  bittikten sonra yeniden okunuyor; `text_job(settled=True)` süre dolunca sessizce dönmek yerine işin bitmesini bekliyor.
+- Kiralama fiyat çekimi başlatılmadı (kullanıcı başlatacak; tahmin yaklaşık 11 saat).
+
+Önceki dal (GÖREV-22, 17 Kasım 2026; main'de, `v0.23.0`): kiralama fiyatlarının eksikleri.
 
 - **Bölge engeli ölçümü** (`studio/sources/region_probe.py`, `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`): aynı sayfa doğrudan ve ABD proxy'si
   üzerinden istenir; üç sınıf (bölge engeli, bölge engeli değil, site yok). 17 Kasım ölçümü: 360blue.com ve vacasa.com bölge engelli

@@ -16,6 +16,13 @@ kendi envanteri olarak okunur (`avantstay`; fiyat sorgusu henüz doğrulanmadı�
 gerçek fiyat çekimi henüz yapılmadı (kullanıcı başlatacak). Ayrıntı aşağıda: "Bölge engelli iki şirket, bağlantıdaki numara kuralı ve
 şirketin kendi sitesindeki evler".
 
+GÖREV-23 (17 Kasım 2026, şema 23, uygulama 0.24.0): açık kalan dört şirket yeniden ele alındı. **30A Beach Girls:** AvantStay'in
+servisine deneme istekleri yapıldı; evlerin haftalık **kirası** artık sitenin takviminden okunur (`inventory.own.quotes: true`), ücretli
+ve vergili toplam ise yalnız sepet kaydı açan bir sorguyla geldiği için **sorulmaz**. **Vacasa:** arama sayfası `page_limit` ile 300 evin
+tamamını tek istekte veriyor; okuyucu değişmedi, tam listeyle sınandı. **Outdoor Shower:** devralan LocalVR'nin sitesinde 30A'da ya da
+Florida'da ev yok; okunacak site yok. **RealJoy:** eklentinin ilan sayfası kaydı bekleniyor. Yapılandırma 27 şirket (değişmedi).
+Ayrıntı aşağıda: "GÖREV-23: AvantStay'in takvimi, Vacasa'nın tam listesi, LocalVR".
+
 ## Amaç
 
 Ziyaretçinin yer seçiminde "burada kalmak ne kadar tutar" sorusuna kanıt. Book>Direct fiyatı çok az ilan için veriyor (GÖREV-07: 9.189 arama satırının 12'sinde liste fiyatı; takvimlerin çoğu gizli). Book>Direct ilanlarının çoğu bir kiralama şirketine ait ve ilan kaydındaki `url` alanı şirketin kendi ilan sayfasını gösteriyor; bu şirketlerin siteleri belirli tarihler için kalem kalem fiyat gösteriyor. Bu toplayıcı o fiyatı sitenin kendi herkese açık fiyat/müsaitlik gösteriminden okur.
@@ -154,7 +161,7 @@ kullanıcının ABD proxy'si üzerinden incelendi (şirket başına 10 sayfa, ik
 |---|---|---|---|
 | 360 Blue (360blue.com; bölge engelli) | `nrbe` — Natural Retreats'in rezervasyon motoru (Adobe Experience Manager) | `GET /api/nrbe/units.json` (30A koleksiyonunun bütün evleri tek istekte: ad, koordinat, oda, banyo, kapasite), `availability-calendar.json` (altı aylık müsaitlik), `reservation-quotes.json?unitId&arrivalDate&departureDate&adults&children` (`subTotal`, `taxes`, `total`) | Adres kuralı. Listede adres alanı yok; evin sokak adresi adının sonundan alınır (`name_address`: `Seaside "Sea ya real soon" 73 Odessa Street` → `73 Odessa Street`). Yalnız adres alınır, ad karşılaştırılmaz |
 | Vacasa (vacasa.com; bölge engelli; wyndhamvacationrentals.com bağlantıları buraya yönleniyor) | `vacasa` | Arama sayfası (`/search?place=/usa/Highway-30A/`): her ev için koordinat, oda, banyo ve evin **eski ilan numarası** (`migrated_from_unit_id`); `GET /guest-com-api/get-unit-price-quote` (kira, ücret kalemleri, vergi kalemleri, toplam; `Error` yanıtı sebebi söyler) | Bağlantıdaki numara kuralı (aşağıda); olmazsa konum kuralı |
-| 30A Beach Girls (30a-beachgirls.com) | `avantstay` | Alfabetik ev listesi ve her evin sayfası (`__NEXT_DATA__`): şehir, sitenin bölge adı, 3 ondalığa yuvarlanmış koordinat; sokak adresi yok | Eşleme yok: şirketin kendi envanteri (aşağıda) |
+| 30A Beach Girls (30a-beachgirls.com) | `avantstay` | Alfabetik ev listesi ve her evin sayfası (`__NEXT_DATA__`): şehir, sitenin bölge adı, 3 ondalığa yuvarlanmış koordinat; sokak adresi yok. GÖREV-23: AvantStay'in servisindeki takvim (gün gün gecelik fiyat, en az konaklama, durum) | Eşleme yok: şirketin kendi envanteri (aşağıda) |
 
 **Fiyat kalemleri sitenin gösterdiği gibidir.** 360 Blue ücret kalemi göstermez: `rent` sitenin ara toplamıdır (`subTotal`), vergi ve
 toplam sitenin kendi sayılarıdır. Vacasa'da temizlik ücreti ve vergi kalemleri ayrı gelir; tesiste ödenecek ücretler (varsa) toplama
@@ -188,24 +195,75 @@ tek topluluğun resmî programındaki "kendi envanter" yoluyla (GÖREV-09, Alys 
   girmez; iki kez sayılmaz.
 - Kanıt paketinde ve ekranda kaynağıyla ayrı durur: "şirketin kendi sitesindeki evler; Book>Direct ilanlarına bağlanmadı".
 
-**30A Beach Girls'te fiyat henüz sorulmuyor (`inventory.own.quotes: false`).** Sitenin fiyatı kendi alan adından değil, AvantStay'in
-ayrı servisinden geliyor (`arriere.prod.avantstay.com/public/graphql`, başlık `X-Distribution-Channel: BEACH_GIRLS`): müsaitlik ve
-gecelik fiyat için `home(homeId){calendar(from,to){date minStay rate season status restrictions{…}}}`, fiyat dökümü için
-`cartPrice(bookingRequest:{adults,children,from,until,guests,homeId,infants,inputPaymentMode:CREDIT_CARD,pets,…}){creditCard{subtotal
-taxesAndFees{fees taxes total} totalOfStay …}}`. Sorguların biçimi sitenin betiğinden okundu; GÖREV-22'de bu servise deneme isteği
-yapılamadığı için hiçbir yanıt görülmedi (tutarların birimi, takvimdeki durum sözleri ve ret metinleri bilinmiyor). Görülmemiş bir
-yanıt için okuyucu yazılmadı: `AvantStay.quote` bilerek hata verir ve yapılandırma fiyat sormaz; evlerin listesi, yer adları ve
-mahalle dağılımı okunur, satırlarında "Fiyat sorulmadı" yazar. Ayrıca `cartPrice` yanıtında bir `cartId` dönüyor: sorgu sunucuda bir
-sepet kaydı açıyor olabilir; etkinleştirmeden önce buna da bakılmalı.
+**30A Beach Girls'te GÖREV-22'de fiyat sorulmuyordu (`inventory.own.quotes: false`);** sitenin fiyatı kendi alan adından değil,
+AvantStay'in ayrı servisinden geliyor ve o görevde bu servise deneme isteği yapılamamıştı. GÖREV-23'te yapıldı; sonuç bir sonraki
+bölümde.
+
+## GÖREV-23: AvantStay'in takvimi, Vacasa'nın tam listesi, LocalVR
+
+### 30A Beach Girls — yalnız kira, sitenin takviminden (sepet sorgusu kullanılmaz)
+
+Servis: `POST https://arriere.prod.avantstay.com/public/graphql`, başlık `X-Distribution-Channel: BEACH_GIRLS` (sitenin kendi betiğinin
+gönderdiği kanal adı; yapılandırmada `inventory.channel`). Evin sayfası bu servise iki şey sorar:
+
+| Sorgu | Ne verir | Kullanılıyor mu |
+|---|---|---|
+| `home(homeId){calendar(from,to){date minStay rate season status restrictions{checkInAllowed checkOutAllowed}}}` (sayfanın takvimi) | Gün gün gecelik fiyat (**dolar**, ör. `175.0`), en az konaklama ve durum: `VACANT`, `OCCUPIED`, `CHECK_IN`, `CHECK_OUT`, `CHECK_OUT_AND_CHECK_IN` | **Evet** |
+| `cartPrice(bookingRequest:{…}, cartId){creditCard{subtotal taxesAndFees{…} totalOfStay …} cartId}` (sayfanın fiyat kutusu) | Ücretler, vergiler ve toplam; yanında bir **sepet numarası** | **Hayır** |
+
+**Sepet konusu (17 Kasım 2026, sitenin kendi betiğinden).** Fiyat kutusu `cartPrice`'ı ilk kez sepet numarası olmadan sorar, yanıtta
+dönen `cartId`'yi saklar (`cartIdWithoutInsurance`) ve sonraki her soruda geri gönderir; aynı numara ödeme adımlarının (`initializeCartPayment`,
+`setCartPayment`, `confirmCartPayment`) girdisidir. Yani bu soru serviste bir sepet kaydı açar. Kural gereği rezervasyon ya da sepet
+akışına girilmez: `cartPrice` **hiç gönderilmedi**, okuyucuda da yoktur (test bunu sorgu metninde denetler). Sayfanın sepetsiz bir fiyat
+dökümü sorgusu yoktur; servis tür tanımı sorgusuna (introspection) yanıt vermiyor (HTTP 422).
+
+**Okuyucu (`AvantStay.quote`).** Ev başına **bir** takvim isteği (bu ayın ilk gününden 18 ay; sitenin betiğinin bir kerede sorduğu
+aralık) evin bütün pencerelerine yeter. Bir haftanın tutulabilir olup olmadığı sitenin kendi kuralıyla (sayfanın betiği) belirlenir:
+
+- giriş günü `CHECK_IN`, `CHECK_OUT_AND_CHECK_IN` ya da `OCCUPIED` değilse (`CHECK_OUT` günü giriş yapılabilir), aradaki geceler `VACANT`
+  ise ve çıkış günü `CHECK_OUT`, `CHECK_OUT_AND_CHECK_IN` ya da `OCCUPIED` değilse (`CHECK_IN` günü çıkış yapılabilir) hafta boştur;
+  değilse **müsait değil** (takvimden);
+- giriş günü girişe ya da çıkış günü çıkışa kapalıysa (`restrictions`), ya da giriş gününün en az konaklaması pencereden uzunsa
+  **kısıtlı** (en az gece sayısı saklanır);
+- hafta boşsa **kira = takvimin o gecelere yazdığı gecelik fiyatların toplamı**. Bu toplam **bizim toplamımızdır** ve öyle etiketlenir;
+  gecelik fiyatlar sitenin kendi sayılarıdır ve satırda saklanır.
+
+Temizlik ücreti, öbür ücretler, vergi ve **toplam boş kalır** (site bunları sepetsiz söylemiyor). Bu yüzden bu satırlar hiçbir toplam
+fiyat ortancasına girmez: mahalle hücrelerinde "fiyatlı" sayılmaz, yalnız müsaitlik payına girer. Şirket tablosunda ve kanıt paketinde
+ayrı bir ölçü olarak görünür: **"7 gecelik kira ortancası; temizlik ücreti, öbür ücretler ve vergi HARİÇ"** (`own_companies[].windows[]`
+içinde `rent_count`, `rent_median`). Misafir sayısı takvim sorusunda yoktur; satırlarda boş kalır. Para birimi: servis sayı verir, site
+"$" ile gösterir; "USD" yazılır.
+
+### Vacasa — tam liste
+
+`GET /search?place=/usa/Highway-30A/&page_limit=300` (ABD proxy'si üzerinden, 17 Kasım 2026): **300 evin 300'ü tek yanıtta** (4,4 MB;
+`total_units: 300`, `page_count: 1`). Okuyucu zaten ilk sayfadan sonra ikinci istekte `page_limit=<toplam>` soruyordu; kod değişmedi,
+sayfalama isteği gerekmedi. "Liste eksik" kuralı aynen duruyor: yanıt duyurulan sayıdan az ev verirse şirket o çekimde hatayla kaydedilir,
+hiçbir ilan tahminle bağlanmaz. Çevrimdışı karşılaştırma (son Book>Direct çekimi ile bu liste): bağlantısında ilan numarası olan 11
+Vacasa ilanından **1'i** listedeki bir evin eski numarasına denk geliyor; 14 Wyndham bağlantısının yönlendiği numara ancak çekimde
+görülür; 10 bağlantı bir evin değil bir yerleşkenin sayfası.
+
+### Outdoor Shower / LocalVR — okunacak site yok
+
+`golocalvr.com` ve rezervasyon sitesi `stay.golocalvr.com` doğrudan incelendi (8 sayfa, 17 Kasım 2026). Rezervasyon sitesi Guesty
+üzerinde kendi ön yüzü (Next.js); ev listesi `GET /api/properties?fetchAll=1`, fiyat `POST /api/listing-quotes`. Listede **548 ev** var:
+Colorado 254, California 137, Utah 96, Montana 51, Nevada 10. **Florida'da ve 30A'da tek bir ev yok;** sitenin 13 pazarı arasında 30A
+yok, "LocalVR Expands in 30A Florida with Acquisition of Outdoor Shower" duyurusunun adresi de artık blog ana sayfasına yönleniyor.
+Bu yüzden Outdoor Shower'ın 21 Book>Direct ilanının bağlanacağı bir liste yok: uyarlayıcı yazılmadı, yapılandırmaya satır eklenmedi,
+ilanlar fiyatsız kalır (`thirty_a_agency_unread.csv`'de gözden geçirilmiş nedeniyle). Bağlantıları (outdoorshower30a.com) yapılandırılmış
+bir şirketin alan adı olmadığı için çekimde zaten sorulmaz.
 
 **Okunamayan şirketlerin son durumu** (`thirty_a_agency_unread.csv`, 17 Kasım 2026): Cottage Rental Agency — site yok (DNS kaydı yok;
-ana alan adı sandestin.com'daki kaldırılmış sayfaya yönleniyor, proxy'den de aynı); Outdoor Shower — alan adı askıda, şirket LocalVR'ye
-devredilmiş (golocalvr.com bölge engelli değil; okuyucusu yok); RealJoy — Cloudflare doğrulaması (bot koruması; proxy kullanılmaz).
+ana alan adı sandestin.com'daki kaldırılmış sayfaya yönleniyor, proxy'den de aynı); Outdoor Shower — alan adı askıda; devralan LocalVR'nin
+sitesinde 30A'da ev yok (GÖREV-23), okunacak site yok; RealJoy — Cloudflare doğrulaması (bot koruması; proxy kullanılmaz), okuma yolu
+eklenti.
 
 **Çekim tahmini (`new_site_estimate`).** Yeni şirket için: ilan × (bağlantıyı açma istekleri — ölü bağlantıda 0 — + ilan başına ek
 istek + pencere × fiyat isteği), bölge engelli şirkette istek aralığı 8 sn (+1 sn yanıt). Uyarlayıcı ipuçları: `nrbe` ilan başına 3
 takvim isteği ve pencere başına 1; `vacasa` bağlantı başına 3 (iki yönlendirme ve yer sayfası) ve pencere başına 1. Kendi envanterde
-beklenen ev sayısı × 1 sayfa (`expected_homes`). Bu bir üst sınırdır: eşleşmeyen ilan fiyat sormaz, dolu pencere sorulmaz.
+beklenen ev sayısı × 1 sayfa (`expected_homes`). Bu bir üst sınırdır: eşleşmeyen ilan fiyat sormaz, dolu pencere sorulmaz. GÖREV-23:
+`avantstay` ev başına 1 takvim isteği ve pencere başına 0 (145 ev × 2 = 290 istek); şirketin 48 Book>Direct bağlantısından hiçbirinin
+bağlanması beklenmediği için (`expected_matches: 0`) onlar için takvim sayılmaz.
 
 ## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
 
@@ -232,6 +290,16 @@ beklenen ev sayısı × 1 sayfa (`expected_homes`). Bu bir üst sınırdır: eş
 Kullanılabilir: "<Mahalle>'de kiralama şirketlerinin kendi sitelerinde, <tarih> tarihinde <pencere> haftası için sorduğumuz <n> evin, sitenin gösterdiği vergiler ve ücretler dahil haftalık toplamının ortancası yaklaşık $X'ti." Ortancanın yanında kaç ilandan hesaplandığı ve aralık (çeyrekler) söylenir. İki aylık çekimden sonra: "aynı <n> ev için <hafta> haftasının fiyatı <tarih1> ile <tarih2> arasında ortanca olarak %Y değişti (bizim hesabımız)"; eşleşen ev sayısı söylenir. **Kapsanan şirketler (GÖREV-20):** fiyat ortancaları yalnız fiyatı okunan şirketlerin ilanlarından gelir; fiyatı okunamayan şirketler videoda adlarıyla anılmaz, "fiyatını okuyamadığımız şirketler" denir ve onların yoğun olduğu mahallede "mahallenin fiyatı" denmez.
 
 Kullanılmaz: "<Mahalle>'de bir hafta $X tutar" (genelleme), "fiyatlar şu kadar arttı" (eşleşmemiş evlerden ya da tek tarihten), ilan sayısı az olan hücrelerden mahalle karşılaştırması, 360blue'nun yoğun olduğu WaterColor/WaterSound için "mahallenin fiyatı". **Küçük örnek (GÖREV-11, bizim eşiğimiz):** bir pencerede 20'den az fiyatlı ilanı olan hücre küçük örnektir; kanıt paketi bu hücrelerde "küçük örnek; mahalle karşılaştırmasında kullanılmaz" yazar ve pencere başına ortanca fiyatlı ilan sayısı 20'nin altında kalan mahalleyi bilinen boşluklara ekler (ör. Gulf Place).
+
+## Testler (GÖREV-23)
+
+`tests/test_gorev23.py`, 17 Kasım 2026 incelemesinin ham yanıtlarından fixture'larla (`tests/fixtures/gorev23/`): `avantstay` — takvimden
+haftalık kira (toplam, ücret ve vergi boş), sorgu metninde `cartPrice` olmaması, dolu hafta, giriş günü başka bir konaklamanın başladığı
+gün, girişe ya da çıkışa kapalı gün, en az konaklama, takvimin vermediği gün ve hata yanıtı; çekimde ev başına tek takvim isteği, özetin
+ve kanıt paketinin kirayı toplamdan ayrı tutması; `vacasa` — 300 evlik tam listenin ikinci istekte alınması ve bir ev eksik gelince
+"liste eksik" hatası; adres kuralı — aynı adla ama başka adresle bağlanmama, başka oda sayısı, 2 km'den uzak koordinat, iki aday;
+Outdoor Shower için yapılandırma olmaması ve gözden geçirilmiş neden; şema 22 → 23 geçişi (satır sayıları aynı, elle değiştirilmiş satıra
+dokunulmaz); tahmin. `tests/frontend.test.mjs`: şirket tablosunda "HAFTALIK KİRA ORTANCASI" sütunu.
 
 ## Testler (GÖREV-22)
 

@@ -160,6 +160,14 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model ve efor (v0.20.0'dan beri tur sınırı yok; yerine son çalışmaların ortanca harcaması, çıktı varsayımı ve token sınırları). Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
 
+## Kiralama okuyucularının tamamlanması · v0.24.0
+
+GÖREV-23 (şema 23): GÖREV-22'den açık kalan dört şirket. 30A Beach Girls'ün evlerinde artık **haftalık kira** okunur: sitenin takviminin
+gün gün verdiği gecelik fiyatların toplamı. Sitenin ücretli ve vergili toplamı yalnız sepet kaydı açan bir sorguyla geldiği için o sorgu
+kullanılmaz; kira, toplam fiyat ortancalarına karışmadan ayrı gösterilir ("yalnız kira; ücret ve vergi hariç"). Vacasa'nın arama sayfası
+300 evin tamamını tek istekte veriyor. Outdoor Shower'ı devralan LocalVR'nin sitesinde 30A'da ev yok; okunacak site yok. RealJoy için
+eklentinin ilan sayfası kaydı bekleniyor. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`, `docs/gorevler/GOREV-23/RAPOR.md`.
+
 ## Kiralama fiyatlarının eksikleri · v0.23.0
 
 GÖREV-22 (şema 22): fiyatı okunamayan şirketlerden ikisi (360 Blue, Vacasa) yalnız ABD içinden gelen ziyaretçiye açıkmış. Bir sitenin

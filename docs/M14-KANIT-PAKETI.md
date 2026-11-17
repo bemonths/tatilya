@@ -174,6 +174,14 @@ Okunamayan şirketlerin gözden geçirilmiş nedenleri 17 Kasım 2026'da güncel
 "bölge engeli; okuyucusu yazıldı, sonraki fiyat çekiminde okunur", Cottage Rental Agency ve Outdoor Shower "site yok", 30A Beach Girls
 "şirketin kendi envanteri". Yeni şirketlerle bir fiyat çekimi yapılınca 360 Blue ve Vacasa bu tablodan çıkar.
 
+**Yalnız kira veren şirket (GÖREV-23).** 30A Beach Girls'ün sitesi ücretli ve vergili toplamı yalnız sepet kaydı açan bir sorguyla
+veriyor; o sorgu kullanılmaz ve evlerin yalnız haftalık kirası okunur (sitenin takvimindeki gecelik fiyatların toplamı). Kanıt paketinde
+bu, toplam satırlarından ayrı bir satırdır: "<şirket>: şirketin kendi sitesindeki evler; Book>Direct ilanlarına bağlanmadı — <hafta>
+haftası, 7 gecelik kira ortancası; temizlik ücreti, öbür ücretler ve vergi HARİÇ" (etiket "bizim hesabımız", örneklem = kirası okunan
+ev). Notu açıkça söyler: toplam fiyat değildir, öbür şirketlerin toplam fiyat ortancalarıyla karşılaştırılmaz ve onlara karışmaz. Video
+metninde de "haftalık toplam" diye anılamaz; "ücretler ve vergi hariç haftalık kira" denir. Outdoor Shower'ın nedeni güncellendi:
+devralan LocalVR'nin sitesinde 30A'da ev yok.
+
 ## Yeni şablon nasıl yazılır
 
 1. Destinasyonun şablon klasörüne (`thirty_a_evidence/`) yeni bir JSON dosyası koyun; anahtarı benzersiz olsun.
