@@ -3,11 +3,15 @@
 ## Stable durum
 
 ```text
-tag v0.21.0 -> 57088be (GÖREV-20'nin son commit'i, gorev-20-eksik-veri)
+tag v0.22.0 -> 2848c6f (GÖREV-21'in son commit'i, gorev-21-katmanlar)
 main -> aynı commit
-app 0.21.0
-schema 20
+app 0.22.0
+schema 21
 ```
+
+17 Kasım 2026'da GÖREV-22 Adım 1 ile (yönetici GÖREV-21'i kabul etti) main, `gorev-21-katmanlar` dalının son commit'ine fast-forward
+edildi (`57088be..2848c6f`) ve bu commit'e açıklamalı `v0.22.0` etiketi konuldu ("v0.22.0 — GÖREV-21: proje ve video katmanları
+(şema 21)"); main ve etiket push edildi. Önceki kararlı sürüm: `v0.21.0` → `57088be`.
 
 16 Kasım 2026'da GÖREV-21 Adım 1 ile (yönetici GÖREV-20'yi kabul etti) main, `gorev-20-eksik-veri` dalının son commit'ine fast-forward edildi (`7af4f1f..57088be`) ve bu commit'e açıklamalı `v0.21.0` etiketi konuldu ("v0.21.0 — eksik veri: yol ağı üzerinden yol mesafesi ve tahmini sürüş, havalimanı bilet ücretleri, kanıt paketinde yeni bloklar"); main ve etiket push edildi.
 
@@ -44,12 +48,31 @@ schema 20
 ## Aktif branch
 
 ```text
-gorev-21-katmanlar
-app 0.22.0
-schema 21
+gorev-22-kiralama
+app 0.23.0
+schema 22
 ```
 
-Bu dal (GÖREV-21, 16 Kasım 2026; main'e alınmadı, etiket konmadı):
+Bu dal (GÖREV-22, 17 Kasım 2026; main'e alınmadı, etiket konmadı): kiralama fiyatlarının eksikleri.
+
+- **Bölge engeli ölçümü** (`studio/sources/region_probe.py`, `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`): aynı sayfa doğrudan ve ABD proxy'si
+  üzerinden istenir; üç sınıf (bölge engeli, bölge engeli değil, site yok). 17 Kasım ölçümü: 360blue.com ve vacasa.com bölge engelli
+  (gerçek veride listeye eklendi); Cottage Rental Agency ve Outdoor Shower'ın sitesi yok; sandestin.com ve
+  wyndhamvacationrentals.com bölge engelli değil.
+- **İki yeni okuyucu, proxy üzerinden:** `nrbe` (360 Blue; Natural Retreats rezervasyon motoru) ve `vacasa`. Kiralama toplayıcısında
+  bölge engelli şirketin yalnız listedeki alan adları proxy'den gider. Bağlantıdaki ilan numarası kuralı (`link_unit`), ölü bağlantıların
+  sorulmaması (`inventory.dead_links`).
+- **Şirketin kendi sitesindeki evler** (`inventory.own`; 30A Beach Girls, `avantstay`): ilanlara bağlanmadan, mahalle yalnız sitenin
+  söylediği yer adından; mahallesiz ev ayrı sayılır (şema 22: `agency_rate_own_listings.region_id` boş olabilir). Fiyat sorgusu
+  yazılmadı (AvantStay'in servisinden yanıt görülemedi); yapılandırmada kapalı.
+- **Yapılandırma 27 şirket** (migration v22); çekim tahmini yeni şirketleri, proxy hızını ve şirketlerin yan yana okunmasını sayar.
+- Gerçek veri şema 22'de (yedek `work/yedek/20261117-1220`); yeni şirketlerle fiyat çekimini kullanıcı başlatacak.
+- Açık kalanlar: RealJoy (eklenti deneme kaydı bekleniyor), 30A Beach Girls fiyat sorgusu, Vacasa arama sayfasının tam liste verip
+  vermediği (ilk gerçek çekimde görülecek), LocalVR (Outdoor Shower'ın evleri; okuyucu yok).
+
+Rapor: `docs/gorevler/GOREV-22/RAPOR.md`.
+
+Önceki dal `gorev-21-katmanlar` (GÖREV-21, 16 Kasım 2026; 17 Kasım'da main'e alındı, `v0.22.0`):
 - program iki katman: proje katmanı (Veri — sekmelerle —, Konu bankası, Kanal, Videolar) ve video katmanı (videonun sekiz adımı); video açık değilken menüde yalnız proje ekranları ve Ayarlar, video açıkken yalnız o videonun adımları, "Videoyu kapat" ve daraltılmış "← Proje"; üst çubukta video seçici yok — M21,
 - adımlar: 1 Başlık ve vaat · 2 Veri paketi · 3 Plan · 4 Yazım · 5 Kontrol ve ton seçimi · 6 Yayın paketi · 7 Seslendirme · 8 Kurgu paketi (6–8 "Sonraki görevde gelecek"); "Veri" ve "Konu ve başlık" proje katmanına taşındı, "Görsel plan" ve "Video üretimi" kalktı (Kurgu Motoru),
 - durumlar saklanıyor (`video_steps`, `video_step_log`): bekliyor, hazır, çalışıyor, onay bekliyor, onaylandı, tamamlandı, hata, eskidi; eskime sebebi Türkçe, "Bu değişiklik etkilemiyor", yarıda kapanan adım "hata" ve "Kaldığı yerden sürdür",

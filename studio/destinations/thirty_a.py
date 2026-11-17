@@ -236,7 +236,8 @@ AGENCY_SITES_V22 = (
 )
 AGENCY_SITE_OPTIONS_V22 = {
     "360blue.com": {"inventory": {"source": "platform", "origin": "https://www.360blue.com", "brand_ids": ["193", "195"],
-                                  "resource_path": "/content/360blue/us/en/travel-collections/30A", "dead_links": "17 Kasım 2026"}},
+                                  "resource_path": "/content/360blue/us/en/travel-collections/30A", "dead_links": "17 Kasım 2026",
+                                  "expected_matches": 127}},        # of 256 listings, by the address rule against the site's list of 17 Nov 2026
     "vacasa.com": {"aliases": ["wyndhamvacationrentals.com"],
                    "inventory": {"source": "platform", "origin": "https://www.vacasa.com", "place": "/usa/Highway-30A/"}},
     "30a-beachgirls.com": {"inventory": {

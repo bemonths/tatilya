@@ -564,3 +564,21 @@ def test_a_measured_domain_goes_on_the_list_with_its_evidence(tmp_path):
         assert row["evidence"].startswith("17.11.2026 ölçümü") and row["url"].endswith("/Dunes-Of-Seagrove-Santa-Rosa-Beach/")
         plain = client.post("/api/abd-proxy/bolge-engelli", json={"alan_adi": "360blue.com", "kanit": 5}).json()["bolge_engelli"]
         assert [(r["host"], r["evidence"]) for r in plain if r["host"] == "360blue.com"] == [("360blue.com", None)]
+
+
+def test_added_companies_lengthen_the_run_as_companies_read_side_by_side(monkeypatch):
+    monkeypatch.setattr(ar, "REQUEST_GAP", 2.0)
+    monkeypatch.setattr(ar, "PROTECTED_GAP", 6.0)
+    last = [{"domain": "a.test", "listing_count": 100, "request_count": 1000, "protected": 0},      # 3,000 s
+            {"domain": "b.test", "listing_count": 50, "request_count": 400, "protected": 0},        # 1,200 s
+            {"domain": "c.test", "listing_count": 20, "request_count": 100, "protected": 1}]        # 700 s
+    small = [{"domain": "n.test", "listings": 10, "seconds": 1000, "protected": False}]
+    assert ar.added_run_seconds(3000, last, small, workers=3) == 0                    # it fits beside the longest company
+    big = [{"domain": "n.test", "listings": 200, "seconds": 4500, "protected": False}]
+    assert ar.added_run_seconds(3300, last, big, workers=3) == 1650                   # the run is as long as its longest company: 3,000 -> 4,500 s, scaled by the real duration
+    assert ar.added_run_seconds(3000, last, big, workers=1) == int(3000 * 9400 / 4900) - 3000   # one at a time: everything adds up
+    assert ar.added_run_seconds(None, last, big) == 4500 and ar.added_run_seconds(3000, [], big) == 4500      # nothing to scale: the plain sum
+    sites = [{"domain": "360blue.com", "company": "360 Blue", "adapter": "nrbe", "enabled": 1, "inventory": json.dumps(OPTIONS["360blue.com"]["inventory"])}]
+    listings = [{"url": f"https://www.360blue.com/rentals/properties/x-{n}/"} for n in range(256)]
+    blue = ar.new_site_estimate(sites, listings, set(), 12, ["360blue.com"])[0]
+    assert (blue["listings"], blue["requests"]) == (256, 127 * (3 + 12))             # only the listings expected to tie ask the calendar and the prices

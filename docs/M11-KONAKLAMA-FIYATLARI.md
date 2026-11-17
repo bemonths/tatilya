@@ -10,6 +10,12 @@ GÖREV-10 (şema 13): aylık pencere kuralı (12 ay). İlk aylık çekim `b85a4b
 
 GÖREV-20 (16 Kasım 2026, şema 20, uygulama 0.21.0): fiyatı okunamayan altı şirket yeniden incelendi (aşağıda "Fiyatı okunamayan şirketler"); hiçbiri bu görevde okunabilir hale gelmedi, yeni uyarlayıcı ve yeni şirket satırı yok. Her birinin nedeni gözden geçirilmiş dosyaya yazıldı (`studio/destinations/thirty_a_agency_unread.csv`) ve kanıt paketine "Kiralama fiyatlarının kapsadığı şirketler" bloğuyla girdi. "Engelli 51 ilan"ın site engeli olmadığı, şirketlerin sitelerinde yayından kaldırılmış ilanlar olduğu görüldü. Çekim tahmini, son çekimden sonra eklenen şirketlerin isteklerini de sayar. Ayrıntı: `docs/gorevler/GOREV-20/RAPOR.md`.
 
+GÖREV-22 (17 Kasım 2026, şema 22, uygulama 0.23.0): okunamayan şirketlerden ikisinin engeli bölge engeli çıktı (360 Blue, Vacasa);
+ABD proxy'si üzerinden incelendi ve okuyucuları yazıldı (`nrbe`, `vacasa`). 30A Beach Girls'ün evleri, ilanlara bağlanmadan şirketin
+kendi envanteri olarak okunur (`avantstay`; fiyat sorgusu henüz doğrulanmadığı için kapalı). Yapılandırma 27 şirket. Yeni şirketlerle
+gerçek fiyat çekimi henüz yapılmadı (kullanıcı başlatacak). Ayrıntı aşağıda: "Bölge engelli iki şirket, bağlantıdaki numara kuralı ve
+şirketin kendi sitesindeki evler".
+
 ## Amaç
 
 Ziyaretçinin yer seçiminde "burada kalmak ne kadar tutar" sorusuna kanıt. Book>Direct fiyatı çok az ilan için veriyor (GÖREV-07: 9.189 arama satırının 12'sinde liste fiyatı; takvimlerin çoğu gizli). Book>Direct ilanlarının çoğu bir kiralama şirketine ait ve ilan kaydındaki `url` alanı şirketin kendi ilan sayfasını gösteriyor; bu şirketlerin siteleri belirli tarihler için kalem kalem fiyat gösteriyor. Bu toplayıcı o fiyatı sitenin kendi herkese açık fiyat/müsaitlik gösteriminden okur.
@@ -226,6 +232,15 @@ beklenen ev sayısı × 1 sayfa (`expected_homes`). Bu bir üst sınırdır: eş
 Kullanılabilir: "<Mahalle>'de kiralama şirketlerinin kendi sitelerinde, <tarih> tarihinde <pencere> haftası için sorduğumuz <n> evin, sitenin gösterdiği vergiler ve ücretler dahil haftalık toplamının ortancası yaklaşık $X'ti." Ortancanın yanında kaç ilandan hesaplandığı ve aralık (çeyrekler) söylenir. İki aylık çekimden sonra: "aynı <n> ev için <hafta> haftasının fiyatı <tarih1> ile <tarih2> arasında ortanca olarak %Y değişti (bizim hesabımız)"; eşleşen ev sayısı söylenir. **Kapsanan şirketler (GÖREV-20):** fiyat ortancaları yalnız fiyatı okunan şirketlerin ilanlarından gelir; fiyatı okunamayan şirketler videoda adlarıyla anılmaz, "fiyatını okuyamadığımız şirketler" denir ve onların yoğun olduğu mahallede "mahallenin fiyatı" denmez.
 
 Kullanılmaz: "<Mahalle>'de bir hafta $X tutar" (genelleme), "fiyatlar şu kadar arttı" (eşleşmemiş evlerden ya da tek tarihten), ilan sayısı az olan hücrelerden mahalle karşılaştırması, 360blue'nun yoğun olduğu WaterColor/WaterSound için "mahallenin fiyatı". **Küçük örnek (GÖREV-11, bizim eşiğimiz):** bir pencerede 20'den az fiyatlı ilanı olan hücre küçük örnektir; kanıt paketi bu hücrelerde "küçük örnek; mahalle karşılaştırmasında kullanılmaz" yazar ve pencere başına ortanca fiyatlı ilan sayısı 20'nin altında kalan mahalleyi bilinen boşluklara ekler (ör. Gulf Place).
+
+## Testler (GÖREV-22)
+
+`tests/test_gorev22.py`, incelemenin ham kopyalarından kesilmiş fixture'larla (`tests/fixtures/gorev22/`): bölge engeli sınıflandırması
+(üç sınıf ve 17 Kasım ölçümünün kayıtları); `nrbe` (sayfa, liste, fiyat, takvimden "müsait değil", sebepsiz hata), `vacasa` (sayfa,
+arama listesi, fiyat, retler, eksik liste, bağlantıdaki numara) ve `avantstay` (ev sayfası, liste) uyarlayıcıları; bölge engelli
+şirketin proxy'den, listede olmayan alan adının doğrudan gitmesi ve ham kayıttaki `transport`; ölü bağlantının sorulmaması; kendi
+envanterde mahallenin yalnız sitenin yer adından gelmesi, mahallesiz evin hiçbir mahalle ortancasına girmemesi, Book>Direct ilanına
+bağlanan evin iki kez sayılmaması; kanıt paketindeki satırlar; tahmin; şema 21 → 22 geçişi.
 
 ## Testler
 

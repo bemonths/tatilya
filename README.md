@@ -160,6 +160,14 @@ Seviyesi hesaplanmayan restoranlar tek tek gözden geçirildi: yapısal menü ve
 
 **Ayarlar → Claude**: bulunan Claude Code'un yolu ve sürümü, API anahtarı uyarısı, genel varsayılan model ve efor, adım başına model ve efor (v0.20.0'dan beri tur sınırı yok; yerine son çalışmaların ortanca harcaması, çıktı varsayımı ve token sınırları). Abonelik girişiniz kullanılır; `ANTHROPIC_API_KEY` tanımlıysa API'den ücretlendirilir (uyarı gösterilir). Ayrıntılar: [M15](docs/M15-CLAUDE-ADIMLARI.md).
 
+## Kiralama fiyatlarının eksikleri · v0.23.0
+
+GÖREV-22 (şema 22): fiyatı okunamayan şirketlerden ikisi (360 Blue, Vacasa) yalnız ABD içinden gelen ziyaretçiye açıkmış. Bir sitenin
+bölge engelli olup olmadığı artık ölçülür (aynı sayfa doğrudan ve kullanıcının ABD proxy'si üzerinden istenir; `region_probe`), yalnız
+bölge engelli çıkan alan adı listeye girer ve yalnız o alan adı proxy'den okunur. İki şirketin okuyucusu yazıldı; 30A Beach Girls'ün
+evleri (sitesi adres vermiyor) ilanlara bağlanmadan "şirketin kendi sitesindeki evler" olarak okunur, mahalle yalnız sitenin söylediği
+yer adından alınır. Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`, `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`, `docs/gorevler/GOREV-22/RAPOR.md`.
+
 ## Proje ve video katmanları · v0.22.0
 
 Program iki katmandır ve katmanlar karışmaz (GÖREV-21). Aşağıdaki eski bölümlerde geçen "video seçici", "Videolar ekranı", "Ayarlar → Tonlar",

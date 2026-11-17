@@ -112,9 +112,12 @@ def status(db, destination_id, today=None):
                 added = [a for a in agency_rates.new_site_estimate(context.agency["sites"], listings, read, current_windows or 0, blocked)
                          if a["requests"]]
                 if added and seconds is not None:
-                    seconds += sum(a["seconds"] for a in added)
+                    companies = [dict(r) for r in con.execute(
+                        "SELECT domain, listing_count, request_count, protected FROM agency_rate_companies WHERE run_id=?", (last["id"],))]
+                    extra = agency_rates.added_run_seconds(seconds, companies, added)
+                    seconds += extra
                     note = (f"{note}; son çekimden sonra eklenen {len(added)} şirket için en çok +{sum(a['requests'] for a in added)} istek, "
-                            f"+{sum(a['seconds'] for a in added) // 60} dk ({', '.join(a['company'] for a in added)})")
+                            f"+{extra // 60} dk (şirketler yan yana okunur; {', '.join(a['company'] for a in added)})")
             items.append({"connector": connector.name, "source_id": source["id"], "source_name": source["name"],
                           "interval_months": interval["months"] if interval else None, "sort_order": interval["sort_order"] if interval else None,
                           "last_run_id": last["id"] if last else None, "last_done_on": last_day.isoformat() if last_day else None,

@@ -359,7 +359,9 @@ def new_site_estimate(sites, listings, read_domains, window_count, region_hosts=
     `listing_requests`, e.g. a calendar; per listing and window its `quote_requests`; one page, none and QUOTE_REQUESTS unless the
     adapter says otherwise) and the seconds at the company's own pace. GÖREV-22: a region-blocked company is paced as the proxy is
     (PROXY_GAP); a company read as its own inventory adds the homes its configuration expects (`inventory.own.expected_homes`, one
-    page each); a company whose prices are not asked adds no price request. Our estimate, an upper bound: a listing that ties to no home asks nothing more,
+    page each); a company whose prices are not asked adds no price request; where the configuration says how many of the
+    listings are expected to tie to a home (`inventory.expected_matches`, from a trial against the company's list), only that many
+    ask the calendar and the prices. Our estimate, an upper bound: a listing that ties to no home asks nothing more,
     a window the site's calendar shows as taken is not asked, and a company may be stopped at its first refusal."""
     listed = {host_key(h) for h in region_hosts or ()}
     added = []
@@ -375,7 +377,8 @@ def new_site_estimate(sites, listings, read_domains, window_count, region_hosts=
         pages = 0 if (options["inventory"] or {}).get("dead_links") else getattr(adapter, "page_requests", 1)
         extra = getattr(adapter, "listing_requests", 0) if asked else 0
         per_window = getattr(adapter, "quote_requests", QUOTE_REQUESTS) if asked else 0
-        requests = count * (pages + extra + window_count * per_window)
+        tied = min(count, int((options["inventory"] or {}).get("expected_matches", count)))
+        requests = count * pages + tied * (extra + window_count * per_window)
         homes = int(own.get("expected_homes") or 0) if own else 0
         requests += homes * (1 + extra + window_count * per_window)
         region = any(host_key(h) in listed for h in hosts)
@@ -383,6 +386,33 @@ def new_site_estimate(sites, listings, read_domains, window_count, region_hosts=
         added.append({"domain": options["domain"], "company": options["company"], "listings": count, "own_homes": homes, "requests": requests,
                       "seconds": int(requests * (gap + ANSWER_SECONDS)), "protected": bool(options["protected"]), "proxy": region})
     return added
+
+
+def added_run_seconds(last_seconds, last_companies, added, workers=None):
+    """The seconds the added companies add to a run (GÖREV-22). Companies are read side by side (WORKERS at a time, protected ones
+    one at a time), so a new company does not simply lengthen the run by its own time: the last run's companies (their requests at
+    their own pace, in the run's order) are laid out on the workers with and without the new ones, and the last run's real duration
+    is scaled by the ratio of the two. `last_companies`: rows with domain, listing_count, request_count, protected. Our estimate;
+    the plain sum when the last run gives nothing to scale."""
+    workers = workers or WORKERS
+
+    def span(jobs):
+        free, lock, end = [0.0] * workers, 0.0, 0.0
+        for _, _, seconds, protected in sorted(jobs, key=lambda job: (-job[0], job[1])):
+            slot = min(range(workers), key=free.__getitem__)
+            start = max(free[slot], lock) if protected else free[slot]
+            free[slot] = start + seconds
+            lock = free[slot] if protected else lock
+            end = max(end, free[slot])
+        return end
+
+    old = [(c["listing_count"], c["domain"], c["request_count"] * ((PROTECTED_GAP if c.get("protected") else REQUEST_GAP) + ANSWER_SECONDS),
+            bool(c.get("protected"))) for c in last_companies]
+    new = old + [(a["listings"], a["domain"], a["seconds"], a["protected"]) for a in added]
+    before = span(old)
+    if not last_seconds or before <= 0:
+        return sum(a["seconds"] for a in added)
+    return max(0, int(last_seconds * span(new) / before) - int(last_seconds))
 
 
 def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None, region=None):

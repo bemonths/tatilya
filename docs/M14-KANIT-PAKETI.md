@@ -158,6 +158,22 @@ planın bütün kanıtları yeni pakette aynı değerle bulundu.
 - **Bilinen boşluklar:** fiyatı okunamayan şirketler artık gözden geçirilmiş dosyadaki her şirketi (ilan sayısı 20'nin altında olsa da) adlandırır; "engelli ilan" satırı bunların yayından kalkmış ilanlar olduğunu söyler; yol mesafesi ve uçak bileti için ya verinin sınırı ya da "veri yok" yazar; sonda **"Kapsam dışı"** satırı: araç kiralama fiyatları, market fiyatları, anlık trafik ve trafikli sürüş süresi, Vrbo ilanlarının fiyatları.
 - **Kapsam dışı kuralı (video dili):** kapsam dışı konu hakkında sayı, fiyat ya da karşılaştırma söylenmez; gerekiyorsa "bu videoda bunun verisi yok" denir. Liste destinasyon profilindedir (`OUT_OF_SCOPE`: anahtar, başlık, neden).
 
+## Şirketin kendi sitesindeki evler (GÖREV-22)
+
+`lodging_coverage` bloğu artık üç tablo verir: "Fiyat ortancalarına giren kiralama şirketleri", **"Şirketin kendi sitesindeki evler
+(Book>Direct ilanlarına bağlanmadı)"** ve "Fiyatı okunamayan kiralama şirketleri". Yeni tablo, sitesi sokak adresi vermediği için
+ilanlara bağlanamayan ve evleri şirketin kendi envanteri olarak okunan şirketler içindir (30A Beach Girls): şirket başına ev sayısı,
+mahallesi belirtilen ev (sitenin söylediği yer adına göre, mahalle mahalle), mahallesi belirtilmemiş ev ve fiyatlı ev. Satırın notu
+kuralı söyler: mahalle yalnız sitenin ev için söylediği yer adından alınmıştır, mahallesi belirtilmemiş evler hiçbir mahallenin
+ortancasına girmez, bu fiyatlar Book>Direct ilanlarının ortancalarına karışmaz. Fiyat sorulmuşsa her hafta için ayrı satır gelir:
+"<şirket>: şirketin kendi sitesindeki evler; Book>Direct ilanlarına bağlanmadı — <hafta> haftası, 7 gecelik toplam ortancası"
+(örneklem = fiyatlı ev; mahallesi belirtilmemiş evlerin ortancası notta). Tek bir topluluğun resmî programındaki kendi envanter
+(Alys Beach) eskisi gibi o mahallenin satırında durur, bu tabloya girmez. Kaynak: `summarize()["own_companies"]`.
+
+Okunamayan şirketlerin gözden geçirilmiş nedenleri 17 Kasım 2026'da güncellendi (`thirty_a_agency_unread.csv`): 360 Blue ve Vacasa
+"bölge engeli; okuyucusu yazıldı, sonraki fiyat çekiminde okunur", Cottage Rental Agency ve Outdoor Shower "site yok", 30A Beach Girls
+"şirketin kendi envanteri". Yeni şirketlerle bir fiyat çekimi yapılınca 360 Blue ve Vacasa bu tablodan çıkar.
+
 ## Yeni şablon nasıl yazılır
 
 1. Destinasyonun şablon klasörüne (`thirty_a_evidence/`) yeni bir JSON dosyası koyun; anahtarı benzersiz olsun.
