@@ -186,8 +186,16 @@ export function ownCompanies(companies) {
   const shown=(companies || []).filter(c=>c.unassigned || c.regions.length>1);
   if(!shown.length) return "";
   return `<section class="library climate-block"><div class="library-title"><h2>Şirketin kendi sitesindeki evler</h2><small>Book>Direct ilanlarına bağlanmadı; mahalle yalnız sitenin ev için söylediği yer adından alınır, mahallesi belirtilmemiş evler hiçbir mahallenin ortancasına girmez</small></div>
-    <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ŞİRKET</th><th>EV</th><th>MAHALLESİ BELİRTİLEN</th><th>MAHALLESİ BELİRTİLMEMİŞ</th><th>FİYATLI EV</th></tr></thead>
-    <tbody>${shown.map(c=>`<tr><td>${esc(c.company)}<small>${esc(c.domain)}</small></td><td>${c.homes}${c.outside?`<small>30A bölgesi dışında ${c.outside} ev alınmadı</small>`:""}${c.on_bookdirect?`<small>Book>Direct ilanına bağlanan ${c.on_bookdirect} ev ayrıca sayılmadı</small>`:""}</td><td>${c.with_region}<small>${esc(c.regions.map(r=>`${r.region_name} ${r.homes}`).join(" · ") || "—")}</small></td><td>${c.unassigned}</td><td>${c.priced}</td></tr>`).join("")}</tbody></table></div></section>`;
+    <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ŞİRKET</th><th>EV</th><th>MAHALLESİ BELİRTİLEN</th><th>MAHALLESİ BELİRTİLMEMİŞ</th><th>FİYATLI EV</th><th>HAFTALIK KİRA ORTANCASI</th></tr></thead>
+    <tbody>${shown.map(c=>`<tr><td>${esc(c.company)}<small>${esc(c.domain)}</small></td><td>${c.homes}${c.outside?`<small>30A bölgesi dışında ${c.outside} ev alınmadı</small>`:""}${c.on_bookdirect?`<small>Book>Direct ilanına bağlanan ${c.on_bookdirect} ev ayrıca sayılmadı</small>`:""}</td><td>${c.with_region}<small>${esc(c.regions.map(r=>`${r.region_name} ${r.homes}`).join(" · ") || "—")}</small></td><td>${c.unassigned}</td><td>${c.priced}</td><td>${ownRents(c)}</td></tr>`).join("")}</tbody></table></div></section>`;
+}
+/** GÖREV-23: the median weekly rent of a company's own homes where the site prices by rent alone (its calendar's nightly rates summed;
+ *  no fees, taxes or total): the lowest and the highest window median, labelled as rent. */
+export function ownRents(company) {
+  const rows=(company.windows || []).filter(w=>w.rent_count);
+  if(!rows.length) return "—";
+  const medians=rows.map(w=>w.rent_median), low=Math.min(...medians), high=Math.max(...medians);
+  return `${low===high?usd(low):`${usd(low)}–${usd(high)}`}<small>${rows.length} haftanın ortancaları · yalnız kira; ücret ve vergi hariç</small>`;
 }
 /** Homes from a community's official rental program that Book>Direct does not show, with their prices; counted apart. */
 export function ownTable(own, windows) {

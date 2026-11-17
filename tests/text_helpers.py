@@ -149,12 +149,15 @@ def sessions(view, step=None, tone=None):
     return [s for s in view["oturumlar"] if (step is None or s["step"] == step) and (tone is None or s["tone"] == tone)]
 
 
-def text_job(client, settled=False, limit=15):
-    """The text run's job; settled=True waits until it has ended (the run changes its state a moment before its job's last message)."""
+def text_job(client, settled=False, limit=120):
+    """The text run's job; settled=True waits until it has ended (the run changes its state a moment before its job's last message).
+    The wait ends when the job has ended, never by the clock: a job still running at the limit is a failure, not an answer."""
     import time
     end = time.monotonic() + limit
     while True:
         job = next(j for j in client.get("/api/jobs").json() if j["kind"] == "claude_metin")
-        if not settled or job["status"] not in ("queued", "running") or time.monotonic() >= end:
+        if not settled or job["status"] not in ("queued", "running"):
             return job
+        if time.monotonic() >= end:
+            raise AssertionError(f"metin işi {limit} saniyede bitmedi: {job['status']}")
         time.sleep(0.05)

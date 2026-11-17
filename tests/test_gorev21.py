@@ -365,6 +365,9 @@ def test_the_estimate_the_spending_and_the_link_table_of_plan_and_writing(app):
     assert chain["toplam"]["tahmin"] == estimate["toplam"]["toplam"] and chain["fazla"] is False
     job = text_job(app, settled=True)
     assert job["result"]["harcama"]["gercek"]["cagri"] == 2 and job["result"]["harcama"]["tahmin"] == estimate["toplam"]["toplam"]
+    # The run stops for the approval a moment before its job writes its last message; the run's spending comes from the job's
+    # result, so the run is read again once the job has ended (GÖREV-23: the view read at the pause could still be without it).
+    plan = app.get(f"/api/metin/calismalar/{plan['id']}").json()
     assert plan["harcama"]["gercek"]["toplam"] == chain["toplam"]["gercek"]                # actual beside the estimate, after the job
     decide(app, "plan")
     done = start_writing(app)
@@ -461,7 +464,7 @@ def test_v20_to_v21_keeps_every_row_and_gives_existing_videos_their_steps(text_e
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 22
+        assert con.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 23
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = counts(con)
         assert after == {**before, **V21_TABLES, "video_steps": 16, "video_step_log": 2}    # nothing lost; two videos × eight steps

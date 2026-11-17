@@ -1248,15 +1248,31 @@ class AvantStay:
     is no street address, so these homes cannot be tied to Book>Direct listings by the address or location rule; they are read as
     the company's own inventory (the destination configuration's `inventory.own`).
 
-    The price: the site's booking box asks AvantStay's GraphQL service (arriere.prod.avantstay.com/public/graphql, header
-    X-Distribution-Channel) - `home(homeId){calendar(from,to){date minStay rate season status ...}}` and `cartPrice(bookingRequest:{...})`.
-    GÖREV-22 could not send a trial request to that service, so quote() is not written: nobody has seen an answer (the amounts'
-    unit, the calendar's status words and the refusal texts are unknown). The configuration keeps `inventory.own.quotes` false until
-    it is."""
+    The price (GÖREV-23, answers seen 17 Nov 2026): the home page asks AvantStay's GraphQL service
+    (arriere.prod.avantstay.com/public/graphql, header X-Distribution-Channel) two things. Its calendar asks
+    `home(homeId){calendar(from,to){date minStay rate season status restrictions{checkInAllowed checkOutAllowed}}}`: per day the
+    nightly rate in dollars, the minimum stay and a status (VACANT, OCCUPIED, CHECK_IN, CHECK_OUT, CHECK_OUT_AND_CHECK_IN). Its
+    booking box asks `cartPrice(bookingRequest:{...}, cartId)`, which answers the fees, the taxes and the total together with a
+    cart id the page then sends back with every later question: the question opens a cart on the service. We do not enter a
+    booking or cart flow, so cartPrice is never sent. quote() reads the calendar only: whether the week can be booked by the
+    site's own rule (the page's script: the arrival day is free and allows check-in, the nights between are VACANT, the minimum
+    stay fits, the departure day allows check-out) and the rent as the sum of the calendar's nightly rates. That sum is ours and
+    is labelled so; cleaning fee, other fees, taxes and the total stay empty (the site did not tell them without a cart)."""
 
     name = "avantstay"
-    sends_guests = True
+    sends_guests = False                        # the calendar question carries no guest count
     page_requests = 1
+    listing_requests, quote_requests = 1, 0     # the estimate: one calendar request per home covers every window
+    api_hosts = ("arriere.prod.avantstay.com",)
+    SERVICE = "https://arriere.prod.avantstay.com/public/graphql"
+    CALENDAR_MONTHS = 18
+    today = staticmethod(date.today)
+    CALENDAR_QUERY = ("query HomeService_loadHomePrices($homeId: UUID!, $from: LocalDate!, $to: LocalDate!) { home(homeId: $homeId) { "
+                      "calendar(from: $from, to: $to) { date minStay rate season status restrictions { checkInAllowed checkOutAllowed } } } }")
+    TAKEN_NIGHT = ("CHECK_IN", "CHECK_OUT_AND_CHECK_IN", "OCCUPIED")       # no arrival on such a day (the page's script)
+    TAKEN_DEPARTURE = ("CHECK_OUT", "CHECK_OUT_AND_CHECK_IN", "OCCUPIED")   # no departure on such a day
+    RENT_NOTE = ("Kira = sitenin takviminde bu gecelere yazdığı gecelik fiyatların toplamı (bizim toplamımız). Temizlik ücreti, öbür "
+                 "ücretler ve vergi dahil değil; sitenin toplam fiyatı sepet kaydı açan bir sorguyla geldiği için sorulmadı.")
 
     @staticmethod
     def next_data(html):
@@ -1322,6 +1338,8 @@ class AvantStay:
                 details = {key: value for key, value in self.unit_fields(page.text).items() if value not in (None, [])}
                 unit.update({**details, "bedrooms": unit["bedrooms"] if unit["bedrooms"] is not None else details.get("bedrooms"),
                              "title": unit["title"] or details.get("title")})
+                if options.get("channel"):
+                    info["channel"] = options["channel"]
                 unit["page"] = prepared_page(info, page.url, page.sha256)
             units.append(unit)
         return units, replies
@@ -1337,9 +1355,69 @@ class AvantStay:
         return found[0], ("Bağlantı: Book>Direct bağlantısındaki numara şirketin kendi listesinde bu evin numarası olarak geçiyor; "
                           f"şirket ilanı: {found[0].get('title') or found[0]['url']}.")
 
-    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
-        raise AdapterError("AvantStay fiyat sorgusu yazılmadı: sitenin fiyat servisinden örnek yanıt görülemedi (GÖREV-22).")
+    def calendar(self, session, info, first, last):
+        """The calendar block ({iso date: the calendar's row}, the reply) that holds first..last. One request covers
+        CALENDAR_MONTHS months from the first day of the present month (the stretch the site's own script asks at once), so a home's
+        windows share one request whatever their order; a window beyond it asks for its own stretch."""
+        for block in info.setdefault("calendars", []):
+            if block["from"] <= first and last <= block["to"]:
+                return block
+        if not info.get("home_id") or not info.get("channel"):
+            raise AdapterError("AvantStay takvimi sorulamadı: evin kimliği ya da sitenin kanal adı (yapılandırma: inventory.channel) yok.")
+        start = min(first, self.today()).replace(day=1)
+        month = start.month - 1 + self.CALENDAR_MONTHS
+        end = max(last, date(start.year + month // 12, month % 12 + 1, 1))
+        reply = session.request("POST", self.SERVICE, note=f"avantstay-calendar-{info['site_id']}-{start.isoformat()}",
+                                json={"query": self.CALENDAR_QUERY,
+                                      "variables": {"homeId": info["home_id"], "from": start.isoformat(), "to": end.isoformat()}},
+                                headers={"Accept": "application/json", "Content-Type": "application/json",
+                                         "X-Distribution-Channel": info["channel"], "Referer": info["page_url"]})
+        try:
+            data = json.loads(reply.text)
+        except ValueError:
+            data = None
+        errors = data.get("errors") if isinstance(data, dict) else None
+        home = (data.get("data") or {}).get("home") if isinstance(data, dict) and isinstance(data.get("data"), dict) else None
+        rows = home.get("calendar") if isinstance(home, dict) else None
+        if reply.status != 200 or errors or not isinstance(rows, list):
+            said = clean(errors[0].get("message")) if isinstance(errors, list) and errors and isinstance(errors[0], dict) else None
+            raise AdapterError(f"Takvim isteği HTTP {reply.status} döndü" + (f"; servis: {said}." if said else "; yanıtta takvim yok."))
+        block = {"from": start, "to": end, "reply": reply,
+                 "days": {row["date"]: row for row in rows if isinstance(row, dict) and isinstance(row.get("date"), str)}}
+        info["calendars"].append(block)
+        return block
 
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        arrival, departure = window["checkin_date"], window["checkout_date"]
+        block = self.calendar(session, info, arrival, departure)
+        replies = [block["reply"]]
+        stay = [date.fromordinal(arrival.toordinal() + n) for n in range(window["nights"] + 1)]
+        rows = [block["days"].get(day.isoformat()) for day in stay]
+        if any(row is None for row in rows):
+            raise AdapterError("Sitenin takvimi bu pencerenin günlerini vermedi.")
+        first, last = rows[0], rows[-1]
+        taken = [stay[0].isoformat()] if first.get("status") in self.TAKEN_NIGHT else []
+        taken += [day.isoformat() for day, row in zip(stay[1:-1], rows[1:-1]) if row.get("status") != "VACANT"]
+        taken += [stay[-1].isoformat()] if last.get("status") in self.TAKEN_DEPARTURE else []
+        if taken:
+            return {**outcome("unavailable", f"Sitenin takvimi bu pencerenin {len(taken)} gününü dolu gösteriyor ({taken[0]} …).", available=0),
+                    "replies": replies}
+        rules_in = first.get("restrictions") if isinstance(first.get("restrictions"), dict) else {}
+        rules_out = last.get("restrictions") if isinstance(last.get("restrictions"), dict) else {}
+        minimum = first.get("minStay")
+        minimum = int(minimum) if isinstance(minimum, (int, float)) and not isinstance(minimum, bool) else None
+        if rules_in.get("checkInAllowed") is False:
+            return {**outcome("restricted", f"Sitenin takvimi {stay[0].isoformat()} günü girişe izin vermiyor.", min_stay=minimum), "replies": replies}
+        if rules_out.get("checkOutAllowed") is False:
+            return {**outcome("restricted", f"Sitenin takvimi {stay[-1].isoformat()} günü çıkışa izin vermiyor.", min_stay=minimum), "replies": replies}
+        if minimum is not None and minimum > window["nights"]:
+            return {**outcome("restricted", f"Sitenin takvimi bu giriş günü için en az {minimum} gece istiyor.", min_stay=minimum), "rule_source": "yanıt", "replies": replies}
+        nightly = [{"date": day.isoformat(), "price": money(row.get("rate"))} for day, row in zip(stay[:-1], rows[:-1])]
+        if any(night["price"] is None for night in nightly):
+            return {**outcome("no_price", "Sitenin takvimi bu geceleri boş gösteriyor ama gecelik fiyat vermiyor.", available=1), "replies": replies}
+        rent = round(sum(night["price"] for night in nightly), 2)
+        return {**breakdown(rent, [], None, None, nightly=nightly, currency="USD"), "min_stay": minimum, "message": self.RENT_NOTE,
+                "rule_source": "yanıt" if minimum else None, "replies": replies}
 
 ADAPTERS = {adapter.name: adapter for adapter in (ResCMS(), Track(), Streamline(), VacationRentalsRouter(), VRP(), PropertyQuoteV3(),
                                                   ExceptionalStay(), AsmxGetQuote(), Wander(), Q4VR(), NaturalRetreats(), Vacasa(),

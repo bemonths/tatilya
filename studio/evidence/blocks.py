@@ -1021,6 +1021,13 @@ def lodging_coverage(data, spec):
                                                                           "Mahallesi belirtilmemiş": number(company["unassigned"]),
                                                                           "Fiyatlı ev": number(company["priced"])}, head="Şirket")))
         for window in company["windows"]:
+            if window.get("rent_count"):      # GÖREV-23: rent alone (the site's calendar), never a total
+                rows.append(row(f"{name}: {company['source']} — {labels.get(window['window_key'], window['window_key'])} haftası, 7 gecelik kira "
+                                f"ortancası; temizlik ücreti, öbür ücretler ve vergi HARİÇ ({queried} tarihinde soruldu)", window["rent_median"], "USD",
+                                scope="30A", source=source, label="bizim hesabımız", sample=window["rent_count"], usage=USAGE["lodging_coverage"],
+                                small=window["rent_count"] < SMALL_SAMPLE,
+                                note=("Kira = sitenin takviminde gösterdiği gecelik fiyatların toplamı. Toplam fiyat değildir; öbür şirketlerin "
+                                      "toplam fiyat ortancalarıyla karşılaştırılmaz ve onlara karışmaz.")))
             if not window["priced_count"]:
                 continue
             rows.append(row(f"{name}: {company['source']} — {labels.get(window['window_key'], window['window_key'])} haftası, 7 gecelik toplam "

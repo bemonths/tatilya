@@ -1737,3 +1737,17 @@ test('homes on a company\'s own site are shown apart, with the ones the site giv
   assert.match(html,/<td>120<small>30A bölgesi dışında 25 ev alınmadı<\/small><small>Book>Direct ilanına bağlanan 2 ev ayrıca sayılmadı<\/small><\/td><td>40<small>Seagrove 30 · Seacrest 10<\/small><\/td><td>80<\/td><td>0<\/td>/);
   assert.match(html,/MAHALLESİ BELİRTİLMEMİŞ/);
 });
+
+// GÖREV-23: a company whose site prices by rent alone (its calendar's nightly rates summed) shows the weekly rent medians as rent, never as a total
+import {ownRents} from '../studio/web/agency.js';
+test('the own-homes table shows the weekly rent medians of a rent-only company and says what they leave out',()=>{
+  assert.equal(ownRents({windows:[{window_key:'a',rent_count:0,rent_median:null,priced_count:3,total_median:5000}]}),'—');
+  assert.equal(ownRents({}),'—');
+  const cell=ownRents({windows:[{window_key:'a',rent_count:40,rent_median:1468},{window_key:'b',rent_count:35,rent_median:3210.5},{window_key:'c',rent_count:0,rent_median:null}]});
+  assert.match(cell,/\$1,468.*–\$3,21\d/);
+  assert.match(cell,/2 haftanın ortancaları · yalnız kira; ücret ve vergi hariç/);
+  const html=ownCompanies([{company:'30A Beach Girls',domain:'30a-beachgirls.com',homes:120,with_region:40,unassigned:80,priced:75,
+    regions:[{region_name:'Seagrove',homes:30},{region_name:'Seacrest',homes:10}],windows:[{window_key:'a',rent_count:40,rent_median:1468}]}]);
+  assert.match(html,/HAFTALIK KİRA ORTANCASI/);
+  assert.match(html,/<td>75<\/td><td>\$1,468[^<]*<small>1 haftanın ortancaları · yalnız kira; ücret ve vergi hariç<\/small><\/td>/);
+});

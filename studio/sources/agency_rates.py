@@ -1113,7 +1113,9 @@ OWN_SOURCE = "şirketin kendi sitesindeki evler; Book>Direct ilanlarına bağlan
 def own_company_summary(own, own_by_window, windows, companies, names):
     """Per company its own-inventory homes (GÖREV-22): how many, how many the site places in a neighbourhood and in which, how many
     in none, and per asked window the priced homes and the median total of all of them and of the homes without a neighbourhood.
-    The medians are ours, from the site's own totals; homes without a neighbourhood enter no neighbourhood's medians."""
+    The medians are ours, from the site's own totals; homes without a neighbourhood enter no neighbourhood's medians. GÖREV-23: a
+    week priced by rent alone (the calendar's nightly rates summed; no fees, taxes or total) is counted and its median given apart
+    (`rent_count`, `rent_median`); it never enters a total median."""
     result = []
     for company in companies:
         homes = [o for o in own if o["domain"] == company["domain"]]
@@ -1132,10 +1134,14 @@ def own_company_summary(own, own_by_window, windows, companies, names):
             def totals(group):
                 found = [asked.get((h["domain"], h["site_listing_id"])) for h in group]
                 return [q["total"] for q in found if q is not None and q["status"] == "priced" and q["total"] is not None]
-            everything, apart = totals(homes), totals(loose)
+            def rents(group):       # GÖREV-23: weeks a site prices by rent alone (no total without a cart), kept apart from the totals
+                found = [asked.get((h["domain"], h["site_listing_id"])) for h in group]
+                return [q["rent"] for q in found if q is not None and q["status"] == "priced" and q["total"] is None and q["rent"] is not None]
+            everything, apart, rent_only = totals(homes), totals(loose), rents(homes)
             rows.append({"window_key": window["window_key"], "priced_count": len(everything),
                          "total_median": round(statistics.median(everything), 2) if everything else None,
-                         "unassigned_priced": len(apart), "unassigned_median": round(statistics.median(apart), 2) if apart else None})
+                         "unassigned_priced": len(apart), "unassigned_median": round(statistics.median(apart), 2) if apart else None,
+                         "rent_count": len(rent_only), "rent_median": round(statistics.median(rent_only), 2) if rent_only else None})
         result.append({"domain": company["domain"], "company": company["company"], "homes": len(homes), "with_region": len(homes) - len(loose),
                        "unassigned": len(loose), "outside": company.get("own_outside"), "on_bookdirect": company.get("own_on_bookdirect"),
                        "priced": sum(1 for h in homes if any((h["domain"], h["site_listing_id"]) in own_by_window.get(w["window_key"], {})

@@ -250,6 +250,19 @@ AGENCY_SITE_OPTIONS_V22 = {
                             "WaterSound Beach": "watersound", "Seacrest": "seacrest", "Seacrest Beach": "seacrest",
                             "Alys Beach": "alys-beach", "Rosemary Beach": "rosemary-beach"}}}},
 }
+# Changed by migration v23 (GÖREV-23, 17 November 2026): options a company already configured gets (the row is updated only when it
+# still holds the options an earlier migration gave it).
+# - 30a-beachgirls.com: the weekly rent is now read (`quotes` true) from the calendar the home page asks AvantStay's service for
+#   (`channel`: the X-Distribution-Channel the site's own script sends). Only the rent: the fees, taxes and total come with a question
+#   that opens a cart on the service, and that question is never sent (studio/sources/agency_adapters.py, AvantStay).
+AGENCY_SITE_OPTIONS_V23 = {
+    "30a-beachgirls.com": {"inventory": {
+        **AGENCY_SITE_OPTIONS_V22["30a-beachgirls.com"]["inventory"], "channel": "BEACH_GIRLS",
+        "expected_matches": 0,          # none of its 48 Book>Direct links names a home of the site's list (GÖREV-20, GÖREV-22)
+        "own": {**{key: value for key, value in AGENCY_SITE_OPTIONS_V22["30a-beachgirls.com"]["inventory"]["own"].items() if key != "quotes_note"},
+                "quotes": True}}},
+}
+AGENCY_SITES_V23 = ()
 # Reviewed files read by the restaurant-sites collector (GÖREV-09): the official site found by a web search for restaurants whose
 # directory entry has no working website (accepted only when the site shows the same address or phone), and menu items read by a
 # person from image menus or text-less PDFs, each tied to the document's SHA-256.
