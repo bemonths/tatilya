@@ -176,6 +176,15 @@ okunamayan şirketler" tablosunda bu nedenle durur. Fiyat sorgusu yöneticinin i
 sitenin iki sayfası arasında artık daha uzun bekliyor (RealJoy'da 20 saniye). Ayrıntı: `docs/M11-KONAKLAMA-FIYATLARI.md`,
 `docs/gorevler/GOREV-24/RAPOR.md`.
 
+## RealJoy ve sayfanın kendi sorgusu · v0.26.0
+
+GÖREV-25: Kullanıcı kararıyla tarayıcı eklentisi (0.20.0) bir sitenin kendi sekmesinden, o sayfanın ziyaretçi için zaten yaptığı
+herkese açık sorguları gönderebiliyor: fiyat sorusu ve ev listesinin devamı. Yalnız programın izinli listesindeki adreslere, sayfanın
+kendi alanlarıyla gider; giriş, hesap, ödeme, rezervasyon, sepet ve iletişim adresleri yasak listededir. Bununla RealJoy okunuyor:
+311 evlik liste, ev sayfasındaki takvim ve en az gece, haftalık fiyatın kalemleri (kira, ücretler, promosyon, vergi, toplam). Takvimde
+dolu hafta sorulmaz; ilanlar yalnız adresle bağlanır. RealJoy yalnız eklentiyle okunur, eklenti bağlı değilse atlanır. Şema 24.
+Ayrıntı: `docs/M16-TARAYICI-EKLENTISI.md`, `docs/M11-KONAKLAMA-FIYATLARI.md`, `docs/gorevler/GOREV-25/RAPOR.md`.
+
 ## Kiralama fiyatlarının eksikleri · v0.23.0
 
 GÖREV-22 (şema 22): fiyatı okunamayan şirketlerden ikisi (360 Blue, Vacasa) yalnız ABD içinden gelen ziyaretçiye açıkmış. Bir sitenin

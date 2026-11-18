@@ -62,6 +62,9 @@ RETRY_PAUSE = 5.0
 BLOCK_LIMIT = 3             # consecutive refusals (401/403/429, no verification page) that stop a company; see site_answers()
 ERROR_LIMIT = 5             # consecutive unreachable/failed requests that stop a company
 VERIFY_TIMEOUT = 15 * 60
+RETRY_AFTER_MAX = 60 * 60   # GÖREV-25: the longest Retry-After a 429 rule waits
+EXTENSION_ONLY_SKIP = ("Eklenti bağlı değil: bu şirket yalnız tarayıcı eklentisiyle (sitenin kendi sorgularıyla) okunur; programın kendi "
+                       "tarayıcısı bu sorguları göndermez. Şirket bu çekimde atlandı.")
 MAX_BYTES = 8_000_000
 MAX_REDIRECTS = 5
 MAX_INVENTORY_PAGES = 400   # listing pages read from one company's sitemap
@@ -242,11 +245,12 @@ class SiteSession:
     """Sequential, spaced requests to one company site; requests and redirects stay inside the company's domains (its own, the
     configured aliases its links redirect to, and the platform's API hosts). A protected site stops at its first refusal."""
 
-    def __init__(self, store, domain, transport, canceled, *, allowed=(), gap=None, protected=False):
+    def __init__(self, store, domain, transport, canceled, *, allowed=(), gap=None, protected=False, retry_429=None):
         self.store, self.domain, self.transport, self.canceled = store, domain, transport, canceled
         self.allowed = (domain, *allowed)
         self.gap = REQUEST_GAP if gap is None else gap
         self.protected = protected
+        self.retry_429 = retry_429 if isinstance(retry_429, dict) else None    # GÖREV-25: {"wait_s", "retries"} from the configuration
         self.last = None
         self.requests = 0
 
@@ -256,7 +260,7 @@ class SiteSession:
     def request(self, method, url, *, note, params=None, data=None, json=None, headers=None):
         if not self.allows(url):
             raise AdapterError("Uyarlayıcı şirketin alan adı dışındaki bir adrese istek yapmak istedi; yapılmadı.")
-        current, hops, asked = url, 0, []
+        current, hops, asked, refused = url, 0, [], 0
         while True:
             asked.append(str(httpx.URL(current, params=params)) if params else current)
             check(self.canceled)
@@ -289,6 +293,17 @@ class SiteSession:
             head = reply.text[:30000] if status in (403, 429, 503) or self.protected else ""
             if status in (403, 429, 503) and (lowered.get("cf-mitigated") == "challenge" or CHALLENGE.search(head)):
                 raise VerificationNeeded(current)
+            if status == 429 and self.retry_429:
+                # GÖREV-25: wait what the site asks (Retry-After) or at least wait_s, ask again at most `retries` times; a 429 after
+                # that stops the company for this run (what it gave so far is kept)
+                if refused < int(self.retry_429.get("retries", 2)):
+                    refused += 1
+                    pause(retry_after(lowered.get("retry-after"), float(self.retry_429.get("wait_s", 60))), self.canceled)
+                    self.last = time.monotonic() - self.gap
+                    continue
+                raise CompanyStopped("stopped_blocked", f"Site art arda {refused + 1} kez HTTP 429 (çok fazla istek) döndü; her seferinde "
+                                                        "beklenip yeniden sorulduktan sonra şirket bu çekimde durduruldu, o ana kadarki "
+                                                        "sonuçlar saklandı.")
             if self.protected and (status in (403, 429) or BLOCK_PAGE.search(head)):
                 raise CompanyStopped("stopped_blocked", f"Korumalı site isteği reddetti (HTTP {status}{', engel sayfası' if BLOCK_PAGE.search(head) else ''}); "
                                                         "şirket hemen durduruldu, yeniden denenmedi.")
@@ -303,6 +318,20 @@ class SiteSession:
                 if attempt == 1 or self.protected:
                     raise AdapterError("Şirket sitesine bağlanılamadı veya zaman aşımı oluştu.") from exc
                 pause(RETRY_PAUSE, self.canceled)
+
+
+def retry_after(value, least):
+    """Seconds to wait after a 429: the site's Retry-After (seconds or an HTTP date), else `least` (GÖREV-25)."""
+    text = str(value or "").strip()
+    if text.isdigit():
+        return min(float(text), RETRY_AFTER_MAX)
+    if text:
+        from email.utils import parsedate_to_datetime
+        try:
+            return min(max(0.0, (parsedate_to_datetime(text) - datetime.now(timezone.utc)).total_seconds()), RETRY_AFTER_MAX)
+        except (TypeError, ValueError):
+            pass
+    return least
 
 
 class Progress:
@@ -381,8 +410,11 @@ def new_site_estimate(sites, listings, read_domains, window_count, region_hosts=
         requests = count * pages + tied * (extra + window_count * per_window)
         homes = int(own.get("expected_homes") or 0) if own else 0
         requests += homes * (1 + extra + window_count * per_window)
+        if options["inventory"] and (count or homes):      # GÖREV-25: the company's own list read on the run (e.g. RealJoy's parts of 12)
+            requests += getattr(adapter, "inventory_requests", 0)
         region = any(host_key(h) in listed for h in hosts)
-        gap = max(PROTECTED_GAP if options["protected"] else REQUEST_GAP, PROXY_GAP if region else 0)
+        gap = max(PROTECTED_GAP if options["protected"] else REQUEST_GAP, PROXY_GAP if region else 0,
+                  float((options["inventory"] or {}).get("gap_s") or 0))
         added.append({"domain": options["domain"], "company": options["company"], "listings": count, "own_homes": homes, "requests": requests,
                       "seconds": int(requests * (gap + ANSWER_SECONDS)), "protected": bool(options["protected"]), "proxy": region})
     return added
@@ -570,8 +602,12 @@ class CompanyRun:
             hosts = sorted(self.region.hosts)      # GÖREV-22: only the listed domains through the proxy, the company's other domains directly
             transport, gap = HttpTransport(proxy_client(self.region.proxy, hosts), kind="proxy",
                                            proxied=lambda url: is_listed(hosts, url)), max(gap, PROXY_GAP)
+        options = site["inventory"] or {}
+        gap = max(gap, float(options.get("gap_s") or 0))      # GÖREV-25: a company's own pace (RealJoy: 20 s)
+        self.extension_only = bool(options.get("extension_only"))
         self.session = SiteSession(shared.store, site["domain"], transport, shared.canceled,
-                                   allowed=(*site["aliases"], *getattr(self.adapter, "api_hosts", ())), gap=gap, protected=self.protected)
+                                   allowed=(*site["aliases"], *getattr(self.adapter, "api_hosts", ())), gap=gap, protected=self.protected,
+                                   retry_429=options.get("retry_429"))
         self.result = {"domain": site["domain"], "company": site["company"], "adapter": site["adapter"], "status": "done",
                        "listing_count": len(members), "verification": None, "message": None, "protected": int(self.protected),
                        "guest_rule": site["guest_rule"], "inventory_count": None, "inventory_raw_sha256": None, "own_count": 0,
@@ -589,6 +625,10 @@ class CompanyRun:
         program's own browser through the user's US proxy (never to the extension); a region block met now lists the domain."""
         shared, domain = self.shared, self.site["domain"]
         verifier = shared.verifier
+        if self.extension_only:        # GÖREV-25: only the user's extension; never the program's own browser
+            verifier = getattr(verifier, "without_fallback", None)
+            if verifier is None:
+                raise CompanyStopped("verification_unavailable", EXTENSION_ONLY_SKIP)
         if self.region is not None:
             from ..proxy import PROXY_FAILED_SKIP
             if self.region.proxy is None or self.region.proxy.browser_problem:
@@ -616,6 +656,9 @@ class CompanyRun:
                                          "bölge engelli listeye eklendi (sonraki çekimde ABD proxy'si tanımlıysa onunla okunur).") from None
                 if type(exc).__name__ == "SiteBlocked":
                     raise CompanyStopped("stopped_blocked", f"Site engel sayfası gösterdi ({exc}); şirket durduruldu, yeniden denenmedi.") from None
+                if type(exc).__name__ == "ExtensionMissing":
+                    self.result["verification"] = "unavailable"
+                    raise CompanyStopped("verification_unavailable", str(exc)) from None
                 if type(exc).__name__ == "BrowserUnavailable":
                     self.result["verification"] = "unavailable"
                     raise CompanyStopped("verification_unavailable", f"Tarayıcı kullanılamıyor: {exc}") from None
@@ -651,11 +694,17 @@ class CompanyRun:
         try:
             if self.region is not None and self.region.proxy is None:
                 raise CompanyStopped("stopped_blocked", self.region_skip_text())      # GÖREV-16: region-blocked and no US proxy
+            if self.extension_only and not getattr(shared.verifier, "extension_ready", lambda: False)():
+                self.result["verification"] = "unavailable"
+                raise CompanyStopped("verification_unavailable", EXTENSION_ONLY_SKIP)     # GÖREV-25: skipped, nothing asked
+            options = site["inventory"] or {}
+            dead = options.get("dead_links")
             with shared.protected_lock if self.protected else nullcontext():
                 if self.protected:
                     first = next((m["listing_url"] for m in members if self.session.allows(m["listing_url"])), None)
-                    self.open_browser(first or (site["inventory"] or {}).get("origin") or f"https://www.{site['domain']}/")
-                dead = (site["inventory"] or {}).get("dead_links")
+                    if dead and options.get("origin"):      # GÖREV-25: the old links do not work; the company's list page is the way in
+                        first = options["origin"].rstrip("/") + (options.get("list_path") or "/")
+                    self.open_browser(first or options.get("origin") or f"https://www.{site['domain']}/")
                 for index, row in enumerate(members):
                     check(shared.canceled)
                     if dead:        # GÖREV-22: the company's old listing addresses are known not to work; none is asked
@@ -776,7 +825,7 @@ class CompanyRun:
             if unit is not None:        # GÖREV-22: the link names a unit number the company's own list gives for exactly one home
                 kind, method = "matched", "link"
             elif by_address:
-                kind, unit, note = address_match(facts, units)
+                kind, unit, note = address_match(facts, units, address_without_unit=self.address_without_unit())
                 method = "address"
             else:
                 kind, unit, note = location_match(facts, units, self.shared.everyone)
@@ -791,6 +840,12 @@ class CompanyRun:
             row.update({k: page[k] for k in ("page_status", "page_url", "http_status", "site_listing_id")})
             row["message"], row["match_method"] = None, method
             self.price(row, page["info"])
+
+    def address_without_unit(self):
+        """GÖREV-25: the company's list writes a building's homes under the building's address without their unit (the configuration's
+        `inventory.address_without_unit`, else what the adapter knows of its site, e.g. RealJoy)."""
+        options = self.site["inventory"] or {}
+        return bool(options.get("address_without_unit", getattr(self.adapter, "address_without_unit", False)))
 
     def own_inventory(self, units):
         """The community's homes from the company's own list that Book>Direct does not show: the community is the configured name

@@ -1,0 +1,110 @@
+<form id="quoteForm">
+<ul class="pdp-quote-list">
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-text">Rent</span>
+<span class="pdp-quote-item-price" data-price="6692.02">$6,692<sup>.02</sup></span>
+</li>
+<li class="pdp-quote-item pdp-quote-item-toggle">
+<span class="pdp-quote-item-toggle-group">
+<button type="button" class="pdp-quote-item-toggle-btn" aria-label="Fees Button">
+<span class="pdp-quote-item-toggle-group">
+<svg class="icon">
+<title>Dropdown</title>
+<use href="#caret-square-down-regular"></use>
+</svg>
+<span class="pdp-quote-item-text">Fees</span>
+</span>
+<span class="pdp-quote-item-price" data-price="1755">$1,755<sup>.00</sup></span>
+</button>
+</span>
+<ul class="pdp-quote-item-toggle-list">
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-group">
+<span class="pdp-quote-item-text">Accidental Damage Waiver</span>
+</span>
+<span class="pdp-quote-item-price" data-price="130.00">$130<sup>.00</sup></span>
+</li>
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-group">
+<span class="pdp-quote-item-text">Guest Departure Clean</span>
+</span>
+<span class="pdp-quote-item-price" data-price="600.00">$600<sup>.00</sup></span>
+</li>
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-group">
+<span class="pdp-quote-item-text">Check In Amenity Fee-Sea La Vie Seaside</span>
+</span>
+<span class="pdp-quote-item-price" data-price="805.00">$805<sup>.00</sup></span>
+</li>
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-group">
+<span class="pdp-quote-item-text">Check In & Amenity Fee</span>
+</span>
+<span class="pdp-quote-item-price" data-price="220.00">$220<sup>.00</sup></span>
+</li>
+</ul>
+</li>
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-text">Promo discount</span>
+<span class="pdp-quote-item-price" data-price="-626.5">($626<sup>.50</sup>)</span>
+</li>
+<li class="pdp-quote-item">
+<span class="pdp-quote-item-text">Taxes</span>
+<span class="pdp-quote-item-price" data-price="938.53">$938<sup>.53</sup></span>
+</li>
+<li class="pdp-quote-item pdp-quote-total">
+<span class="pdp-quote-item-text">Total</span>
+<span class="pdp-quote-item-price" data-price="8759.05">$8,759<sup>.05</sup></span>
+</li>
+</ul>
+<div class="pdp-section pdp-promo-code">
+<label for="promocode" class="pdp-section-heading">Promo Code</label>
+<div class="pdp-section-body">
+<div class="form-group">
+<div class="row">
+<div class="col">
+<input class="form-control" id="promocode" name="promocode" type="text" autocomplete="off" value="HOTDEALS" placeholder="Enter Code">
+</div>
+<div class="col">
+<button type="button" name="promoCodeSubmit" id="submitPromo" class="btn btn-block btn-md promo-code-btn">Submit</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<input type="hidden" id="bookNowURL" name="bookNowURL" value="https://www.realjoy.com/beach-rentals/book-now?propertyID=1806&checkin=01/09/2027&checkout=01/16/2027&promocode=HOTDEALS">
+</form>
+<script>
+var jsonLdString = 
+{
+"@context": "https://schema.org",
+"@type": "Hotel",
+"address": {
+"@type": "PostalAddress",
+"addressCountry": "US",
+"addressLocality": "Santa Rosa Beach",
+"addressRegion": "FL",
+"postalCode": "32459",
+"streetAddress": "35 Tupelo St"
+},
+"identifier": "6198",
+"makesOffer": {
+"@type": [
+"Offer",
+"LodgingReservation"
+],
+"checkinTime": "01/09/2027 16:00",
+"checkoutTime": "01/16/2027 10:00",
+"priceSpecification": {
+"@type": "CompoundPriceSpecification",
+"price": 8759.05,
+"priceCurrency": "USD"
+}
+},
+"name": "Sea La Vie Seaside Main House"
+};
+var scriptElement = document.getElementById('googleVacationLD');
+scriptElement.type = 'application/ld+json';
+scriptElement.textContent = JSON.stringify(jsonLdString);
+document.head.appendChild(scriptElement)
+</script>

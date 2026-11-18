@@ -176,6 +176,10 @@ class ExtensionTransport:
         self.session.close()
 
 
+class ExtensionMissing(Exception):
+    """GÖREV-25: a company read only through the extension met no extension (not paired, not connected, or the job handed over)."""
+
+
 class ExtensionVerifier:
     """The rental collector's verifier through the extension: (domain, url, canceled, timeout) -> transport, or None when the page still
     verifies after the extension's wait; raises SiteBlocked on a block page or a login page. After a hand-over the program's own
@@ -216,6 +220,24 @@ class ExtensionVerifier:
         if state in ("giris", "odeme", "erisim_reddedildi", "yonlendi"):
             raise SiteBlocked(f"{domain}: {STOPPED[state]}")
         return None
+
+    def extension_ready(self):
+        """GÖREV-25: the extension can take a company read only through it (paired, connected, the job not handed over)."""
+        return not self.handed and bool(getattr(self.access, "paired", False)) and bool(getattr(self.access, "connected", True))
+
+    def without_fallback(self, domain, url, canceled, timeout):
+        """GÖREV-25: the same as a call, but a hand-over never reaches the program's own browser: the company is skipped."""
+        if not self.extension_ready():
+            raise ExtensionMissing("Eklenti bağlı değil ya da iş programın kendi tarayıcısına devredildi: bu şirket yalnız eklentiyle "
+                                   "okunur; şirket bu çekimde atlandı.")
+        fallback, self.fallback = self.fallback, None      # the caller holds the run's verify lock
+        try:
+            transport = self(domain, url, canceled, timeout)
+        finally:
+            self.fallback = fallback
+        if self.handed:
+            raise ExtensionMissing("İş programın kendi tarayıcısına devredildi: bu şirket yalnız eklentiyle okunur; atlandı.")
+        return transport
 
     def through_fallback(self, domain, url, canceled, timeout):
         if self.fallback is None:

@@ -522,7 +522,7 @@ def test_v9_to_v10_migration_adds_tables_configuration_and_source_with_backup(tm
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         assert counts == {**{t: len(rows) for t, rows in before.items()}, **V10_TABLES, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, **V15_TABLES, **V16_TABLES, **V17_TABLES, **V18_TABLES, **V19_TABLES, **V20_TABLES, **V21_TABLES, "sources": len(before["sources"]) + 6}
@@ -556,7 +556,7 @@ def test_v9_to_v10_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
 
 
 def test_v10_never_duplicates_an_existing_lodging_source_or_overwrites_configuration(tmp_path):
@@ -635,9 +635,9 @@ def test_v10_to_v11_migration_adds_listing_link_columns(tmp_path):
     db = Database(path); db.initialize()
     with sqlite3.connect(path) as con:
         columns = [row[1] for row in con.execute("PRAGMA table_info(lodging_listings)")]
-        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert columns[-3:] == ["url", "phone", "toll_free"] and con.execute("PRAGMA user_version").fetchone()[0] == 24
         with pytest.raises(sqlite3.OperationalError):
             con.execute("BEGIN IMMEDIATE"); upgrade_v11(con)                     # columns already exist; the transaction rolls back
         con.rollback()
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
 

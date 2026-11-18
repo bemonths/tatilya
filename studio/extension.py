@@ -575,6 +575,10 @@ class JobAccess:
     def paired(self):
         return self.bridge.paired
 
+    @property
+    def connected(self):
+        return self.bridge.connected
+
     def open(self, domain, purpose=""):
         return self.bridge.open(domain, job_id=self.job_id, purpose=purpose, notify=self.notify)
 

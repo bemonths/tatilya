@@ -1419,6 +1419,194 @@ class AvantStay:
         return {**breakdown(rent, [], None, None, nightly=nightly, currency="USD"), "min_stay": minimum, "message": self.RENT_NOTE,
                 "rule_source": "yanıt" if minimum else None, "replies": replies}
 
+
+# --- RealJoy Vacations (realjoy.com; GÖREV-25) ----------------------------------------------------------------------------------
+
+class RealJoy:
+    """realjoy.com (a TrackHS booking engine on the company's own site; read 17 Nov 2026 only through the user's extension: the site
+    asks the program's own requests for a verification). Nothing here is sent except the page's own queries on the extension's
+    allowed list (studio.extension_queries; user decision of 17 Nov 2026), with the fields the page itself sends.
+
+    The 30A listing page (/beach-rentals/30a-vacation-rentals) shows 12 homes as cards and carries, in hidden inputs, the ids of every
+    further part of 12 (page2propertyIDs, page3propertyIDs, ...; a new random order on every load) and the number of homes
+    (#bottomOfResults data-count); scrolling posts #scrollForm (page, propertyIDs, sortBy) to /ajax/results/scroll and appends the
+    returned cards. A card (.be-property-widget) carries the unit code, name, street address, coordinates, bedrooms and sleeps.
+
+    A home page carries #pdpDatesForm (checkin, checkout, propertyID, roomTypeID, propertyName, hash), the calendar the date picker
+    draws (#pdpStoredDates: unavailable days, the days a stay begins (checkout-dates: a stay may end there, the night is taken) and
+    ends (checkin-dates: a stay may begin there), blackout days and turn-day limits) and the minimum stay per arrival day
+    (min_night_MM/DD/YYYY). Choosing dates posts the form with the dates (MM/DD/YYYY) to /ajax/quote; the answer is the quote's lines
+    (rent, the fee group with its items, a promotion the site applies by itself, taxes, total) or the text "No" (not available)."""
+
+    name = "realjoy"
+    sends_guests = False                          # the page's price question has no guest field
+    page_requests, listing_requests, quote_requests = 1, 1, 1
+    inventory_requests = 26                       # the estimate: the listing page and 25 parts of 12 (311 homes on 17 Nov 2026)
+    address_without_unit = True                   # a building's homes carry the building's street address, the unit only in the name
+    SCROLL_PATH, QUOTE_PATH = "/ajax/results/scroll", "/ajax/quote"
+    AJAX = {"Accept": "*/*", "X-Requested-With": "XMLHttpRequest"}
+
+    @staticmethod
+    def attribute(tag, name):
+        found = re.search(rf'\s{re.escape(name)}="([^"]*)"', tag)
+        return unescape(found.group(1)) if found else None
+
+    @staticmethod
+    def dates(text):
+        return {d.strip() for d in (text or "").split(",") if d.strip()}
+
+    def parse_page(self, html, url):
+        form = re.search(r'<form[^>]+id="pdpDatesForm"[^>]*>(.*?)</form>', html, re.S | re.I)
+        if not form:
+            return None
+        fields = {}
+        for tag in re.findall(r"<input[^>]*>", form.group(1)):
+            name = self.attribute(tag, "name")
+            if name and name not in fields:
+                fields[name] = self.attribute(tag, "value") or ""
+        if not re.fullmatch(r"\d+", fields.get("propertyID") or ""):
+            return None
+        stored = re.search(r'<div[^>]*\bid="pdpStoredDates"[^>]*>', html, re.S)
+        tag = stored.group(0) if stored else ""
+        calendar = {key: self.dates(self.attribute(tag, f"data-{key}-dates"))
+                    for key in ("unavailable", "checkin", "checkout", "blackout", "not-checkin-turndays", "not-checkout-turndays")}
+        minimum = {day: int(value) for day, value in re.findall(r'id="min_night_(\d\d/\d\d/\d{4})"[^>]*?value="(\d+)"', html)}
+        return {"site_id": fields["propertyID"], "fields": fields, "calendar": calendar if stored else None, "min_nights": minimum,
+                "page_url": url, "origin": origin_of(url)}
+
+    def card(self, tag, origin):
+        value = lambda key: clean(self.attribute(tag, f"data-{key}"))
+        site_id, seo = value("unitcode"), value("seoname") or value("id")
+        if not site_id or not site_id.isdigit() or not seo:
+            return None
+        return {"site_id": site_id, "url": f"{origin}/beach-rentals/{seo}", "title": value("unitshortname"), "address": value("straddress1"),
+                "city": None, "site_location": value("strlocation"), "latitude": number(value("latitude")),
+                "longitude": number(value("longitude")), "bedrooms": number(value("dblbeds")), "bathrooms": None,
+                "sleeps": number(value("intoccu")), "info": None}
+
+    def cards(self, text, origin):
+        return [unit for unit in (self.card(tag, origin) for tag in re.findall(r'<div class="be-property-widget"[^>]*>', text)) if unit]
+
+    def unit_fields(self, html):
+        info = self.parse_page(html, "https://www.realjoy.com/")
+        for tag in re.findall(r'<div class="be-property-widget"[^>]*>', html):
+            if info and self.attribute(tag, "data-unitcode") == info["site_id"]:
+                unit = self.card(tag, "https://www.realjoy.com")
+                return {k: unit[k] for k in ("title", "address", "city", "latitude", "longitude", "bedrooms", "bathrooms", "sleeps")}
+        return json_ld_unit(html)
+
+    def inventory(self, session, origin, options):
+        """Every home of the configured listing page: the page's own 12, then each further part of 12 the page names, asked the way
+        the page asks when it is scrolled. A list shorter than the number the page gives is an error ("liste eksik"): an incomplete
+        list could tie a listing to the wrong home."""
+        address = origin + options["list_path"]
+        replies = [session.request("GET", address, note="realjoy-inventory", headers={"Accept": "text/html,application/xhtml+xml"})]
+        page = replies[0].text
+        if replies[0].status != 200:
+            raise AdapterError(f"İlan listesi sayfası HTTP {replies[0].status} döndü.")
+        count = re.search(r'id="bottomOfResults"[^>]*data-count="(\d+)"', page)
+        if not count:
+            raise AdapterError("İlan listesi sayfasında ev sayısı (bottomOfResults) yok; sayfa beklenen biçimde değil.")
+        total = int(count.group(1))
+        parts = sorted((int(n), ids) for n, ids in re.findall(r'id="page(\d+)propertyIDs"[^>]*value="([\d,]*)"', page))
+        form = re.search(r'<form id="scrollForm">(.*?)</form>', page, re.S)
+        sort = re.search(r'name="sortBy" value="([^"]*)"', form.group(1)) if form else None
+        units = {unit["site_id"]: unit for unit in self.cards(page, origin)}
+        for number_of_part, ids in parts:
+            if number_of_part == 1:
+                continue
+            fields = {"page": str(number_of_part), "propertyIDs": ids, "sortBy": sort.group(1) if sort else "Random"}
+            reply = session.request("POST", origin + self.SCROLL_PATH, data=fields, headers={**self.AJAX, "Referer": address},
+                                    note=f"realjoy-inventory-{number_of_part}")
+            replies.append(reply)
+            if reply.status != 200:
+                raise AdapterError(f"Listenin {number_of_part}. parçası HTTP {reply.status} döndü; liste eksik.")
+            for unit in self.cards(reply.text, origin):
+                units.setdefault(unit["site_id"], unit)
+        if len(units) < total:
+            raise AdapterError(f"İlan listesi {total} evden yalnız {len(units)} tanesini verdi; liste eksik.")
+        return list(units.values()), replies
+
+    def calendar_answer(self, info, window):
+        """The answer the page's own date picker gives before any question: a taken night, a day the site does not allow to arrive or
+        leave, or a stay shorter than the arrival day's minimum. None when the dates can be asked."""
+        calendar = info.get("calendar")
+        if calendar is None:
+            return None
+        checkin, checkout = window["checkin_date"], window["checkout_date"]
+        nights = [us_date(date.fromordinal(day)) for day in range(checkin.toordinal(), checkout.toordinal())]
+        taken = calendar["unavailable"] | calendar["checkout"] | calendar["blackout"]
+        minimum = info.get("min_nights", {}).get(us_date(checkin))
+        if any(night in taken for night in nights):
+            return {**outcome("unavailable", "Sitenin takvimi bu tarihleri dolu gösteriyor; fiyat sorulmadı.", available=0, min_stay=minimum),
+                    "rule_source": "takvim"}
+        if us_date(checkin) in calendar["not-checkin-turndays"] or us_date(checkout) in calendar["not-checkout-turndays"]:
+            return {**outcome("restricted", "Sitenin takvimi bu günde giriş ya da çıkışa izin vermiyor; fiyat sorulmadı.", min_stay=minimum),
+                    "rule_source": "takvim"}
+        if minimum and window["nights"] < minimum:
+            return {**outcome("restricted", f"Sitenin takvimi bu giriş günü için en az {minimum} gece istiyor; fiyat sorulmadı.", min_stay=minimum),
+                    "rule_source": "takvim"}
+        return None
+
+    def quote(self, session, info, window, guests=DEFAULT_GUESTS):
+        early = self.calendar_answer(info, window)
+        if early is not None:
+            return {**early, "replies": []}
+        fields = dict(info["fields"])
+        fields.update({"checkin": us_date(window["checkin_date"]), "checkout": us_date(window["checkout_date"])})
+        reply = session.request("POST", info["origin"] + self.QUOTE_PATH, data=fields, headers={**self.AJAX, "Referer": info["page_url"]},
+                                note=f"realjoy-quote-{info['site_id']}-{window['window_key']}")
+        if reply.status != 200:
+            raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü.")
+        minimum = info.get("min_nights", {}).get(us_date(window["checkin_date"]))
+        answer = reply.text.strip()
+        if answer == "No":
+            return {**outcome("unavailable", "Site bu tarihler için \"No\" yanıtı verdi (uygun değil).", available=0, min_stay=minimum),
+                    "replies": [reply]}
+        if answer == "API Error" or "pdp-quote-item" not in answer:
+            raise AdapterError(f"Fiyat yanıtı beklenen biçimde değil ({plain_text(answer[:120]) or 'boş'}).")
+        return {**self.parse_quote(answer), "min_stay": minimum, "rule_source": "sayfa" if minimum else None, "replies": [reply]}
+
+    @staticmethod
+    def parse_quote(content):
+        """The quote's lines as the site shows them: rent, every item of the fee group (the group's own sum is not added again), a
+        promotion the site applies by itself (a negative line, with its code), the taxes and the total."""
+        tree = Tree(content).root
+        lists = tree.find("ul", "pdp-quote-list")
+        if not lists:
+            raise AdapterError("Fiyat yanıtında kalem listesi yok.")
+
+        def line(node):
+            text = node.find("span", "pdp-quote-item-text")
+            price = node.find("span", "pdp-quote-item-price")
+            return (clean(text[0].text()) if text else None), (money(price[0].attrs.get("data-price")) if price else None)
+        code = tree.find("input", None, id="promocode")
+        code = clean(code[0].attrs.get("value")) if code else None
+        rent, fees, taxes, total = None, [], [], None
+        for item in [c for c in lists[0].children if getattr(c, "tag", None) == "li"]:
+            classes = item.attrs.get("class", "").split()
+            label, amount = line(item)
+            if "pdp-quote-item-toggle" in classes:
+                inner = [li for sub in item.find("ul", "pdp-quote-item-toggle-list") for li in sub.children if getattr(li, "tag", None) == "li"]
+                parts = [line(li) for li in inner] or [(label, amount)]
+                target = taxes if re.search(r"\btax", label or "", re.I) else fees
+                target.extend({"name": name or label or "Fee", "amount": value} for name, value in parts if value is not None)
+            elif amount is None:
+                continue
+            elif "pdp-quote-total" in classes:
+                total = amount
+            elif rent is None and re.fullmatch(r"rent|rental|lodging", label or "", re.I):
+                rent = amount
+            elif re.search(r"\btax", label or "", re.I):
+                taxes.append({"name": label, "amount": amount})
+            else:
+                promo = code and amount < 0 and re.search(r"promo|discount", label or "", re.I)
+                fees.append({"name": f"{label} ({code})" if promo else label or "Fee", "amount": amount})
+        if rent is None and total is None:
+            raise AdapterError("Fiyat yanıtında kira veya toplam yok.")
+        return breakdown(rent, fees, None, total, tax_items=taxes, currency="USD")
+
+
 ADAPTERS = {adapter.name: adapter for adapter in (ResCMS(), Track(), Streamline(), VacationRentalsRouter(), VRP(), PropertyQuoteV3(),
                                                   ExceptionalStay(), AsmxGetQuote(), Wander(), Q4VR(), NaturalRetreats(), Vacasa(),
-                                                  AvantStay())}
+                                                  AvantStay(), RealJoy())}

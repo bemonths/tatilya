@@ -57,12 +57,31 @@ edildi (`57088be..2848c6f`) ve bu commit'e açıklamalı `v0.22.0` etiketi konul
 ## Aktif branch
 
 ```text
-gorev-24-realjoy
-app 0.25.0
-schema 23
+gorev-25-realjoy-sorgu (gorev-24-realjoy'un ucundan)
+app 0.26.0
+schema 24
+eklenti 0.20.0
 ```
 
-Bu dal (GÖREV-24, 17 Kasım 2026; main'e alınmadı, etiket konmadı): RealJoy incelemesi.
+Bu dal (GÖREV-25, 17–18 Kasım 2026; main'e alınmadı, etiket konmadı): sayfanın kendi sorgusu ve RealJoy okuyucusu.
+
+- **Eklenti 0.20.0, "sayfanın kendi sorgusu"** (`docs/M16-TARAYICI-EKLENTISI.md` "GÖREV-25"; kullanıcı kararı 17 Kasım 2026): eklenti
+  sitenin sekmesinden, sayfanın kökeninden, yalnız izinli listedeki (şirket yapılandırmasında `inventory.extension_queries`) alan adı,
+  yol ve yöntemle ve sayfanın kendi alanlarıyla sorgu gönderir. Yasak yol ve alan adı listesi iki tarafta aynı
+  (`studio/extension_queries.py`, `eklenti/logic.js`); düz istek artık yalnız GET. Ham kayıt sorgunun yöntemini, alanlarını ve zamanını
+  tutar. Deneme okuması izinli her sorgudan bir örnek gönderir.
+- **RealJoy okuyucusu** (`realjoy`; `docs/M11-KONAKLAMA-FIYATLARI.md` "GÖREV-25"): liste sayfası + 12'lik parçalar
+  (`POST /ajax/results/scroll`; 18 Kasım denemesinde 311/311 ev), ev sayfasının takvimi ve en az gecesi, fiyat `POST /ajax/quote`
+  (kalemler, promosyon, vergi, toplam; "No" = uygun değil). Takvimde dolu hafta sorulmaz. Eşleme yalnız adres kuralı; bina adresi
+  paylaşan dairelerde tek aday yoksa bağlanmaz (`address_without_unit`). Çevrimdışı: 61 ilandan 32 bağlı. Yalnız eklentiyle okunur;
+  eklenti yoksa atlanır ve kaydedilir. 20 sn aralık, 429 kuralı (`Retry-After` ya da 60 sn, en çok iki yeniden deneme, sonra dur).
+- **Şema 24** (`studio/migration_v24.py`): tablo değişikliği yok; realjoy.com yapılandırması. Gerçek veri 17 Kasım 2026'da programın
+  normal açılışıyla şema 24'e geçti (yedek `work/yedek/20261117-2025`; yalnız `destination_agency_sites` 27 → 28 ve kullanıcının deneme
+  işleri).
+- Kiralama fiyat çekimi başlatılmadı (kullanıcı başlatacak; tahmin kiralama ~12 sa 28 dk, zamanı gelenlerin hepsi ~13 sa 31 dk; RealJoy
+  üst sınırı 819 istek).
+
+Önceki dal (GÖREV-24, 17 Kasım 2026; main'e alınmadı, etiket konmadı): RealJoy incelemesi.
 
 - **RealJoy'un fiyat isteği** (`docs/M11-KONAKLAMA-FIYATLARI.md` "GÖREV-24"): ilan sayfası ve üç betiği kullanıcının Chrome eklentisiyle
   okundu. Müsaitlik ve en az konaklama sayfada (GET); fiyat yalnız `POST /ajax/quote` (tarih formu) ile. Okuyucu yazılmadı, yapılandırma

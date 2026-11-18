@@ -689,7 +689,7 @@ def test_cancel_job_through_api_publishes_nothing(tmp_path, monkeypatch):
 def test_fresh_database_has_agency_sites_and_source(tmp_path):
     db = Database(tmp_path / "studio.sqlite3"); db.initialize()
     agency = db.context("30a").agency
-    assert [(s["domain"], s["company"], s["adapter"]) for s in agency["sites"]] == list(thirty_a.AGENCY_SITES + thirty_a.AGENCY_SITES_V12 + thirty_a.AGENCY_SITES_V22)
+    assert [(s["domain"], s["company"], s["adapter"]) for s in agency["sites"]] == list(thirty_a.AGENCY_SITES + thirty_a.AGENCY_SITES_V12 + thirty_a.AGENCY_SITES_V22 + thirty_a.AGENCY_SITES_V24)
     assert "input" not in agency
     assert db.context("30a", inputs=("lodging_listings",)).agency["input"] is None         # no lodging run yet
     source = next(s for s in db.sources() if s["url"] == AGENCY_URL)
@@ -728,7 +728,7 @@ def test_v10_to_v11_migration_adds_agency_tables_source_and_keeps_rows(tmp_path)
         before = {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         assert counts == {**{t: len(rows) for t, rows in before.items()}, **V11_TABLES, **V12_TABLES, **V13_TABLES, **V14_TABLES, **V15_TABLES, **V16_TABLES, **V17_TABLES, **V18_TABLES, **V19_TABLES, **V20_TABLES, **V21_TABLES, "destination_lodging_windows": 5,
@@ -747,7 +747,7 @@ def test_v10_to_v11_migration_adds_agency_tables_source_and_keeps_rows(tmp_path)
         assert con.execute("PRAGMA user_version").fetchone()[0] == 10
     Database(path).initialize()                                                              # idempotent: nothing added twice
     with sqlite3.connect(path) as con:
-        assert table_counts(con)["sources"] == len(before["sources"]) + 5 and table_counts(con)["destination_agency_sites"] == 27
+        assert table_counts(con)["sources"] == len(before["sources"]) + 5 and table_counts(con)["destination_agency_sites"] == 28
 
 
 def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
@@ -767,4 +767,4 @@ def test_v10_to_v11_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in before} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24

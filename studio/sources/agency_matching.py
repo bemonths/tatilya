@@ -4,7 +4,9 @@ Destination-independent. Two methods, both strict; a listing that does not meet 
 
 - address: the same normalized street number + street name (common abbreviations and the 30A road names are unified), the same
   unit number when either side has one, the same number of bedrooms, and exactly one such candidate in the company's list. When
-  both sides carry coordinates they must also lie within ADDRESS_SANITY_M of each other.
+  both sides carry coordinates they must also lie within ADDRESS_SANITY_M of each other. Where a company's list writes a building's
+  homes under the building's street address without their unit (GÖREV-25, RealJoy's reader), a listing
+  whose address has no unit is tied only when the company's list has a single home at that address (else it is "ambiguous").
 - location (only when the company's list gives no street address): at most LOCATION_MATCH_M apart, the same bedrooms and
   bathrooms, and exactly one unit with those values within LOCATION_UNIQUE_M. Not used where another Book>Direct listing lies
   within LOCATION_MATCH_M (buildings with many units).
@@ -99,7 +101,7 @@ def has_point(item):
     return item.get("latitude") is not None and item.get("longitude") is not None
 
 
-def address_match(listing, units):
+def address_match(listing, units, *, address_without_unit=False):
     """('matched', unit, note) / ('ambiguous', None, note) / ('none', None, note) / ('unusable', None, note) by the address rule."""
     key = normalize_address(listing.get("address"))
     if key is None:
@@ -118,6 +120,11 @@ def address_match(listing, units):
             continue
         candidates.append(item)
     shown = f"{number} {street}" + (f" #{unit}" if unit else "")
+    if address_without_unit and not unit and candidates:
+        same = [item for item in units if (normalize_address(item.get("address")) or (None, None, None)) == (number, street, None)]
+        if len(same) > 1:       # a building: its homes share the street address and the unit is not in it
+            return "ambiguous", None, (f"Adres eşlemesi belirsiz: şirket listesinde '{shown}' adresinde {len(same)} ev var ve daire numarası "
+                                       "adreste yazmıyor; eşlenmedi.")
     if not candidates:
         return "none", None, f"Adres eşlemesi: '{shown}', {listing['bedrooms']:g} oda için şirket listesinde aday yok."
     if len(candidates) > 1:

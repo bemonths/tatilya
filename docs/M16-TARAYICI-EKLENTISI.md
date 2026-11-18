@@ -1,4 +1,4 @@
-# M16 — Tarayıcı eklentisi: "30A Studio Yardımcısı" (GÖREV-14, v0.16.0; GÖREV-16 düzeltmeleri, v0.18.0; GÖREV-17 tek pencere, v0.19.0)
+# M16 — Tarayıcı eklentisi: "30A Studio Yardımcısı" (GÖREV-14, v0.16.0; GÖREV-16 düzeltmeleri, v0.18.0; GÖREV-17 tek pencere, v0.19.0; GÖREV-25 sayfanın kendi sorgusu, 0.20.0)
 
 ## Neden
 
@@ -102,7 +102,8 @@ Yok: `cookies`, `history`, `bookmarks`, `downloads`, `debugger` (CDP), `webReque
   `Sec-Fetch-Site: cross-site/same-site` dediği bir sayfadan gelirse reddedilir; programın kendi penceresi `X-Studio-Request` başlığını
   gönderir. Programın API'si başka kökenlere CORS açmaz; `TrustedHostMiddleware` yalnız 127.0.0.1/localhost'u kabul eder.
 - Program kullanıcının Chrome profiline, çerezlerine, parolalarına ve geçmişine erişmez; eklenti de bu izinleri istemez.
-- Eklenti tıklamaz, yazı yazmaz, form doldurmaz; giriş ve ödeme sayfalarını okumadan atlar; doğrulamayı kullanıcı yapar (çözme servisi,
+- Eklenti tıklamaz, yazı yazmaz, form doldurmaz; sayfanın kendi sorgusunu (GÖREV-25) yalnız izinli listeyle ve sayfanın alanlarıyla
+  gönderir (aşağıda); giriş ve ödeme sayfalarını okumadan atlar; doğrulamayı kullanıcı yapar (çözme servisi,
   gizlenme, parmak izi sahteciliği ve IP değiştirme yoktur; eklenti proxy kullanmaz, Chrome'un proxy ayarına dokunmaz). Programın ABD
   proxy'si yalnız bölge engelli alan adları içindir ve eklentiyle ilgisi yoktur (`docs/M18-ABD-PROXY-BOLGE-ENGELI.md`).
 
@@ -173,3 +174,43 @@ restoran sitelerinin ikinci okumasında bu, art arda açılıp kapanan pencerele
   `chrome.windows.create` ve iş içinde pencere kapatmama), `tests/frontend.test.mjs` (`windowKey`, `keepWindow`, `WINDOW_OPTIONS`),
   uçtan uca `tests/test_extension_e2e.py` (Playwright'in Chromium'u, yerel sayfalar: bir işin iki oturumu aynı pencerede, pencere iki
   site arasında açık, tek sekme, küçültülmemiş, iş iptal edilince kapanıyor).
+
+
+## GÖREV-25: sayfanın kendi sorgusu (eklenti 0.20.0, 17 Kasım 2026)
+
+**Kullanıcı kararı (17 Kasım 2026).** Eklenti, bir sitenin kendi sekmesinden, o sayfanın ziyaretçi için zaten yaptığı herkese açık
+sorguları gönderebilir; POST da buna dahildir. Kapsam: fiyat sorgusu ve ev listesinin devamı (sayfalama, "daha fazla yükle"). Alanlar
+yalnız sayfanın kendi gönderdiği alanlardır, değerler sayfanın biçimindedir. Yasak olan aynen kalır: giriş, hesap, ödeme, rezervasyon,
+sepet, kişisel bilgi, iletişim formu, doğrulama çözme. Eklenti tıklamaz, yazı yazmaz; isteği sayfanın betiği gibi gönderir. Çerezleri,
+parolaları ve geçmişi okumaz, programa taşımaz; istek sitenin kendi sekmesinden gittiği için tarayıcı o sitenin oturumunu kendisi
+kullanır.
+
+- **Öğe türü `sorgu`.** Program öğeyi `{tur: "sorgu", alan_adi, yol, yontem, alanlar, sayfa?}` olarak verir. Eklenti
+  (`background.js` `doQuery`): sekme o sitede değilse önce sitenin sayfasına gider (`sayfa`, yoksa `https://<alan adı>/`); sekmenin
+  kökeninin alan adı sorgunun alan adıyla aynı olmalıdır; aralık kuralını bekler; isteği sayfanın kendi dünyasında (`MAIN`) `fetch` ile,
+  `credentials: "same-origin"`, `X-Requested-With: XMLHttpRequest` ve POST'ta `application/x-www-form-urlencoded; charset=UTF-8`
+  gövdesiyle gönderir; cevabın son adresi yine o alan adında olmalıdır. Sonuç: durum, HTTP durumu, son adres, başlıklar, gövde
+  (base64) ve `gonderilen` (yöntem, adres, alanlar, zaman).
+- **İzinli liste.** Programın yapılandırmasında, şirketin `inventory.extension_queries` alanında durur (alan adı, yol, yöntem, alan
+  adları sırasıyla, amaç; `studio/extension_queries.py` `allowed_from_sites`); kapalı şirketin sorgusu listeye girmez. Program listeyi
+  oturum görünümünde (`izinli_sorgular`, yalnız oturumun alan adı) ve Ayarlar → Tarayıcı eklentisi'nde ("İzinli sorgular") gösterir.
+- **İki tarafta aynı kural** (`studio/extension_queries.py` `refusal`, `eklenti/logic.js` `queryRefusal`; bir Python testi iki listeyi
+  karşılaştırır): yöntem yalnız GET ya da POST; yol `/` ile başlar, `?`, `#`, `..` ve tam adres taşımaz; alan adı ve yol yasak listede
+  değil; alan adı, yol ve yöntem izinli listede; alanlar listedeki adların alt kümesi ve aynı sırada; en çok 40 alan, değer başına 2000
+  karakter. Yasak liste: yolda `login`, `account`, `password`, `checkout`, `payment`, `cart`, `order`, `reserve`, `reservation`,
+  `contact`, `inquiry`, `subscribe`, `profile`, `guest`, `owner`, `save`, `favorite`, `email`, `phone`, `review` gibi sözcükler (camelCase
+  da bölünür; `addToCart` → cart) ve `book`, `booking`, `my` yol parçaları; alan adlarında ödeme ve giriş servisleri (paypal.com,
+  stripe.com, accounts.google.com, …) ve `login.`, `secure.`, `checkout.`, `pay.`, `book.`, `my.` gibi alt alan adları. Reddedilen sorgu
+  eklentiye hiç gitmez (program tarafı) ya da gönderilmez (eklenti tarafı, `reddedildi`). Düz `istek` öğesi artık yalnız GET'tir.
+- **Kayıt.** Programın ham kaydı (`raw/eklenti/<tarih>/`, toplayıcıda kendi ham deposu) cevabı sorgunun yöntemi, yolu, alanları, adresi
+  ve zamanıyla tutar (`sorgu`).
+- **Yalnız eklentiyle okunan şirket** (`inventory.extension_only`, RealJoy): eklenti eşleşmemiş, bağlı değil ya da iş programın kendi
+  tarayıcısına devredilmişse şirket atlanır ve kaydedilir; programın kendi tarayıcısı ve doğrudan istek bu sorguları göndermez.
+- **Deneme.** "Sorunlu sitelerden birer sayfa dene" sayfalardan sonra izinli her sorgudan birer örnek gönderir (`EXTENSION_TRIAL_QUERIES`;
+  sitenin kendi aralığıyla, RealJoy 20 sn).
+- **Sürüm.** Eklenti 0.20.0. Yeniden yükleme: Chrome'da `chrome://extensions` → "30A Studio Yardımcısı" kartındaki yenile düğmesi;
+  kartta 0.20.0 yazmalı; programda Ayarlar → Tarayıcı eklentisi "Bağlı" ve sürüm 0.20.0 göstermeli.
+- **Test.** `tests/test_gorev25.py` (kurallar, yasak yollar ve alan adları, iki tarafın listeleri, yapılandırmadan liste, deneme),
+  uçtan uca `tests/test_extension_e2e.py` (Playwright'in Chromium'u, geçici profil, yerel sayfa: izinli sorgu tam verilen alanlarla
+  gider; yasak yol, listede olmayan yol, fazladan alan ve düz isteğin POST'u eklentinin kendisinde reddedilir; başka alan adı Python
+  tarafında sınanır).

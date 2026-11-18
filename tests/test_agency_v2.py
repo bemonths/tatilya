@@ -516,7 +516,7 @@ def test_fresh_database_has_v12_configuration_window_and_nws_method(tmp_path):
     db = Database(tmp_path / "studio.sqlite3"); db.initialize()
     context = db.context("30a")
     sites = {s["domain"]: s for s in context.agency["sites"]}
-    assert len(sites) == len(thirty_a.AGENCY_SITES) + len(thirty_a.AGENCY_SITES_V12) + len(thirty_a.AGENCY_SITES_V22)
+    assert len(sites) == len(thirty_a.AGENCY_SITES) + len(thirty_a.AGENCY_SITES_V12) + len(thirty_a.AGENCY_SITES_V22) + len(thirty_a.AGENCY_SITES_V24)
     assert sites["oversee.us"]["protected"] == 1 and sites["oversee.us"]["inventory"] == {"source": "platform", "origin": "https://oversee.us"}
     assert sites["grayt30avacations.com"]["aliases"] == ["royaldestinations.com"] and sites["benchmark30a.com"]["guest_rule"] == "two_adults"
     assert (sites["alysbeach.com"]["own_region_id"], sites["alysbeach.com"]["own_city"]) == ("alys-beach", "Alys Beach")
@@ -571,12 +571,12 @@ def test_v11_to_v12_migration_backfills_old_runs_and_adds_configuration(tmp_path
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         for table in ("agency_rate_own_listings", "agency_rate_own_quotes", "agency_rate_published"):
             assert counts[table] == 0
-        assert counts["destination_agency_sites"] == len(thirty_a.AGENCY_SITES) + len(thirty_a.AGENCY_SITES_V12) + len(thirty_a.AGENCY_SITES_V22)
+        assert counts["destination_agency_sites"] == len(thirty_a.AGENCY_SITES) + len(thirty_a.AGENCY_SITES_V12) + len(thirty_a.AGENCY_SITES_V22) + len(thirty_a.AGENCY_SITES_V24)
         assert counts["destination_lodging_windows"] == len(thirty_a.LODGING_WINDOWS) + 1
         rows = {r["lodging_id"]: dict(r) for r in con.execute("SELECT * FROM agency_rate_listings")}
         assert {i: (r["match_method"], r["link_status"]) for i, r in rows.items()} == {7: ("link", "matched"), 8: ("link", "matched")}
@@ -613,7 +613,7 @@ def test_v11_to_v12_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 23
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
 
 
 def test_summary_counts_methods_own_inventory_and_published_rents_apart(tmp_path):

@@ -296,7 +296,7 @@ sayısı yok). Tam liste olmadan gerçek sayı bilinmez.
 **429.** Sitenin 17 Kasım denemesindeki ilk sayfaya verdiği 429 (çok fazla istek) bir hız sınırıdır. Deneme okuması artık bir sitenin iki
 sayfası arasında eklentinin aralığından (8 sn) ya da sitenin kendi aralığından (`EXTENSION_TRIAL_GAP_S`; realjoy.com 20 sn) uzun olanı
 bekler. RealJoy'u okuyan bir toplayıcı olmadığı için çekimdeki 429 kuralı (bekle, en çok iki yeniden deneme, üst üste 429'da şirketi
-durdur) bu görevde koda girmedi; GÖREV-25'in işidir.
+durdur) bu görevde koda girmedi; GÖREV-25'te girdi (aşağıda).
 
 **Çekim tahmini (`new_site_estimate`).** Yeni şirket için: ilan × (bağlantıyı açma istekleri — ölü bağlantıda 0 — + ilan başına ek
 istek + pencere × fiyat isteği), bölge engelli şirkette istek aralığı 8 sn (+1 sn yanıt). Uyarlayıcı ipuçları: `nrbe` ilan başına 3
@@ -304,6 +304,48 @@ takvim isteği ve pencere başına 1; `vacasa` bağlantı başına 3 (iki yönle
 beklenen ev sayısı × 1 sayfa (`expected_homes`). Bu bir üst sınırdır: eşleşmeyen ilan fiyat sormaz, dolu pencere sorulmaz. GÖREV-23:
 `avantstay` ev başına 1 takvim isteği ve pencere başına 0 (145 ev × 2 = 290 istek); şirketin 48 Book>Direct bağlantısından hiçbirinin
 bağlanması beklenmediği için (`expected_matches: 0`) onlar için takvim sayılmaz.
+
+## GÖREV-25: RealJoy okuyucusu (17–18 Kasım 2026, şema 24)
+
+Kullanıcı kararıyla (17 Kasım 2026) eklenti sayfanın kendi sorgularını gönderir (`docs/M16-TARAYICI-EKLENTISI.md` "GÖREV-25").
+RealJoy (`realjoy`, `studio/sources/agency_adapters.py`) yalnız eklentiyle okunur.
+
+- **Liste:** 30A liste sayfası (`/beach-rentals/30a-vacation-rentals`, GET) 12 ev kartı, ev sayısı (`#bottomOfResults data-count`) ve
+  sonraki her 12'lik parçanın kimliklerini (`page2propertyIDs` … `page26propertyIDs`; her açılışta rastgele sıra) verir. Sayfa
+  kaydırılınca `POST /ajax/results/scroll` alanları `page`, `propertyIDs`, `sortBy` (sayfanın `#scrollForm`'u); cevap istenen 12 evin
+  kartıdır. Kart: birim kodu, ad, sokak adresi, koordinat, oda ve kişi sayısı. Okuyucu sayfayı ve 25 parçayı sorar; gelen ev sayısı
+  sayfanın söylediğinden azsa hata verir ("liste eksik") ve o çekimde listeden ilan bağlanmaz. 18 Kasım 2026 denemesi: 26 parça,
+  311 kimlik, 311 ev (her parça tam istenen 12'yi verdi); hepsinde adres ve oda sayısı var.
+- **Ev sayfası (GET):** `#pdpDatesForm` alanları, takvim (`#pdpStoredDates`) ve giriş gününe göre en az gece (`min_night_AA/GG/YYYY`).
+  Takvim sitenin tarih seçicisinin (`datepicker.js`) kuralıyla okunur: `data-unavailable-dates` dolu gece, `data-checkout-dates` başka
+  bir konaklamanın başladığı gün (o gün çıkılabilir, o gece dolu), `data-checkin-dates` bir konaklamanın bittiği gün (o gün girilebilir),
+  `data-blackout-dates` kapalı gün; giriş/çıkış yasak günleri ayrı. Gecelerinden biri dolu olan hafta **sorulmaz** ("unavailable",
+  `rule_source` "takvim", kanıt sayfanın kaydı); giriş günü en az gece pencereden uzunsa "restricted".
+- **Fiyat:** `POST /ajax/quote`, sayfanın formu (`checkin`, `checkout` AA/GG/YYYY, `propertyID`, `roomTypeID`, `propertyName`, `hash`).
+  Cevap: kalemler (Rent; "Fees" grubunun her kalemi ayrı, grubun kendi toplamı yeniden eklenmez; sitenin kendiliğinden uyguladığı
+  promosyon eksi kalem olarak koduyla; Taxes; Total). Örnek (ev 1806, 9–16 Ocak 2027): kira 6.692,02; Accidental Damage Waiver 130;
+  Guest Departure Clean 600; Check In Amenity Fee-Sea La Vie Seaside 805; Check In & Amenity Fee 220; Promo discount (HOTDEALS)
+  −626,50; vergi 938,53; toplam 8.759,05 $ (kalemlerin toplamı sitenin toplamına eşit; bizim kontrolümüz). Cevap `No` → "uygun değil"
+  (`unavailable`, `available=0`), ayrı tutulur; `API Error` ya da başka biçim → hata. Fiyat sorusunda konuk alanı yok (`sends_guests`
+  false).
+- **Eşleme:** Book>Direct'teki eski RealJoy bağlantıları çalışmıyor (`dead_links`, sorulmaz); ilanlar yalnız adres kuralıyla şirketin
+  listesine bağlanır. RealJoy bir binanın dairelerini binanın adresiyle yazar, daire numarası yalnız addadır; bu yüzden adresinde daire
+  olmayan bir ilan, şirket listesinde o adreste tek ev varsa bağlanır (`address_without_unit`; yoksa "belirsiz"). Adlar hiç
+  karşılaştırılmaz. Çevrimdışı eşleme (311 ev × son Book>Direct çekimindeki 61 RealJoy ilanı): **32 bağlı**, 10 belirsiz (aynı bina
+  adresinde 2–23 ev), 17 aday yok, 2 kullanılamaz (oda sayısı yok). Bina kuralı olmadan bir ilan daha (Beachside Villas #814 → 214)
+  yanlış eve bağlanırdı.
+- **Hız ve 429:** iki istek arası en az 20 sn (`gap_s`), korumalı şirket olarak bir anda tek şirket. 429'da `Retry-After` kadar, yoksa
+  60 sn beklenir, en çok iki kez yeniden sorulur (`retry_429`); üçüncü 429'da şirket o çekimde durur ("stopped_blocked", neden kayıtlı),
+  o ana kadarki fiyatlar saklanır. 18 Kasım denemesinde liste sayfası bir kez 429 döndü (sayfa yine geldi).
+- **Eklenti yoksa:** eklenti eşleşmemiş ya da bağlı değilse, ya da iş programın kendi tarayıcısına devredildiyse RealJoy hiç istek
+  yapılmadan atlanır (`verification_unavailable`, `EXTENSION_ONLY_SKIP`); programın kendi tarayıcısı ve doğrudan istek bu sorguları
+  göndermez.
+- **Yapılandırma** (şema 24, `studio/migration_v24.py`): `destination_agency_sites`'a realjoy.com (`protected`, `inventory`: kaynak
+  `platform`, köken, liste yolu, `dead_links`, `extension_only`, `gap_s` 20, `retry_429`, izinli sorgular). Gerçek veri 17 Kasım 2026'da
+  programın normal açılışıyla şema 24'e geçti (yedek `work/yedek/20261117-2025`).
+- **Tahmin:** RealJoy için en çok 61 × (ev sayfası 1 + 12 hafta × 1) + liste 26 = 819 istek, 21 sn'den ~4 sa 47 dk (üst sınır; bağlantı
+  sayfası 0). Çevrimdışı eşlemedeki 32 bağla ~442 istek, ~2 sa 35 dk. Program "Güncelleme zamanı gelenler"de kiralama için ~12 sa 28 dk,
+  zamanı gelenlerin hepsi için ~13 sa 31 dk gösteriyor (şirketler yan yana; bizim tahminimiz).
 
 ## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
 
