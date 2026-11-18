@@ -234,7 +234,7 @@ RealJoy'un kendi payı:
   - eklenti aktarım testi (POST artık yalnız izinli sorgu).
 - Tam takım: `.venv\Scripts\python.exe -m pytest -q` → **1232 geçti, 3 atlandı** (18 Kasım 2026). `node --test tests/frontend.test.mjs` → **138/138 geçti**.
   Uçtan uca eklenti testleri (`STUDIO_EKLENTI_E2E=1`, Playwright Chromium, geçici profil): 3/3 geçti.
-- CI: SONUÇ_CI.
+- CI: `9778692` için "Tests" iş akışı **başarılı** (https://github.com/bemonths/tatilya/actions/runs/44246626531, 18 Kasım 2026 05:52 UTC).
 
 ## 10. Canlı istekler ve kurallara uyum
 
