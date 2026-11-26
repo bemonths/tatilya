@@ -32,7 +32,9 @@ jobs:
         run: |
           # GÖREV-20: an annotation holds about 4,000 characters and is cut at its end; keep the END of the log (the test that was
           # running and faulthandler's stacks), not the first lines of a longer tail
-          tail -n 120 pytest.log | cut -c1-300 | tail -c 3600 > tail.txt
+          # HEDEF-01: faulthandler's stacks fill the whole tail with pytest's own frames; keep the last test lines and, of the stacks,
+          # only the thread headers and the frames of this program and its tests (where a thread waits)
+          { grep -E '(PASSED|FAILED|ERROR|SKIPPED)' pytest.log | tail -n 3; grep -E 'Thread 0x|Current thread|/studio/|/tests/' pytest.log | grep -v '_pytest' | tail -n 60; } | cut -c1-200 | tail -c 3600 > tail.txt
           body=$(sed -e 's/%/%25/g' -e 's/\r/%0D/g' tail.txt | sed ':a;N;$!ba;s/\n/%0A/g')
           echo "::error title=pytest log tail::${body}"
       - uses: actions/setup-node@v7
