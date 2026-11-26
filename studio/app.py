@@ -30,6 +30,7 @@ from .video_flow import VideoFlow
 from .watchdog import Watchdog
 from . import extension as ext
 from . import proxy as proxy_mod
+from . import proxy_list
 from .sources import page_kinds, region_reader
 from .sources import agency_rates, airfare, beaches, bookdirect_lodging, climate_normals, daily_needs, neighborhoods, restaurant_sites, road_network, storm_proximity, water_temperature, weather, windows
 from .sources.registry import DEFAULT_REGISTRY
@@ -464,7 +465,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def proxy_view():
         with db.connect() as con:
             hosts = proxy_mod.listing(con)
-        return {**proxy_mod.view(db.path.parent), "bolge_engelli": hosts}
+        return {**proxy_mod.view(db.path.parent), "bolge_engelli": hosts, "liste": proxy_list.view(db.path.parent),
+                "site_basina": proxy_list.site_limit(db.path.parent), "site_basina_aralik": list(proxy_list.SITE_LIMIT_RANGE)}
 
     @app.get("/api/abd-proxy")
     def us_proxy():
@@ -494,14 +496,63 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     async def us_proxy_test():
         """"Proxy'yi dene": through the proxy to a public IP service; the exit address, its country and a warning when it is not the US.
         No site of the list is opened."""
+        listed = proxy_list.rows(db.path.parent)
+        if len(listed) <= 1:          # one proxy (GÖREV-16): its own answer, a missing password is an error as before
+            try:
+                proxy = proxy_mod.load(db.path.parent)
+            except Exception as exc:
+                raise HTTPException(409, str(exc)) from exc
+            try:
+                result = await asyncio.to_thread(app.state.proxy_test, proxy)
+            except proxy_mod.ProxyError as exc:
+                raise HTTPException(409, str(exc)) from exc
+            proxy_list.update_state(db.path.parent, listed[0]["id"], result) if listed else None
+            return {**result, "sonuclar": [{**result, "id": listed[0]["id"], "sira": 1, "etiket": proxy.label}] if listed else []}
+        # HEDEF-01: every proxy of the list, one result each (works or not, exit country)
+        results = await asyncio.to_thread(proxy_list.test_rows, db.path.parent, None, tester=app.state.proxy_test)
+        first = results[0]
+        return {**{k: first.get(k) for k in ("ok", "ip", "ulke", "uyari", "satirlar")}, "sonuclar": results}
+
+    # --- HEDEF-01: the proxy list (each working proxy is one worker of a rental price run) -----------------------------------------
+
+    @app.post("/api/abd-proxy/liste")
+    async def proxy_list_add(request: Request):
+        """Bulk add: one proxy per line (`sunucu:port:kullanıcı:parola` and the other forms of studio/proxy_list.py); the passwords go
+        to Credential Manager at once, every line is tested. The answer never carries a password or a pasted line."""
+        body = await json_body(request)
+        text = body.get("satirlar") if isinstance(body.get("satirlar"), str) else ""
+        scheme = body.get("tur") if body.get("tur") in proxy_mod.PROXY_SCHEMES else "http"
+        if not text.strip():
+            raise HTTPException(422, "Kutuya en az bir proxy satırı yapıştırın.")
+        if len(text) > 200_000:
+            raise HTTPException(422, "Liste çok uzun.")
+        outcome = await asyncio.to_thread(proxy_list.add_lines, db.path.parent, text, scheme, tester=app.state.proxy_test)
+        return {**proxy_view(), "ekleme": outcome}
+
+    @app.delete("/api/abd-proxy/liste/{row_id}")
+    def proxy_list_remove(row_id: str):
         try:
-            proxy = proxy_mod.load(db.path.parent)
-        except Exception as exc:
-            raise HTTPException(409, str(exc)) from exc
-        try:
-            return await asyncio.to_thread(app.state.proxy_test, proxy)
+            if not proxy_list.remove(db.path.parent, row_id):
+                raise HTTPException(404, "Bu proxy listede yok.")
         except proxy_mod.ProxyError as exc:
             raise HTTPException(409, str(exc)) from exc
+        return proxy_view()
+
+    @app.post("/api/abd-proxy/liste/{row_id}/dene")
+    async def proxy_list_test(row_id: str):
+        if not any(r["id"] == row_id for r in proxy_list.rows(db.path.parent)):
+            raise HTTPException(404, "Bu proxy listede yok.")
+        result = await asyncio.to_thread(proxy_list.test_row, db.path.parent, row_id, tester=app.state.proxy_test)
+        return {**proxy_view(), "deneme": result}
+
+    @app.put("/api/abd-proxy/isciler")
+    async def proxy_workers_save(request: Request):
+        body = await json_body(request)
+        try:
+            proxy_list.set_site_limit(db.path.parent, body.get("site_basina"))
+        except proxy_mod.ProxyError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return proxy_view()
 
     @app.post("/api/abd-proxy/bolge-engelli", status_code=201)
     async def region_add(request: Request):
@@ -591,7 +642,13 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.get("/api/jobs")
     def jobs(destination_id: str = DEFAULT_DESTINATION_ID):
         selected(destination_id)
-        return db.jobs(destination_id)
+        from .workers import BOARDS
+        out = db.jobs(destination_id)
+        for job in out:                 # HEDEF-01: the workers of a running rental price job
+            board = BOARDS.get(job["id"]) if job.get("status") in ("queued", "running") else None
+            if board:
+                job["isciler"] = board
+        return out
 
     @app.post("/api/jobs", status_code=202)
     def start_job(body: JobInput, request: Request):

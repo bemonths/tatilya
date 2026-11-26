@@ -9,6 +9,14 @@ export function addedCompany(a) {
   return `${a.company} ${parts.join(", ") || "0 ilan"}, en çok +${a.requests} istek${a.proxy?" (ABD proxy'siyle)":""}`;
 }
 
+/** HEDEF-01: the rental price estimate by the number of workers: now, and with 10 and 20 workers. */
+export function workerNote(item) {
+  const w=item.workers;
+  if(!w) return "";
+  const examples=Object.entries(w.examples||{}).map(([n,s])=>`${n} işçiyle ${duration(s)}`).join(", ");
+  return `<small>${esc(w.workers)} işçiyle (doğrudan + ${esc(w.proxies)} proxy)${examples?`; ${esc(examples)}`:""}. İşçiler Ayarlar → ABD proxy'si bölümünden eklenir.</small>`;
+}
+
 export const STEP_LABELS={waiting:"sırada",running:"çalışıyor",done:"tamamlandı",failed:"hata",canceled:"iptal edildi",interrupted:"yarıda kaldı",skipped:"atlandı"};
 export const BATCH_LABELS={running:"Sürüyor",done:"Tamamlandı",failed:"Bir kısmı tamamlanamadı",canceled:"Durduruldu",interrupted:"Yarıda kaldı"};
 
@@ -42,7 +50,7 @@ export function refreshSection(refresh, busy=false) {
   const rows=refresh.items.map(i=>`<tr class="${i.due?"due-row":""}"><td>${esc(i.source_name)}<small>${esc(i.connector)}</small></td>
     <td>${i.last_done_on?esc(trDate(i.last_done_on)):'<span class="muted">başarılı çekim yok</span>'}</td>
     <td>${i.interval_months==null?'<span class="muted">—</span>':`${i.interval_months} ay`}</td><td>${dueTag(i)}</td>
-    <td>${i.due?esc(duration(i.estimate_seconds)):'<span class="muted">—</span>'}${i.due && i.added_companies?.length?`<small>yeni şirketler dahil: ${esc(i.added_companies.map(addedCompany).join("; "))}</small>`:""}</td></tr>`).join("");
+    <td>${i.due?esc(duration(i.estimate_seconds)):'<span class="muted">—</span>'}${i.due?workerNote(i):""}${i.due && i.added_companies?.length?`<small>yeni şirketler dahil: ${esc(i.added_companies.map(addedCompany).join("; "))}</small>`:""}</td></tr>`).join("");
   const plan=running||batch?`<div class="refresh-batch"><strong>Son toplu çalıştırma: ${esc(BATCH_LABELS[batch.status] || batch.status)}</strong>
     <small>${esc(trDate(batch.created_at))}${batch.backup_file?` · yedek: ${esc(batch.backup_file)}`:""}${batch.message?` · ${esc(batch.message)}`:""}</small>
     <ol>${batch.plan.map(step=>`<li>${esc(step.source_name)} · ${esc(STEP_LABELS[step.status] || step.status)}${step.message?` <small>(${esc(step.message)})</small>`:""}</li>`).join("")}</ol>

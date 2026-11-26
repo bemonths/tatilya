@@ -226,7 +226,7 @@ def test_v15_to_v16_adds_usage_progress_and_title_edit_and_keeps_rows(tmp_path):
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 25
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in
                  con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}

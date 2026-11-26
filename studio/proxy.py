@@ -254,14 +254,21 @@ def save(data_dir, url, user, password=None):
             raise ProxyError(error)
     if len(user) > 200:
         raise ProxyError("Kullanıcı adı en çok 200 karakter olabilir.")
+    from . import proxy_list
+    current = proxy_list.rows(data_dir)
+    if not url:                       # empty address: the first row leaves the list (HEDEF-01; the next row becomes the first)
+        if current:
+            proxy_list.remove(data_dir, current[0]["id"])
+        return view(data_dir)
     if password:
         try:
             credentials.set_secret(PASSWORD, password)
         except credentials.SecretError as exc:
             raise ProxyError(str(exc)) from exc
-    data = stored_settings.stored_settings(data_dir)
-    data[SECTION] = {"adres": url, "kullanici": user}
-    stored_settings.write_settings(data_dir, data)
+    first = {"id": proxy_list.FIRST_ID, "adres": url, "kullanici": user, "durum": "denenmedi", "ulke": None, "denendi": None, "not": None}
+    if current and current[0]["adres"] == url and current[0]["kullanici"] == user and not password:
+        first = current[0]
+    proxy_list.write_rows(data_dir, [first, *current[1:]])
     return view(data_dir)
 
 

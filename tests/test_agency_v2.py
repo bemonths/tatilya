@@ -385,7 +385,7 @@ def test_protected_sites_use_the_browser_six_seconds_apart_one_at_a_time_and_sto
     assert guarded["request_count"] == 4                     # page, 2 quotes, the next page refused: no retry, no home-page check
     assert [r.url.path for r in mock.seen if r.url.host == "www.guard.example"][-1] == "/rentals/2"
     assert companies["guard2.example"]["status"] == "done" and sorted(opened) == ["guard.example", "guard2.example"]
-    assert pauses and set(pauses) == {6}                      # every gap between two requests to one protected site
+    assert pauses and set(pauses) == {8}                      # HEDEF-01: every gap between two requests to one protected site (8 s)
     hosts = [r.url.host for r in mock.seen]
     first = hosts[0]
     assert hosts == [first] * hosts.count(first) + [h for h in hosts if h != first]       # one protected company at a time
@@ -571,7 +571,7 @@ def test_v11_to_v12_migration_backfills_old_runs_and_adds_configuration(tmp_path
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 25
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         counts = table_counts(con)
         for table in ("agency_rate_own_listings", "agency_rate_own_quotes", "agency_rate_published"):
@@ -613,7 +613,7 @@ def test_v11_to_v12_failure_rolls_back_everything(tmp_path, monkeypatch):
         assert {table: con.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall() for table in table_counts(con)} == before
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 24
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 25
 
 
 def test_summary_counts_methods_own_inventory_and_published_rents_apart(tmp_path):

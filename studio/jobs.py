@@ -97,6 +97,9 @@ class JobQueue:
                 extra["extension"] = JobAccess(self.extension, self.db, identifier)   # GÖREV-14: the user's Chrome, when paired
             if getattr(connector, "uses_region", False) and self.region is not None:
                 extra["region"] = self.region()        # GÖREV-16: region-blocked domains only through the user's US proxy
+            if getattr(connector, "uses_workers", False):
+                from .workers import BOARDS
+                extra["board"] = BOARDS.open(identifier)     # HEDEF-01: the workers on the job panel while the job runs
             if getattr(connector, "uses_verification", False):
                 def waiting(site):
                     message = (f"Kullanıcı doğrulaması bekleniyor: {site}. Açılan tarayıcı penceresinde doğrulamayı tamamlayın "
@@ -125,6 +128,9 @@ class JobQueue:
             info = diagnostic(exc)
             info["raw_artifact_error"] = capture_raw()
             self.db.update_job(identifier, status="failed", message="Veri toplama tamamlanamadı. Önceki başarılı sürümler korundu.", diagnostic=info)
+        finally:
+            from .workers import BOARDS
+            BOARDS.close(identifier)
 
     def shutdown(self):
         with self.lock:

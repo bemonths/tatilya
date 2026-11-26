@@ -55,9 +55,9 @@ CONNECTOR_VERSION = "agency-lodging-rates/2"
 SOURCE_QUERY = "kaynak=kiralama-sirketleri"
 USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36 "
               "30AStudio/0.12 (+https://github.com/bemonths/tatilya)")
-REQUEST_GAP = 2.0           # seconds between two requests to the same company site
-PROTECTED_GAP = 6.0         # the same for a protected site (Cloudflare and kin)
-WORKERS = 3                 # companies read side by side; each company is sequential; protected companies one at a time
+REQUEST_GAP = 8.0           # HEDEF-01: seconds between two requests of one worker to the same company site (at least 8 s)
+PROTECTED_GAP = 8.0         # the same for a protected site (Cloudflare and kin), read in the browser lane
+WORKERS = 3                 # GÖREV-22 estimate only (the old three companies side by side); runs use studio/sources/agency_workers.py
 RETRY_PAUSE = 5.0
 BLOCK_LIMIT = 3             # consecutive refusals (401/403/429, no verification page) that stop a company; see site_answers()
 ERROR_LIMIT = 5             # consecutive unreachable/failed requests that stop a company
@@ -253,6 +253,12 @@ class SiteSession:
         self.retry_429 = retry_429 if isinstance(retry_429, dict) else None    # GÖREV-25: {"wait_s", "retries"} from the configuration
         self.last = None
         self.requests = 0
+        self.on_event = None       # HEDEF-01: (kind) -> None; a 429, a block page or a verification page slows every worker of the site
+        self.on_request = None     # HEDEF-01: () -> None; the worker's "last seen" for the stall check
+
+    def event(self, kind):
+        if self.on_event is not None:
+            self.on_event(kind)
 
     def allows(self, url):
         return any(on_domain(url, domain) for domain in self.allowed)
@@ -271,6 +277,8 @@ class SiteSession:
             finally:
                 self.last = time.monotonic()
             self.requests += 1
+            if self.on_request is not None:
+                self.on_request()
             requested = str(httpx.URL(current, params=params)) if params else current
             digest, _ = self.store.save(company=self.domain, transport=self.transport.kind, method=method, requested=requested,
                                         status=status, final_url=final, headers=response_headers, body=body, note=note,
@@ -292,7 +300,12 @@ class SiteSession:
                 continue
             head = reply.text[:30000] if status in (403, 429, 503) or self.protected else ""
             if status in (403, 429, 503) and (lowered.get("cf-mitigated") == "challenge" or CHALLENGE.search(head)):
+                self.event("doğrulama sayfası")
                 raise VerificationNeeded(current)
+            if status == 429:
+                self.event("HTTP 429")
+            elif status in (403, 503) and BLOCK_PAGE.search(head):
+                self.event("engel sayfası")
             if status == 429 and self.retry_429:
                 # GÖREV-25: wait what the site asks (Retry-After) or at least wait_s, ask again at most `retries` times; a 429 after
                 # that stops the company for this run (what it gave so far is kept)
@@ -368,6 +381,7 @@ def site_options(site):
             return default
         return json.loads(value) if isinstance(value, str) else value
     return {**site, "aliases": loaded(site.get("aliases"), []), "protected": int(site.get("protected") or 0),
+            "protected_config": int(site.get("protected") or 0),
             "guest_rule": site.get("guest_rule") or "two_adults", "inventory": loaded(site.get("inventory"), None),
             "own_region_id": site.get("own_region_id"), "own_city": site.get("own_city")}
 
@@ -447,7 +461,40 @@ def added_run_seconds(last_seconds, last_companies, added, workers=None):
     return max(0, int(last_seconds * span(new) / before) - int(last_seconds))
 
 
-def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None, region=None):
+def worker_companies(sites, last_companies, added, region_hosts=(), window_ratio=1.0):
+    """The companies of a run as the worker estimate sees them (HEDEF-01): per company its requests (the last run's, scaled by the
+    window ratio; a company configured since then: `new_site_estimate`), a worker's gap on its site, its tasks (listings), its lane
+    (browser companies are not split) and whether it is region-blocked."""
+    listed = {host_key(h) for h in region_hosts or ()}
+    configured = {s["domain"]: site_options(s) for s in sites if s.get("enabled", 1)}
+    out = []
+
+    def shape(domain, requests, units, protected):
+        options = configured.get(domain) or {"aliases": [], "inventory": None, "protected": protected, "domain": domain}
+        inventory = options.get("inventory") or {}
+        hosts = (domain, *options.get("aliases", []))
+        region = any(host_key(h) in listed for h in hosts)
+        gap = max(REQUEST_GAP, PROTECTED_GAP if protected else 0, PROXY_GAP if region else 0, float(inventory.get("gap_s") or 0))
+        lane = "eklenti" if inventory.get("extension_only") else "tarayici" if protected else None
+        return {"domain": domain, "requests": int(requests), "gap": gap, "units": max(1, int(units or 1)), "lane": lane, "region": region}
+    for company in last_companies:
+        if company["domain"] in configured:
+            out.append(shape(company["domain"], company["request_count"] * window_ratio, company["listing_count"], bool(company.get("protected"))))
+    for item in added:
+        out.append(shape(item["domain"], item["requests"], (item.get("listings") or 0) + (item.get("own_homes") or 0), item.get("protected")))
+    return out
+
+
+def worker_estimate(companies, exits, site_limit=4):
+    """Seconds of a run for these workers (studio.workers.simulate); region-blocked companies count only when a US proxy is among them."""
+    from .. import workers as W
+    pairs = exits if isinstance(exits, list) else [(True, False)] + [(True, True)] * max(0, int(exits) - 1)
+    usable = companies if any(r for _, r in pairs) else [c for c in companies if not c["region"] or c["lane"]]
+    return W.simulate(usable, pairs, site_limit, ANSWER_SECONDS)
+
+
+def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None, region=None, pool=None,
+            site_limit=None, exit_client=None, board=None, trial=None):
     """Ask every configured company site the price of every future window for each listing tied to it (and for its own inventory).
     Companies whose site waits for a human verification are read last, after one shared wait (see the module text)."""
     if not config or not config.get("sites"):
@@ -461,7 +508,14 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     active = [w for w in windows if w["status"] == "queried"]
     if not active:
         raise SourceError("Bütün tarih pencereleri geçmişte kaldı; yapılandırmaya yeni tarihler eklenmeli.")
+    if trial:          # HEDEF-01: the trial run asks one week (the first window ahead)
+        active = active[:int(trial.get("windows", 1))]
+        windows = list(active)
     sites = {site["domain"]: site_options(site) for site in config["sites"] if site["enabled"]}
+    if trial:          # HEDEF-01: a few pages of a company's sitemap list
+        for site in sites.values():
+            if site["inventory"]:
+                site["inventory"] = {**site["inventory"], "max_pages": int(trial.get("inventory_pages", 3))}
     browser_hosts = {host_key(h) for h in config.get("browser_hosts") or ()}
     for site in sites.values():
         if any(host_key(h) in browser_hosts for h in (site["domain"], *site["aliases"])):
@@ -486,6 +540,12 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                 row["domain"] = domain
                 groups[domain].append(row)
         listings[row["lodging_id"]] = row
+    if trial:          # HEDEF-01: the trial run asks a few listings of every company (trial["listings"]; the ones tied last time first)
+        for domain in groups:
+            preferred = set(trial.get("preferred", {}).get(domain) or ())
+            groups[domain] = sorted(groups[domain], key=lambda r: (r["lodging_id"] not in preferred, r["lodging_id"]))[:int(trial.get("listings", 2))]
+        kept = {r["lodging_id"] for rows in groups.values() for r in rows}
+        listings = {k: v for k, v in listings.items() if k in kept or v["domain"] is None}
     order = sorted((d for d in sites if groups[d] or sites[d]["own_region_id"] or own_everywhere(sites[d])), key=lambda d: (-len(groups[d]), d))
     store = RawStore(raw_path)
     owns = client is None
@@ -494,16 +554,24 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                     tracker=Progress(progress, sum(max(1, len(groups[d])) for d in order)), marks={})
     progress(1, f"{len(order)} kiralama şirketinin sitesi için {sum(len(groups[d]) for d in order)} ilan sorgulanacak.")
     try:
-        with ThreadPoolExecutor(max_workers=WORKERS, thread_name_prefix="30a-agency") as pool:
-            futures = [pool.submit(CompanyRun(shared, sites[domain], groups[domain]).run) for domain in order]
-            failures = [future.exception() for future in futures]
-        if any(isinstance(error, CollectionCanceled) for error in failures) or canceled():
-            raise CollectionCanceled()
-        for error in failures:
-            if error is not None:
-                raise error
+        from . import agency_workers as AW
+        from .. import workers as W
+        runs = [CompanyRun(shared, sites[domain], groups[domain]) for domain in order]
+        if trial:
+            for run in runs:
+                run.trial = trial
+        exits = pool.exits() if pool is not None else default_exits(region)
+        scheduler = AW.Scheduler(shared, runs, exits=exits, site_limit=site_limit or 4, board=board, pool=pool,
+                                 exit_client=exit_client or (lambda exit_, hosts: proxy_client(exit_.proxy, hosts)),
+                                 extension_paired=bool(getattr(verifier, "extension_ready", lambda: False)()))
+        progress(1, f"{len(order)} kiralama şirketinin sitesi için {sum(len(groups[d]) for d in order)} ilan, "
+                    f"{sum(1 for e in exits)} işçiyle ({', '.join(e.label for e in exits)}) sorgulanacak.")
+        scheduler.start()
+        scheduler.wait()
+        summary = scheduler.summary()
+        for state in scheduler.states:
+            state.run.finalize(sum(s.requests for s in state.sessions))
         store.flush()
-        runs = [future.result() for future in futures]
         deferred = [index for index, run in enumerate(runs) if run.deferred]
         if deferred:
             runs = finish_deferred(shared, runs, deferred)
@@ -525,7 +593,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                     "own_priced": len({(q["domain"], q["site_listing_id"]) for q in own_quotes if q["status"] == "priced"}),
                     "published_rents": len(published), "companies": companies, "scope": SCOPE,
                     "browser_hosts": sorted(shared.marks.values(), key=lambda m: m["host"]),
-                    "okuma_yontemleri": dict(getattr(shared.verifier, "methods", None) or {})}
+                    "okuma_yontemleri": dict(getattr(shared.verifier, "methods", None) or {}),
+                    "isciler": summary, "deneme": bool(trial)}
         progress(97, f"{len(listings)} ilan, {len(quotes)} fiyat sorgusu, kendi envanterinden {len(own_rows)} ev ve {len(order)} şirket sonucu kaydediliyor.")
         related = {"snapshot": snapshot, "windows": windows_rows, "companies": companies, "quotes": quotes, "own_listings": own_rows,
                    "own_quotes": own_quotes, "published": published, "browser_hosts": metadata["browser_hosts"],
@@ -613,7 +682,7 @@ class CompanyRun:
                        "guest_rule": site["guest_rule"], "inventory_count": None, "inventory_raw_sha256": None, "own_count": 0,
                        "own_outside": None, "own_on_bookdirect": None}
         self.browser, self.pages, self.cache = None, {}, {}
-        self.blocked = self.errors = 0
+        self.counts = {"blocked": 0, "errors": 0}     # HEDEF-01: shared by every worker's view of the company (consecutive refusals/errors)
         self.quotes, self.own_rows, self.own_quotes, self.published = [], [], [], []
         self.facts = {f["lodging_id"]: f for f in shared.everyone}
 
@@ -629,6 +698,8 @@ class CompanyRun:
             verifier = getattr(verifier, "without_fallback", None)
             if verifier is None:
                 raise CompanyStopped("verification_unavailable", EXTENSION_ONLY_SKIP)
+        elif self.site["protected_config"] and getattr(verifier, "fallback", None) is not None:
+            verifier = verifier.through_fallback      # HEDEF-01: oversee.us, exclusive30a.com: the program's own browser (its lane)
         if self.region is not None:
             from ..proxy import PROXY_FAILED_SKIP
             if self.region.proxy is None or self.region.proxy.browser_problem:
@@ -753,6 +824,52 @@ class CompanyRun:
             shared.tracker.step(0, f"{site['company']}: doğrulama bekliyor, sona bırakıldı.")
         return self
 
+    # --- HEDEF-01: the pieces the workers' scheduler (agency_workers.py) uses -------------------------------------------
+
+    def precheck(self):
+        """Before any task: a company read only through the extension is skipped when the extension cannot take it (GÖREV-25)."""
+        if self.extension_only and not getattr(self.shared.verifier, "extension_ready", lambda: False)():
+            self.result["verification"] = "unavailable"
+            raise CompanyStopped("verification_unavailable", EXTENSION_ONLY_SKIP)
+
+    def stopped(self, stop):
+        self.result["status"], self.result["message"] = stop.status, stop.message
+        for row in self.members:
+            if row["page_status"] == "not_queried":
+                row["message"] = stop.message
+
+    def mark_dead(self, row, dead):
+        row.update({"page_status": "not_found", "link_status": "not_found",
+                    "message": f"Book>Direct bağlantısı sorulmadı: şirketin eski ilan adresleri çalışmıyor ({dead} ölçümü); "
+                               "ilan şirketin kendi listesinden eşlenir."})
+
+    def first_url(self):
+        options = self.site["inventory"] or {}
+        first = next((m["listing_url"] for m in self.members if self.session.allows(m["listing_url"])), None)
+        if options.get("dead_links") and options.get("origin"):
+            first = options["origin"].rstrip("/") + (options.get("list_path") or "/")
+        return first or options.get("origin") or f"https://www.{self.site['domain']}/"
+
+    def open_lane(self):
+        """The first task of a protected company in its lane opens the browser (as `run` does)."""
+        if self.protected:
+            self.open_browser(self.first_url())
+
+    def finalize(self, extra_requests=0):
+        """The company row's counts at the end of the run (as `run` writes them); the browser it opened is closed."""
+        if self.browser is not None:
+            try:
+                self.browser.close()
+            except Exception:
+                pass
+            self.browser = None
+        members = self.members
+        self.result.update({"matched_count": sum(r["page_status"] == "matched" for r in members), "quote_count": len(self.quotes),
+                            "priced_count": sum(q["status"] == "priced" for q in self.quotes),
+                            "request_count": self.session.requests + extra_requests, "own_count": len(self.own_rows),
+                            "match_counts": {m: sum(r["match_method"] == m for r in members) for m in MATCH_METHODS}})
+        self.shared.tracker.step(0, f"{self.site['company']}: bitti ({self.result['status']}).")
+
     def skip(self, status, verification, message):
         """A deferred company the user did not verify: nothing is read, the rows say why."""
         self.result.update({"status": status, "verification": verification, "message": message, "matched_count": 0, "quote_count": 0,
@@ -766,8 +883,8 @@ class CompanyRun:
         key = (info["site_id"], window["window_key"], guests["adults"], guests["children"])
         if key not in self.cache:
             self.cache[key] = ask_quote(self.session, self.adapter, info, window, self.ask, guests)
-            self.errors = self.errors + 1 if self.cache[key]["status"] == "error" else 0
-            if self.errors >= ERROR_LIMIT:
+            self.counts["errors"] = self.counts["errors"] + 1 if self.cache[key]["status"] == "error" else 0
+            if self.counts["errors"] >= ERROR_LIMIT:
                 raise CompanyStopped("stopped_errors", f"Fiyat isteği art arda {ERROR_LIMIT} kez başarısız oldu; şirket durduruldu.")
         return self.cache[key]
 
@@ -791,23 +908,23 @@ class CompanyRun:
             # A refused listing page can be one unpublished listing (Drupal answers its themed "Access denied" page)
             # or the whole site refusing us. One look at the site's home page tells them apart.
             if site_answers(self.session, url, self.ask):
-                self.blocked = 0
+                self.counts["blocked"] = 0
                 page["message"] = (f"Bu ilan sayfası erişime kapalı (HTTP {page['http_status']}); sitenin ana sayfası normal yanıt "
                                    "veriyor (ilan yayından kaldırılmış olabilir).")
                 row["message"] = page["message"]
             else:
-                self.blocked += 1
-                if self.blocked >= BLOCK_LIMIT:
+                self.counts["blocked"] += 1
+                if self.counts["blocked"] >= BLOCK_LIMIT:
                     raise CompanyStopped("stopped_blocked", f"Site art arda {BLOCK_LIMIT} isteği reddetti (HTTP {page['http_status']}); "
                                                             "şirket durduruldu.")
         else:
-            self.blocked = 0
+            self.counts["blocked"] = 0
         if page["page_status"] == "error":
-            self.errors += 1
-            if self.errors >= ERROR_LIMIT:
+            self.counts["errors"] += 1
+            if self.counts["errors"] >= ERROR_LIMIT:
                 raise CompanyStopped("stopped_errors", f"Siteye art arda {ERROR_LIMIT} kez ulaşılamadı; şirket durduruldu.")
         elif page["page_status"] != "blocked":
-            self.errors = 0
+            self.counts["errors"] = 0
         if page["page_status"] == "matched":
             row["match_method"] = "link"
             self.price(row, page["info"])
@@ -815,31 +932,35 @@ class CompanyRun:
     def fallback(self, rows, units):
         """Listings whose link did not reach a listing, tied by the address rule (or, when the company's list has no street
         addresses, by the location rule)."""
-        by_address = sum(bool(u.get("address")) for u in units) * 2 >= max(1, len(units))
-        linker = getattr(self.adapter, "link_unit", None)
         for row in rows:
             check(self.shared.canceled)
-            facts = self.facts[row["lodging_id"]]
-            unit, note = (linker([row["listing_url"], *(self.pages.get(row["listing_url"]) or {}).get("hops", ())], units)
-                          if linker else (None, None))
-            if unit is not None:        # GÖREV-22: the link names a unit number the company's own list gives for exactly one home
-                kind, method = "matched", "link"
-            elif by_address:
-                kind, unit, note = address_match(facts, units, address_without_unit=self.address_without_unit())
-                method = "address"
-            else:
-                kind, unit, note = location_match(facts, units, self.shared.everyone)
-                method = "location"
-            row["match_note"] = note
-            if kind != "matched":
-                continue
-            page = unit.get("page") or open_listing(self.session, self.adapter, unit["url"], self.ask)
-            if page["page_status"] != "matched":
-                row["match_note"] = f"{note} Eşleşen şirket ilanının sayfası açılamadı: {page['message']}"
-                continue
-            row.update({k: page[k] for k in ("page_status", "page_url", "http_status", "site_listing_id")})
-            row["message"], row["match_method"] = None, method
-            self.price(row, page["info"])
+            self.fallback_one(row, units)
+
+    def fallback_one(self, row, units):
+        """One listing of `fallback` (HEDEF-01: one worker task)."""
+        by_address = sum(bool(u.get("address")) for u in units) * 2 >= max(1, len(units))
+        linker = getattr(self.adapter, "link_unit", None)
+        facts = self.facts[row["lodging_id"]]
+        unit, note = (linker([row["listing_url"], *(self.pages.get(row["listing_url"]) or {}).get("hops", ())], units)
+                      if linker else (None, None))
+        if unit is not None:        # GÖREV-22: the link names a unit number the company's own list gives for exactly one home
+            kind, method = "matched", "link"
+        elif by_address:
+            kind, unit, note = address_match(facts, units, address_without_unit=self.address_without_unit())
+            method = "address"
+        else:
+            kind, unit, note = location_match(facts, units, self.shared.everyone)
+            method = "location"
+        row["match_note"] = note
+        if kind != "matched":
+            return
+        page = unit.get("page") or open_listing(self.session, self.adapter, unit["url"], self.ask)
+        if page["page_status"] != "matched":
+            row["match_note"] = f"{note} Eşleşen şirket ilanının sayfası açılamadı: {page['message']}"
+            return
+        row.update({k: page[k] for k in ("page_status", "page_url", "http_status", "site_listing_id")})
+        row["message"], row["match_method"] = None, method
+        self.price(row, page["info"])
 
     def address_without_unit(self):
         """GÖREV-25: the company's list writes a building's homes under the building's address without their unit (the configuration's
@@ -852,6 +973,14 @@ class CompanyRun:
         the site itself gives (its City field); a home the site places elsewhere is left out, and a home already on Book>Direct
         (same company page, same url or the address rule) is not counted twice. GÖREV-22 (`inventory.own`): the same for a
         company's homes in every neighbourhood, each under the neighbourhood the site itself names for it, or under none."""
+        plan = self.own_plan(units)
+        for unit in plan["homes"]:
+            check(self.shared.canceled)
+            self.own_one(unit, plan)
+
+    def own_plan(self, units):
+        """What `own_inventory` reads (HEDEF-01: each home then is one worker task): the community's homes not already on Book>Direct,
+        and the counts written on the company row."""
         site, everyone = self.site, self.shared.everyone
         own = own_everywhere(site)
         if own:
@@ -869,12 +998,19 @@ class CompanyRun:
         ask_prices = not own or own.get("quotes", True)
         self.result["own_outside"] = len(units) - len(community)
         matched = {r["site_listing_id"] for r in self.members if r["page_status"] == "matched"}
-        on_bookdirect = 0
+        on_bookdirect, homes = 0, []
         for unit in community:
-            check(self.shared.canceled)
             if unit["site_id"] in matched or any(same_url(unit["url"], f["url"]) for f in everyone) or any(same_home(unit, f) for f in everyone):
                 on_bookdirect += 1
                 continue
+            homes.append(unit)
+        self.result["own_on_bookdirect"] = on_bookdirect
+        return {"homes": homes, "region_of": region_of, "ask_prices": ask_prices, "own": own}
+
+    def own_one(self, unit, plan):
+        """One home of the company's own inventory (HEDEF-01: one worker task)."""
+        site, own, ask_prices, region_of = self.site, plan["own"], plan["ask_prices"], plan["region_of"]
+        if True:
             page = unit.get("page") or open_listing(self.session, self.adapter, unit["url"], self.ask)
             row = {"domain": site["domain"], "site_listing_id": unit["site_id"], "title": unit.get("title") or unit["url"], "page_url": page["page_url"] or unit["url"],
                    "address": unit.get("address"), "city": unit.get("city"), "region_id": region_of(unit), "bedrooms": unit.get("bedrooms"),
@@ -882,15 +1018,14 @@ class CompanyRun:
                    "page_status": page["page_status"], "message": page["message"]}
             self.own_rows.append(row)
             if page["page_status"] != "matched":
-                continue
+                return
             if not ask_prices:
                 row["message"] = own.get("quotes_note") or "Bu şirketin fiyatı sorulmuyor (yapılandırma)."
-                continue
+                return
             guests = guests_for(site, unit.get("bedrooms"), unit.get("sleeps"))
             for window in self.shared.active:
                 answer = self.quote_once(page["info"], window, guests)
                 self.own_quotes.append({**answer, "domain": site["domain"], "site_listing_id": unit["site_id"], "window_key": window["window_key"]})
-        self.result["own_on_bookdirect"] = on_bookdirect
 
     def published_rents(self):
         """Published seasonal rents for the matched listings of an adapter that reads them (kept apart from the quotes)."""
@@ -954,7 +1089,7 @@ def sitemap_inventory(session, adapter, options, ask):
             continue
         urls.extend(loc for loc in locations if pattern.search(loc) and loc not in urls)
     units = []
-    for url in urls[:MAX_INVENTORY_PAGES]:
+    for url in urls[:int(options.get("max_pages") or MAX_INVENTORY_PAGES)]:
         check(session.canceled)
         page = open_listing(session, adapter, url, ask, keep_html=True)
         if page["page_status"] != "matched":
@@ -1320,7 +1455,9 @@ class AgencyRatesConnector:
     uses_extension = True
     uses_region = True          # GÖREV-16: region-blocked company sites only through the user's US proxy
 
-    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None, region=None):
+    uses_workers = True         # HEDEF-01: the run is split among workers (the direct connection and the proxies of the list)
+
+    def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None, region=None, board=None):
         lodging, agency = context.lodging, context.agency
         if not lodging or not agency:
             raise SourceError("Bu destinasyon için kiralama şirketi fiyat yapılandırması yok.")
@@ -1330,8 +1467,10 @@ class AgencyRatesConnector:
         if extension is not None and extension.paired:        # GÖREV-14: the user's own Chrome first, the program's browser after a hand-over
             from .extension_reader import ExtensionVerifier
             verifier = ExtensionVerifier(extension, fallback=verifier)
+        pool = getattr(region, "pool", None)
         return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts},
-                       verifier=verifier, waiting=waiting, region=region)
+                       verifier=verifier, waiting=waiting, region=region, pool=pool, site_limit=pool.site_limit() if pool is not None else None,
+                       board=board, trial=getattr(context, "trial", None))
 
     def store_records(self, con, run_id, records, related=None):
         snapshot = related["snapshot"]
@@ -1385,6 +1524,15 @@ def proxy_client(proxy, hosts=None):
     if hosts is None:
         return httpx.Client(transport=proxy.transport(), timeout=timeout, follow_redirects=False)
     return httpx.Client(mounts=proxy.mounts(hosts), timeout=timeout, follow_redirects=False)
+
+
+def default_exits(region):
+    """Without a pool (older call paths and tests): the direct connection, and the GÖREV-16 single proxy for region-blocked sites only."""
+    from .. import workers as W
+    exits = [W.direct_exit()]
+    if region is not None and getattr(region, "proxy", None) is not None:
+        exits.append(W.Exit("proxy:1", 1, region.proxy, None, general=False))
+    return exits
 
 
 def default_verifier():

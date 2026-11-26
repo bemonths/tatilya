@@ -21,6 +21,7 @@ import time
 import uuid
 from datetime import date, datetime, timezone
 
+from . import proxy_list, workers
 from .database import Conflict
 from .sources import agency_rates
 from .sources.windows import DEFAULT_RULE
@@ -105,25 +106,41 @@ def status(db, destination_id, today=None):
                 elif seconds is not None:
                     note = "son başarılı çekimin süresi; bizim tahminimiz"
             added = []
+            workers_info = None
             if connector.name == agency_rates.AgencyRatesConnector.name and last and context.agency:
                 read = {r[0] for r in con.execute("SELECT domain FROM agency_rate_companies WHERE run_id=?", (last["id"],))}
                 listings = (db.lodging_input(con, destination_id) or {}).get("listings") or []
                 blocked = [r[0] for r in con.execute("SELECT host FROM region_blocked_hosts")]
                 added = [a for a in agency_rates.new_site_estimate(context.agency["sites"], listings, read, current_windows or 0, blocked)
                          if a["requests"]]
-                if added and seconds is not None:
-                    companies = [dict(r) for r in con.execute(
-                        "SELECT domain, listing_count, request_count, protected FROM agency_rate_companies WHERE run_id=?", (last["id"],))]
-                    extra = agency_rates.added_run_seconds(seconds, companies, added)
-                    seconds += extra
-                    note = (f"{note}; son çekimden sonra eklenen {len(added)} şirket için en çok +{sum(a['requests'] for a in added)} istek, "
-                            f"+{extra // 60} dk (şirketler yan yana okunur; {', '.join(a['company'] for a in added)})")
+                # HEDEF-01: the run is split among workers; the estimate lays the companies' requests out on them (studio.workers.simulate)
+                companies = [dict(r) for r in con.execute(
+                    "SELECT domain, listing_count, request_count, protected FROM agency_rate_companies WHERE run_id=?", (last["id"],))]
+                old_windows = window_count(metadata)
+                ratio = current_windows / old_windows if current_windows and old_windows else 1.0
+                shaped = agency_rates.worker_companies(context.agency["sites"], companies, added, blocked, ratio)
+                exits = workers.exits_from_settings(db.path.parent)
+                pairs = [(e.general, e.region_ok) for e in exits]
+                limit = proxy_list.site_limit(db.path.parent)
+                estimate = agency_rates.worker_estimate(shaped, pairs, limit)
+                if estimate is not None:
+                    seconds = int(estimate)
+                    examples = {n: agency_rates.worker_estimate(shaped, n, limit) for n in (10, 20)}
+                    workers_info = {"workers": len(exits), "proxies": len(exits) - 1, "site_limit": limit,
+                                    "examples": {str(n): int(v) if v is not None else None for n, v in examples.items()},
+                                    "requests": sum(c["requests"] for c in shaped)}
+                    note = (f"{len(exits)} işçiyle (doğrudan + {len(exits) - 1} proxy), site başına en çok {limit} işçi, işçi başına site "
+                            f"aralığı en az {int(agency_rates.REQUEST_GAP)} sn; son çekimin istek sayıları"
+                            f"{f' × pencere oranı ({old_windows} → {current_windows})' if ratio != 1.0 else ''}"
+                            f"{f' ve son çekimden sonra eklenen {len(added)} şirketin istekleri' if added else ''}; bizim tahminimiz")
+                    if not any(r for _, r in pairs) and any(c["region"] for c in shaped):
+                        note += "; ABD proxy'si olmadığı için bölge engelli şirketler atlanır, süreye katılmadı"
             items.append({"connector": connector.name, "source_id": source["id"], "source_name": source["name"],
                           "interval_months": interval["months"] if interval else None, "sort_order": interval["sort_order"] if interval else None,
                           "last_run_id": last["id"] if last else None, "last_done_on": last_day.isoformat() if last_day else None,
                           "next_due_on": next_due.isoformat() if next_due else None,
                           "due": reason is not None, "due_reason": reason,
-                          "estimate_seconds": seconds, "estimate_note": note, "added_companies": added,
+                          "estimate_seconds": seconds, "estimate_note": note, "added_companies": added, "workers": workers_info,
                           "last_finished_at": (last["finished_at"] or last["fetched_at"]) if last else None,
                           "follows": list(getattr(connector, "follows", ())),
                           "inputs": list(getattr(connector, "inputs", ())), "produces": getattr(connector, "produces", None)})

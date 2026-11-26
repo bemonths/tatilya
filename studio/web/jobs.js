@@ -32,6 +32,16 @@ export function windowLines(job) {
   return lines;
 }
 
+/** HEDEF-01: the workers of a running rental price job: each worker's way out (doğrudan, proxy N — never an address), its company,
+ *  its finished tasks and its errors; the last events of the site protection (slowed down, one worker). */
+export function workerBlock(job) {
+  const board=job.isciler;
+  if(!active(job) || !board?.isciler?.length) return "";
+  const rows=board.isciler.map(w=>`<tr><td>${esc(w.cikis)}</td><td>${esc(w.sirket || "—")}</td><td>${esc(w.biten ?? 0)}</td><td>${esc(w.hata ?? 0)}</td><td>${esc(w.durum)}</td></tr>`).join("");
+  const events=(board.olaylar||[]).slice(-5).map(e=>`<div class="log-line"><time>${esc(date(e.zaman))}</time>${esc(e.metin)}</div>`).join("");
+  return `<details class="job-workers" open><summary>İşçiler (${esc(board.calisan)} çalışıyor)</summary><div class="table-scroll"><table class="reference-table"><thead><tr><th>ÇIKIŞ</th><th>ŞİRKET</th><th>BİTEN İŞ</th><th>HATA</th><th>DURUM</th></tr></thead><tbody>${rows}</tbody></table></div>${events?`<div class="job-worker-events">${events}</div>`:""}</details>`;
+}
+
 export function panelHead(jobs) {
   const count=removableJobs(jobs).length;
   return `<div class="jobs-tools"><button type="button" class="quiet" data-hide-finished ${count?"":"disabled"} title="Tamamlanan, hata veren ve iptal edilen işleri panelden kaldırır. Kayıtları ve günlükleri silinmez.">Bitenleri kaldır${count?` (${count})`:""}</button></div>`;
@@ -48,7 +58,7 @@ export function jobCard(job, {resultLink=""}={}) {
   const buttons=running?`${handover}${skipButton(job)}<button class="quiet" data-cancel-job="${esc(job.id)}">İptal et</button>`
     :`<button class="quiet job-remove" data-hide-job="${esc(job.id)}" title="İşi panelden kaldırır; kaydı ve günlüğü silinmez.">Kaldır</button>`;
   return `<article class="job" data-job="${esc(job.id)}"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(STATUS_LABELS[job.status] || job.status)}</span>${job.awaiting_approval?'<span class="tag warm">Onay bekliyor</span>':""}<time>${esc(date(job.created_at))}</time></div>
-    <h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${bar}${spending}${waiting}${windows}${message}${buttons}
+    <h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${bar}${spending}${waiting}${windows}${message}${workerBlock(job)}${buttons}
     <details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${resultLink}</article>`;
 }
 

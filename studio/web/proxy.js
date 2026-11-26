@@ -16,6 +16,7 @@ export function testResult(result) {
   const head=result.ok?`<p><span class="tag ${result.uyari?"warm":"green"}">Çıkış adresi ${esc(result.ip)} · ülke ${esc(result.ulke || "bilinmiyor")}</span></p>`
     :`<p><span class="tag warm">Proxy denemesi başarısız</span></p>`;
   const warning=result.uyari?`<p class="stage-note claude-warning">${esc(result.uyari)}.</p>`:"";
+  if((result.sonuclar||[]).length>1) return `<div class="proxy-test-result" role="status">${resultRows(result.sonuclar)}</div>`;
   return `<div class="proxy-test-result" role="status">${head}${warning}<ul class="muted">${lines}</ul></div>`;
 }
 
@@ -28,16 +29,47 @@ export function regionRows(hosts) {
     </tbody></table></div>`;
 }
 
-/** Ayarlar → ABD proxy'si (GÖREV-21): only the connection details and whether the password is in the vault. */
-export function proxySection(view, {message=""}={}) {
+const STATE_TAGS={calisiyor:"green",calismiyor:"warm",denenmedi:""};
+
+/** HEDEF-01: one row per tested proxy ("Proxy'yi dene" of every row): works or not, exit country. */
+export function resultRows(results) {
+  return `<ul class="proxy-results">${(results||[]).map(r=>`<li><strong>${esc(r.sira)}. ${esc(r.etiket)}</strong> <span class="tag ${r.ok?(r.uyari?"warm":"green"):"warm"}">${r.ok?`çalışıyor · ülke ${esc(r.ulke || "bilinmiyor")}`:"çalışmıyor"}</span>${r.ok?"":`<small class="muted"> ${esc((r.satirlar||[]).slice(1).join(" "))}</small>`}${r.uyari?`<small class="muted"> ${esc(r.uyari)}</small>`:""}</li>`).join("")}</ul>`;
+}
+
+/** HEDEF-01: the proxy list; each row is one worker unless it is marked "çalışmıyor". Never an address with its port or a password. */
+export function proxyRows(rows) {
+  if(!rows?.length) return '<p class="muted">Listede proxy yok. Program yalnız doğrudan bağlantıyla (tek işçi) çalışır; bölge engelli siteler atlanır.</p>';
+  return `<div class="table-scroll"><table class="reference-table proxy-table"><thead><tr><th>SIRA</th><th>PROXY</th><th>KULLANICI</th><th>PAROLA</th><th>DURUM</th><th>ÜLKE</th><th>İŞÇİ</th><th></th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.sira)}</td><td><strong>${esc(r.etiket)}</strong>${r.denendi?`<small class="source-host">denendi ${esc(date(r.denendi))}</small>`:""}</td><td>${esc(r.kullanici || "—")}</td>
+      <td>${r.kullanici?(r.parola_kayitli?'<span class="tag green">kasada</span>':'<span class="tag warm">yok</span>'):"—"}</td>
+      <td><span class="tag ${STATE_TAGS[r.durum] ?? ""}">${esc(r.durum_metni || r.durum)}</span>${r.not?`<small class="source-host">${esc(r.not)}</small>`:""}</td><td>${esc(r.ulke || "—")}</td>
+      <td>${r.isci?"evet":"hayır"}</td>
+      <td><button type="button" class="quiet" data-proxy-test="${esc(r.id)}">Dene</button> <button type="button" class="quiet" data-proxy-remove="${esc(r.id)}">Listeden çıkar</button></td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+/** Ayarlar → ABD proxy'si (HEDEF-01): the proxy list, the bulk add box and the workers' site limit. */
+export function proxySection(view, {message="", outcome=null}={}) {
   const notes=(view.notlar||[]).map(n=>`<p class="stage-note claude-warning">${esc(n)}</p>`).join("");
-  return `<section class="info-card proxy-settings" id="abd-proxy"><span class="eyebrow">ABD PROXY'Sİ</span><h2 style="margin-top:12px">ABD proxy'si (bölge engeli için)</h2>
-    <p>Bazı siteler yalnız ABD içinden gelen ziyaretçiye hizmet veriyor. Kendi ABD proxy'nizin bağlantı bilgilerini buraya girersiniz; program yalnız bölge engelli listedeki alan adlarını bu proxy üzerinden okur, öbür bütün istekler doğrudan gider. Proxy'nin denemesi ve bölge engelli alan adları listesi <a href="#veri/okuma">Veri → Okuma denemeleri</a> sekmesindedir.</p>
-    <form id="proxy-form" class="video-form proxy-form" autocomplete="off">
-      <label>Proxy adresi<input id="proxy-url" value="${esc(view.adres)}" placeholder="http://sunucu:port" spellcheck="false"><small class="muted">Şema http, https ya da socks5; ör. http://sunucu:8080. Kullanıcı adı ve parola adrese yazılmaz.</small></label>
-      <label>Kullanıcı adı<input id="proxy-user" value="${esc(view.kullanici)}" spellcheck="false"></label>
-      <label>Parola<input id="proxy-password" type="password" placeholder="${view.parola_kayitli?"kayıtlı (değiştirmek için yazın)":""}" autocomplete="new-password"><small class="muted">${view.parola_kayitli?'<span class="tag green">kasada kayıtlı</span> Windows Kimlik Bilgisi Yöneticisi\'nde; burada gösterilmez.':"<span class=\"tag\">kasada yok</span> Parola Windows Kimlik Bilgisi Yöneticisi'ne kaydedilir; hiçbir dosyaya yazılmaz."}</small></label>
-      <div class="decision-actions"><button type="submit" class="primary">Kaydet</button>${view.parola_kayitli?'<button type="button" class="quiet" id="proxy-forget">Parolayı sil</button>':""}</div>
+  const rows=view.liste||[];
+  const workers=1+rows.filter(r=>r.isci).length;
+  const range=view.site_basina_aralik||[1,8];
+  const added=outcome?`<p class="stage-note" role="status">${esc(outcome.eklenen)} proxy eklendi, ${esc(outcome.guncellenen)} güncellendi.${(outcome.hatalar||[]).length?` Okunamayan satırlar: ${outcome.hatalar.map(e=>`${e.satir}. satır (${e.hata})`).join("; ")}.`:""}</p>${(outcome.sonuclar||[]).length?resultRows(outcome.sonuclar):""}`:"";
+  return `<section class="info-card proxy-settings" id="abd-proxy"><span class="eyebrow">ABD PROXY'Sİ</span><h2 style="margin-top:12px">ABD proxy'si (bölge engeli ve işçiler için)</h2>
+    <p>Bazı siteler yalnız ABD içinden gelen ziyaretçiye hizmet veriyor; bu siteler yalnız proxy'yle okunur. Kiralama fiyatı çekiminde her çalışan proxy bir <strong>işçi</strong>dir, doğrudan bağlantı da bir işçidir; işçiler aynı anda çalışır, işçi arttıkça çekim kısalır. Proxy'nin denemesi ve bölge engelli alan adları listesi <a href="#veri/okuma">Veri → Okuma denemeleri</a> sekmesindedir.</p>
+    <h3>Proxy listesi</h3>
+    <p class="muted">Şu an <strong>${workers} işçi</strong>: doğrudan bağlantı ve ${workers-1} proxy. "Çalışmıyor" işaretli proxy işçi olmaz. Çekim sürerken listeye eklenen proxy birkaç dakika içinde çekime katılır; çıkarılan proxy'nin işi başka işçiye geçer.</p>
+    ${proxyRows(rows)}
+    <form id="proxy-bulk-form" class="video-form proxy-form" autocomplete="off">
+      <label>Toplu ekleme (her satıra bir proxy)<textarea id="proxy-bulk" rows="6" spellcheck="false" placeholder="sunucu:port:kullanıcı:parola"></textarea><small class="muted">Kabul edilen biçimler: sunucu:port:kullanıcı:parola · sunucu:port · kullanıcı:parola@sunucu:port · http://sunucu:port. Kaydedince parolalar hemen Windows Kimlik Bilgisi Yöneticisi'ne yazılır, kutu temizlenir; dosyada yalnız adres, port, kullanıcı adı ve tür kalır. Her satır tek tek denenir.</small></label>
+      <label>Tür<select id="proxy-kind"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select><small class="muted">Satırda http:// ya da socks5:// yazmıyorsa bu tür kullanılır.</small></label>
+      <div class="decision-actions"><button type="submit">Listeye ekle ve dene</button></div>
+    </form>
+    ${added}
+    <h3>Sitenin korunması</h3>
+    <form id="proxy-workers-form" class="video-form proxy-form" autocomplete="off">
+      <label>Aynı siteye aynı anda çalışan en çok işçi<input id="proxy-site-limit" type="number" min="${esc(range[0])}" max="${esc(range[1])}" value="${esc(view.site_basina ?? 4)}"><small class="muted">Başlangıç değeri 4. Her işçi aynı siteye en az 8 saniye arayla istek yapar. Bir site 429, engel ya da doğrulama sayfası verirse o sitedeki bütün işçiler yavaşlar; tekrar ederse o site tek işçiyle okunur.</small></label>
+      <div class="decision-actions"><button type="submit" class="primary">Kaydet</button></div>
     </form>
     ${notes}
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}
@@ -71,22 +103,39 @@ class ProxyBase {
   }
 }
 
-/** Ayarlar → ABD proxy'si: the connection details. */
+/** Ayarlar → ABD proxy'si: the proxy list, bulk add, one row's test and removal, the site limit (HEDEF-01). */
 export class ProxySettings extends ProxyBase {
   draw() {
-    this.container.innerHTML=proxySection(this.view,{message:this.message});
-    this.container.querySelector("#proxy-form").addEventListener("submit",event=>{event.preventDefault();this.save();});
-    this.container.querySelector("#proxy-forget")?.addEventListener("click",()=>this.forget());
+    this.container.innerHTML=proxySection(this.view,{message:this.message,outcome:this.outcome});
+    this.container.querySelector("#proxy-bulk-form").addEventListener("submit",event=>{event.preventDefault();this.addLines();});
+    this.container.querySelector("#proxy-workers-form").addEventListener("submit",event=>{event.preventDefault();this.saveLimit();});
+    this.container.querySelectorAll("[data-proxy-test]").forEach(button=>button.addEventListener("click",()=>this.testRow(button.dataset.proxyTest)));
+    this.container.querySelectorAll("[data-proxy-remove]").forEach(button=>button.addEventListener("click",()=>this.removeRow(button.dataset.proxyRemove)));
   }
-  async save() {
-    const body={adres:this.container.querySelector("#proxy-url").value,kullanici:this.container.querySelector("#proxy-user").value};
-    const password=this.container.querySelector("#proxy-password").value;
-    if(password) body.parola=password;
-    await this.call("abd-proxy",{method:"PUT",body:JSON.stringify(body)},password?"Kaydedildi; parola Kimlik Bilgisi Yöneticisi'ne yazıldı.":"Kaydedildi.");
+  async addLines() {
+    const box=this.container.querySelector("#proxy-bulk");
+    const body={satirlar:box.value,tur:this.container.querySelector("#proxy-kind").value};
+    box.value="";              // the passwords leave the screen at once
+    this.outcome=null;this.message="Proxy'ler kaydediliyor ve tek tek deneniyor…";this.draw();
+    try {const answer=await api("abd-proxy/liste",{method:"POST",body:JSON.stringify(body)});this.view=answer;this.outcome=answer.ekleme;this.message="";}
+    catch(error) {if(error.stale) return;this.message=error.message;}
+    this.draw();
   }
-  async forget() {
-    if(!globalThis.confirm?.("Proxy parolası Windows Kimlik Bilgisi Yöneticisi'nden silinsin mi?")) return;
-    await this.call("abd-proxy/parola",{method:"DELETE"},"Parola silindi.");
+  async testRow(id) {
+    this.outcome=null;this.message="Proxy deneniyor…";this.draw();
+    try {const answer=await api(`abd-proxy/liste/${encodeURIComponent(id)}/dene`,{method:"POST",body:"{}"});this.view=answer;this.outcome={eklenen:0,guncellenen:0,hatalar:[],sonuclar:[answer.deneme]};this.message="";}
+    catch(error) {if(error.stale) return;this.message=error.message;}
+    this.draw();
+  }
+  async removeRow(id) {
+    if(!globalThis.confirm?.("Bu proxy listeden çıkarılsın mı? Parolası da Windows Kimlik Bilgisi Yöneticisi'nden silinir.")) return;
+    this.outcome=null;
+    await this.call(`abd-proxy/liste/${encodeURIComponent(id)}`,{method:"DELETE"},"Proxy listeden çıkarıldı.");
+  }
+  async saveLimit() {
+    const value=Number(this.container.querySelector("#proxy-site-limit").value);
+    this.outcome=null;
+    await this.call("abd-proxy/isciler",{method:"PUT",body:JSON.stringify({site_basina:value})},"Kaydedildi.");
   }
 }
 

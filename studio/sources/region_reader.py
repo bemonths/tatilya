@@ -382,6 +382,8 @@ class RegionAccess:
         except Exception:                      # Credential Manager unreadable: the proxy is not used
             self.proxy = None
         self.browser_factory = browser_factory if browser_factory is not None else self.default_browser_factory
+        from ..workers import ProxyPool
+        self.pool = ProxyPool(self.data_dir)      # HEDEF-01: the workers of a rental price run (the proxy list, read live)
 
     def default_browser_factory(self):
         if not bv.available():

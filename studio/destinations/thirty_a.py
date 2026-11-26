@@ -283,7 +283,7 @@ AGENCY_SITES_V23 = ()
 # queries (`extension_queries`: the allowed list, with exactly the fields the page sends). The site answers direct requests with 429
 # and verification pages, so it is read only through the user's Chrome extension (`extension_only`): when the extension is not
 # connected the company is skipped in that run and the reason recorded; the program's own browser never sends these queries.
-# `gap_s`: at least 20 s between two requests (one at a time); `retry_429`: on 429 wait Retry-After (else 60 s), at most two retries,
+# `gap_s`: at least 20 s between two requests (one at a time; HEDEF-01, migration v25: 12 s, a 429 doubles it); `retry_429`: on 429 wait Retry-After (else 60 s), at most two retries,
 # then stop the company in that run and keep what was read. The Book>Direct links are its old addresses (`dead_links`); the
 # listings are tied by the address rule to the site's own list.
 AGENCY_SITES_V24 = (

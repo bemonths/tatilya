@@ -6,6 +6,7 @@ saved or read in this process goes on the log's mask list (`studio.logs.register
 written with `***` instead.
 """
 import logging
+import re
 
 import keyring
 from keyring.errors import KeyringError, PasswordDeleteError
@@ -25,10 +26,16 @@ class SecretError(Exception):
     """A Turkish message for the user (it never carries the value)."""
 
 
+LIST_PASSWORD = re.compile(r"^abd_proxy_parolasi_[0-9a-f]{8}$")      # HEDEF-01: the password of one row of the proxy list
+
+
 def check_name(name):
-    if name not in LABELS:
-        raise SecretError(f"Bilinmeyen gizli bilgi: {name}.")
-    return name
+    if name in LABELS:
+        return name
+    if isinstance(name, str) and LIST_PASSWORD.match(name):
+        LABELS[name] = "ABD proxy parolası"
+        return name
+    raise SecretError(f"Bilinmeyen gizli bilgi: {name}.")
 
 
 def clean_value(name, value):
