@@ -347,6 +347,27 @@ RealJoy (`realjoy`, `studio/sources/agency_adapters.py`) yalnız eklentiyle okun
   sayfası 0). Çevrimdışı eşlemedeki 32 bağla ~442 istek, ~2 sa 35 dk. Program "Güncelleme zamanı gelenler"de kiralama için ~12 sa 28 dk,
   zamanı gelenlerin hepsi için ~13 sa 31 dk gösteriyor (şirketler yan yana; bizim tahminimiz).
 
+## HEDEF-01: işçiler, deneme çekimi ve RealJoy'un 12 sn'si (26 Kasım 2026, şema 25, v0.27.0)
+
+- **İşçiler.** Çekim artık "aynı anda üç şirket" değil: şirketlerin işleri (ilan ilan) işçilere dağıtılır; doğrudan bağlantı ve proxy
+  listesindeki her çalışan proxy bir işçidir. Kurallar, site başına sınır, yavaşlama ve tarayıcı sıraları `docs/M18-ABD-PROXY-BOLGE-ENGELI.md`
+  "İşçiler" bölümündedir. Bir işçinin aynı siteye iki isteği arası en az 8 sn (`REQUEST_GAP` 2 sn idi; korumalı siteler 6 sn idi, artık 8 sn).
+  Şirket satırındaki `request_count` bütün işçilerin o siteye istekleridir; çalışmanın `metadata.isciler` alanında işçiler, şirket başına
+  hangi çıkışlardan okunduğu (`sirketler.<alan>.cikislar`, `sira`) ve sitenin korunma olayları durur.
+- **Korumalı şirketler** (oversee.us, exclusive30a.com) eklentiyle değil programın kendi tarayıcısıyla okunur (hedefin kararı); programın
+  tarayıcısı yoksa eski sıra (eklenti) kalır. Yalnız eklentiyle okunan RealJoy'un sırası değişmedi.
+- **RealJoy 12 sn** (göç v25, `studio/migration_v25.py`): yapılandırmadaki `gap_s` 20'den 12'ye; yalnız değer hâlâ 20 ise. 429 gelirse
+  işçi kuralı aralığı iki katına (24 sn) çıkarır; GÖREV-25'in `retry_429` kuralı aynen durur.
+- **Tahmin.** "Güncelleme zamanı gelenler" kiralama satırı işçi sayısına göre hesaplanır (`agency_rates.worker_companies`,
+  `worker_estimate`; `docs/M18` "Tahmin"); satırın altında 10 ve 20 işçiyle tahmin de yazar.
+- **Deneme çekimi** (`studio/trial_run.py`; Sol menü → Veri → Okuma denemeleri → "Deneme çekimini başlat"): bütün toplayıcılar gerçek
+  sitelerde, işçilerle, küçük ölçekte bir kez. Gerçek veritabanının programın aldığı kopyasında (`data/deneme/<zaman>/studio.sqlite3`,
+  ham dosyalar yanında) normal iş akışıyla çalışır; gerçek veritabanına yalnız deneme işinin kaydı düşer. Kiralama şirketlerinde şirket
+  başına 2 ilan (son çekimde şirket sayfasına bağlanmış olanlar önce), tek hafta, şirketin site haritası listesinden 3 sayfa, kendi
+  envanterinden 2 ev (`collect(..., trial=...)`); Book>Direct'te tek hafta ve 5 takvim (`calendar_limit`); restoran sitelerinde 3 restoran;
+  öbürleri tam. Sonuç tablosu (toplayıcı başına ve kiralama şirketi başına: okundu mu, hangi işçiden, hata) iş sonucuna ve
+  `sonuc.json`'a yazılır; son 3 denemenin kopyası durur, eskilerinin yalnız `sonuc.json`'u kalır.
+
 ## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
 
 **Kural (bizim varsayımımız, kaynak gerçeği değil):** çekim ayından sonraki **12 ayın** her biri için ayın **15'ini içeren Cumartesi–Cumartesi haftası** (7 gece): hafta, 15'inden önceki ya da 15'i olan Cumartesi başlar, dolayısıyla her zaman ayın 9'u ile 22'si arasındadır. Başlangıcı çekim tarihine **21 günden yakın** olan pencere atlanır ve yerine 13. ay eklenir; her çekim aynı sayıda pencere sorar. Pencere anahtarı ayı adlandırır (`ay-2027-07`), etiket "Temmuz 2027 · 10–17 Temmuz". Kural destinasyon yapılandırmasındadır (`destination_lodging_sources.window_rule`, JSON: `kind, months, anchor_day, weekday, nights, min_lead_days`; 30A: `thirty_a.py` → `LODGING_WINDOW_RULE`); hesap `studio/sources/windows.py` içinde generic'tir. Book>Direct konaklama aramaları ve kiralama şirketi fiyatları aynı kuralı kullanır; her çekim kullandığı kuralı kaydına yazar (`metadata.window_rule`). Kural tanımlıyken eski sabit pencereler (`destination_lodging_windows`) kapalı kalır.

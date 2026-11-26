@@ -21,6 +21,7 @@ import {UsagePanel, claudeProgress, progressText as claudeProgressText} from "./
 import {InstructionEditor} from "./instructions.js";
 import {ExtensionSettings, ExtensionReading, warmUpSection} from "./extension.js";
 import {ProxySettings, ProxyReading} from "./proxy.js";
+import {TrialRunSection} from "./trialrun.js";
 import {ToneSettings} from "./tones.js";
 import {jobsPanel, active} from "./jobs.js";
 import {sectionOfHash, isSettingsHash, sectionId, settingsFrame, usageCard, SETTINGS_INTRO, channelFrame, channelSectionOfHash, CHANNEL_INTRO} from "./settings.js";
@@ -128,10 +129,12 @@ function renderStep() {
 
 /** Veri → Okuma denemeleri (GÖREV-21): the trial readings that were in Ayarlar — the extension's, the warm-up list, the proxy's. */
 function renderReadingTrials() {
-  $("#main").innerHTML = veriHeading("Okuma denemeleri", "Bir sitenin okunup okunamadığını deneyen araçlar: tarayıcı eklentisinin deneme okuması, ısınma listesi ve ABD proxy'sinin deneme okuması. Bağlantı bilgileri Ayarlar'dadır.") +
-    `<div id="reading-screen"><section class="settings-section"><div class="settings-slot" id="extension-reading-slot"><p class="muted">Yükleniyor…</p></div></section>
+  $("#main").innerHTML = veriHeading("Okuma denemeleri", "Bir sitenin okunup okunamadığını deneyen araçlar: bütün toplayıcıların deneme çekimi, tarayıcı eklentisinin deneme okuması, ısınma listesi ve ABD proxy'sinin deneme okuması. Bağlantı bilgileri Ayarlar'dadır.") +
+    `<div id="reading-screen"><section class="settings-section"><div class="settings-slot" id="trial-run-slot"><p class="muted">Yükleniyor…</p></div></section>
+    <section class="settings-section"><div class="settings-slot" id="extension-reading-slot"><p class="muted">Yükleniyor…</p></div></section>
     <section class="settings-section"><div class="settings-slot" id="warm-up-slot"><p class="muted">Yükleniyor…</p></div></section>
     <section class="settings-section"><div class="settings-slot" id="proxy-reading-slot"><p class="muted">Yükleniyor…</p></div></section></div>`;
+  new TrialRunSection($("#trial-run-slot")).load();
   new ExtensionReading($("#extension-reading-slot")).load();
   new ProxyReading($("#proxy-reading-slot")).load();
   api("isinma-listesi").then(list=>{const slot=$("#warm-up-slot");if(slot) slot.innerHTML=warmUpSection(list);}).catch(error=>{const slot=$("#warm-up-slot");if(slot && !error.stale) slot.textContent=error.message;});

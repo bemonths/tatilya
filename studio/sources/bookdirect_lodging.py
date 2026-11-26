@@ -371,6 +371,8 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
         # The front end shows no rate calendar for listings with hide_rate_calendar; those are not asked (GOREV-08).
         ordered = [lodging_id for lodging_id in sorted(listings) if not listings[lodging_id]["hide_rate_calendar"]]
         hidden_calendars = len(listings) - len(ordered)
+        if config.get("calendar_limit"):          # HEDEF-01: the trial run reads a few calendars
+            ordered = ordered[:int(config["calendar_limit"])]
         for index, lodging_id in enumerate(ordered):
             if index % 10 == 0:
                 progress(55 + int(40 * index / max(1, len(ordered))), f"Fiyat takvimleri okunuyor ({index}/{len(ordered)}).")

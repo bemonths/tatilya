@@ -67,19 +67,31 @@ def pac_digest(pac):
     return hashlib.sha256(pac.encode("utf-8")).hexdigest()
 
 
+AUTH_HOPS = 8          # HEDEF-01: the proxy's questions answered for one request across its redirects
+
+
 def auth_answer(event, username, password, asked):
     """`Fetch.authRequired` → `Fetch.continueWithAuth` parameters (Housing Atlas `_auth_answer`): the proxy's question gets the
-    credentials once per request; a second question for the same request is cancelled; a site's own question is left to Chrome."""
+    credentials once per request and address; a second question for the same request and address (a wrong password) is cancelled; a
+    site's own question is left to Chrome.
+
+    HEDEF-01 (winndixie.com, GÖREV-25 note: ERR_INVALID_AUTH_CREDENTIALS and Chrome's own proxy password window): a request keeps its
+    id across its redirects, and through the proxy every redirect to another host opens a new tunnel the proxy asks about again.
+    The old rule cancelled that second question as if the password were wrong. Now each address of the request's way gets the
+    credentials once (at most AUTH_HOPS addresses per request)."""
     if not isinstance(event, dict) or not event.get("requestId"):
         return None
     request_id = event["requestId"]
     challenge = event.get("authChallenge") if isinstance(event.get("authChallenge"), dict) else {}
+    request = event.get("request") if isinstance(event.get("request"), dict) else {}
+    key = (request_id, str(request.get("url") or ""))
+    hops = sum(1 for item in asked if isinstance(item, tuple) and item[0] == request_id)
     if challenge.get("source") != "Proxy":
         response = {"response": "Default"}
-    elif request_id in asked:
+    elif key in asked or hops >= AUTH_HOPS:
         response = {"response": "CancelAuth"}
     else:
-        asked.add(request_id)
+        asked.add(key)
         response = {"response": "ProvideCredentials", "username": username, "password": password}
     return {"requestId": request_id, "authChallengeResponse": response}
 

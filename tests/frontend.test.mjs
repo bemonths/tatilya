@@ -1210,18 +1210,28 @@ test('GÖREV-16 Ayarlar → Tarayıcı eklentisi: "Eklenti çalışıyor", the o
   assert.equal(skipButton({id:'j1',progress_info:{tur:'eklenti'},waiting_for:''}),'');
   assert.equal(skipButton({id:'j1',progress_info:{tur:'claude'},waiting_for:'x'}),'');
 });
-test('Ayarlar → ABD proxy\'si: yalnız bağlantı bilgileri ve parolanın kasada olup olmadığı; deneme ve liste Veri → Okuma denemeleri\'nde (GÖREV-21)',()=>{
-  const empty=proxySection({adres:'',kullanici:'',parola_kayitli:false,tanimli:false,notlar:[],bolge_engelli:[]});
-  assert.match(empty,/ABD proxy'si \(bölge engeli için\)/);assert.match(empty,/<span class="tag">kasada yok<\/span>/);
+test('Ayarlar → ABD proxy\'si (HEDEF-01): proxy listesi, toplu ekleme, site başına işçi; deneme ve bölge listesi Veri → Okuma denemeleri\'nde',()=>{
+  const empty=proxySection({adres:'',kullanici:'',parola_kayitli:false,tanimli:false,notlar:[],bolge_engelli:[],liste:[],site_basina:4,site_basina_aralik:[1,8]});
+  assert.match(empty,/ABD proxy'si \(bölge engeli ve işçiler için\)/);assert.match(empty,/Şu an <strong>1 işçi<\/strong>: doğrudan bağlantı ve 0 proxy/);
+  assert.match(empty,/Listede proxy yok/);assert.match(empty,/id="proxy-bulk"/);assert.match(empty,/<option value="socks5">SOCKS5<\/option>/);
+  assert.match(empty,/id="proxy-site-limit" type="number" min="1" max="8" value="4"/);
   assert.doesNotMatch(empty,/id="proxy-test"|id="region-form"|Bölge engelli alan adları<\/h3>/);          // no data work in Ayarlar
   assert.match(empty,/<a href="#veri\/okuma">Veri → Okuma denemeleri<\/a>/);
+  const listed=proxySection({liste:[{id:'1',sira:1,etiket:'http://a.test',kullanici:'ali',parola_kayitli:true,durum:'calisiyor',durum_metni:'çalışıyor',ulke:'US',isci:true,denendi:'2026-11-26T20:00:00+00:00'},
+    {id:'ab12cd34',sira:2,etiket:'socks5://b.test',kullanici:'',parola_kayitli:false,durum:'calismiyor',durum_metni:'çalışmıyor',ulke:null,isci:false,not:'zaman aşımı'}],notlar:[]},
+    {outcome:{eklenen:2,guncellenen:0,hatalar:[{satir:3,hata:'biçim tanınmadı'}],sonuclar:[{sira:1,etiket:'http://a.test',ok:true,ulke:'US'},{sira:2,etiket:'socks5://b.test',ok:false,satirlar:['Proxy: socks5://b.test','BAŞARISIZ: zaman aşımı.']}]}});
+  assert.match(listed,/Şu an <strong>2 işçi<\/strong>: doğrudan bağlantı ve 1 proxy/);
+  assert.match(listed,/<td>1<\/td><td><strong>http:\/\/a\.test<\/strong>/);assert.match(listed,/tag green">kasada<\/span>/);
+  assert.match(listed,/tag green">çalışıyor<\/span>/);assert.match(listed,/tag warm">çalışmıyor<\/span><small class="source-host">zaman aşımı/);
+  assert.match(listed,/data-proxy-test="ab12cd34">Dene<\/button>/);assert.match(listed,/data-proxy-remove="1">Listeden çıkar/);
+  assert.match(listed,/2 proxy eklendi, 0 güncellendi\. Okunamayan satırlar: 3\. satır \(biçim tanınmadı\)/);
+  assert.match(listed,/2\. socks5:\/\/b\.test<\/strong> <span class="tag warm">çalışmıyor/);
+  assert.doesNotMatch(listed,/a\.test:\d|type="password"/);                        // never a port or a password field
   const view={adres:'http://proxy.example:8080',kullanici:'abd',parola_kayitli:true,tanimli:true,notlar:["Chrome, kullanıcı adı ve parola isteyen SOCKS5 proxy'yi desteklemiyor"],
     bolge_engelli:[{host:'cvs.com',title:null,evidence:'CVS.com is not available outside of the United States',added_by:'program',first_seen_at:'2026-10-11T11:34:14+00:00',last_seen_at:'2026-10-11T11:34:14+00:00',url:'https://www.cvs.com/x'},
       {host:'winndixie.com',added_by:'kullanici',first_seen_at:'2026-10-11T12:00:00+00:00',last_seen_at:'2026-10-11T12:00:00+00:00'}]};
   const saved=proxySection(view);
-  assert.match(saved,/<span class="tag green">kasada kayıtlı<\/span>/);assert.match(saved,/placeholder="kayıtlı \(değiştirmek için yazın\)"/);
-  assert.match(saved,/id="proxy-password" type="password"/);assert.doesNotMatch(saved,/id="proxy-password"[^>]*value=/);
-  assert.match(saved,/id="proxy-forget"/);assert.match(saved,/SOCKS5 proxy&#39;yi desteklemiyor/);assert.doesNotMatch(saved,/data-region-remove/);
+  assert.match(saved,/SOCKS5 proxy&#39;yi desteklemiyor/);assert.doesNotMatch(saved,/data-region-remove/);
   const reading=proxyReading(view);
   assert.match(reading,/id="proxy-test">Proxy'yi dene/);assert.match(reading,/bot korumasını, hız sınırını ya da yasağı aşmak için kullanılmaz/);
   assert.match(reading,/data-region-remove="cvs.com"/);assert.match(reading,/<td>program<\/td>/);assert.match(reading,/<td>siz<\/td>/);assert.match(reading,/outside of the United States/);
@@ -1750,4 +1760,39 @@ test('the own-homes table shows the weekly rent medians of a rent-only company a
     regions:[{region_name:'Seagrove',homes:30},{region_name:'Seacrest',homes:10}],windows:[{window_key:'a',rent_count:40,rent_median:1468}]}]);
   assert.match(html,/HAFTALIK KİRA ORTANCASI/);
   assert.match(html,/<td>75<\/td><td>\$1,468[^<]*<small>1 haftanın ortancaları · yalnız kira; ücret ve vergi hariç<\/small><\/td>/);
+});
+
+// ---- HEDEF-01 ------------------------------------------------------------------------------------------------------------------
+import {workerBlock} from '../studio/web/jobs.js';
+import {workerNote} from '../studio/web/refresh.js';
+import {trialSection, companyTable} from '../studio/web/trialrun.js';
+test('HEDEF-01 İşler paneli: işçilerin çıkışı (adres yok), şirketi, biten işi, hatası ve sitenin korunma olayları',()=>{
+  const job={status:'running',isciler:{calisan:2,isciler:[{id:'dogrudan#1',cikis:'doğrudan',sirket:'Benchmark',biten:12,hata:0,durum:'çalışıyor'},
+    {id:'proxy:ab#1',cikis:'proxy 2',sirket:null,biten:3,hata:1,durum:'düştü'}],olaylar:[{zaman:'2026-11-26T21:00:00+00:00',metin:'benchmark30a.com: HTTP 429 (proxy 2); bu sitedeki bütün işçiler yavaşladı'}]}};
+  const html=workerBlock(job);
+  assert.match(html,/İşçiler \(2 çalışıyor\)/);assert.match(html,/<td>doğrudan<\/td><td>Benchmark<\/td><td>12<\/td><td>0<\/td><td>çalışıyor<\/td>/);
+  assert.match(html,/<td>proxy 2<\/td><td>—<\/td><td>3<\/td><td>1<\/td><td>düştü<\/td>/);assert.match(html,/bütün işçiler yavaşladı/);
+  assert.equal(workerBlock({...job,status:'done'}),'');assert.equal(workerBlock({status:'running'}),'');
+});
+test('HEDEF-01 tahmin: işçi sayısıyla ve 10, 20 işçiyle; işçilerin nereden eklendiği',()=>{
+  const note=workerNote({workers:{workers:2,proxies:1,examples:{"10":22275,"20":22275}}});
+  assert.match(note,/2 işçiyle \(doğrudan \+ 1 proxy\); 10 işçiyle ~6 sa 11 dk, 20 işçiyle ~6 sa 11 dk/);
+  assert.match(note,/Ayarlar → ABD proxy'si/);assert.equal(workerNote({}),'');
+});
+test('HEDEF-01 deneme çekimi: düğme, toplayıcı tablosu, şirketlerin işçisi ve hatası',()=>{
+  const none=trialSection({son:null,calisan:null,sinirlar:{listings:2,calendars:5,restaurants:3}});
+  assert.match(none,/id="trial-run-start">Deneme çekimini başlat/);assert.match(none,/her kiralama şirketinden 2 ilan ve tek hafta/);
+  assert.match(none,/sonuç gerçek veriye karışmaz/);assert.match(none,/Henüz deneme çekimi yapılmadı/);
+  const running=trialSection({son:null,calisan:{message:'1/14 · Kiralama'},sinirlar:{}});
+  assert.match(running,/id="trial-run-start" disabled/);assert.match(running,/Sürüyor: 1\/14 · Kiralama/);
+  const last={baslangic:'2026-11-26T20:00:00+00:00',bitis:'2026-11-26T20:40:00+00:00',klasor:'deneme/20261126-230000',toplayicilar:[
+    {kaynak:'Kiralama şirketleri',toplayici:'agency-lodging-rates',durum:'done',durum_metni:'okundu',kayit:60,sure_s:1500,mesaj:'60 kayıt',
+     sirketler:[{alan_adi:'realjoy.com',sirket:'RealJoy',durum:'verification_unavailable',durum_metni:'doğrulama/eklenti gerekti; atlandı',ilan:2,eslenen:0,fiyat:0,isciler:[],mesaj:'Eklenti bağlı değil'},
+       {alan_adi:'benchmark30a.com',sirket:'Benchmark',durum:'done',durum_metni:'okundu',ilan:2,eslenen:2,fiyat:2,isciler:['doğrudan','proxy 1']}],olaylar:[{metin:'x: yavaşladı'}]},
+    {kaynak:'Book>Direct',toplayici:'bookdirect-lodging',durum:'failed',durum_metni:'hata',kayit:null,sure_s:30,mesaj:'bağlantı'}]};
+  const html=trialSection({son:last,calisan:null,sinirlar:{}});
+  assert.match(html,/kopya: data\/deneme\/20261126-230000/);assert.match(html,/tag green">okundu<\/span><\/td><td>60<\/td><td>25 dk<\/td>/);
+  assert.match(html,/tag warm">hata<\/span><\/td><td>—<\/td><td>30 sn<\/td>/);
+  assert.match(html,/<td>2 \/ 2 \/ 2<\/td><td>doğrudan, proxy 1<\/td>/);assert.match(html,/doğrulama\/eklenti gerekti; atlandı.*Eklenti bağlı değil/s);
+  assert.match(html,/Sitenin korunması ve işçi olayları/);assert.equal(companyTable([]),'');
 });

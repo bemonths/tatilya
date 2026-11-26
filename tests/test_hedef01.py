@@ -413,3 +413,65 @@ def test_the_api_adds_tests_removes_and_sets_the_site_limit(tmp_path, memory_key
         left = client.delete(f"/api/abd-proxy/liste/{answer['liste'][1]['id']}").json()
         assert [r["etiket"] for r in left["liste"]] == ["socks5://a.test"]
         assert client.post("/api/abd-proxy/liste", json={"satirlar": "  "}).status_code == 422
+
+
+# ---- the trial run --------------------------------------------------------------------------------------------------------------
+
+def test_the_trial_run_works_on_a_copy_with_the_limits_and_never_touches_the_real_database(tmp_path, monkeypatch):
+    from studio import trial_run as T
+    from studio.database import Database
+    from studio.sources.base import CollectionResult
+    monkeypatch.setattr(T, "POLL_S", 0.05)
+    seen = []
+
+    class FakeConnector:
+        name, version, raw_filename, method, diff_enabled = "fake", "fake/1", "raw.json", "API", False
+        def supports(self, source):
+            return bool(source.get("url"))
+        def collect(self, source, raw_path, progress, canceled, *, context):
+            seen.append((source["name"], context.trial, len((context.lodging or {}).get("windows") or []), raw_path))
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text("{}", encoding="utf-8")
+            return CollectionResult([], 0, 0, None, {"deneme": True}, {})
+        def store_records(self, con, run_id, records, related=None):
+            pass
+
+    class Registry:
+        connectors = [FakeConnector()]
+        def for_source(self, source):
+            return self.connectors[0] if self.connectors[0].supports(source) else None
+        def by_name(self, name):
+            return self.connectors[0]
+    db = Database(tmp_path / "studio.sqlite3", registry=Registry())
+    db.initialize()
+    with db.connect() as con:
+        runs_before = con.execute("SELECT COUNT(*) FROM source_runs").fetchone()[0]
+    job = db.add_job("deneme_cekimi", "Deneme çekimi")
+    trial = T.TrialRun(db, job["id"] if isinstance(job, dict) else job)
+    trial.run()
+    with db.connect() as con:
+        assert con.execute("SELECT COUNT(*) FROM source_runs").fetchone()[0] == runs_before      # the real database has no new run
+    done = db.job(trial.job_id)
+    assert done["status"] == "done" and "Deneme çekimi bitti" in done["message"]
+    assert seen and all(trial_limits["listings"] == 2 and trial_limits["windows"] == 1 for _, trial_limits, _, _ in seen)
+    assert all(windows <= 1 for _, _, windows, _ in seen)
+    assert all(str(raw).startswith(str(tmp_path / "deneme")) for _, _, _, raw in seen)           # raw files beside the copy
+    result = T.latest(tmp_path)
+    assert result["klasor"].startswith("deneme/") and len(result["toplayicilar"]) == len(seen)
+    assert {r["durum"] for r in result["toplayicilar"]} == {"done"}
+    copy = Database(tmp_path / result["klasor"] / "studio.sqlite3", registry=Registry())
+    with copy.connect() as con:
+        assert con.execute("SELECT COUNT(*) FROM source_runs").fetchone()[0] == runs_before + len(seen)
+
+
+def test_only_the_last_trials_keep_their_copies(tmp_path):
+    from studio import trial_run as T
+    root = tmp_path / "deneme"
+    for name in ("20261101-000000", "20261102-000000", "20261103-000000", "20261104-000000"):
+        (root / name / "raw").mkdir(parents=True)
+        (root / name / "studio.sqlite3").write_text("x")
+        (root / name / "sonuc.json").write_text("{}")
+    T.prune(root, keep=3)
+    assert not (root / "20261101-000000" / "studio.sqlite3").exists() and not (root / "20261101-000000" / "raw").exists()
+    assert (root / "20261101-000000" / "sonuc.json").exists()
+    assert all((root / n / "studio.sqlite3").exists() for n in ("20261102-000000", "20261103-000000", "20261104-000000"))

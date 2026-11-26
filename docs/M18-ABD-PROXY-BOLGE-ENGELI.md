@@ -9,8 +9,9 @@ Publix (başlık "International | Publix Super Markets", "unable to service cust
 yüzünden değil, kullanıcı Türkiye'den bağlandığı için okunamıyormuş. Eklenti kullanıcının kendi bağlantısını kullandığı için bunu çözemez.
 
 Kullanıcının kararı: ABD dışından erişilemeyen siteler için kendi ABD proxy'si kullanılır (Housing Atlas'ta FEMA için yapılanın aynısı).
-Yöneticinin sınırı: proxy yalnız ABD dışı erişim engeli olan siteler için kullanılır; bot korumasını, hız sınırını ya da yasağı aşmak için
-kullanılmaz; IP döndürme yoktur. Bu kural `CLAUDE.md`'deki tarayıcı kuralına işlendi.
+Yöneticinin sınırı (11 Ekim 2026): proxy bot korumasını, doğrulama sayfasını ya da yasağı aşmak için kullanılmaz. 26 Kasım 2026'dan beri
+(HEDEF-01, kullanıcı kararı) proxy'ler kiralama fiyatı çekiminde hız için de kullanılır: her proxy bir işçidir (aşağıda "İşçiler"). Eski
+"hız sınırını aşmak için kullanılmaz; IP döndürme yoktur" cümlesi bu kararla değişti; `CLAUDE.md`'deki tarayıcı kuralına işlendi.
 
 ## Sayfa türleri (`studio/sources/page_kinds.py`)
 
@@ -166,3 +167,65 @@ kalıbıyla 127.0.0.1'e bağlanabilir.
 - Proxy tarayıcısı (Chrome) yalnız PAC'teki alan adlarını proxy'ye gönderir; Chrome'un kendi arka plan istekleri doğrudan gider.
 - Günlük ihtiyaç zincir kontrolleri (CVS, Publix, Winn-Dixie, The Fresh Market, HCA) toplayıcıda canlı okunmuyor, gözden geçirilmiş
   dosyadan geliyor; proxy'yle okunan sayfalardan bu dosyanın güncellenmesi ayrı bir iş.
+
+## İşçiler (HEDEF-01, 26 Kasım 2026, şema 25, v0.27.0)
+
+Kullanıcının kararı: kiralama fiyatı çekimi Housing Atlas'taki gibi işçilerle yapılır. Her işçi ayrı bir çıkıştan çalışır: doğrudan bağlantı
+ya da kullanıcının proxy'lerinden biri. İşçiler aynı anda çalışır; işçi eklendikçe çekim kısalır.
+
+**Proxy listesi** (`studio/proxy_list.py`; Ayarlar → ABD proxy'si):
+- `ayarlar.json` → `abd_proxy_listesi`: sıra, adres (`şema://sunucu:port`), kullanıcı adı, durum (denenmedi / çalışıyor / çalışmıyor),
+  çıkış ülkesi, son deneme. `abd_proxy` listenin ilk satırının aynısıdır (bölge engelli okumalar onu kullanır); eski tek proxy listenin
+  ilk satırı olur.
+- Parolalar yalnız Windows Kimlik Bilgisi Yöneticisi'nde: ilk satır eski `abd_proxy_parolasi` adıyla, öbürleri `abd_proxy_parolasi_<kimlik>`.
+  İlk satır silinirse ikinci satır ilk olur ve parolası eski ada taşınır.
+- Toplu ekleme: kutuya her satıra bir proxy. Kabul edilen biçimler `sunucu:port:kullanıcı:parola` (Housing Atlas), `sunucu:port`,
+  `kullanıcı:parola@sunucu:port`, `şema://sunucu:port`, `şema://kullanıcı:parola@sunucu:port`; şemasız satır seçilen türü (HTTP ya da
+  SOCKS5) alır. Kaydedince parolalar hemen kasaya yazılır, kutu temizlenir; her satır IP servisine proxy üzerinden tek tek denenir
+  (8'i aynı anda) ve "çalışıyor" / "çalışmıyor" işaretlenir. Hata metni satırı yalnız numarasıyla anar.
+- "Proxy'yi dene" (Veri → Okuma denemeleri) ve satırdaki "Dene": her proxy için ayrı sonuç (çalışıyor mu, çıkış ülkesi).
+
+**İşçiler ve dağıtım** (`studio/workers.py`, `studio/sources/agency_workers.py`):
+- İşçiler: doğrudan bağlantı + "çalışmıyor" işaretli olmayan (ve kullanıcı adı varsa parolası kasada olan) her proxy. Ekranda ve kayıtta
+  bir işçinin çıkışı "doğrudan" ya da "proxy N" (listedeki sırası) diye yazılır; adresi hiçbir yerde yazılmaz.
+- İş birimi: şirketin bir Book>Direct ilanı (ilan sayfası ve bütün haftalarının fiyatı). Sonra şirketin kendi listesi (tek iş), listeden
+  eşlenen ilanlar ve kendi envanterindeki evler (her biri bir iş), en sonda yayımlanmış kiralar (tek iş). Bir aşama bitmeden sonraki
+  başlamaz. İşçi, işi kalan ve site sınırının altında olan şirketlerden işçi başına en çok işi kalanı alır.
+- Bir işin sonuçları iş bitene kadar ayrı tutulur; işçi düşerse yarım iş sayılmaz, başka işçiye baştan verilir.
+- **Düşen proxy:** proxy hatası (ya da bağlantı hatasından sonra IP servisine de cevap vermemesi) → işçi durur, işi kuyruğun başına
+  döner, proxy listede "çalışmıyor" işaretlenir (sonraki çekimde işçi olmaz; "Dene" ile yeniden açılır). 15 dakika cevap vermeyen işçi de
+  bırakılır, işi başkasına geçer.
+- **Canlı havuz:** çekim sürerken liste dakikada bir yeniden okunur; yeni çalışan proxy yeni işçi olur, listeden çıkan proxy'nin işçisi
+  durur ve işi başka işçiye geçer.
+
+**Sitenin korunması:**
+- Bir işçi aynı siteye en az 8 sn arayla istek yapar (`REQUEST_GAP`; şirketin kendi aralığı daha uzunsa o: RealJoy 12 sn).
+- Aynı siteye aynı anda en çok "site başına işçi" kadar işçi (Ayarlar → ABD proxy'si → Sitenin korunması; 1–8, başlangıç 4). Bir siteye
+  düşen yük en çok 4 / 8 sn = 0,5 istek/sn; bu, eski tek çıkışın 2 sn aralığıyla aynıdır.
+- Bir site herhangi bir işçiye 429, engel sayfası ya da doğrulama sayfası verirse o sitedeki bütün işçilerin aralığı iki katına çıkar;
+  tekrar ederse o site için işçi sayısı bire iner. Olaylar çekim kaydına (iş mesajı, İşler paneli, çalışmanın `metadata.isciler.olaylar`)
+  yazılır. RealJoy'da bu kural 12 sn'yi 24 sn'ye çıkarır (GÖREV-25'teki 20 sn ve üstü); GÖREV-25'in 429 kuralı (Retry-After) aynen durur.
+- **Bölge engelli siteler** (360 Blue, Vacasa…) yalnız ABD çıkışlı (ya da ülkesi henüz bilinmeyen) proxy işçilerine gider; yalnız listedeki
+  alan adları proxy'den gider. Hiç ABD proxy'si yoksa şirket atlanır ve kaydedilir.
+- **Tarayıcı gerektiren siteler işçilere bölünmez:** korumalı siteler (oversee.us, exclusive30a.com) "tarayıcı" sırasında programın kendi
+  tarayıcısıyla, yalnız eklentiyle okunan RealJoy "eklenti" sırasında kullanıcının Chrome'unda, bütün şirket olarak okunur; iki sıra
+  işçilerle aynı anda çalışır. Çekim sırasında bir işçiye doğrulama sayfası gösteren sıradan şirket kalan işleriyle eklenti bağlıysa
+  eklenti, değilse tarayıcı sırasına geçer ve tarayıcı o sayfayla açılır; doğrulamayı yine kullanıcı geçer, en sonda 15 dakika beklenir.
+- İşçiler doğrulamayı ya da engeli geçmek için değiştirilmez.
+
+**İşler paneli:** çalışan kiralama işinin kartında "İşçiler (N çalışıyor)" tablosu: çıkış, elindeki şirket, biten iş, hata, durum
+(çalışıyor, boşta, düştü, çıkarıldı, bitti) ve sitenin korunma olayları.
+
+**Tahmin** ("Güncelleme zamanı gelenler", `agency_rates.worker_estimate`, `workers.simulate`): son çekimin şirket başına istek sayıları
+(pencere sayısı değiştiyse oranıyla) ve sonra eklenen şirketlerin tahmini istekleri, aynı kurallarla (site sınırı, işçi başına aralık,
+bölge engelli yalnız proxy'de, tarayıcı sıraları tek başına) işçilere dağıtılır. Tablo bugünkü işçi sayısıyla süreyi, ayrıca 10 ve 20
+işçiyle süreyi gösterir. Bizim tahminimizdir.
+
+**Testler** (`tests/test_hedef01.py`, sahte HTTP, her işçi ayrı sahte istemci): dağıtım; düşen proxy'nin işinin devri ve işaretlenmesi;
+site başına sınır; 429'da bütün işçilerin yavaşlaması ve ikincisinde tek işçi; bölge engelli sitenin yalnız ABD proxy'sine gitmesi;
+tarayıcı ve eklenti sıraları; canlı havuz (eklenen ve çıkarılan proxy); toplu ekleme ve parolaların yalnız kasada durması; tahmin.
+
+**winndixie.com'un proxy kimlik doğrulama penceresi** (GÖREV-25 notu): bir istek yönlendirmeler boyunca aynı kimliği taşıyor; proxy
+başka sunucuya yönlenen her adım için yeniden soruyor. Eski kural (`auth_answer`) bu ikinci soruyu yanlış parola sayıp iptal ediyordu
+(`ERR_INVALID_AUTH_CREDENTIALS`). Artık isteğin yolundaki her adrese bir kez cevap verilir (istek başına en çok 8 adres); aynı adres
+ikinci kez sorulursa (yanlış parola) yine iptal edilir.

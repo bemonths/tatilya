@@ -263,4 +263,7 @@ def test_refresh_status_lists_the_new_collectors_and_adds_new_companies_to_the_r
     item = next(i for i in refresh.status(db, "30a", today=date(2026, 11, 16))["items"] if i["connector"] == "agency-lodging-rates")
     added = item["added_companies"]
     assert [(a["domain"], a["listings"], a["requests"]) for a in added] == [("benchmark30a.com", 2, 2 * (1 + 12 * ar.QUOTE_REQUESTS))]
-    assert item["estimate_seconds"] == 3600 + added[0]["seconds"] and "+50 istek" in item["estimate_note"] and "Benchmark Management" in item["estimate_note"]
+    # HEDEF-01: the estimate lays the requests out on the workers (one direct worker here: the old companies asked nothing, Benchmark's
+    # 50 requests at 8 s + 1 s), no longer the last run's duration plus the added companies
+    assert item["estimate_seconds"] == 50 * (ar.REQUEST_GAP + ar.ANSWER_SECONDS) and "eklenen 1 şirketin istekleri" in item["estimate_note"]
+    assert item["workers"]["workers"] == 1 and item["workers"]["examples"]["10"] == int(50 * 9 / 2)   # two listings: at most two workers

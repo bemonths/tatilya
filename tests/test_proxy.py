@@ -334,6 +334,14 @@ def test_the_proxy_credentials_are_answered_once_over_cdp():
     assert first == {"requestId": "1", "authChallengeResponse": {"response": "ProvideCredentials", "username": "abd", "password": SECRET}}
     assert R.auth_answer({"requestId": "1", "authChallenge": {"source": "Proxy"}}, "abd", SECRET, asked)["authChallengeResponse"] == {"response": "CancelAuth"}
     assert R.auth_answer({"requestId": "2", "authChallenge": {"source": "Server"}}, "abd", SECRET, asked)["authChallengeResponse"] == {"response": "Default"}
+    # HEDEF-01 (winndixie.com): the same request redirected to another host is asked again by the proxy: it gets the credentials
+    # once more; the same address asked twice (a wrong password) is still cancelled
+    hop = lambda url: R.auth_answer({"requestId": "7", "authChallenge": {"source": "Proxy"}, "request": {"url": url}}, "abd", SECRET, asked)
+    assert hop("https://winndixie.com/")["authChallengeResponse"]["response"] == "ProvideCredentials"
+    assert hop("https://www.winndixie.com/")["authChallengeResponse"]["response"] == "ProvideCredentials"
+    assert hop("https://www.winndixie.com/")["authChallengeResponse"] == {"response": "CancelAuth"}
+    assert all(hop(f"https://h{i}.winndixie.com/")["authChallengeResponse"]["response"] == "ProvideCredentials" for i in range(R.AUTH_HOPS - 2))
+    assert hop("https://one-too-many.winndixie.com/")["authChallengeResponse"] == {"response": "CancelAuth"}
     assert "***" in repr(R.ProxyAuth.__new__(R.ProxyAuth))
 
 

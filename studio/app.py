@@ -513,6 +513,29 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         first = results[0]
         return {**{k: first.get(k) for k in ("ok", "ip", "ulke", "uyari", "satirlar")}, "sonuclar": results}
 
+    # --- HEDEF-01: the trial run (Veri → Okuma denemeleri → "Deneme çekimini başlat"; studio/trial_run.py) ---------------------------
+
+    def running_trial(destination_id):
+        return next((j for j in db.jobs(destination_id) if j.get("kind") == "deneme_cekimi" and j["status"] in ("queued", "running")), None)
+
+    @app.get("/api/deneme-cekimi")
+    def trial_run_view(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        from . import trial_run
+        return {"son": trial_run.latest(db.path.parent), "calisan": running_trial(destination_id), "sinirlar": trial_run.LIMITS}
+
+    @app.post("/api/deneme-cekimi", status_code=201)
+    def trial_run_start(destination_id: str = DEFAULT_DESTINATION_ID):
+        """Every collector once, small, on the real sites and with the workers, in the program's own copy of the database."""
+        selected(destination_id)
+        from . import trial_run
+        if running_trial(destination_id):
+            raise Conflict("Bir deneme çekimi zaten sürüyor.")
+        if any(j["status"] in ("queued", "running") and j.get("kind") == "source_collection" for j in db.jobs(destination_id)):
+            raise Conflict("Bir veri toplama işi sürüyor; bitince deneme çekimini başlatın.")
+        factory = getattr(app.state, "trial_region", None) or (lambda copy: region_reader.RegionAccess(copy, db.path.parent))
+        return trial_run.start(db, extension=app.state.extension, region_factory=factory, destination_id=destination_id)
+
     # --- HEDEF-01: the proxy list (each working proxy is one worker of a rental price run) -----------------------------------------
 
     @app.post("/api/abd-proxy/liste")
