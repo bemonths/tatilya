@@ -14,8 +14,8 @@
   işçilerle, veritabanının kopyasında. Üç kez gerçek sitelerde çalıştırıldı; bulunan hatalar düzeltildi; son denemede 13 toplayıcının 11'i, 28 kiralama şirketinin 21'i okundu
   (kalan 7 şirket yalnız Mucahit'in yapabileceği işe bağlı: 5'i eklenti site izni, 2'si çalışan ABD proxy'si).
 - **Tahmin** işçi sayısına göre: 1 işçi ~47 sa, 2 işçi ~27 sa, 5 işçi ~11 sa, 10 ve 20 işçi ~6 sa.
-- **Önemli:** kayıtlı tek proxy 26 Kasım'da çalışmadı. Proxy listesi girilmeden kiralama çekimi tek işçiyle ~2 gün sürer ve bölge engelli
-  şirketler atlanır. Gece çekiminden önce proxy listesinin girilmesi gerekir (tarif aşağıda).
+- Kayıtlı tek proxy 26 Kasım'da çalışmadı; Mucahit gece 12 proxy girdi (hepsi çalışıyor). **Bugünkü tahmin: 13 işçiyle kiralama ~6 sa 10 dk,
+  bu gecenin toplamı ~7 sa 15 dk.** 13 işçili 4. deneme çekiminde 28 kiralama şirketinin hepsi okundu.
 
 ---
 
@@ -85,14 +85,21 @@ Ayrıntı ve kurallar: `docs/M18-ABD-PROXY-BOLGE-ENGELI.md` "İşçiler". Kod: `
 
 ### Gerçek sitelerdeki sonuç
 
-Üç kez çalıştırıldı; işçi: yalnız **doğrudan** (kayıtlı tek proxy çalışmadı) ve iki sıra (tarayıcı, eklenti). Kullanıcı yoktu (doğrulama ve
-eklenti izni verilemedi).
+Dört kez çalıştırıldı. İlk üçünde işçi yalnız **doğrudan** idi (kayıtlı tek proxy çalışmadı) ve kullanıcı yoktu (eklenti izni ve doğrulama
+verilemedi). Dördüncüsünde Mucahit 12 proxy girmiş, eklentiyi yenilemiş ve beş siteye eklenti izni vermişti.
+
+**4. deneme (13 işçi):** 28 kiralama şirketinin hepsi "tamamlandı"; her işçi iş aldı, hiçbir proxy düşmedi. Bölge engelli 360 Blue (listesi 583
+ev) ve Vacasa (300 ev) ABD proxy'siyle okundu; denemedeki ikişer ilanları eşleme kuralına takıldı (360 Blue: Book>Direct ilanında oda sayısı
+yok; Vacasa: aynı 15 m içinde başka ilan, çok daireli yapı) — kural gereği, hata değil. Doğrulama gösteren beş site (Alys Beach, Rosemary
+Beach, 30A Escapes, Ocean Reef, Panhandle Getaways) eklenti sırasına geçip eklentiyle okundu. Avrupa çıkışlı proxy'lere özel bir ret
+görülmedi (proxy'lerin aldığı 403/429'ların hepsi zaten bilinen doğrulama sayfaları). Aşağıdaki tablolar 3. denemedendir.
 
 | Deneme | Zaman | Kod | Sonuç | Klasör |
 |---|---|---|---|---|
 | 1 | 19:37–20:53 | `43f8f82` | 13 toplayıcının 8'i okundu | `data/deneme/20261126-193747/` |
 | 2 | 21:03–22:05 (iptal) | `519ee34` | eklenti sırası takıldı (aşağıda), iptal edildi | `data/deneme/20261126-210328/` |
-| 3 | 22:07–23:41 | `1bd6f8b` | 13 toplayıcının 11'i okundu | `data/deneme/20261126-220734/` |
+| 3 | 22:07–23:41 | `1bd6f8b` | 13 toplayıcının 11'i okundu (yalnız doğrudan işçi) | `data/deneme/20261126-220734/` |
+| **4** | **23:55–00:16** | `dfe4ab1` | **13 işçiyle** (doğrudan + Mucahit'in 12 proxy'si: 8 DE, 2 GB, 1 NL, 1 US), eklenti izinleri verilmiş: 13 toplayıcının 11'i; kiralamada **28 şirketin 28'i** tamamlandı, kiralama kısmı **15 dk** | `data/deneme/20261126-235534/` |
 
 **Toplayıcılar (3. deneme)**
 
@@ -163,7 +170,7 @@ düştü. Düzeltme `1bd6f8b` (sıra, bitmiş şirketin tarayıcısını kendi i
 | Overpass (günlük ihtiyaç noktaları) tek 502'de düştü | Meşgulken 30/60/120/240 sn bekleyip yeniden sorar (yol ağıyla aynı kural) | `test_a_busy_overpass_server_is_asked_again_after_a_wait` |
 | Deneme çekiminde 30A Beach Girls'ün AvantStay listesi 144 evin hepsini açtı (deneme sınırı uygulanmıyordu) | AvantStay listesi `max_pages` sınırına uyar | `test_the_trial_run_reads_only_a_few_homes_of_the_avantstay_list` |
 | winndixie.com proxy kimlik doğrulama penceresi (GÖREV-25 notu): yönlendirmede aynı istek kimliğiyle gelen ikinci proxy sorusu "yanlış parola" sayılıp iptal ediliyordu (`ERR_INVALID_AUTH_CREDENTIALS`) | İsteğin yolundaki her adrese bir kez cevap (en çok 8); aynı adres ikinci kez sorulursa yine iptal | `test_proxy.py` (auth_answer) |
-| CI'daki "test_extension kapanışında takılma" (bu hedefte bir kez, 45856622744) | Takılmanın ek açıklaması artık son test satırlarını ve her iş parçacığının program satırlarını taşıyor; bir sonraki takılmada kök neden görülecek | — |
+| CI'daki "test_extension kapanışında takılma" (GÖREV-18'den beri ara sıra) | Tanı adımı son test satırlarını ve iş parçacıklarının program satırlarını gösterecek biçimde düzeltildi; ikinci takılmada kök neden görüldü: test eklentilerinin iç döngüsü test bitince durmuyordu; düzeltildi | CI 45895201380 |
 
 ### Kalıcı engeller ve kullanıcı işi
 
@@ -259,15 +266,16 @@ gelen öbür toplayıcılar: Book>Direct (~1 sa) ve Yol ağı (~1 dk); restoran 
 
 ## 7. Açık kalanlar
 
-- **Proxy listesi** kullanıcıdan gelecek; kayıtlı tek proxy 26 Kasım'da çalışmadı. Deneme çekimi bu yüzden yalnız doğrudan işçiyle yapıldı;
-  proxy işçileri gerçek sitelerde denenmedi (testlerde sahte HTTP'yle denendi). Bölge engelli 360 Blue, Vacasa ve proxy'yle okunan
-  CVS/Publix/Winn-Dixie sayfaları bu yüzden gerçek denemede okunmadı; winndixie düzeltmesi de gerçek proxy'yle denenemedi.
-- **Visit South Walton'ın restoran dizini ve mahalleleri** (site yeniden yapıldı): restoran listesinde alt kategori ("Restaurants") bilgisi
+- **winndixie.com düzeltmesi** gerçek proxy'yle programın tarayıcısında denenmedi (bu gece o site yok; günlük ihtiyaç toplayıcısı zincir
+  sitelerini canlı okumuyor).
+- **ABD çıkışlı proxy tek:** bölge engelli 360 Blue ve Vacasa yalnız ona gidiyor (tahminde ~4,8 sa; toplamı aşmıyor). Düşerse bu iki şirket
+  o gece atlanır.
+- **Visit South Walton'ın restoran dizini ve mahalleleri** (site yeniden yapıldı; Mucahit 27 Kasım gecesi sitenin kendi API'sinin
+  kullanılmasını onayladı, okuyucular ayrı bir dalda yazılıyor): restoran listesinde alt kategori ("Restaurants") bilgisi
   boş geliyor (aynı listede catering, bar vb.; 235 işletme), mahalle kayıtlarında koordinat, etiket ve değişiklik zamanı yok (tablo
   koordinatı zorunlu tutuyor). İkisi kaynağın ne söylediğine dair karar istiyor; okuyucu yazılmadı. Bu iki toplayıcı çalıştırılırsa
   "kaynak yapısı değişti" hatası verir; eski kayıtlar korunur. Bu gece zamanları gelmediği için gece çekimini etkilemez.
 - **Doğrulama gerektiren siteler** kullanıcı doğrularsa okunur (tarif).
-- **CI'daki ara sıra takılma** (test_extension kapanışı): tanı adımı düzeltildi, kök neden bir sonraki takılmada.
 
 ## 8. Yedekler
 
@@ -288,7 +296,9 @@ gelen öbür toplayıcılar: Book>Direct (~1 sa) ve Yol ağı (~1 dk); restoran 
   hatada işin kuyrukta kalması, durdurulan şirketin öbür işçilerinin okumayı sürdürmesi, art arda ret sayacının işçiler arasında paylaşılması,
   bölge engelli şirketin havuz yenilenmeden atlanması, geç eklenen işçinin beklenmemesi.
 - **GitHub CI:** 45856622744 (`190944c`) bilinen test_extension kapanış takılmasına düştü (tanı adımı düzeltildi); 45859402665 (`43f8f82`)
-  başarılı; 45882082512 (`60ceb89`) başarılı; son commit: FINAL_CI.
+  başarılı; 45882082512 (`60ceb89`) başarılı; 45892968427 (`29484d4`) yine test_extension kapanışında takıldı — bu kez yeni tanı satırları takılan yeri gösterdi:
+  sahte eklentinin iç döngüsü test bitince durmuyordu (`/sonraki`'yi sorup duruyordu); üç test dosyasında düzeltildi (`dfe4ab1`), CI
+  45895201380 başarılı. Son commit: bölüm 1'deki etiket commit'i.
 
 ## 10. Uyulan kurallar
 
