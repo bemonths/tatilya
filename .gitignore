@@ -10,3 +10,6 @@ work/
 !.env.example
 # Kullanıcının kısayolları (kisayol-olustur.ps1 -Hedef <program klasörü>); depoya girmez
 *.lnk
+
+# agent worktrees (local)
+.claude/worktrees/
