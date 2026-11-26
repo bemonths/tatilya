@@ -262,20 +262,37 @@ def test_every_page_is_read(tmp_path):
     assert sum(1 for r in result.related["results"] if r["window_key"] == "fall-2026" and r["location_id"] == 2565) == 60
 
 
-def test_a_changing_total_is_read_again_then_fails(tmp_path):
+def shifting(total):
     class Shifting(BookDirectMock):
         def __call__(self, request):
             response = super().__call__(request)
             if request.url.path.endswith("/lodgings.json") and request.url.params["group_ids[]"] == "2565" and request.url.params["page"] == "2":
                 body = json.loads(response.content)
-                body["request"]["total_count"] = 61
+                body["request"]["total_count"] = total
                 return self.json(body)
             return response
-    mock = Shifting()
+    return Shifting()
+
+
+def test_a_changing_total_is_read_again_then_fails(tmp_path):
+    mock = shifting(90)
     with pytest.raises(SourceError, match="tutarlı bir sonuç vermedi"):
         run(tmp_path, mock)
     pages = [r.url.params["page"] for r in mock.seen if r.url.path.endswith("/lodgings.json") and r.url.params["group_ids[]"] == "2565"]
     assert pages == ["1", "2"] * bl.SEARCH_ATTEMPTS
+
+
+def test_a_total_that_only_wobbles_is_kept_with_a_note(tmp_path):
+    """HEDEF-01: Seaside's total flipped between 153 and 154 on 26 Nov 2026; after every attempt a wobble of one listing keeps the last
+    attempt's listings and writes the wobble down."""
+    mock = shifting(61)
+    result = run(tmp_path, mock)
+    pages = [r.url.params["page"] for r in mock.seen if r.url.path.endswith("/lodgings.json") and r.url.params["group_ids[]"] == "2565"
+             and r.url.params["checkin"] == "20261017"]
+    assert pages == ["1", "2"] * bl.SEARCH_ATTEMPTS
+    notes = [n for n in result.metadata["search_notes"] if n["window_key"] == "fall-2026"]
+    assert notes and notes[0]["totals"] == [60, 61] and notes[0]["read"] == 60 and "60–61 arasında değişti" in notes[0]["note"]
+    assert sum(1 for r in result.related["results"] if r["window_key"] == "fall-2026" and r["location_id"] == 2565) == 60
 
 
 def test_past_windows_are_skipped_and_recorded(tmp_path):

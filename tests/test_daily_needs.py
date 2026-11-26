@@ -300,3 +300,21 @@ def test_profile_reviewed_files_name_their_source_url_date_and_coordinate_source
                 assert row["koordinat_kaynagi"] or "oordinat" in row["not"]
     health = dn.read_reviewed(thirty_a.HEALTH_POINTS, CATEGORIES)
     assert {r["kategori"] for r in health} == {"emergency", "urgent_care"}
+
+
+def test_a_busy_overpass_server_is_asked_again_after_a_wait(tmp_path, monkeypatch):
+    """HEDEF-01: the trial run of 26 Nov 2026 failed on one 502 from the public Overpass server; it is asked again after waits."""
+    monkeypatch.setattr(climate_http, "RETRY_SECONDS", 0)
+    calls, waits = [], []
+    monkeypatch.setattr(dn, "pause", lambda seconds, canceled: waits.append(seconds))
+    good = answer_mock()
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(502, text="busy") if len(calls) <= 2 else good(request)
+    config = {"area": AREA, "categories": CATEGORIES, "reviewed_files": []}
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = dn.collect(tmp_path / "raw" / "manifest.json", lambda *a: None, lambda: False, config=config, client=client, today=date(2026, 10, 9))
+    assert result.metadata["point_counts"]["big_supermarket"] == 1 and waits[:1] == [30]
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(502, text="busy"))) as client, pytest.raises(SourceError):
+        dn.collect(tmp_path / "raw2" / "manifest.json", lambda *a: None, lambda: False, config=config, client=client, waits=(1, 2))

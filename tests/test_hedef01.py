@@ -509,3 +509,37 @@ def test_the_track_sites_own_security_check_is_a_verification_page_and_moves_the
     company = result.related["companies"][0]
     assert company["status"] == "done" and company["verification"] == "completed"
     assert len([1 for _, h, _ in net.seen if h == "track.test"]) == 1 and len(priced(result)) == 6
+
+
+def test_the_rebuilt_visit_south_walton_site_gives_the_beach_accesses_from_its_static_query(tmp_path, monkeypatch):
+    """26 Nov 2026 (the trial run): visitsouthwalton.com was rebuilt with Gatsby; the map's markers are the static query
+    `allBeachAccess` (page-data.json names the template and its static queries; the template's script names the query's hash).
+    Fixtures cut from that day's answers (six of the 70 points)."""
+    from pathlib import Path
+    from studio.sources import beaches
+    monkeypatch.setattr(beaches, "GATSBY_GAP", 0)
+    folder = Path(__file__).parent / "fixtures" / "hedef01"
+    asked = []
+
+    def handler(request):
+        asked.append(request.url.path)
+        path = request.url.path
+        if path == "/beach-bay-access-locations/":
+            return httpx.Response(200, content=(folder / "vsw-plaj-sayfasi.html").read_bytes(), headers={"content-type": "text/html"})
+        if path == "/page-data/beach-bay-access-locations/page-data.json":
+            return httpx.Response(200, content=(folder / "vsw-plaj-page-data.json").read_bytes(), headers={"content-type": "application/json"})
+        if path.startswith("/component---src-templates-beach-access-map-js"):
+            return httpx.Response(200, content=(folder / "vsw-plaj-bileseni.js").read_bytes())
+        if path == "/page-data/sq/d/2083699297.json":
+            return httpx.Response(200, content=(folder / "vsw-plaj-sq.json").read_bytes(), headers={"content-type": "application/json"})
+        return httpx.Response(200, content=b'{"data": {"other": {}}}')
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        batch = beaches.collect(tmp_path / "source.html", lambda *a: None, lambda: False, client=client)
+    assert asked[:4] == ["/beach-bay-access-locations/", "/page-data/beach-bay-access-locations/page-data.json",
+                         asked[2], "/page-data/sq/d/2083699297.json"] and len(asked) == 4          # the template names the hash: no other query asked
+    assert batch.total_count == 6 and len(batch.records) == 4 and batch.excluded_count == 2          # Miramar and the bay access left out
+    assert {r["city"] for r in batch.records} == {"Santa Rosa Beach", "Inlet Beach"} and {r["access_type"] for r in batch.records} == {"neighborhood"}
+    assert batch.source_updated == "Nov 26, 2026 9:06:32 AM" and batch.metadata["kaynak_bicimi"] == "gatsby-statik-sorgu"
+    assert all(len(r["external_id"]) == 24 for r in batch.records)                                   # the same Simpleview ids as before
+    assert sorted(p.name for p in tmp_path.glob("gatsby-*")) == ["gatsby-01-page-data.json", f"gatsby-02-{Path(asked[2]).name}",
+                                                                 "gatsby-03-2083699297.json"]        # every answer kept beside the page

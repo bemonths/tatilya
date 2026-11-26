@@ -12,7 +12,12 @@ from .base import CollectionResult, SourceError, CollectionCanceled
 
 SOURCE_URL = "https://www.visitsouthwalton.com/beach-bay-access-locations/"
 ALLOWED_HOSTS = frozenset({"visitsouthwalton.com", "www.visitsouthwalton.com"})
-PARSER_VERSION = "south-walton-beaches/2"
+PARSER_VERSION = "south-walton-beaches/3"
+# HEDEF-01 (26 Nov 2026): the site was rebuilt with Gatsby; the access points are the static query `allBeachAccess` (studio/sources/gatsby.py)
+GATSBY_KEY = "allBeachAccess"
+TYPE_NAMES = {"regional beach access": "regional", "neighborhood beach access": "neighborhood", "bay and lake access": "bays-lakes",
+              "bay & lake access": "bays-lakes"}
+GATSBY_GAP = 1.0
 MAX_BYTES = 5_000_000
 COASTAL_CITIES = frozenset({"Santa Rosa Beach", "Grayton Beach", "Seacrest", "Inlet Beach"})
 COASTAL_TYPES = frozenset({"regional", "neighborhood"})
@@ -63,6 +68,57 @@ def parse_page(content: bytes) -> BeachBatch:
                 raise ValueError("Beklenmeyen ayırıcı")
     except (IndexError, ValueError) as exc:
         raise SourceError("Harita verisinin biçimi değişmiş veya sayfa eksik. Önceki kayıtlar korundu.") from exc
+    if not raw_records:
+        raise SourceError("Kaynak boş bir kayıt listesi döndürdü. Önceki kayıtlar korundu.")
+    records, seen = [], set()
+    for item in raw_records:
+        if not isinstance(item, dict):
+            raise SourceError("Kaynakta beklenmeyen bir kayıt biçimi var.")
+        for field in ("id", "name", "city", "type", "address"):
+            if not isinstance(item.get(field), str) or not item[field].strip() or len(item[field]) > 1000:
+                raise SourceError(f"Kaynak kaydında zorunlu alan eksik veya geçersiz: {field}.")
+        if item["id"] in seen:
+            raise SourceError("Kaynakta yinelenen kayıt kimliği var. Önceki kayıtlar korundu.")
+        seen.add(item["id"])
+        if item["type"] not in ("regional", "neighborhood", "bays-lakes"):
+            raise SourceError("Kaynak yeni bir erişim türü içeriyor; bağlayıcı güncellenmeli.")
+        latitude, longitude = item.get("lat"), item.get("lng")
+        if (type(latitude) not in (int, float) or type(longitude) not in (int, float)
+                or not math.isfinite(latitude) or not math.isfinite(longitude)
+                or not 30 <= latitude <= 31 or not -87 <= longitude <= -85):
+            raise SourceError("Kaynak kaydında geçersiz veya bölge dışında koordinat var.")
+        features = item.get("features")
+        if not isinstance(features, list) or any(not isinstance(feature, str) or len(feature) > 160 for feature in features):
+            raise SourceError("Kaynak kaydının olanak listesi okunamadı.")
+        if item["city"].strip() not in COASTAL_CITIES or item["type"] not in COASTAL_TYPES:
+            continue
+        records.append({"external_id": item["id"], "name": item["name"].strip(), "city": item["city"].strip(),
+                        "address": item["address"].strip(), "latitude": latitude, "longitude": longitude,
+                        "access_type": item["type"], "features": list(dict.fromkeys(feature.strip() for feature in features))})
+    if not records:
+        raise SourceError("Seçilen 30A kıyı kapsamına uyan kayıt bulunamadı. Önceki kayıtlar korundu.")
+    updated_match = re.search(r"Latest map update:\s*(?:<[^>]+>\s*)*([^<\r\n]+)", text)
+    source_updated = unescape(updated_match.group(1)).strip() if updated_match else None
+    return BeachBatch(records, len(raw_records), len(raw_records)-len(records), source_updated)
+
+
+def gatsby_records(nodes):
+    """The access points of the rebuilt site (HEDEF-01) in the records' old shape: id, name, city, type, address, lat, lng, features."""
+    out = []
+    for node in nodes:
+        types = [str((t.get("object") or {}).get("name") or "").strip() for t in node.get("Type") or [] if isinstance(t, dict)]
+        kinds = sorted({TYPE_NAMES.get(t.lower()) for t in types if t} - {None})
+        unknown = [t for t in types if t and t.lower() not in TYPE_NAMES]
+        if unknown or len(kinds) != 1:
+            raise SourceError("Kaynak yeni bir erişim türü içeriyor; bağlayıcı güncellenmeli.")
+        features = [str((f.get("object") or {}).get("name") or "").strip() for f in node.get("Feature") or [] if isinstance(f, dict)]
+        out.append({"id": node.get("id"), "name": node.get("name"), "city": node.get("city"), "type": kinds[0], "address": node.get("address"),
+                    "lat": node.get("lat"), "lng": node.get("lng"), "features": [f for f in features if f]})
+    return out
+
+
+def parse_records(raw_records, text):
+    """The checks and the 30A coastal selection of the access points (the old page's markers or the rebuilt site's static query)."""
     if not raw_records:
         raise SourceError("Kaynak boş bir kayıt listesi döndürdü. Önceki kayıtlar korundu.")
     records, seen = [], set()
@@ -166,7 +222,16 @@ def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         raw_path.write_bytes(content)
         progress(50, "Ham sayfa kaydedildi. Harita noktaları ayrıştırılıyor.")
-        batch = parse_page(content)
+        text = content.decode("utf-8-sig", errors="replace")
+        if "initMarkers" in text:
+            batch = parse_page(content)
+        else:          # HEDEF-01: the rebuilt site; the page's own static data files (kept beside the page)
+            from . import gatsby
+            data, raws = gatsby.static_query(lambda url: fetch_json(client, url, canceled), SOURCE_URL, text, GATSBY_KEY)
+            for number, (url, body) in enumerate(raws, start=1):
+                (raw_path.parent / f"gatsby-{number:02d}-{Path(urlsplit(url).path).name}").write_bytes(body)
+            batch = parse_records(gatsby_records(gatsby.nodes(data.get(GATSBY_KEY))), text)
+            batch.metadata["kaynak_bicimi"] = "gatsby-statik-sorgu"
         if canceled():
             raise CollectionCanceled()
         progress(85, f"{batch.total_count} harita noktası okundu; {len(batch.records)} kıyı kaydı seçildi.")
@@ -174,6 +239,26 @@ def collect(raw_path: Path, progress, canceled, *, client=None) -> BeachBatch:
     finally:
         if owns_client:
             client.close()
+
+
+def fetch_json(client, url, canceled):
+    """One of the site's own static data files (same host, HTTPS, no redirect, size limit), GATSBY_GAP apart."""
+    parts = urlsplit(url)
+    if parts.scheme != "https" or parts.hostname not in ALLOWED_HOSTS:
+        raise SourceError("Sitenin veri dosyası başka bir alan adında; istenmedi.")
+    for _ in range(int(GATSBY_GAP * 10)):
+        if canceled():
+            raise CollectionCanceled()
+        time.sleep(0.1)
+    try:
+        response = client.get(url, headers={"Accept": "application/json,text/javascript,*/*"})
+    except httpx.RequestError as exc:
+        raise SourceError("Sitenin veri dosyası okunamadı (bağlantı).") from exc
+    if response.status_code != 200:
+        raise SourceError(f"Sitenin veri dosyası HTTP {response.status_code} döndürdü. Önceki kayıtlar korundu.")
+    if len(response.content) > MAX_BYTES:
+        raise SourceError("Sitenin veri dosyası boyut sınırını aştı.")
+    return response.content
 
 
 class BeachesConnector:

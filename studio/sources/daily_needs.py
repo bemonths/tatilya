@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .base import CollectionResult, SourceError
-from .climate_http import Reader, make_client
+from .climate_http import Reader, make_client, pause
 from .geo import distance_km
 
 CONNECTOR_VERSION = "openstreetmap-daily-needs/1"
@@ -220,7 +220,11 @@ def merge_chain_checks(points, rows, categories=None):
     return points, checks
 
 
-def collect(raw_path, progress, canceled, *, config, client=None, today=None):
+BUSY_WAITS = (30, 60, 120, 240)      # HEDEF-01 (the trial run: 502): the public Overpass server at capacity is asked again after these waits
+BUSY_STATUSES = (429, 502, 503, 504)
+
+
+def collect(raw_path, progress, canceled, *, config, client=None, today=None, waits=BUSY_WAITS):
     if not config or not config.get("area") or not config.get("categories"):
         raise SourceError("Bu destinasyon için günlük ihtiyaç alanı ve kategorileri yapılandırılmamış.")
     area, categories = config["area"], config["categories"]
@@ -230,7 +234,17 @@ def collect(raw_path, progress, canceled, *, config, client=None, today=None):
     try:
         progress(5, "OpenStreetMap (Overpass API) sorgulanıyor: tek sorgu.")
         query = overpass_query(area, categories)
-        body, _ = reader.get(OVERPASS_URL, suffix=".json", note="overpass", content_types={"application/json"}, params={"data": query})
+        for attempt, wait in enumerate((0, *waits)):
+            if wait:
+                progress(5, f"Overpass sunucusu meşgul; {wait} sn sonra yeniden soruluyor.")
+                pause(wait, canceled)
+            try:
+                body, _ = reader.get(OVERPASS_URL, suffix=".json", note="overpass", content_types={"application/json"}, params={"data": query})
+                break
+            except SourceError:
+                last = reader.manifest["responses"][-1]["status"] if reader.manifest["responses"] else None
+                if last not in BUSY_STATUSES or attempt == len(waits):
+                    raise
         points, stamp = parse(body, categories)
         progress(70, f"{len(points)} nokta okundu; gözden geçirilmiş zincir ve kurum kontrolleri ekleniyor.")
         files = list(config.get("reviewed_files") or ())

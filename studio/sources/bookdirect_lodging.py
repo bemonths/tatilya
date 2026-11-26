@@ -34,6 +34,10 @@ LIVE_BATCH, LIVE_ATTEMPTS, LIVE_PAUSE, LIVE_BACKOFF = 50, 5, 1.0, 0.75
 CALENDAR_DAYS = 365
 # A search whose total changes between its pages (a listing added or removed meanwhile) is read again from page 1, after a pause.
 SEARCH_ATTEMPTS, SEARCH_RETRY_PAUSE = 3, 20.0
+# HEDEF-01 (26 Nov 2026, the trial run): Seaside's total flipped between 153 and 154 in every attempt (one listing coming and going
+# with its availability). After the attempts, a total that only wobbles this little is accepted with the last attempt's listings and
+# the wobble written in the run's metadata (`search_notes`); a bigger difference still fails the run.
+SEARCH_WOBBLE = (2, 0.02)
 CALENDAR_MISSING = (400, 404, 422)   # a listing whose calendar the source does not serve is recorded, not a failed run
 MAX_BYTES = 8_000_000
 JSON_TYPES = {"application/json"}
@@ -337,13 +341,13 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
         unmapped = sorted(name for name in by_name if name not in mapping)
         filters = sorted(((by_name[name], name, region_id) for name, region_id in mapping.items()), key=lambda item: item[1])
 
-        listings, results, filter_rows = {}, {}, []
+        listings, results, filter_rows, search_notes = {}, {}, [], []
         steps = len(active) * len(filters)
         for index, window in enumerate(active):
             for position, (location_id, location_name, region_id) in enumerate(filters):
                 done = index * len(filters) + position
                 progress(5 + int(35 * done / steps), f"{window['label']}: {location_name} aranıyor.")
-                total, pages, rows = search(call, window, location_id, location_name, clone, canceled)
+                total, pages, rows = search(call, window, location_id, location_name, clone, canceled, notes=search_notes)
                 for listing, result in rows:
                     known = listings.get(listing["lodging_id"])
                     if known and known["title"] != listing["title"]:
@@ -404,7 +408,7 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
                     "windows": [{k: w[k] for k in ("window_key", "label", "checkin", "checkout", "status")} for w in windows],
                     "skipped_past_windows": [w["window_key"] for w in windows if w["status"] == "skipped_past"],
                     "location_filters": [{"location_id": f[0], "location_name": f[1], "region_id": f[2]} for f in filters],
-                    "unmapped_locations": unmapped, "search_rows": len(results), "listing_count": len(listings),
+                    "unmapped_locations": unmapped, "search_rows": len(results), "listing_count": len(listings), "search_notes": search_notes,
                     "live_rate_requests": live_requests, "request_count": request_count, "priced": priced,
                     "calendars_read": len(calendars), "calendars_skipped_hidden": hidden_calendars, "scope": SCOPE}
         progress(97, f"{len(listings)} benzersiz ilan, {len(results)} arama satırı ve {len(calendars)} fiyat takvimi kaydediliyor.")
@@ -420,7 +424,7 @@ def collect(raw_path, progress, canceled, *, config, regions, client=None, today
             client.close()
 
 
-def search(call, window, location_id, location_name, clone, canceled=lambda: False):
+def search(call, window, location_id, location_name, clone, canceled=lambda: False, notes=None):
     """All pages of one window x location filter; a changing total or an incomplete page set is read again from page 1 (up to
     SEARCH_ATTEMPTS times, SEARCH_RETRY_PAUSE apart), then fails: no partial result is kept."""
     for attempt in range(SEARCH_ATTEMPTS):
@@ -449,6 +453,12 @@ def search(call, window, location_id, location_name, clone, canceled=lambda: Fal
             page += 1
         if len(totals) == 1 and len(rows) == total:
             return total, pages, list(rows.values())
+    low, high = min(totals), max(totals)
+    if notes is not None and low <= len(rows) <= high and high - low <= max(SEARCH_WOBBLE[0], int(high * SEARCH_WOBBLE[1])):
+        notes.append({"window_key": window["window_key"], "location": location_name, "totals": sorted(totals), "read": len(rows),
+                      "note": f"{SEARCH_ATTEMPTS} denemede de sitenin bildirdiği toplam {low}–{high} arasında değişti; son denemede okunan "
+                              f"{len(rows)} ilan kaydedildi."})
+        return len(rows), pages, list(rows.values())
     raise SourceError(f"Book>Direct {location_name} araması ({window['label']}) tutarlı bir sonuç vermedi: sayfalar arasında toplam değişti "
                       f"veya {len(rows)} ilan okunup {sorted(totals)} bildirildi. Kısmi sonuç kaydedilmedi.")
 
