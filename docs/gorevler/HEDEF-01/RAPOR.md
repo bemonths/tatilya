@@ -302,9 +302,11 @@ gelen öbür toplayıcılar: Book>Direct (~1 sa) ve Yol ağı (~1 dk); restoran 
   hatada işin kuyrukta kalması, durdurulan şirketin öbür işçilerinin okumayı sürdürmesi, art arda ret sayacının işçiler arasında paylaşılması,
   bölge engelli şirketin havuz yenilenmeden atlanması, geç eklenen işçinin beklenmemesi.
 - **GitHub CI:** 45856622744 (`190944c`) bilinen test_extension kapanış takılmasına düştü (tanı adımı düzeltildi); 45859402665 (`43f8f82`)
-  başarılı; 45882082512 (`60ceb89`) başarılı; 45892968427 (`29484d4`) yine test_extension kapanışında takıldı — bu kez yeni tanı satırları takılan yeri gösterdi:
-  sahte eklentinin iç döngüsü test bitince durmuyordu (`/sonraki`'yi sorup duruyordu); üç test dosyasında düzeltildi (`dfe4ab1`), CI
-  45895201380 başarılı. Son commit: bölüm 1'deki etiket commit'i.
+  başarılı; 45882082512 (`60ceb89`) başarılı; 45892968427 (`29484d4`), 45897519869 (`1bce84c`) ve 45900156595 (`3979613`) yine test_extension kapanışında takıldı.
+  Tanı adımı iki kez düzeltildi; son dökümde ana iş parçacığı TestClient'ın olay döngüsünü bekliyordu, döngü de sahte eklentinin
+  kapanış anındaki son isteğini. Önlem: sahte eklentilerin iç döngüsü de durur ve test, istemci kapanmadan önce sahte eklenti iş parçacığının
+  bitmesini bekler (`dfe4ab1`, `89e2ce1`); CI 45895201380 ve 45902251201 başarılı. Takılma ara sıra olduğu için kesin kanıt değildir; bir
+  daha olursa tanı adımı artık bütün iş parçacıklarının yığınını gösterir. Son commit: bölüm 1'deki etiket commit'i.
 
 ## 10. Uyulan kurallar
 
