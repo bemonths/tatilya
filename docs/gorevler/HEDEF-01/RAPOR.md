@@ -271,10 +271,16 @@ gelen öbür toplayıcılar: Book>Direct (~1 sa) ve Yol ağı (~1 dk); restoran 
 - **ABD çıkışlı proxy tek:** bölge engelli 360 Blue ve Vacasa yalnız ona gidiyor (tahminde ~4,8 sa; toplamı aşmıyor). Düşerse bu iki şirket
   o gece atlanır.
 - **Visit South Walton'ın restoran dizini ve mahalleleri** (site yeniden yapıldı; Mucahit 27 Kasım gecesi sitenin kendi API'sinin
-  kullanılmasını onayladı, okuyucular ayrı bir dalda yazılıyor): restoran listesinde alt kategori ("Restaurants") bilgisi
-  boş geliyor (aynı listede catering, bar vb.; 235 işletme), mahalle kayıtlarında koordinat, etiket ve değişiklik zamanı yok (tablo
-  koordinatı zorunlu tutuyor). İkisi kaynağın ne söylediğine dair karar istiyor; okuyucu yazılmadı. Bu iki toplayıcı çalıştırılırsa
-  "kaynak yapısı değişti" hatası verir; eski kayıtlar korunur. Bu gece zamanları gelmediği için gece çekimini etkilemez.
+  kullanılmasını onayladı; okuyucular bir ajanla yazıldı, `8d1e5ff`):
+  - **Restoran dizini çalışıyor:** `/api/simpleview/listing/all/` (kategori culinary-experiences, alt kategori restaurants, 13 hedef mahalle,
+    tek sayfa). 131 restoran; mahalle başına: Santa Rosa Beach 26, Seaside 17, Seagrove 15, Grayton Beach 15, Rosemary Beach 12, Inlet Beach
+    11, Blue Mountain Beach 8, Gulf Place 6, Alys Beach 6, Seacrest 5, WaterColor 5, WaterSound 3, Dune Allen 2. Kaynakta boş olanlar NULL/[]
+    kaldı (27 e-posta, 84 mutfak, 55 öğün, 54 olanak). Kapısız 86 web adresine sitenin kendi bağlantı kodu gibi `https://` eklendi
+    (`website_scheme_added_count`). Sürüm `south-walton-restaurants/3`. Gerçek veride henüz çalışmadı (zamanı gelmedi).
+  - **Mahalleler açık:** API (`/api/beach/neighborhood/all/`) 16 mahalleyi veriyor, 13 hedefin hepsi adla eşleşiyor, ama koordinat yok
+    (ana sayfadaki harita piksel konumlu bir çizim) ve etiket listesi boş. Tablo koordinatı zorunlu tuttuğu için okuyucu açık bir hatayla
+    durur, ham cevabı saklar, hiçbir şey yazmaz; eski kayıtlar korunur. Karar yöneticide: şema değişikliği (koordinatsız kayıt) ya da başka
+    bir koordinat kaynağı. Live istekler: ajan 5 istek (≥8 sn arayla).
 - **Doğrulama gerektiren siteler** kullanıcı doğrularsa okunur (tarif).
 
 ## 8. Yedekler
