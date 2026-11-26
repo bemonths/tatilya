@@ -11,7 +11,8 @@
 - **Proxy listesi** ekranı (Ayarlar → ABD proxy'si): toplu ekleme, her satır tek tek denenir, parolalar yalnız Windows Kimlik Bilgisi
   Yöneticisi'nde.
 - **Deneme çekimi** (Sol menü → Veri → Okuma denemeleri → "Deneme çekimini başlat"): bütün toplayıcılar küçük ölçekte, gerçek sitelerde,
-  işçilerle, veritabanının kopyasında. İki kez gerçek sitelerde çalıştırıldı; bulunan hatalar düzeltildi (aşağıda).
+  işçilerle, veritabanının kopyasında. Üç kez gerçek sitelerde çalıştırıldı; bulunan hatalar düzeltildi; son denemede 13 toplayıcının 11'i, 28 kiralama şirketinin 21'i okundu
+  (kalan 7 şirket yalnız Mucahit'in yapabileceği işe bağlı: 5'i eklenti site izni, 2'si çalışan ABD proxy'si).
 - **Tahmin** işçi sayısına göre: 1 işçi ~47 sa, 2 işçi ~27 sa, 5 işçi ~11 sa, 10 ve 20 işçi ~6 sa.
 - **Önemli:** kayıtlı tek proxy 26 Kasım'da çalışmadı. Proxy listesi girilmeden kiralama çekimi tek işçiyle ~2 gün sürer ve bölge engelli
   şirketler atlanır. Gece çekiminden önce proxy listesinin girilmesi gerekir (tarif aşağıda).
@@ -84,7 +85,73 @@ Ayrıntı ve kurallar: `docs/M18-ABD-PROXY-BOLGE-ENGELI.md` "İşçiler". Kod: `
 
 ### Gerçek sitelerdeki sonuç
 
-TRIAL_RESULTS
+Üç kez çalıştırıldı; işçi: yalnız **doğrudan** (kayıtlı tek proxy çalışmadı) ve iki sıra (tarayıcı, eklenti). Kullanıcı yoktu (doğrulama ve
+eklenti izni verilemedi).
+
+| Deneme | Zaman | Kod | Sonuç | Klasör |
+|---|---|---|---|---|
+| 1 | 19:37–20:53 | `43f8f82` | 13 toplayıcının 8'i okundu | `data/deneme/20261126-193747/` |
+| 2 | 21:03–22:05 (iptal) | `519ee34` | eklenti sırası takıldı (aşağıda), iptal edildi | `data/deneme/20261126-210328/` |
+| 3 | 22:07–23:41 | `1bd6f8b` | 13 toplayıcının 11'i okundu | `data/deneme/20261126-220734/` |
+
+**Toplayıcılar (3. deneme)**
+
+| Toplayıcı | Sonuç | Kayıt | Süre | Not |
+|---|---|---|---|---|
+| Kiralama şirketleri · Konaklama fiyatları | okundu | 429 | 82 dk | 28 şirketin 21'i okundu (aşağıda); sürenin çoğu eklenti izni beklemesi (5 × 15 dk) |
+| Restoranlar · İşletme siteleri | okundu | 3 | 19 sn | deneme: 3 restoran |
+| National Weather Service | okundu | 510 | 18 sn | |
+| South Walton · Plaj erişimleri | okundu | 53 | 6 sn | 1. denemede düştü (site yeniden yapıldı); düzeltildi |
+| South Walton · Restoranlar | hata | — | 2 sn | site yeniden yapıldı; açık iş (bölüm 7) |
+| South Walton · Mahalleler | hata | — | 2 sn | site yeniden yapıldı; açık iş (bölüm 7) |
+| NOAA NCEI · İklim normalleri | okundu | 168 | 2 sn | |
+| NOAA NDBC · Deniz suyu sıcaklığı | okundu | 182 | 14 sn | |
+| NOAA NHC · HURDAT2 kasırga izleri | okundu | 227 | 4 sn | |
+| OpenStreetMap · Günlük ihtiyaç noktaları | okundu | 47 | 75 sn | Overpass "meşgul" dedi; 30 sn bekleyip yeniden sordu (1. denemede düşmüştü) |
+| OpenStreetMap · Yol ağı ve sürüş süreleri | okundu | 23.090 | 100 sn | |
+| BTS · Havalimanı ortalama bilet ücreti | okundu | 10 | 55 sn | |
+| South Walton · Konaklama (Book>Direct) | okundu | 2.231 | 197 sn | deneme: tek hafta, 5 takvim; 1. denemede toplamı oynayan arama yüzünden düşmüştü |
+
+**Kiralama şirketleri (3. deneme; şirket başına 2 ilan, tek hafta)**
+
+| Şirket | Sonuç | İlan / eşlenen / fiyatlı | İşçi | Not |
+|---|---|---|---|---|
+| 30A Beach Girls | okundu | 2 / 0 / 0 (kendi envanteri 3 ev) | doğrudan | eski bağlantılar ölü; evler kendi listesinden, haftalık kira |
+| 30A Vacay | okundu | 2 / 0 / 0 | doğrudan | iki Book>Direct bağlantısı 404 |
+| 30A Beach Stays | okundu | 2 / 2 / 2 | doğrudan | |
+| 30A Cottages | okundu | 2 / 2 / 2 | doğrudan | |
+| 30A Escapes | atlandı | 2 / 0 / 0 | doğrudan → eklenti | "Quick security check" doğrulaması; eklentinin site izni yok |
+| 360 Blue | atlandı | — | — | bölge engeli: çalışan ABD proxy'si yok |
+| Alys Beach Vacation Rentals | atlandı | 2 / 0 / 0 | doğrudan → eklenti | Cloudflare doğrulaması; eklentinin site izni yok |
+| Dune Allen Realty | okundu | 2 / 2 / 1 | doğrudan | 1 ilan o hafta dolu |
+| Benchmark Management | okundu | 2 / 2 / 2 | doğrudan | |
+| Coastal Blue Vacations | okundu | 2 / 2 / 0 | doğrudan | o hafta dolu |
+| Newman-Dailey | okundu | 2 / 2 / 1 | doğrudan | |
+| Dune Vacation Rentals | okundu | 2 / 2 / 1 | doğrudan | |
+| Exclusive 30A | okundu | 2 / 2 / 1 | programın tarayıcısı | |
+| FunVacay | okundu | 2 / 2 / 2 | doğrudan | |
+| Grayt 30A Vacations | okundu | 2 / 2 / 1 | doğrudan | |
+| Grayton Coast Rentals | okundu | 2 / 2 / 2 | doğrudan | |
+| Homeowner's Collection | okundu | 2 / 2 / 1 | doğrudan | |
+| My Vacation Haven | okundu | 2 / 2 / 1 | doğrudan | |
+| Ocean Reef Resorts | atlandı | 2 / 0 / 0 | doğrudan → eklenti | "Quick security check"; eklentinin site izni yok |
+| Oversee | okundu | 2 / 2 / 1 | programın tarayıcısı | 2. denemede tarayıcı sırası hatasıyla düşmüştü |
+| Panhandle Getaways | atlandı | 2 / 0 / 0 | doğrudan → eklenti | "Quick security check"; eklentinin site izni yok |
+| Paradise Properties | okundu | 2 / 2 / 0 | doğrudan | o hafta dolu |
+| RealJoy Vacations | okundu | 2 / 1 / 1 | eklenti | tam liste (26 parça) + 1 ev bağlandı ve fiyatlandı |
+| Rosemary Beach® | atlandı | 2 / 0 / 0 | doğrudan → eklenti | Cloudflare doğrulaması; eklentinin site izni yok |
+| Sanders Beach Rentals | okundu | 2 / 2 / 0 | doğrudan | o hafta dolu |
+| Southern Vacation Rentals | okundu | 2 / 2 / 2 | doğrudan | |
+| Vacasa | atlandı | — | — | bölge engeli: çalışan ABD proxy'si yok |
+| Your Friend at the Beach | okundu | 2 / 2 / 0 | doğrudan | fiyat servisi "not authorized" (kalıcı; Ekim'de de) |
+
+"Atlandı" yazan eklenti sırasındaki şirketlerin mesajı ekranda "Kullanıcı doğrulaması süresinde tamamlanmadı" diyor; asıl sebep eklentinin
+o site için izni olmaması (program bunu iş mesajında "Eklentinin … için izni yok" diye söyledi). Sitenin korunma olayları kaydı: her
+doğrulama gösteren site için "bütün işçiler yavaşladı" olayı yazıldı.
+
+**2. denemedeki takılma:** eklenti sırasında bir şirket bitince eklenti oturumu (ve tarayıcı sırasında programın tarayıcısı) kapatılmıyordu;
+eklenti RealJoy'u "çalışıyor" tutup sıradaki şirketin oturumunu sonsuza kadar bekletti, tarayıcı sırasında oversee.us Playwright hatasıyla
+düştü. Düzeltme `1bd6f8b` (sıra, bitmiş şirketin tarayıcısını kendi iş parçacığında kapatır); 3. denemede ikisi de doğru çalıştı.
 
 ### Bulunan ve düzeltilen hatalar
 
@@ -102,9 +169,10 @@ TRIAL_RESULTS
 
 - **Your Friend at the Beach:** sitenin fiyat servisi "You are not authorized to use this service" diyor; Ekim çekiminde de 252/252 böyleydi.
   Sitenin servisi dışarıya kapalı (kalıcı).
-- **Doğrulama isteyen siteler** (yalnız kullanıcı geçer): oversee.us (programın tarayıcısı), alysbeach.com, rosemarybeach.com ve realjoy.com
-  (Cloudflare "Just a moment"; eklenti), Track'li üç şirket ("Quick security check"; eklenti). Denemelerde kullanıcı yoktu; 15 dakika
-  beklenip atlandılar.
+- **Eklenti izni ve doğrulama isteyen siteler** (yalnız kullanıcı verir/geçer): eklentinin site izni yalnız order.online, realjoy.com,
+  thefreshmarket.com ve winndixie.com için var. Çekim sırasında eklenti sırasına geçen alysbeach.com, rosemarybeach.com (Cloudflare
+  "Just a moment") ve Track'li üç şirket ("Quick security check") için Chrome'da eklenti simgesinden "İzin ver" gerekir; verilmezse 15 dk
+  sonra atlanırlar. oversee.us programın tarayıcısında doğrulama isteyebilir. Denemelerde kullanıcı yoktu.
 - **Bölge engelli** 360 Blue ve Vacasa: proxy çalışmadığı için atlandı ("ABD proxy'si tanımlı değil"). Çalışan ABD proxy'si gerekir.
 
 ## 5. Tahminler
@@ -127,7 +195,67 @@ gelen öbür toplayıcılar: Book>Direct (~1 sa) ve Yol ağı (~1 dk); restoran 
 
 ## 6. Kullanıcının gece çekimi tarifi
 
-TARIF
+**Önce bilin:** kiralama çekimi artık işçilerle yapılıyor. İşçi sayısı = doğrudan bağlantı + çalışan proxy sayısı. Kayıtlı tek proxy'niz
+26 Kasım'da çalışmadı; proxy girmeden başlatırsanız kiralama çekimi tek işçiyle **yaklaşık 47 saat** sürer ve 360 Blue ile Vacasa atlanır.
+10 ya da daha çok çalışan proxy'yle **yaklaşık 6 saat**. Bilgisayarın uyumaması ve internetin açık kalması gerekir. **Chrome'u ve programı
+çekim bitene kadar kapatmayın.**
+
+**Başlamadan önce**
+
+1. **Chrome'u açın.** Adres çubuğuna `chrome://extensions` yazın. "30A Studio Yardımcısı" kartında sürüm **0.21.0** olmalı. Değilse
+   karttaki yenile (dairesel ok) düğmesine bir kez basın.
+2. **Programı açın** (masaüstündeki "30A Studio").
+3. **Eklenti bağlı mı:** Sol menü → **Ayarlar** → **Tarayıcı eklentisi**. Yeşil **"Bağlı"** yazmalı. "Bağlı değil" yazıyorsa Chrome'un açık
+   olduğundan emin olup birkaç saniye bekleyin.
+4. **Proxy listesini girin:** Sol menü → **Ayarlar** → **ABD proxy'si** bölümü.
+   - **"Toplu ekleme (her satıra bir proxy)"** kutusuna proxy'lerinizi Housing Atlas'taki gibi her satıra bir tane yapıştırın:
+     `sunucu:port:kullanıcı:parola`.
+   - **"Tür"** kutusundan **HTTP** ya da **SOCKS5** seçin.
+   - **"Listeye ekle ve dene"** düğmesine basın. Program her satırı tek tek dener. Tabloda her proxy için **DURUM** (çalışıyor /
+     çalışmıyor) ve **ÜLKE** görünür. Parolalar Windows Kimlik Bilgisi Yöneticisi'ne yazılır, kutu kendiliğinden temizlenir.
+   - Çalışmayan satırları **"Listeden çıkar"** ile kaldırabilirsiniz (kalsalar da işçi olmazlar).
+   - Bölümün üstünde **"Şu an N işçi"** yazar. Bölge engelli şirketler (360 Blue, Vacasa) için ÜLKE sütununda en az bir **US** olmalı.
+   - **"Sitenin korunması"** kutusundaki **4** sayısını değiştirmeyin.
+5. **Tahmini süreye bakın:** Sol menü → **Veri** → **Kaynaklar** → **"Güncelleme zamanı gelenler"** tablosu. "Kiralama şirketleri ·
+   Konaklama fiyatları" satırının **TAHMİNİ SÜRE** sütunu işçi sayısına göre süreyi gösterir; altında "N işçiyle … ; 10 işçiyle …, 20
+   işçiyle …" yazar. Süre çok uzunsa (ör. 20 saatten fazla) daha çok proxy ekleyin.
+6. İsterseniz önce küçük bir deneme: Sol menü → **Veri** → **Okuma denemeleri** → **"Deneme çekimini başlat"** (yaklaşık 1–2 saat,
+   gerçek veriye karışmaz). Gerekmez; ben iki kez çalıştırdım.
+
+**Başlatma**
+
+7. Sol menü → **Veri** → **Kaynaklar** → **"Güncelleme zamanı gelenler"** → **"Zamanı gelenleri başlat"**. Program önce kendi yedeğini
+   alır, sonra sırayla çalıştırır: **Konaklama (Book>Direct)** (~1 saat), **Kiralama şirketleri** (işçi sayısına göre), **Yol ağı** (~1 dk).
+
+**Çekim sırasında**
+
+8. İlerlemeyi sağ üstteki **"İşler"** düğmesinden izleyin. Kiralama işinin kartında **"İşçiler (N çalışıyor)"** tablosu her işçinin
+   çıkışını (doğrudan / proxy N), elindeki şirketi ve hata sayısını gösterir. Bir proxy düşerse "düştü" yazar; işi başka işçiye geçer,
+   sizin bir şey yapmanız gerekmez. Çekim sürerken listeye proxy eklerseniz birkaç dakika içinde çekime katılır.
+9. **Doğrulama çıkarsa:**
+   - **RealJoy, Alys Beach, Rosemary Beach, 30A Escapes, Ocean Reef Resorts, Panhandle Getaways**: eklenti Chrome'unuzda kendi penceresini
+     öne getirir. Sayfadaki "insan olduğunuzu doğrulayın" kutusunu **işaretleyin**. Her site en çok 15 dakika bekler; geçilmezse atlanır.
+   - **oversee.us** ve **exclusive30a.com**: programın kendi tarayıcı penceresi öne gelir; kutuyu orada işaretleyin. Bekleyen siteler
+     çekimin sonuna bırakılır, en sonda 15 dakika beklenir.
+   - **Eklentiye site izni verin.** Çekim bu sitelere gelince (ilk birkaç dakikada) Chrome'da sağ üstteki **"30A Studio Yardımcısı"**
+     simgesine tıklayın. Açılan küçük pencerede **"İzin bekleyen siteler"** altında görünen her site için **"İzin ver"**e basın
+     (30aescapes.com, oceanreefresorts.com, panhandlegetaways.com, alysbeach.com, rosemarybeach.com). Eklenti izin verilmeyen siteye
+     gitmez; izin 15 dakika içinde verilmezse o şirket atlanır. İzin bir kez verilir, sonraki çekimlerde sorulmaz.
+   - İşler panelindeki kartta "Kullanıcı doğrulaması bekleniyor: <site>" yazar. Beklemek istemezseniz **"Bu sayfayı atla"** düğmesi var.
+10. Winn-Dixie'nin proxy kullanıcı adı/şifre penceresi bu çekimde çıkmaz (o site bu gece yok). Çıkarsa kapatın.
+
+**Atlanan bir şirketi sonra yeniden okumak**
+
+11. Bir şirket doğrulama yüzünden atlandıysa, ertesi gün Chrome açıkken: Sol menü → **Veri** → **Toplama** → **Konaklama** sekmesi →
+    **"Konaklama fiyatları"** bölümü → **"↓ Kiralama şirketi fiyatlarını topla"**. Bu, kiralama çekimini baştan çalıştırır (işçi sayısına
+    göre süre). Doğrulama penceresi çıkınca kutuyu işaretleyin.
+
+**Bitince**
+
+12. Sol menü → **Veri** → **Toplama** → **Konaklama** sekmesi → **"Konaklama fiyatları"** bölümü → **"Şirket bazında sonuç"** tablosu.
+    DURUM sütununda çoğu şirkette "tamamlandı" yazmalı. "doğrulama gerekti; atlandı" ya da "kullanıcı doğrulaması süresinde
+    tamamlanmadı" yazan şirketleri not edin.
+13. Bana (ya da yöneticiye) **"çekim bitti"** yazın; sonuçların denetimi ayrı hedefte yapılacak.
 
 ## 7. Açık kalanlar
 
@@ -146,11 +274,21 @@ TARIF
 - Gerçek verinin tam yedeği, program kapalıyken: `work/yedek/20261126-1905/` (45.688 dosya, 1.976.684.410 bayt; kaynakla aynı).
 - Programın göç yedeği (şema 24 → 25): `data/backups/studio-v24-737ad661f5534f1980f964bb121a58e6.sqlite3`.
 - Göç önce kopyada denendi: satır sayıları aynı, `foreign_key_check` boş, RealJoy `gap_s` 12.
-- Deneme çekimlerinin kopyaları: `data/deneme/20261126-193747/`, `data/deneme/SECOND_TRIAL/`.
+- Deneme çekimlerinin kopyaları: `data/deneme/20261126-193747/`, `20261126-210328/`, `20261126-220734/` (her birinde `sonuc.json`).
 
 ## 9. Testler ve CI
 
-TESTS
+- **Yerel tam takım** (`60ceb89`): `.venv\Scripts\python.exe -m pytest -q` → **1267 geçti, 3 atlandı**; `node --test tests/frontend.test.mjs`
+  → **141/141**. Bu hedefte eklenen testler: `tests/test_hedef01.py` (32), `test_proxy.py` (winndixie), `test_lodging.py` (oynayan toplam),
+  `test_daily_needs.py` (Overpass meşgul), `test_gorev22.py` (AvantStay deneme sınırı), arayüz testleri (proxy listesi, İşler panelindeki
+  işçiler, tahmin satırı, deneme çekimi).
+- **Bağımsız inceleme:** işçi zamanlayıcısı ayrı bir inceleme ajanıyla okundu; 6 bulgu (ikisi sahte HTTP'yle yeniden üretildi: takılan bir
+  işin fiyatları iki kez yazılıyordu; iş çevresindeki bir hata çekimi bitmez hâle getiriyordu) `60ceb89`'da düzeltildi, ikisine gerileme testi
+  yazıldı. Bulgular: takılan işin iki kez kuyruğa girmesi (takılma sınırı en uzun Retry-After beklemesinden uzun yapıldı), iş dışındaki
+  hatada işin kuyrukta kalması, durdurulan şirketin öbür işçilerinin okumayı sürdürmesi, art arda ret sayacının işçiler arasında paylaşılması,
+  bölge engelli şirketin havuz yenilenmeden atlanması, geç eklenen işçinin beklenmemesi.
+- **GitHub CI:** 45856622744 (`190944c`) bilinen test_extension kapanış takılmasına düştü (tanı adımı düzeltildi); 45859402665 (`43f8f82`)
+  başarılı; 45882082512 (`60ceb89`) başarılı; son commit: FINAL_CI.
 
 ## 10. Uyulan kurallar
 

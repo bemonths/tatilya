@@ -3,11 +3,17 @@
 ## Stable durum
 
 ```text
-tag v0.24.0 -> f87582c (GÖREV-23'ün son commit'i, gorev-23-okuyucular)
+tag v0.27.0 -> HEDEF-01'in son commit'i (hedef-01)
 main -> aynı commit
-app 0.24.0
-schema 23
+app 0.27.0
+schema 25
+eklenti 0.21.0
 ```
+
+26 Kasım 2026'da HEDEF-01 ile main önce `gorev-25-realjoy-sorgu`'ya (`f87582c..833382a`, etiket `v0.26.0`), sonra `hedef-01`'e
+fast-forward edildi; son commit'e açıklamalı `v0.27.0` etiketi kondu. HEDEF-01: işçiler (proxy listesi, site başına sınır, yavaşlama, canlı
+havuz, tarayıcı ve eklenti sıraları), deneme çekimi, işçi sayısına göre tahmin, RealJoy 12 sn (şema 25), Visit South Walton plajlarının yeni
+kaynağı, eklenti 0.21.0. Ayrıntı: `docs/gorevler/HEDEF-01/RAPOR.md`.
 
 17 Kasım 2026'da GÖREV-24 Adım 1 ile (yönetici GÖREV-23'ü kabul etti) main, `gorev-23-okuyucular` dalının son commit'ine fast-forward
 edildi (`9ead6a8..f87582c`) ve bu commit'e açıklamalı `v0.24.0` etiketi konuldu ("v0.24.0 — GÖREV-23: 30A Beach Girls haftalık kirası
