@@ -80,7 +80,7 @@ def test_the_extension_holds_the_same_lists_and_rules():
     assert js_list("QUERY_METHODS") == list(eq.METHODS)
     assert int(re.search(r"export const MAX_FIELDS = (\d+);", logic).group(1)) == eq.MAX_FIELDS
     manifest = json.loads((ROOT / "eklenti" / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == ext.EXPECTED_VERSION == "0.20.0"
+    assert manifest["version"] == ext.EXPECTED_VERSION == "0.21.0"
 
 
 def test_the_allowed_list_comes_from_the_configuration(tmp_path):

@@ -214,3 +214,11 @@ kullanır.
   uçtan uca `tests/test_extension_e2e.py` (Playwright'in Chromium'u, geçici profil, yerel sayfa: izinli sorgu tam verilen alanlarla
   gider; yasak yol, listede olmayan yol, fazladan alan ve düz isteğin POST'u eklentinin kendisinde reddedilir; başka alan adı Python
   tarafında sınanır).
+
+## Eklenti 0.21.0 (HEDEF-01, 26 Kasım 2026)
+
+Doğrulama işaretlerine Track altyapılı kiralama sitelerinin (30A Escapes, Ocean Reef Resorts, Panhandle Getaways) yeni kendi
+doğrulama sayfası eklendi: başlık "Quick security check", çerçeve `challenge.icoastalnet.com` (HTTP 429 ile gelir). Program tarafında
+(`studio/sources/page_kinds.py`, `agency_rates.CHALLENGE`, `restaurant_sites.CHALLENGE`) ve eklentide (`eklenti/logic.js`) aynı metin;
+eklenti bu sayfada da kullanıcıyı bekler (en çok 15 dk). Başka değişiklik yok. Kullanıcı Chrome'da eklentiyi bir kez yeniler
+(`chrome://extensions` → "30A Studio Yardımcısı" → yenile düğmesi).

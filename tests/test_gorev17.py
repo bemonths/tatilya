@@ -173,7 +173,7 @@ def test_the_extension_files_open_one_unfocused_window_and_never_close_it_per_si
     background = (ROOT / "eklenti" / "background.js").read_text(encoding="utf-8")
     logic = (ROOT / "eklenti" / "logic.js").read_text(encoding="utf-8")
     manifest = json.loads((ROOT / "eklenti" / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == ext.EXPECTED_VERSION == "0.20.0"
+    assert manifest["version"] == ext.EXPECTED_VERSION == "0.21.0"
     assert background.count("chrome.windows.create(") == 1 and "chrome.windows.create({...L.WINDOW_OPTIONS})" in background
     assert 'focused: false, type: "normal"' in logic and "minimized" not in logic.split("WINDOW_OPTIONS = ")[1].split("\n")[0]
     run_job = background.split("async function runJob")[1].split("/** Open an address")[0]

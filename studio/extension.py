@@ -48,7 +48,7 @@ from urllib.parse import urlsplit
 PAIRING_FILE = "eklenti.json"
 CONNECTED_S = 20.0
 CONNECTED_BUSY_S = 60.0            # while a job runs the extension may be busy with one page for a while; it reports every ≤5 s
-EXPECTED_VERSION = "0.20.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
+EXPECTED_VERSION = "0.21.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
 DEFAULT_GAP_S, MIN_GAP_S, MAX_GAP_S = 8, 3, 120
 VERIFY_WAIT_S = 15 * 60
 PAGE_TIMEOUT_S = VERIFY_WAIT_S + 240

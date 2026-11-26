@@ -15,8 +15,8 @@ export const MAX_WAIT_S = 60;
 
 // Sayfa türü işaretleri: programın studio/sources/page_kinds.py dosyasındakilerle aynıdır (bir Python testi bu metinlerin ve
 // sayıların aynı kaldığını, iki taraf aynı fikstürlerde aynı sonucu verdiğini denetler).
-export const CHALLENGE_SOURCE = String.raw`<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold`;
-export const CHALLENGE_TITLES_SOURCE = String.raw`^(just a moment|attention required|verify you are human|bir dakika)`;
+export const CHALLENGE_SOURCE = String.raw`<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold|<title>\s*Quick security check|challenge\.icoastalnet\.com`;
+export const CHALLENGE_TITLES_SOURCE = String.raw`^(just a moment|attention required|verify you are human|bir dakika|quick security check)`;
 export const DENIED_SOURCE = String.raw`Sorry, you have been blocked|You are unable to access|You don(?:'|’|&#39;|&#x27;)t have permission to access|You do not have permission to access`;
 export const DENIED_TITLES_SOURCE = String.raw`^(access denied|403 forbidden|forbidden|error 403)\b`;
 export const REGION_SOURCE = String.raw`outside of the United States|outside the United States|outside the U\.S\.|not available in your country|not available in your region|unable to service customers outside|block access from your country`;
