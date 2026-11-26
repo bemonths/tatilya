@@ -36,9 +36,13 @@ from .base import CollectionCanceled
 log = logging.getLogger(__name__)
 
 POOL_REFRESH_S = 60.0
-STALL_S = 15 * 60
+STALL_S = 75 * 60          # longer than the longest 429 Retry-After wait (agency_rates.RETRY_AFTER_MAX, 1 h), so a waiting worker is not given up
 IDLE_WAIT_S = 0.5
 CONNECT_TIMEOUT = httpx.Timeout(45, connect=15)
+
+
+class CompanyHalted(Exception):
+    """The company was stopped (or failed) while this worker's task was running: the task ends without committing anything."""
 
 
 class NeedsBrowser(Exception):
@@ -67,6 +71,7 @@ class CompanyState:
         self.units = None
         self.plan = None
         self.exits = set()
+        self.halted = False
         self.requests = 0
         self.sessions = []
 
@@ -86,7 +91,13 @@ def lane_of(run):
 
 
 class WorkerSessionMixin:
-    """A worker's session on one site: the gap follows the site's gate (twice after a refusal)."""
+    """A worker's session on one site: the gap follows the site's gate (twice after a refusal); once the company is stopped or failed
+    (`state.halted`) its next request ends the task without committing it."""
+
+    def request(self, *args, **kwargs):
+        if getattr(self.state, "halted", False):
+            raise CompanyHalted()
+        return super().request(*args, **kwargs)
 
     @property
     def gap(self):
@@ -137,6 +148,7 @@ class Worker:
         self.clients = {}
         self.thread = None
         self.lane_state = None
+        self.counts = {}          # per site: this worker's consecutive refusals and errors (BLOCK_LIMIT, ERROR_LIMIT)
 
     @property
     def label(self):
@@ -168,7 +180,7 @@ class Worker:
         else:
             inner = ar.HttpTransport(self.client_for(None), kind="proxy")
         session = worker_session_class().__new__(worker_session_class())
-        session.gate = state.gate
+        session.gate, session.state = state.gate, state
         ar.SiteSession.__init__(session, shared.store, state.domain, WorkerTransport(inner, self), shared.canceled,
                                 allowed=run.session.allowed[1:], gap=run.session._base_gap, protected=False,
                                 retry_429=run.session.retry_429)
@@ -212,6 +224,7 @@ class Scheduler:
             gate.on_factor = (lambda factor, s=run.session: setattr(s, "gap", s._base_gap * factor))
             self.states.append(state)
         self.initial_exits = list(exits)
+        self.region_available = any(e.region_ok for e in self.initial_exits)    # the pool's latest view: a US proxy exists
 
     # --- log ---------------------------------------------------------------------------------------------------------------
 
@@ -229,10 +242,11 @@ class Scheduler:
     # --- workers -----------------------------------------------------------------------------------------------------------
 
     def add_worker(self, exit_, lane=None, start=True):
-        number = self.numbers.get(lane or exit_.key, 0) + 1
-        self.numbers[lane or exit_.key] = number
-        worker = Worker(self, exit_, number, lane)
-        self.workers.append(worker)
+        with self.cond:
+            number = self.numbers.get(lane or exit_.key, 0) + 1
+            self.numbers[lane or exit_.key] = number
+            worker = Worker(self, exit_, number, lane)
+            self.workers.append(worker)
         self.board_set(worker, durum="boşta", sirket=None)
         worker.thread = threading.Thread(target=self.work, args=(worker,), name=f"30a-isci-{worker.label}", daemon=True)
         if start:
@@ -257,15 +271,22 @@ class Scheduler:
             log.exception("Proxy listesi okunamadı.")
             return
         keys = {e.key for e in exits}
-        alive = {w.exit.key for w in self.workers if not w.removed and not w.lane}
-        for worker in self.workers:
-            if not worker.lane and not worker.removed and worker.exit.key not in keys:
-                worker.removed = True
-                self.record(f"{worker.label}: proxy listeden çıkarıldı; işçi durdu, elindeki iş başka işçiye geçiyor.")
-        for exit_ in exits:
-            if exit_.key not in alive:
-                self.add_worker(exit_)
-                self.record(f"{exit_.label}: yeni işçi çekime katıldı.")
+        gone, joined = [], []
+        with self.cond:
+            self.region_available = any(e.region_ok for e in exits)
+            alive = {w.exit.key for w in self.workers if not w.removed and not w.lane}
+            for worker in self.workers:
+                if not worker.lane and not worker.removed and worker.exit.key not in keys:
+                    worker.removed = True
+                    gone.append(worker)
+            for exit_ in exits:
+                if exit_.key not in alive:
+                    self.add_worker(exit_)
+                    joined.append(exit_)
+        for worker in gone:
+            self.record(f"{worker.label}: proxy listeden çıkarıldı; işçi durdu, elindeki iş başka işçiye geçiyor.")
+        for exit_ in joined:
+            self.record(f"{exit_.label}: yeni işçi çekime katıldı.")
 
     def watch(self):
         """Pool refresh and the stall check, until the run ends."""
@@ -276,13 +297,13 @@ class Scheduler:
                 last_refresh = now
                 self.refresh_pool()
             with self.cond:
-                stalled = [w for w in self.workers if w.task is not None and not w.removed and not w.lane and now - w.seen > STALL_S]
-            for worker in stalled:
-                worker.removed = True
-                self.record(f"{worker.label}: {STALL_S // 60} dakikadır yanıt yok; iş başka işçiye geçiyor.")
-                self.requeue(worker.task)
-                if worker.exit.direct or not worker.dropped:
+                stalled = [(w, w.task) for w in self.workers if w.task is not None and not w.removed and not w.lane and now - w.seen > STALL_S]
+                for worker, task in stalled:
+                    worker.removed = True
+                    self.requeue(task)
                     self.add_worker(worker.exit)
+            for worker, _ in stalled:
+                self.record(f"{worker.label}: {STALL_S // 60} dakikadır yanıt yok; iş başka işçiye geçiyor.")
 
     # --- tasks -------------------------------------------------------------------------------------------------------------
 
@@ -415,6 +436,8 @@ class Scheduler:
                 continue
             if any(w.exit.region_ok for w in alive):
                 continue
+            if self.pool is not None and self.region_available:
+                continue          # a US proxy is still listed: the next pool refresh starts its worker
             had_proxy = any(w.exit.region_ok for w in self.workers)
             state.run.stopped(CompanyStopped("stopped_blocked", f"{PROXY_FAILED_SKIP} (çekim sırasında çalışan ABD proxy'si kalmadı)"
                                              if had_proxy else NO_PROXY_SKIP))
@@ -427,6 +450,8 @@ class Scheduler:
             return
         with self.cond:
             state = task.state
+            if task.abandoned or task not in state.inflight:      # already given to another worker (or finished): nothing to do
+                return
             if task in state.inflight:
                 state.inflight.discard(task)
                 if task.owner is not None and not task.owner.lane:
@@ -465,59 +490,90 @@ class Scheduler:
                 state.pending.clear()
             if not state.finished and not state.pending and not state.inflight:
                 if state.run.result["status"] == "done" and not state.run.deferred:
-                    self.advance(state)
+                    try:
+                        self.advance(state)
+                    except Exception as exc:
+                        log.exception("Kiralama şirketinin sonraki aşaması kurulamadı.")
+                        state.run.result["status"], state.run.result["message"] = "failed", f"Beklenmeyen hata: {type(exc).__name__}: {str(exc)[:200]}"
+                        state.pending.clear()
+                        state.finished = True
                 else:
                     state.finished = True
+            if state.finished or stop is not None or failed is not None:
+                state.halted = True
             self.cond.notify_all()
 
     # --- one task ------------------------------------------------------------------------------------------------------------
 
     def work(self, worker):
-        from .agency_rates import CompanyDeferred, CompanyStopped, VerificationNeeded
+        task = None
         try:
             while True:
                 task = self.next_task(worker)
                 if task is None:
                     break
-                state = task.state
-                state.exits.add(worker.label)
-                self.board_set(worker, durum="çalışıyor", sirket=state.run.site["company"])
-                if worker.lane:
-                    self.run_lane_task(worker, task)
-                    continue
-                view = self.view(worker, state)
                 try:
-                    commit, errors = self.execute(view, task)
-                except W.ExitDown:
-                    self.requeue(task)
-                    break
-                except NeedsBrowser as need:
-                    state.need_url = need.url
-                    self.done(task, to_lane=W.LANE_EXTENSION if self.extension_paired else W.LANE_BROWSER)
-                    continue
-                except CompanyStopped as stop:
-                    self.done(task, commit=getattr(stop, "commit", None), stop=stop)
-                    continue
+                    if not self.one_task(worker, task):
+                        break
                 except CollectionCanceled:
-                    self.requeue(task)
-                    break
-                except Exception as exc:
-                    log.exception("Kiralama işi beklenmedik biçimde durdu.")
-                    self.done(task, failed=f"Beklenmeyen hata: {type(exc).__name__}: {str(exc)[:200]}")
-                    if self.board is not None:
-                        self.board.add(worker.id, "hata")
-                    continue
-                self.done(task, commit=commit)
-                if self.board is not None:
-                    self.board.add(worker.id, "biten")
-                    if errors:
-                        self.board.add(worker.id, "hata", errors)
+                    raise
+                except Exception as exc:          # whatever failed around the task: the company is marked, the run goes on
+                    log.exception("Kiralama işçisi beklenmedik biçimde durdu.")
+                    if task.owner is worker and not task.abandoned and task in task.state.inflight:
+                        self.done(task, failed=f"Beklenmeyen hata: {type(exc).__name__}: {str(exc)[:200]}")
+        except CollectionCanceled:
+            pass
         finally:
+            if task is not None and worker.task is task:
+                self.requeue(task)            # a task still in flight when the thread ends goes to another worker
             status = "düştü" if worker.dropped else "çıkarıldı" if worker.removed else "bitti"
             self.board_set(worker, durum=status, sirket=None)
             worker.close()
             with self.cond:
                 self.cond.notify_all()
+
+    def one_task(self, worker, task):
+        """Run one task; False when the worker must stop (its way out is gone, or the run was cancelled)."""
+        from .agency_rates import CompanyStopped
+        if True:
+            if True:
+                state = task.state
+                state.exits.add(worker.label)
+                self.board_set(worker, durum="çalışıyor", sirket=state.run.site["company"])
+                if worker.lane:
+                    self.run_lane_task(worker, task)
+                    return True
+                view = self.view(worker, state)
+                try:
+                    commit, errors = self.execute(view, task)
+                except W.ExitDown:
+                    self.requeue(task)
+                    return False
+                except CompanyHalted:
+                    self.done(task)                   # the company stopped meanwhile: nothing of this task is kept
+                    return True
+                except NeedsBrowser as need:
+                    state.need_url = need.url
+                    self.done(task, to_lane=W.LANE_EXTENSION if self.extension_paired else W.LANE_BROWSER)
+                    return True
+                except CompanyStopped as stop:
+                    self.done(task, commit=getattr(stop, "commit", None), stop=stop)
+                    return True
+                except CollectionCanceled:
+                    self.requeue(task)
+                    return False
+                except Exception as exc:
+                    log.exception("Kiralama işi beklenmedik biçimde durdu.")
+                    self.done(task, failed=f"Beklenmeyen hata: {type(exc).__name__}: {str(exc)[:200]}")
+                    if self.board is not None:
+                        self.board.add(worker.id, "hata")
+                    return True
+                self.done(task, commit=commit)
+                if self.board is not None:
+                    self.board.add(worker.id, "biten")
+                    if errors:
+                        self.board.add(worker.id, "hata", errors)
+                return True
 
     def view(self, worker, state):
         """The company as one worker's task sees it: its own session (way out, pace), its own result lists, no browser."""
@@ -525,6 +581,7 @@ class Scheduler:
         view = copy.copy(state.run)
         view.session = worker.session_for(state)
         view.quotes, view.own_rows, view.own_quotes, view.published = [], [], [], []
+        view.counts = worker.counts.setdefault(state.domain, {"blocked": 0, "errors": 0})
 
         def ask(call):
             try:
@@ -625,14 +682,26 @@ class Scheduler:
                         break
                     if not any(w.thread.is_alive() for w in self.workers if w.thread.ident is not None):
                         break
+                    readers = [w for w in self.workers if not w.lane and w.thread.ident is not None and w.thread.is_alive()]
+                    if not readers and all(s.finished or not s.lane for s in self.states) and not (self.pool is not None and self.region_available
+                                                                                                and any(not s.finished for s in self.states)):
+                        break         # no worker left for the companies still waiting (and no lane work left)
                     self.strand_check()
                     self.cond.wait(1.0)
         finally:
             self.stop_pool.set()
             with self.cond:
                 self.cond.notify_all()
-            for worker in self.workers:
-                worker.thread.join(timeout=60)
+            joined = set()
+            while True:
+                with self.cond:
+                    pending = [w for w in self.workers if id(w) not in joined]
+                if not pending:
+                    break
+                for worker in pending:
+                    joined.add(id(worker))
+                    if worker.thread.ident is not None:
+                        worker.thread.join(timeout=60)
         if self.shared.canceled():
             raise CollectionCanceled()
         unfinished = [s for s in self.states if not s.finished]

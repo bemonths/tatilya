@@ -576,3 +576,42 @@ def test_a_lane_closes_a_companys_browser_in_its_own_thread_before_the_next_comp
     second = "guard-b.test" if first == "guard-a.test" else "guard-a.test"
     assert kinds == [("open", first), ("close", first), ("open", second), ("close", second)]
     assert {e[2] for e in events} == {"30a-isci-tarayıcı"}
+
+
+def test_a_stalled_worker_is_given_up_once_and_its_task_is_never_counted_twice(tmp_path, monkeypatch):
+    """Review of HEDEF-01: a stalled worker's task was requeued twice (once by the stall check, once by its own ExitDown) and its
+    prices were committed twice."""
+    monkeypatch.setattr(AW, "STALL_S", 0.3)
+    slow = {"done": False}
+
+    def answer(via, host, request):
+        if via == "proxy 1" and request.url.path.startswith("/quote/") and not slow["done"]:
+            slow["done"] = True
+            time.sleep(1.0)          # longer than the stall limit
+        return None
+    net = Net(delay=0.01, answer=answer)
+    result = collect(tmp_path, net, [site("alpha.test")], listings_for("alpha.test", 6), exits=[W.direct_exit(), proxy_exit(1)])
+    pairs = [(q["lodging_id"], q["window_key"]) for q in result.related["quotes"]]
+    assert len(pairs) == len(set(pairs)) == 12 and len(priced(result)) == 12
+    assert any("yanıt yok" in e["metin"] for e in result.metadata["isciler"]["olaylar"])
+
+
+def test_a_failure_around_a_task_never_leaves_the_run_waiting_forever(tmp_path):
+    """Review of HEDEF-01: an exception outside the task itself (here the proxy's client cannot be made) killed the worker thread and
+    left its task in flight: the run never ended."""
+    net = Net(delay=0.005)
+
+    def clients(exit_, hosts):
+        if exit_.label == "proxy 1":
+            raise RuntimeError("no client")
+        return httpx.Client(transport=httpx.MockTransport(net.handler(exit_.label)))
+    box = {}
+    thread = threading.Thread(target=lambda: box.setdefault("r", collect(tmp_path, net, [site("alpha.test"), site("beta.test")],
+                                                                          listings_for("alpha.test", 4) + listings_for("beta.test", 4, 20),
+                                                                          exits=[W.direct_exit(), proxy_exit(1)], exit_client=clients)))
+    thread.start()
+    thread.join(timeout=30)
+    assert not thread.is_alive(), "the run did not end"
+    companies = {c["domain"]: c for c in box["r"].related["companies"]}
+    assert all(c["status"] in ("done", "failed") for c in companies.values())
+    assert any(c["status"] == "failed" and "no client" in (c["message"] or "") for c in companies.values())
