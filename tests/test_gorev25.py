@@ -112,7 +112,7 @@ class QueryExtension(threading.Thread):
                 time.sleep(0.05)
                 continue
             self.views.append(job)
-            while True:
+            while not self.done.is_set() and time.monotonic() < deadline:     # HEDEF-01: the CI hang — the inner loop also stops
                 step = as_extension(self.client, f"/api/eklenti/is/{job['id']}/sonraki").json()
                 if step.get("bitti"):
                     as_extension(self.client, f"/api/eklenti/is/{job['id']}/bitti")
