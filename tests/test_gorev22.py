@@ -583,3 +583,18 @@ def test_added_companies_lengthen_the_run_as_companies_read_side_by_side(monkeyp
     listings = [{"url": f"https://www.360blue.com/rentals/properties/x-{n}/"} for n in range(256)]
     blue = ar.new_site_estimate(sites, listings, set(), 12, ["360blue.com"])[0]
     assert (blue["listings"], blue["requests"]) == (256, 127 * (3 + 12))             # only the listings expected to tie ask the calendar and the prices
+
+
+def test_the_trial_run_reads_only_a_few_homes_of_the_avantstay_list():
+    """HEDEF-01: the trial run's `max_pages` holds for AvantStay's list too (on 26 Nov 2026 the trial opened all 144 home pages)."""
+    asked = []
+
+    def handler(request):
+        asked.append(request.url.path)
+        return beach_girls(request)
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        session = ar.SiteSession(ar.RawStore(Path(__import__("tempfile").mkdtemp()) / "m.json"), "30a-beachgirls.com",
+                                 ar.HttpTransport(client), lambda: False, gap=0)
+        options = {**OPTIONS["30a-beachgirls.com"]["inventory"], "max_pages": 1}
+        units, _ = aa.ADAPTERS["avantstay"].inventory(session, "https://30a-beachgirls.com", options)
+    assert len(units) == 1 and [p for p in asked if p.startswith("/vacation-rental/")] == ["/vacation-rental/609625"]

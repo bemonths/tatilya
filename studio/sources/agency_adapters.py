@@ -1314,9 +1314,12 @@ class AvantStay:
         if not isinstance(rows, list):
             raise AdapterError(f"Ev listesi okunamadı (HTTP {listing.status}).")
         units, replies = [], [listing]
+        limit = int(options.get("max_pages") or 0)       # HEDEF-01: the trial run reads a few homes of the list
         for row in rows:
             if not isinstance(row, dict) or not str(row.get("hash") or "").isdigit() or row.get("redirect"):
                 continue
+            if limit and len(units) >= limit:
+                break
             site_id, url = str(row["hash"]), f"{origin}/vacation-rental/{row['hash']}"
             fields = row.get("homeFields") if isinstance(row.get("homeFields"), dict) else {}
             unit = {"site_id": site_id, "url": url, "title": clean(row.get("name")), "address": None, "city": None, "site_region": None,

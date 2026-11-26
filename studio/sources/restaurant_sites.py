@@ -1490,7 +1490,7 @@ def read_reviewed(path, key):
 # and contact forms carry a Turnstile box (cf-chl-widget-..., "Verify you are human"); neither is a verification page and neither
 # may make the browser pass wait.
 CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|"
-                       r"Checking if the site connection is secure", re.I)
+                       r"Checking if the site connection is secure|<title>\s*Quick security check|challenge\.icoastalnet\.com", re.I)      # HEDEF-01: Track sites' own check
 BLOCKED = re.compile(r"Sorry, you have been blocked|You are unable to access|Attention Required! \| Cloudflare|Edge IP Restricted", re.I)
 DOCUMENT_PATH = re.compile(r"\.(?:pdf|jpe?g|png|webp|gif)(?:$|\?)", re.I)
 BROWSER_GAP = 3.0               # seconds between two browser page loads on the same host

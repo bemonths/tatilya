@@ -475,3 +475,37 @@ def test_only_the_last_trials_keep_their_copies(tmp_path):
     assert not (root / "20261101-000000" / "studio.sqlite3").exists() and not (root / "20261101-000000" / "raw").exists()
     assert (root / "20261101-000000" / "sonuc.json").exists()
     assert all((root / n / "studio.sqlite3").exists() for n in ("20261102-000000", "20261103-000000", "20261104-000000"))
+
+
+def test_the_track_sites_own_security_check_is_a_verification_page_and_moves_the_company_to_a_browser_lane(tmp_path):
+    """26 Nov 2026 (the trial run): 30A Escapes, Ocean Reef and Panhandle Getaways answered every request with HTTP 429 "Quick security
+    check" (a Turnstile frame from challenge.icoastalnet.com). It is a verification the user passes, not a refusal."""
+    from pathlib import Path
+    from studio.sources import page_kinds
+    page = (Path(__file__).parent / "fixtures" / "hedef01" / "track-guvenlik-kontrolu.html").read_text(encoding="utf-8")
+    assert ar.CHALLENGE.search(page) and page_kinds.classify(page, "Quick security check", "https://www.oceanreefresorts.com/x", 429) == "dogrulama"
+    browsed = []
+
+    class Browser:
+        kind = "browser"
+        def send(self, method, url, **kwargs):
+            browsed.append(url)
+            body = "<html>LISTING</html>" if "/rentals/" in url else "ok"
+            return 200, url, {"content-type": "text/html"}, body.encode()
+        def close(self):
+            pass
+
+    class Verifier:
+        methods, fallback = {}, None
+        def __call__(self, domain, url, canceled, timeout):
+            return Browser()
+        def extension_ready(self):
+            return True
+
+    def answer(via, host, request):
+        return httpx.Response(429, text=page, headers={"content-type": "text/html; charset=utf-8"}) if host == "track.test" else None
+    net = Net(answer=answer)
+    result = collect(tmp_path, net, [site("track.test")], listings_for("track.test", 3), verifier=Verifier())
+    company = result.related["companies"][0]
+    assert company["status"] == "done" and company["verification"] == "completed"
+    assert len([1 for _, h, _ in net.seen if h == "track.test"]) == 1 and len(priced(result)) == 6

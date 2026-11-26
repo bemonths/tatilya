@@ -25,8 +25,9 @@ import re
 # Verification the user can pass: the interstitial only (its title, its options object or its page script); a Turnstile box in a
 # contact form is not one.
 CHALLENGE = re.compile(r"<title>\s*Just a moment\.\.\.|cf_chl_opt|/cdn-cgi/challenge-platform/h/[a-z]/orchestrate/|Checking your browser before|"
-                       r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold", re.I)
-CHALLENGE_TITLES = re.compile(r"^(just a moment|attention required|verify you are human|bir dakika)", re.I)
+                       r"Checking if the site connection is secure|px-captcha|Press &amp; Hold|Press & Hold"
+                       r"|<title>\s*Quick security check|challenge\.icoastalnet\.com", re.I)      # HEDEF-01: the Track sites' own check (26 Nov 2026)
+CHALLENGE_TITLES = re.compile(r"^(just a moment|attention required|verify you are human|bir dakika|quick security check)", re.I)
 # A refusal nobody can pass.
 DENIED = re.compile(r"Sorry, you have been blocked|You are unable to access|You don(?:'|’|&#39;|&#x27;)t have permission to access|"
                     r"You do not have permission to access", re.I)

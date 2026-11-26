@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Quick security check</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://challenge.icoastalnet.com">
+<link rel="preconnect" href="https://challenges.cloudflare.com">
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       font:16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f7f9;color:#1f2328}
+  main{max-width:440px;padding:24px;text-align:center}
+  h1{font-size:1.25rem;margin:0 0 .5rem}
+  p{margin:.5rem 0}
+  iframe{border:0;width:320px;height:110px;max-width:100%}
+</style>
+</head>
+<body>
+<main>
+<h1>Quick security check</h1>
+<p>Confirming you're a person before loading www.oceanreefresorts.com. Your page will load in a moment.</p>
+<iframe id="chl-f" title="Security check"></iframe>
+<p id="chl-s" role="status" aria-live="polite"></p>
+<noscript><p>This check needs JavaScript. Please enable it and reload the page.</p></noscript>
+</main>
+<script>
+(function () {
+  var ORIGIN = "https:\/\/challenge.icoastalnet.com";
+  var TICKET = "x.y";
+  var GET = true;
+  var SUPPORT = "If this keeps happening, please contact the property directly.";
+  var s = document.getElementById("chl-s");
+  var f = document.getElementById("chl-f");
+  var done = false, cleared = false;
+  function reload() { location.replace(location.href); }
+  function failed() { s.textContent = "Verification failed. Please refresh the page."; }
+  var here = location.hostname.replace(/\.$/, "");   // "www.example.com." is www.example.com
+  var host = here;   // an unreadable ticket takes the direct path
+  try { host = JSON.parse(atob(TICKET.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"))).h; } catch (e) { /* direct */ }
+  var proxied = host !== here;
+  var CLEAR = proxied ? location.href : "/__chl/clear";
+  if (!proxied) {
+    f.src = ORIGIN + "/frame?t=" + TICKET;
+  } else {
+    fetch(location.href, { method: "POST", credentials: "same-origin",
+                           headers: { "X-CHL-Ticket": TICKET, "X-CHL-Host": here } })
+      .then(function (r) { if (!r.ok) throw new Error("ticket " + r.status); return r.json(); })
+      .then(function (j) {
+        if (!j || typeof j.frame !== "string" || j.frame.indexOf(ORIGIN + "/") !== 0) throw new Error("ticket");
+        f.src = j.frame;
+      })
+      .catch(failed);
+  }
+  window.addEventListener("message", function (e) {
+    if (done || e.origin !== ORIGIN || !e.data || e.data.type !== "chl-pass") return;
+    done = true;
+    s.textContent = "Verified. Loading...";
+    fetch(CLEAR, { method: "POST", credentials: "same-origin", headers: { "X-CHL-Pass": e.data.pass } })
+      .then(function (r) {
+        if (!r.ok) throw new Error("clear " + r.status);
+        cleared = true;
+        if (!GET) {
+          s.textContent = "Verified. Returning to the form. Please submit it again.";
+          setTimeout(function () { history.back(); }, 800);
+          return;
+        }
+        return fetch(location.href, { credentials: "same-origin", redirect: "manual" }).then(function (r2) {
+          if (r2.type === "opaqueredirect") { reload(); return; }
+          if (r2.headers.get("X-CHL-Challenge") === "1") {
+            s.textContent = "Your browser completed the check but did not keep the cookie, so we can't let you through. Please allow cookies for " + location.hostname + " and reload. " + SUPPORT;
+            return;
+          }
+          // an image, PDF or file URL opened directly: let the browser load it
+          if ((r2.headers.get("Content-Type") || "").indexOf("text/html") !== 0) { reload(); return; }
+          return r2.text().then(function (html) {
+            document.open();
+            document.write(html);
+            document.close();
+          });
+        });
+      })
+      .catch(function () {
+        if (cleared) { reload(); return; }
+        done = false;
+        failed();
+      });
+  });
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"f5a0df18e4ab4d738493a94885ebf362","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
