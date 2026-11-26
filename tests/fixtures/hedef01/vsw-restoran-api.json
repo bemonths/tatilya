@@ -1,0 +1,754 @@
+{
+ "hash": "6c7c7ae0ce2a3a044681f9617e8be9b6",
+ "errorCode": null,
+ "errorClass": null,
+ "errorMessage": null,
+ "page": 1,
+ "pages": 1,
+ "pageSize": 200,
+ "rows": 6,
+ "total": 6,
+ "count": 6,
+ "messages": [],
+ "data": [
+  {
+   "_model": "Listing",
+   "_namespace": "Simpleview",
+   "id": "6ad648b9c478fe774b8451ea",
+   "created": "2026-10-19T16:06:32.978Z",
+   "modified": "2026-11-26T01:52:32.275Z",
+   "archived": false,
+   "archiveDate": null,
+   "deleted": false,
+   "deleteDate": null,
+   "approved": true,
+   "approveDate": "2026-10-19T16:06:32.978Z",
+   "permalink": "pizza-by-sea-gulf-place",
+   "uri": "/listing/pizza-by-sea-gulf-place/",
+   "tags": null,
+   "contentCategories": null,
+   "companyName": "Pizza by the Sea at Gulf Place",
+   "companyNameSort": "Pizza by the Sea at Gulf Place",
+   "type": "Website Listing",
+   "state": "FL",
+   "listingID": 4310,
+   "url": "pizzabythesea.com/gulf-place-town-center",
+   "lat": 30.3474333,
+   "lng": -86.2310955,
+   "phone": "(850) 267-2202",
+   "address1": "Gulf Place Town Center",
+   "address2": "Upstairs",
+   "zip": "32459",
+   "amenities": [
+    {
+     "Meals Served": [
+      "Lunch",
+      "Dinner"
+     ]
+    },
+    {
+     "Outdoor Seating": 1
+    }
+   ],
+   "amenityKeys": [
+    "Meals Served",
+    "Outdoor Seating"
+   ],
+   "threshold360": null,
+   "email": "info@pizzabythesea.com",
+   "fax": null,
+   "description": "\"Wonderful\" and \"creative\" describe the pizza at Pizza By The Sea. The only thing better than the pizzas are the friendly and genuine smiles that you receive with each visit to this cheerful hot spot. YUM! The restaurant is located above ResortQuest facing the artist colony.",
+   "socialLinks": null,
+   "tollfree": null,
+   "altPhone": null,
+   "city": "Santa Rosa Beach",
+   "incomplete": false,
+   "randSort": 1474,
+   "noImage": false,
+   "menu": null,
+   "cuisines": null,
+   "mealTypes": [
+    "Lunch",
+    "Dinner"
+   ],
+   "venueType": null,
+   "numberOfPeopleCapacity": null,
+   "indoorSquareFootage": null,
+   "flexibleSquareFootage": null,
+   "Neighborhood": [
+    {
+     "object": {
+      "_model": "Neighborhood",
+      "_namespace": "Beach",
+      "id": "68ee9be9166f8bb1d1f3c655",
+      "permalink": "gulf-place",
+      "uri": "/neighborhoods/gulf-place/",
+      "name": "Gulf Place"
+     },
+     "properties": {}
+    }
+   ],
+   "Category": [
+    {
+     "object": {
+      "_model": "Category",
+      "_namespace": "Simpleview",
+      "id": "5c82a47df836f9166535cba7",
+      "permalink": "culinary-experiences",
+      "uri": "/listings/culinary-experiences/",
+      "name": "Dining"
+     },
+     "properties": {}
+    }
+   ],
+   "SubCategory": [
+    {
+     "object": {
+      "_model": "SubCategory",
+      "_namespace": "Simpleview",
+      "id": "5c5b1519f836f925a34692be",
+      "permalink": "restaurants",
+      "uri": "/sub-category/restaurants/",
+      "name": "Restaurants"
+     },
+     "properties": {}
+    }
+   ]
+  },
+  {
+   "_model": "Listing",
+   "_namespace": "Simpleview",
+   "id": "6ad64bb8c478fe774b845549",
+   "created": "2026-10-19T16:06:32.978Z",
+   "modified": "2026-11-26T02:00:13.032Z",
+   "archived": false,
+   "archiveDate": null,
+   "deleted": false,
+   "deleteDate": null,
+   "approved": true,
+   "approveDate": "2026-10-19T16:06:32.978Z",
+   "permalink": "the-bay",
+   "uri": "/listing/the-bay/",
+   "tags": null,
+   "contentCategories": null,
+   "companyName": "The Bay",
+   "companyNameSort": "The Bay",
+   "type": "Website Listing",
+   "state": "FL",
+   "listingID": 4518,
+   "url": "baysouthwalton.com",
+   "lat": 30.387245,
+   "lng": -86.174001,
+   "phone": "(850) 378-3117",
+   "address1": "24215 Hwy 331 S",
+   "address2": null,
+   "zip": "32459",
+   "amenities": [
+    {
+     "Cuisine": [
+      "American",
+      "Cajun",
+      "Seafood",
+      "Southern",
+      "Sushi"
+     ]
+    },
+    {
+     "Meals Served": [
+      "Lunch",
+      "Dinner"
+     ]
+    },
+    {
+     "Outdoor Seating": 1
+    },
+    {
+     "Private Dining Spaces": 1
+    },
+    {
+     "Water Front": 1
+    },
+    {
+     "Live Music": 1
+    },
+    {
+     "Private Dining Capacity": 24
+    },
+    {
+     "Pet-Friendly": 1
+    },
+    {
+     "Wedding Venue Type(s)": [
+      "Bay Venue",
+      "Garden Venue",
+      "Indoor Space",
+      "Outdoor Space"
+     ]
+    }
+   ],
+   "amenityKeys": [
+    "Cuisine",
+    "Live Music",
+    "Meals Served",
+    "Outdoor Seating",
+    "Pet-Friendly",
+    "Private Dining Capacity",
+    "Private Dining Spaces",
+    "Water Front",
+    "Wedding Venue Type(s)"
+   ],
+   "threshold360": null,
+   "email": null,
+   "fax": null,
+   "description": "A gem sitting directly on Choctawhatchee Bay at the southern foot of the 331 bridge, The Bay is Chef Jim Shirley's waterfront hot spot. The family-friendly restaurant features mouth-watering Southern gulf coast cuisine, sushi, a 12-draft beer system, inventive bar-crafted cocktails and 2015 Wine Spectator Award of Excellence wine selection. Table and bar seating is available inside and outside on the deck overlooking Choctawhatchee Bay. The Bay is a 2016 Perfect In South Walton award winner in multiple categories including menu variety, executive chef, seafood, and a signature cocktail. Stop by for lunch, dinner or Sunday brunch!\n\nThe Bay has a beautiful New Orleans style garden courtyard available for rehearsal dinners, receptions and ceremonies under 100 guests, as well as brunches. Chef Jim Shirley is the owner of the exclusive in-house catering, Cadre of Chefs, so if you're looking for an exceptional venue with the best-tasting food in South Walton, look no further!",
+   "socialLinks": null,
+   "tollfree": null,
+   "altPhone": null,
+   "city": "Santa Rosa Beach",
+   "incomplete": false,
+   "randSort": 1681,
+   "noImage": false,
+   "menu": null,
+   "cuisines": [
+    "American",
+    "Cajun",
+    "Seafood",
+    "Southern",
+    "Sushi"
+   ],
+   "mealTypes": [
+    "Lunch",
+    "Dinner"
+   ],
+   "venueType": null,
+   "numberOfPeopleCapacity": null,
+   "indoorSquareFootage": null,
+   "flexibleSquareFootage": null,
+   "Neighborhood": [
+    {
+     "object": {
+      "_model": "Neighborhood",
+      "_namespace": "Beach",
+      "id": "68ee9bf4166f8bb1d1f3c656",
+      "permalink": "santa-rosa-beach",
+      "uri": "/neighborhoods/santa-rosa-beach/",
+      "name": "Santa Rosa Beach"
+     },
+     "properties": {}
+    }
+   ],
+   "Category": [
+    {
+     "object": {
+      "_model": "Category",
+      "_namespace": "Simpleview",
+      "id": "5c82a47df836f9166535cba7",
+      "permalink": "culinary-experiences",
+      "uri": "/listings/culinary-experiences/",
+      "name": "Dining"
+     },
+     "properties": {}
+    }
+   ],
+   "SubCategory": [
+    {
+     "object": {
+      "_model": "SubCategory",
+      "_namespace": "Simpleview",
+      "id": "5c5b1519f836f925a34692be",
+      "permalink": "restaurants",
+      "uri": "/sub-category/restaurants/",
+      "name": "Restaurants"
+     },
+     "properties": {}
+    }
+   ]
+  },
+  {
+   "_model": "Listing",
+   "_namespace": "Simpleview",
+   "id": "6ad64297c478fe774b844af4",
+   "created": "2026-10-19T16:06:32.978Z",
+   "modified": "2026-11-26T01:36:22.692Z",
+   "archived": false,
+   "archiveDate": null,
+   "deleted": false,
+   "deleteDate": null,
+   "approved": true,
+   "approveDate": "2026-10-19T16:06:32.978Z",
+   "permalink": "caliza",
+   "uri": "/listing/caliza/",
+   "tags": null,
+   "contentCategories": null,
+   "companyName": "Caliza",
+   "companyNameSort": "Caliza",
+   "type": "Website Listing",
+   "state": "FL",
+   "listingID": 2874,
+   "url": "calizarestaurant.com",
+   "lat": 30.2873323136,
+   "lng": -86.0272984338,
+   "phone": "(850) 213-5700",
+   "address1": "23 Nonesuch Way",
+   "address2": null,
+   "zip": "32413",
+   "amenities": [
+    {
+     "Cuisine": [
+      "American",
+      "Seafood"
+     ]
+    },
+    {
+     "Meals Served": [
+      "Lunch",
+      "Dinner"
+     ]
+    },
+    {
+     "Outdoor Seating": 1
+    },
+    {
+     "Private Dining Spaces": 1
+    }
+   ],
+   "amenityKeys": [
+    "Cuisine",
+    "Meals Served",
+    "Outdoor Seating",
+    "Private Dining Spaces"
+   ],
+   "threshold360": null,
+   "email": "caliza@alysbeach.com",
+   "fax": null,
+   "description": "Located in Alys Beach, Florida, Caliza Restaurant, which is open to only Alys Beach homeowners and vacation rental guests, serves contemporary coastal cuisine in a relaxed, al fresco setting overlooking the town’s zero-entry pool,  complemented by candles, soft lighting, and  Bermudan architecture. \n\nRetreat here after a day at the beach for quality food and drink paired with polished, friendly service. The menu centers on artisan, seasonal ingredients sourced from regional purveyors, showcasing the restaurant’s Gulf Coast locale. Expect an equal mix of healthy and indulgent shareable plates presented simply with bright, bold flavors that let the ingredients shine.  The open-air bar is the perfect spot for happy hour,  offering cocktails designed for poolside sipping and a  thoughtfully curated list of craft beers and wines by the glass.",
+   "socialLinks": null,
+   "tollfree": null,
+   "altPhone": "(850) 213-5514",
+   "city": "Alys Beach",
+   "incomplete": false,
+   "randSort": 2137,
+   "noImage": false,
+   "menu": null,
+   "cuisines": [
+    "American",
+    "Seafood"
+   ],
+   "mealTypes": [
+    "Lunch",
+    "Dinner"
+   ],
+   "venueType": null,
+   "numberOfPeopleCapacity": null,
+   "indoorSquareFootage": null,
+   "flexibleSquareFootage": null,
+   "Neighborhood": [
+    {
+     "object": {
+      "_model": "Neighborhood",
+      "_namespace": "Beach",
+      "id": "68ee9c39166f8bb1d1f3c65e",
+      "permalink": "alys-beach",
+      "uri": "/neighborhoods/alys-beach/",
+      "name": "Alys Beach"
+     },
+     "properties": {}
+    }
+   ],
+   "Category": [
+    {
+     "object": {
+      "_model": "Category",
+      "_namespace": "Simpleview",
+      "id": "5c82a47df836f9166535cba7",
+      "permalink": "culinary-experiences",
+      "uri": "/listings/culinary-experiences/",
+      "name": "Dining"
+     },
+     "properties": {}
+    }
+   ],
+   "SubCategory": [
+    {
+     "object": {
+      "_model": "SubCategory",
+      "_namespace": "Simpleview",
+      "id": "5c5b1519f836f925a34692be",
+      "permalink": "restaurants",
+      "uri": "/sub-category/restaurants/",
+      "name": "Restaurants"
+     },
+     "properties": {}
+    }
+   ]
+  },
+  {
+   "_model": "Listing",
+   "_namespace": "Simpleview",
+   "id": "6ad645bac478fe774b844e49",
+   "created": "2026-10-19T16:06:32.978Z",
+   "modified": "2026-11-26T01:44:32.876Z",
+   "archived": false,
+   "archiveDate": null,
+   "deleted": false,
+   "deleteDate": null,
+   "approved": true,
+   "approveDate": "2026-10-19T16:06:32.978Z",
+   "permalink": "great-southern-cafe",
+   "uri": "/listing/great-southern-cafe/",
+   "tags": null,
+   "contentCategories": null,
+   "companyName": "Great Southern Cafe",
+   "companyNameSort": "Great Southern Cafe",
+   "type": "Website Listing",
+   "state": "FL",
+   "listingID": 524,
+   "url": "thegreatsoutherncafe.com",
+   "lat": 30.3206656,
+   "lng": -86.1372481,
+   "phone": "(850) 752-9191",
+   "address1": "83 Central Square",
+   "address2": null,
+   "zip": "32459",
+   "amenities": [
+    {
+     "Cuisine": [
+      "American",
+      "Cajun",
+      "Seafood",
+      "Southern"
+     ]
+    },
+    {
+     "Meals Served": [
+      "Breakfast",
+      "Brunch",
+      "Lunch",
+      "Dinner"
+     ]
+    },
+    {
+     "Outdoor Seating": 1
+    },
+    {
+     "Private Dining Spaces": 1
+    },
+    {
+     "Pet-Friendly": 1
+    }
+   ],
+   "amenityKeys": [
+    "Cuisine",
+    "Meals Served",
+    "Outdoor Seating",
+    "Pet-Friendly",
+    "Private Dining Spaces"
+   ],
+   "threshold360": null,
+   "email": null,
+   "fax": null,
+   "description": "Great Southern Café is a culinary icon in South Walton which fuses Southern cooking with flavors from around the world using local produce from nearby farms and fresh seafood from the Gulf. It’s a place for seafood, steaks, veggies, handmade burgers, hearty Southern breakfast and cold drinks alike. Jim Shirley owns several restaurants throughout Northwest Florida, but Seaside's Great Southern Café is one of only two local spots where you can sample his famous \"Grits a Ya Ya.\" Great Southern Café also features a full bar, raw oyster bar and a perfect porch to relax and take in the scene at the heart of Seaside.",
+   "socialLinks": null,
+   "tollfree": null,
+   "altPhone": null,
+   "city": "Santa Rosa Beach",
+   "incomplete": false,
+   "randSort": 2691,
+   "noImage": false,
+   "menu": null,
+   "cuisines": [
+    "American",
+    "Cajun",
+    "Seafood",
+    "Southern"
+   ],
+   "mealTypes": [
+    "Breakfast",
+    "Brunch",
+    "Lunch",
+    "Dinner"
+   ],
+   "venueType": null,
+   "numberOfPeopleCapacity": null,
+   "indoorSquareFootage": null,
+   "flexibleSquareFootage": null,
+   "Neighborhood": [
+    {
+     "object": {
+      "_model": "Neighborhood",
+      "_namespace": "Beach",
+      "id": "68ee9c1c166f8bb1d1f3c65a",
+      "permalink": "seaside",
+      "uri": "/neighborhoods/seaside/",
+      "name": "Seaside"
+     },
+     "properties": {}
+    }
+   ],
+   "Category": [
+    {
+     "object": {
+      "_model": "Category",
+      "_namespace": "Simpleview",
+      "id": "5c82a47df836f9166535cba7",
+      "permalink": "culinary-experiences",
+      "uri": "/listings/culinary-experiences/",
+      "name": "Dining"
+     },
+     "properties": {}
+    }
+   ],
+   "SubCategory": [
+    {
+     "object": {
+      "_model": "SubCategory",
+      "_namespace": "Simpleview",
+      "id": "5c5b1519f836f925a34692be",
+      "permalink": "restaurants",
+      "uri": "/sub-category/restaurants/",
+      "name": "Restaurants"
+     },
+     "properties": {}
+    }
+   ]
+  },
+  {
+   "_model": "Listing",
+   "_namespace": "Simpleview",
+   "id": "6ad64815c478fe774b845112",
+   "created": "2026-10-19T16:06:32.978Z",
+   "modified": "2026-11-26T01:50:41.037Z",
+   "archived": false,
+   "archiveDate": null,
+   "deleted": false,
+   "deleteDate": null,
+   "approved": true,
+   "approveDate": "2026-10-19T16:06:32.978Z",
+   "permalink": "north-beach-social",
+   "uri": "/listing/north-beach-social/",
+   "tags": null,
+   "contentCategories": null,
+   "companyName": "North Beach Social",
+   "companyNameSort": "North Beach Social",
+   "type": "Website Listing",
+   "state": "FL",
+   "listingID": 12929,
+   "url": "northbeach.social",
+   "lat": 30.3882949,
+   "lng": -86.1746593,
+   "phone": "(850) 318-4653",
+   "address1": "24200 Hwy 331 S",
+   "address2": null,
+   "zip": "32459",
+   "amenities": [
+    {
+     "Cuisine": [
+      "American",
+      "Seafood"
+     ]
+    },
+    {
+     "Meals Served": [
+      "Lunch",
+      "Dinner"
+     ]
+    },
+    {
+     "Outdoor Seating": 1
+    },
+    {
+     "Water Front": 1
+    },
+    {
+     "Live Music": 1
+    },
+    {
+     "Pet-Friendly": 1
+    }
+   ],
+   "amenityKeys": [
+    "Cuisine",
+    "Live Music",
+    "Meals Served",
+    "Outdoor Seating",
+    "Pet-Friendly",
+    "Water Front"
+   ],
+   "threshold360": null,
+   "email": "info@northbeach.social",
+   "fax": null,
+   "description": "North Beach Social, a beach bar and restaurant, resides under Farm & Fire restaurant at the foot of the 331 Bridge in Santa Rosa Beach, Florida. The space reflects the natural beauty of the scenic surroundings, namely some of the best sunsets overlooking the bay in South Walton.\n\nOutside seating is aplenty at the bar and deck with an abundance of white sandy beach for kids and adults to play. Guests order from the counter and bar and enjoy beach games, toys and seating in a very laid back atmosphere. On the menu are some of Chef Jim Shirley's most famous dishes, like Grits á Ya Ya, The Bomber Burger, fresh, raw oysters and poké bowls, to name a few.\n\nNorth Beach Social also features weekday drink specials and ongoing events and music including beach bocce tournaments and dockside family movies. Currently, North Beach Social is open daily from 11 a.m. - 9 p.m.",
+   "socialLinks": null,
+   "tollfree": null,
+   "altPhone": null,
+   "city": "Santa Rosa Beach",
+   "incomplete": false,
+   "randSort": 2234,
+   "noImage": false,
+   "menu": null,
+   "cuisines": [
+    "American",
+    "Seafood"
+   ],
+   "mealTypes": [
+    "Lunch",
+    "Dinner"
+   ],
+   "venueType": null,
+   "numberOfPeopleCapacity": null,
+   "indoorSquareFootage": null,
+   "flexibleSquareFootage": null,
+   "Neighborhood": [
+    {
+     "object": {
+      "_model": "Neighborhood",
+      "_namespace": "Beach",
+      "id": "68ee9bf4166f8bb1d1f3c656",
+      "permalink": "santa-rosa-beach",
+      "uri": "/neighborhoods/santa-rosa-beach/",
+      "name": "Santa Rosa Beach"
+     },
+     "properties": {}
+    }
+   ],
+   "Category": [
+    {
+     "object": {
+      "_model": "Category",
+      "_namespace": "Simpleview",
+      "id": "5c82a47df836f9166535cba7",
+      "permalink": "culinary-experiences",
+      "uri": "/listings/culinary-experiences/",
+      "name": "Dining"
+     },
+     "properties": {}
+    }
+   ],
+   "SubCategory": [
+    {
+     "object": {
+      "_model": "SubCategory",
+      "_namespace": "Simpleview",
+      "id": "5c5b1519f836f925a34692be",
+      "permalink": "restaurants",
+      "uri": "/sub-category/restaurants/",
+      "name": "Restaurants"
+     },
+     "properties": {}
+    }
+   ]
+  },
+  {
+   "_model": "Listing",
+   "_namespace": "Simpleview",
+   "id": "6ad6471ac478fe774b844fbc",
+   "created": "2026-10-19T16:06:32.978Z",
+   "modified": "2026-11-26T01:48:01.918Z",
+   "archived": false,
+   "archiveDate": null,
+   "deleted": false,
+   "deleteDate": null,
+   "approved": true,
+   "approveDate": "2026-10-19T16:06:32.978Z",
+   "permalink": "la-crema-tapas-chocolate",
+   "uri": "/listing/la-crema-tapas-chocolate/",
+   "tags": null,
+   "contentCategories": null,
+   "companyName": "La Crema-Tapas and Chocolate",
+   "companyNameSort": "La Crema-Tapas and Chocolate",
+   "type": "Website Listing",
+   "state": "FL",
+   "listingID": 1418,
+   "url": "http://www.lacrematapas.com",
+   "lat": 30.2792235,
+   "lng": -86.0169425,
+   "phone": "(850) 534-3004",
+   "address1": "38 Main St",
+   "address2": null,
+   "zip": "32461",
+   "amenities": [
+    {
+     "Meals Served": [
+      "Lunch",
+      "Dinner"
+     ]
+    },
+    {
+     "Outdoor Seating": 1
+    },
+    {
+     "Buyout Available": 1
+    },
+    {
+     "Pet-Friendly": 1
+    }
+   ],
+   "amenityKeys": [
+    "Buyout Available",
+    "Meals Served",
+    "Outdoor Seating",
+    "Pet-Friendly"
+   ],
+   "threshold360": null,
+   "email": null,
+   "fax": null,
+   "description": "Our restaurant is influenced by the incredibly popular tapas and chocolate shops of Madrid and Barcelona. Rosemary Beach and Barcelona share a similar climate and strategic location next to the sea for fresh food. A tapas and chocolate shop was a natural fit for our quaint beach town. La Crema is a place to linger with friends while dining and enjoying great flavors both in cuisine and wine. We want to provide such a dynamic experience to each visitor that they can’t help but revere Rosemary Beach with the same passionate feelings one would have for Spain. Dining is supposed to be a relaxing experience that’s casual, tasty, and unique and that’s exactly what you’ll have at La Crema.",
+   "socialLinks": null,
+   "tollfree": null,
+   "altPhone": null,
+   "city": "Rosemary Beach",
+   "incomplete": false,
+   "randSort": 61,
+   "noImage": false,
+   "menu": null,
+   "cuisines": null,
+   "mealTypes": [
+    "Lunch",
+    "Dinner"
+   ],
+   "venueType": null,
+   "numberOfPeopleCapacity": null,
+   "indoorSquareFootage": null,
+   "flexibleSquareFootage": null,
+   "Neighborhood": [
+    {
+     "object": {
+      "_model": "Neighborhood",
+      "_namespace": "Beach",
+      "id": "68ee9c3f166f8bb1d1f3c65f",
+      "permalink": "rosemary-beach",
+      "uri": "/neighborhoods/rosemary-beach/",
+      "name": "Rosemary Beach"
+     },
+     "properties": {}
+    }
+   ],
+   "Category": [
+    {
+     "object": {
+      "_model": "Category",
+      "_namespace": "Simpleview",
+      "id": "5c82a47df836f9166535cba7",
+      "permalink": "culinary-experiences",
+      "uri": "/listings/culinary-experiences/",
+      "name": "Dining"
+     },
+     "properties": {}
+    }
+   ],
+   "SubCategory": [
+    {
+     "object": {
+      "_model": "SubCategory",
+      "_namespace": "Simpleview",
+      "id": "5c5b1519f836f925a34692be",
+      "permalink": "restaurants",
+      "uri": "/sub-category/restaurants/",
+      "name": "Restaurants"
+     },
+     "properties": {}
+    }
+   ]
+  }
+ ]
+}

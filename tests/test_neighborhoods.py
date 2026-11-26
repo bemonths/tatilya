@@ -470,7 +470,7 @@ def test_diff_reports_connector_version_change(tmp_path):
     db = Database(tmp_path / 'studio.sqlite3'); db.initialize()
     records = run_mock(tmp_path).records
     save_run(db, records)
-    class Next(n.NeighborhoodsConnector): version = 'south-walton-neighborhoods/2'
+    class Next(n.NeighborhoodsConnector): version = 'south-walton-neighborhoods/next'
     diff = db.run_diff(save_run(db, records, Next()))
     assert diff['connector_version_changed'] and diff['unchanged'] == 13
 
@@ -586,3 +586,55 @@ def test_runs_listed_only_for_their_destination(tmp_path, monkeypatch):
         with db.connect() as con: con.execute("UPDATE source_runs SET destination_id='test-coast' WHERE id=?", (job['id'],))
         second = start(client); assert second['status'] == 'done'
         assert db.run_diff(second['id'])['previous_run_id'] is None
+
+
+# --- HEDEF-01: the rebuilt site (Gatsby) and its own neighbourhood API --------------------------------------------------------
+HEDEF = Path(__file__).parent / 'fixtures/hedef01'
+
+
+class ApiSite:
+    """The rebuilt directory page and the site's neighbourhood API (fixtures cut from the 26-27 Nov 2026 answers)."""
+    def __init__(self, answer=None):
+        self.answer = json.loads((HEDEF / 'vsw-mahalle-api.json').read_text(encoding='utf-8')) if answer is None else answer
+        self.seen = []
+    def __call__(self, request):
+        self.seen.append(request.url.path)
+        assert request.url.host in n.HOSTS and request.method == 'GET'
+        if request.url.path == '/neighborhoods/':
+            return response((HEDEF / 'vsw-mahalle-sayfasi.html').read_text(encoding='utf-8'))
+        assert request.url.path == '/api/beach/neighborhood/all/'
+        return httpx.Response(200, json=self.answer, headers={'content-type': 'application/json; charset=utf-8'})
+
+
+def test_the_rebuilt_sites_neighborhoods_without_coordinates_stop_the_run_and_nothing_is_invented(tmp_path, monkeypatch):
+    """27 Nov 2026: the site's neighbourhood API has no lat/lng; latitude/longitude are NOT NULL, so no record is written."""
+    monkeypatch.setattr(n, 'API_GAP', 0)
+    site = ApiSite()
+    with pytest.raises(SourceError, match='koordinat') as error:
+        run_mock(tmp_path, site)
+    assert 'Dune Allen' in str(error.value) and 'Miramar' not in str(error.value)
+    assert site.seen == ['/neighborhoods/', '/api/beach/neighborhood/all/']            # no page asked
+    manifest = json.loads((tmp_path / 'manifest.json').read_text(encoding='utf-8'))
+    assert manifest['connector'] == 'south-walton-neighborhoods/2'
+    assert [e['request_kind'] for e in manifest['responses']] == ['index', 'api'] and manifest['responses'][1]['raw_file'] == 'api/0002.json'
+    entries = n.parse_api(site.answer)
+    assert len(entries) == 16 and all(e['latitude'] is None and e['tags'] == [] for e in entries)
+    seaside = next(e for e in entries if e['name'] == 'Seaside')
+    assert seaside['summary'] and '<' not in seaside['summary'] and seaside['page_url'] == 'https://www.visitsouthwalton.com/neighborhoods/seaside/'
+
+
+def test_the_rebuilt_sites_neighborhoods_are_used_when_the_api_gives_coordinates(tmp_path, monkeypatch):
+    monkeypatch.setattr(n, 'API_GAP', 0)
+    answer = json.loads((HEDEF / 'vsw-mahalle-api.json').read_text(encoding='utf-8'))
+    for index, item in enumerate(answer['data']):      # synthetic points: the real answer has none
+        item.update(lat=30.30 + index * 0.001, lng=-86.30 + index * 0.01, activity=[{'object': {'name': 'Walkable'}}])
+    answer['data'][0]['introduction'] = '<p>Synthetic intro.</p>'
+    batch = run_mock(tmp_path, ApiSite(answer))
+    assert len(batch.records) == 13 and batch.total_count == 16 and batch.excluded_count == 3
+    assert {x['canonical_region_id'] for x in batch.records} == {identifier for identifier, _ in REGIONS}
+    assert all(x['tags'] == ['Walkable'] and x['page_intro'] is None for x in batch.records)
+    assert batch.metadata['kaynak_bicimi'] == 'beach-neighborhood-api' and batch.metadata['excluded_neighborhoods'] == sorted(NEIGHBORHOOD_EXCLUDED)
+    db = Database(tmp_path / 'studio.sqlite3'); db.initialize()
+    identifier = save_run(db, batch.records)
+    with db.connect() as con:
+        assert len(n.NeighborhoodsConnector().read_records(con, identifier)) == 13

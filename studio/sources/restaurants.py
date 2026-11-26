@@ -1,4 +1,12 @@
-"""Visit South Walton Restaurants directory: HTML filters, cards and detail pages."""
+"""Visit South Walton Restaurants directory: HTML filters, cards and detail pages.
+
+HEDEF-01 (26 Nov 2026): visitsouthwalton.com was rebuilt with Gatsby; the directory page has no filter form or cards any more.
+The page asks the site's own public JSON API for its listings (`/api/simpleview/listing/all/`, plain GET; the user approved reading
+it on 26 Nov 2026). When the directory page is the rebuilt one, the collector reads the same API: the site's neighbourhood list
+(`/api/beach/neighborhood/all/`) gives the target neighbourhoods' permalinks, then the listings of sub-category "restaurants" in
+those 13 neighbourhoods. Each listing's neighbourhood is its own `Neighborhood` relation; cuisines, meals and amenities are only
+what the listing's `amenities` (and `cuisines` / `mealTypes`) say. Every answer is kept with the manifest.
+"""
 import hashlib
 import json
 import re
@@ -11,10 +19,10 @@ import httpx
 from .base import CollectionResult, SourceError, CollectionCanceled
 from .html_tree import Tree, Node
 from .url_identity import https_source_identity
-from ..destinations.thirty_a import REGIONS
+from ..destinations.thirty_a import NEIGHBORHOOD_ALIASES, REGIONS
 
 SOURCE_URL = 'https://www.visitsouthwalton.com/listings/culinary-experiences/'
-VERSION = 'south-walton-restaurants/2'      # /2: a city line without a ZIP code is parsed as city and state
+VERSION = 'south-walton-restaurants/3'      # /2: a city line without a ZIP code is parsed as city and state; /3: the rebuilt site's API
 HOSTS = {'www.visitsouthwalton.com', 'visitsouthwalton.com'}
 SOURCE_HOST_ALIASES = {host: 'visitsouthwalton.com' for host in HOSTS}
 SOURCE_IDENTITY = https_source_identity(SOURCE_URL, host_aliases=SOURCE_HOST_ALIASES)
@@ -22,6 +30,12 @@ REGION_MAP = {name: identifier for identifier, name in REGIONS}
 EXCLUDED = {'Miramar Beach', 'Seascape', 'Sandestin'}
 MAX_BYTES, MAX_PAGES, MAX_DETAILS = 5_000_000, 100, 500
 RETRY_SECONDS, REQUEST_GAP = 0.5, 0.1
+# HEDEF-01: the rebuilt site's own API (the same addresses and parameters its directory page sends; one page of 200 holds them all)
+API_ROOT = 'https://www.visitsouthwalton.com/api/'
+API_GAP, API_PAGE_SIZE, MAX_API_BYTES = 8.0, 200, 30_000_000
+CATEGORY_PERMALINK, SUBCATEGORY_PERMALINK = 'culinary-experiences', 'restaurants'
+GATSBY_MARK = re.compile(r'<div\s+id="___gatsby"')
+SLUG = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
 
 
 def clean(value): return ' '.join(value.split())
@@ -180,6 +194,147 @@ def parse_detail(content,url,neighborhoods):
             'source_neighborhoods':[r['source_neighborhood'] for r in regions],'regions':regions}
 
 
+# --- HEDEF-01: the rebuilt site's own JSON API ---------------------------------------------------------------------------------
+
+def neighborhood_api_url():
+    return API_ROOT+'beach/neighborhood/all/?_sort=sort&_lang=en&_joinLang=en'
+
+
+def listing_api_url(permalinks,page):
+    # The parameters the directory page itself sends (sorted by name so the pages are stable; embeddings left out of the answer).
+    query=['approved=true','deleted=false','archived=false','_join=true',f'page={int(page)}',f'pageSize={API_PAGE_SIZE}','_sort=name','_order=ASC',
+           '_exclude=embeddings',f'Category.permalink={CATEGORY_PERMALINK}','Neighborhood.permalink='+','.join(permalinks),
+           f'SubCategory.permalink={SUBCATEGORY_PERMALINK}','_lang=en','_joinLang=en']
+    return API_ROOT+'simpleview/listing/all/?'+'&'.join(query)
+
+
+def api_rows(answer,what):
+    if not isinstance(answer,dict) or answer.get('errorCode') or answer.get('errorMessage') or not isinstance(answer.get('data'),list):
+        raise SourceError(f'Sitenin {what} cevabı beklenen biçimde değil; site yapısı değişmiş olabilir.')
+    if any(not isinstance(row,dict) for row in answer['data']):raise SourceError(f'Sitenin {what} cevabında beklenmeyen bir kayıt var.')
+    return answer['data']
+
+
+def region_of(name,region_map):
+    name=clean(name) if isinstance(name,str) else ''
+    return name if name in region_map else NEIGHBORHOOD_ALIASES.get(name) if NEIGHBORHOOD_ALIASES.get(name) in region_map else None
+
+
+def api_permalinks(answer,region_map):
+    """{target neighbourhood: the site's permalink} from the site's neighbourhood list (exact name or the profile's alias)."""
+    found={}
+    for row in api_rows(answer,'mahalle listesi'):
+        region=region_of(row.get('name'),region_map);permalink=row.get('permalink')
+        if region is None:continue
+        if not isinstance(permalink,str) or not SLUG.fullmatch(permalink):raise SourceError('Sitenin mahalle listesinde geçersiz bir sayfa bağlantısı (permalink) var.')
+        if region in found:raise SourceError(f'Sitenin mahalle listesinde aynı hedef mahalle iki kez geçiyor: {region}.')
+        found[region]=permalink
+    missing=[name for name in region_map if name not in found]
+    if missing:raise SourceError(f"Hedef mahalle sitenin mahalle listesinde bulunamadı: {', '.join(missing)}. Önceki kayıtlar korundu.")
+    return {name:found[name] for name in region_map}
+
+
+def text_of(value):
+    if not isinstance(value,str):return None
+    if '<' in value:value=Tree(value).root.text()
+    return clean(value) or None
+
+
+def website(value):
+    """The listing's web address as the site's own link shows it: a bare domain gets 'https://' (the site's link component does the same)."""
+    value=text_of(value)
+    if not value:return None,False
+    added=not re.match(r'https?://',value,re.I)
+    try:
+        parts=urlsplit(('https://'+value) if added else value)
+        if parts.scheme.lower() not in ('http','https') or not parts.hostname or parts.username is not None or parts.password is not None:raise ValueError()
+    except ValueError as exc:raise SourceError('Restoran web sitesi adresi geçersiz.') from exc
+    return urlunsplit(parts),added
+
+
+def api_amenities(row):
+    """(cuisines, meals served, other amenities) exactly as the listing lists them; nothing listed stays empty."""
+    cuisines=[clean(v) for v in row.get('cuisines') or [] if isinstance(v,str) and clean(v)]
+    meals=[clean(v) for v in row.get('mealTypes') or [] if isinstance(v,str) and clean(v)]
+    other=[]
+    entries=row.get('amenities') or []
+    if not isinstance(entries,list) or any(not isinstance(e,dict) for e in entries):raise SourceError('Restoran kaydının olanak listesi okunamadı.')
+    for entry in entries:
+        for key,value in entry.items():
+            label=clean(str(key))
+            if not label or value is None or value is False or value==0 or value=='' or value==[]:continue
+            if label in ('Cuisine','Meals Served'):
+                values=value if isinstance(value,list) else [value]
+                (cuisines if label=='Cuisine' else meals).extend(clean(str(v)) for v in values if clean(str(v)))
+            elif value is True or value==1:other.append(label)
+            elif isinstance(value,list):other.append(f"{label}: {', '.join(clean(str(v)) for v in value if clean(str(v)))}")
+            elif isinstance(value,str) and re.match(r'https?://',value.strip(),re.I):other.append(label)     # a link ("View Menu"): its label
+            else:other.append(f'{label}: {clean(str(value))}')
+    return sorted(set(cuisines)),sorted(set(meals)),sorted(set(other))
+
+
+def parse_api_listing(row,region_map):
+    uri=row.get('uri')
+    if not isinstance(uri,str):raise SourceError('Restoran kaydında sayfa adresi (uri) yok.')
+    external=identity(uri)
+    name=text_of(row.get('companyName'))
+    if not name:raise SourceError('Restoran kaydında ad eksik.')
+    subcategories={(item.get('object') or {}).get('permalink') for item in row.get('SubCategory') or [] if isinstance(item,dict)}
+    if SUBCATEGORY_PERMALINK not in subcategories:raise SourceError('Site Restaurants dışında bir işletme döndürdü; filtre uygulanmamış olabilir.')
+    regions=set()
+    for item in row.get('Neighborhood') or []:
+        region=region_of((item.get('object') or {}).get('name') if isinstance(item,dict) else None,region_map)
+        if region:regions.add(region)
+    if not regions:raise SourceError(f'{name}: restoranın mahalle bilgisi hedef mahallelerden birine bağlanmıyor.')
+    cuisines,meals,amenities=api_amenities(row)
+    site,added=website(row.get('url'))
+    return {'external_id':external,'name':name,'listing_url':checked_url(external),'description':text_of(row.get('description')),
+            'address_line_1':text_of(row.get('address1')),'address_line_2':text_of(row.get('address2')),'city':text_of(row.get('city')),
+            'state':text_of(row.get('state')),'postal_code':text_of(row.get('zip')),'phone':text_of(row.get('phone')),
+            'email':text_of(row.get('email')),'website_url':site,'cuisines':cuisines,'meals_served':meals,'amenities':amenities,
+            'source_neighborhoods':sorted(regions),'regions':[{'source_neighborhood':n,'canonical_region_id':region_map[n]} for n in sorted(regions)]},added
+
+
+def collect_api(reader,progress,canceled,region_map):
+    progress(5,'Site yenilenmiş: sitenin kendi mahalle listesi okunuyor (API).')
+    answer,_=reader.get(neighborhood_api_url(),'api-neighborhoods')
+    permalinks=api_permalinks(answer,region_map)
+    rows,page,pages,total=[],1,1,None
+    while page<=pages:
+        check(canceled)
+        if page>MAX_PAGES:raise SourceError('Restoran sayfalama üst sınırı aşıldı.')
+        progress(10+min(30,page*5),f'Restaurants listesi okunuyor (API, sayfa {page}).')
+        answer,_=reader.get(listing_api_url(list(permalinks.values()),page),'api-listings')
+        rows.extend(api_rows(answer,'restoran listesi'))
+        if type(answer.get('pages')) is not int or type(answer.get('total')) is not int or answer['pages']<0:
+            raise SourceError('Sitenin restoran listesinde sayfa bilgisi yok; site yapısı değişmiş olabilir.')
+        if total is not None and (answer['total']!=total or answer['pages']!=pages):raise SourceError('Sitenin restoran listesi sayfalar arasında değişti; daha sonra yeniden deneyin.')
+        total,pages=answer['total'],answer['pages'];page+=1
+    if len(rows)!=total:raise SourceError('Sitenin restoran listesindeki kayıt sayısı bildirilen toplamla uyuşmuyor.')
+    if len(rows)>MAX_DETAILS:raise SourceError('Restoran detay üst sınırı aşıldı.')
+    records,seen,added=[],{},0
+    for row in rows:
+        check(canceled)
+        record,scheme=parse_api_listing(row,region_map)
+        if record['external_id'] in seen:
+            if seen[record['external_id']]['name']!=record['name']:raise SourceError('Aynı restoran kimliği farklı adlarla bulundu.')
+            raise SourceError('Sitenin restoran listesinde aynı restoran iki kez geçiyor.')
+        seen[record['external_id']]=record;records.append(record);added+=scheme
+    if not records:raise SourceError('13 hedef mahallede restoran bulunamadı; kaynak yapısını kontrol edin.')
+    counts={name:sum(name in r['source_neighborhoods'] for r in records) for name in region_map}
+    metadata={'target_neighborhood_count':len(region_map),'listing_page_count':pages,
+              'unique_restaurant_count':len(records),'detail_page_count':0,'duplicate_count':0,
+              'neighborhood_counts':counts,'business_type':'Restaurants','excluded_neighborhoods':sorted(EXCLUDED),
+              'filters':{'api':API_ROOT+'simpleview/listing/all/','category':CATEGORY_PERMALINK,'subcategory':SUBCATEGORY_PERMALINK,
+                         'neighborhood_permalinks':permalinks},
+              'represented_neighborhood_count':sum(bool(c) for c in counts.values()),
+              'cuisine_count':len({c for r in records for c in r['cuisines']}),
+              'description_missing_count':sum(record['description'] is None for record in records),
+              'kaynak_bicimi':'simpleview-api','source_total':total,'website_scheme_added_count':added}
+    progress(95,f'{len(records)} restoran okundu (13 hedef mahalle, sitenin API\'si).')
+    return CollectionResult(records,len(records),0,None,metadata)
+
+
 def check(canceled):
     if canceled():raise CollectionCanceled()
 
@@ -196,7 +351,7 @@ class Reader:
         self.manifest={'connector':VERSION,'source_url':SOURCE_URL,'responses':[]}
     def save(self,requested,response,body,kind,neighborhood):
         sequence=len(self.manifest['responses'])+1
-        relative=f"{'detail' if kind=='detail' else 'listing'}/{sequence:04d}.html"
+        relative=f"api/{sequence:04d}.json" if kind.startswith('api') else f"{'detail' if kind=='detail' else 'listing'}/{sequence:04d}.html"
         target=self.path.parent/relative;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(body)
         stamp=datetime.now(timezone.utc).isoformat()
         self.manifest['fetched_at']=stamp
@@ -206,17 +361,18 @@ class Reader:
             'raw_sha256':hashlib.sha256(body).hexdigest()})
         temporary=self.path.with_suffix('.tmp');temporary.write_text(json.dumps(self.manifest,ensure_ascii=False,indent=2),encoding='utf-8');temporary.replace(self.path)
     def get(self,url,kind,neighborhood=None):
+        api=kind.startswith('api')
         original=checked_url(url)
         for attempt in range(2):
             current=original
             try:
                 for hop in range(4):
-                    check(self.canceled);pause(REQUEST_GAP,self.canceled)
-                    with self.client.stream('GET',current,follow_redirects=False,headers={'User-Agent':'30AStudio/0.5 (+https://github.com/bemonths/tatilya)','Accept':'text/html'}) as response:
+                    check(self.canceled);pause(API_GAP if api else REQUEST_GAP,self.canceled)
+                    with self.client.stream('GET',current,follow_redirects=False,headers={'User-Agent':'30AStudio/0.5 (+https://github.com/bemonths/tatilya)','Accept':'application/json' if api else 'text/html'}) as response:
                         chunks=[];size=0
                         for part in response.iter_bytes():
                             check(self.canceled);size+=len(part)
-                            if size>MAX_BYTES:raise SourceError('Restoran yanıtı boyut sınırını aştı.')
+                            if size>(MAX_API_BYTES if api else MAX_BYTES):raise SourceError('Restoran yanıtı boyut sınırını aştı.')
                             chunks.append(part)
                         body=b''.join(chunks);self.save(current,response,body,kind,neighborhood)
                         if response.status_code in (301,302,303,307,308):
@@ -227,6 +383,10 @@ class Reader:
                             if attempt==0:break
                             raise SourceError('Restoran kaynağı sunucu hatası döndürdü; daha sonra deneyin.')
                         if response.status_code!=200:raise SourceError(f'Restoran kaynağı okunamadı (HTTP {response.status_code}).')
+                        if api:
+                            if response.headers.get('content-type','').split(';')[0].strip().lower()!='application/json':raise SourceError('Sitenin restoran API\'si JSON döndürmedi; site yapısı değişmiş olabilir.')
+                            try:return json.loads(body.decode('utf-8-sig')),str(response.url)
+                            except (UnicodeError,ValueError) as exc:raise SourceError('Sitenin restoran API cevabı JSON olarak okunamadı.') from exc
                         if response.headers.get('content-type','').split(';')[0].strip().lower() not in ('text/html','application/xhtml+xml'):raise SourceError('Restoran kaynağı beklenen HTML içerik türünü döndürmedi.')
                         try:return body.decode('utf-8-sig'),str(response.url)
                         except UnicodeError as exc:raise SourceError('Restoran HTML karakter kodlaması geçersiz.') from exc
@@ -244,7 +404,9 @@ def collect(raw_path,progress,canceled,*,client=None,regions=None):
     own=client is None;client=client or httpx.Client(timeout=httpx.Timeout(20,connect=10),verify=True)
     reader=Reader(client,raw_path,canceled)
     try:
-        content,_=reader.get(SOURCE_URL,'filters');filters=parse_filters(content)
+        content,_=reader.get(SOURCE_URL,'filters')
+        if GATSBY_MARK.search(content):return collect_api(reader,progress,canceled,region_map)    # HEDEF-01: the rebuilt site
+        filters=parse_filters(content)
         candidates={};page_count=duplicates=0;counts={}
         for index,neighborhood in enumerate(region_map):
             progress(5+index*3,f'{neighborhood} · Restaurants dizini okunuyor.')

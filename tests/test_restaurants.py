@@ -215,7 +215,7 @@ def test_city_line_without_zip_code_is_city_and_state():
     assert [record[k] for k in ('address_line_1', 'address_line_2', 'city', 'state', 'postal_code')] == ['13063 US-98', None, 'Inlet Beach', 'FL', None]
     other = DETAIL.replace('Santa Rosa Beach, FL 32459', 'Santa Rosa Beach FL')       # no comma: not a city line, kept as written
     assert r.parse_detail(other, '/listing/coast-table/', ['Seaside'])['address_line_2'] == 'Suite 2 Santa Rosa Beach FL'
-    assert r.RestaurantsConnector.version == 'south-walton-restaurants/2'
+    assert r.RestaurantsConnector.version == 'south-walton-restaurants/3'
 
 
 def test_optional_fields_null():
@@ -539,3 +539,121 @@ def test_description_null_transitions_are_diff_changes(tmp_path):
         assert diff['changed'] == 1 and diff['unchanged'] == 0
         assert diff['added'] == diff['removed'] == 0
     assert db.run_diff(save(None))['unchanged'] == 1
+
+
+# --- HEDEF-01: the rebuilt site (Gatsby) and its own JSON API ---------------------------------------------------------------
+HEDEF = Path(__file__).parent / 'fixtures/hedef01'
+
+
+def api_json(name):
+    return json.loads((HEDEF / name).read_text(encoding='utf-8'))
+
+
+class ApiMock:
+    """The rebuilt directory page, then the site's neighbourhood list and listing API (fixtures cut from the 26-27 Nov 2026 answers)."""
+    def __init__(self, listings=None, neighborhoods=None, pages=None):
+        self.listings = api_json('vsw-restoran-api.json') if listings is None else listings
+        self.neighborhoods = api_json('vsw-mahalle-api.json') if neighborhoods is None else neighborhoods
+        self.pages = pages
+        self.seen = []
+    def __call__(self, request):
+        self.seen.append(request)
+        assert request.url.host in r.HOSTS and request.method == 'GET'
+        if request.url.path == '/listings/culinary-experiences/':
+            return response((HEDEF / 'vsw-restoran-sayfasi.html').read_text(encoding='utf-8'))
+        headers = {'content-type': 'application/json; charset=utf-8'}
+        if request.url.path == '/api/beach/neighborhood/all/':
+            return httpx.Response(200, json=self.neighborhoods, headers=headers)
+        assert request.url.path == '/api/simpleview/listing/all/'
+        page = int(request.url.params['page'])
+        answer = self.pages[page - 1] if self.pages else self.listings
+        return httpx.Response(200, json=answer, headers=headers)
+
+
+@pytest.fixture
+def api_fast(monkeypatch):
+    monkeypatch.setattr(r, 'API_GAP', 0)
+
+
+def test_the_rebuilt_site_is_read_from_its_own_api_in_the_13_neighborhoods(tmp_path, api_fast):
+    mock = ApiMock()
+    batch = run_mock(tmp_path, mock)
+    paths = [q.url.path for q in mock.seen]
+    assert paths == ['/listings/culinary-experiences/', '/api/beach/neighborhood/all/', '/api/simpleview/listing/all/']
+    params = mock.seen[2].url.params
+    assert params['SubCategory.permalink'] == 'restaurants' and params['Category.permalink'] == 'culinary-experiences'
+    hoods = params['Neighborhood.permalink'].split(',')
+    assert len(hoods) == 13 and not {'miramar-beach', 'seascape', 'sandestin'} & set(hoods) and 'watercolor' in hoods
+    records = {x['external_id']: x for x in batch.records}
+    assert len(records) == 6 and all(k.startswith('/listing/') and k.endswith('/') for k in records)
+    pizza = records['/listing/pizza-by-sea-gulf-place/']
+    assert pizza['name'] == 'Pizza by the Sea at Gulf Place' and pizza['listing_url'] == 'https://www.visitsouthwalton.com/listing/pizza-by-sea-gulf-place/'
+    assert [pizza[k] for k in ('address_line_1', 'address_line_2', 'city', 'state', 'postal_code')] == ['Gulf Place Town Center', 'Upstairs', 'Santa Rosa Beach', 'FL', '32459']
+    assert pizza['website_url'] == 'https://pizzabythesea.com/gulf-place-town-center'          # a bare domain, as the site's own link shows it
+    assert pizza['cuisines'] == [] and pizza['meals_served'] == ['Dinner', 'Lunch'] and pizza['amenities'] == ['Outdoor Seating']
+    assert pizza['regions'] == [{'source_neighborhood': 'Gulf Place', 'canonical_region_id': 'gulf-place'}]
+    bay = records['/listing/the-bay/']
+    assert bay['email'] is None and 'Seafood' in bay['cuisines'] and 'Private Dining Capacity: 24' in bay['amenities']
+    assert 'Wedding Venue Type(s): Bay Venue, Garden Venue, Indoor Space, Outdoor Space' in bay['amenities']
+    assert records['/listing/la-crema-tapas-chocolate/']['website_url'] == 'http://www.lacrematapas.com'   # a given scheme is kept
+    meta = batch.metadata
+    assert meta['kaynak_bicimi'] == 'simpleview-api' and meta['unique_restaurant_count'] == 6 and meta['target_neighborhood_count'] == 13
+    assert set(meta['neighborhood_counts']) == set(r.REGION_MAP) and meta['neighborhood_counts']['Santa Rosa Beach'] == 2
+    assert meta['represented_neighborhood_count'] == 5 and meta['detail_page_count'] == 0 and meta['website_scheme_added_count'] == 5
+    assert meta['cuisine_count'] == len({c for x in batch.records for c in x['cuisines']})
+    manifest = json.loads((tmp_path / 'manifest.json').read_text(encoding='utf-8'))
+    assert manifest['connector'] == 'south-walton-restaurants/3'
+    assert [e['request_kind'] for e in manifest['responses']] == ['filters', 'api-neighborhoods', 'api-listings']
+    for entry in manifest['responses']:
+        assert hashlib.sha256((tmp_path / entry['raw_file']).read_bytes()).hexdigest() == entry['raw_sha256']
+    assert manifest['responses'][2]['raw_file'] == 'api/0003.json'
+
+
+def test_the_api_records_are_stored_and_read_back(tmp_path, api_fast):
+    db = Database(tmp_path / 'studio.sqlite3'); db.initialize(); connector = r.RestaurantsConnector()
+    source = next(s for s in db.sources() if s['url'] == r.SOURCE_URL)
+    batch = run_mock(tmp_path, ApiMock())
+    identifier = db.add_job('source_collection', 'Restaurants', source_id=source['id'], connector=connector)
+    db.complete_source_run(identifier, batch, connector)
+    with db.connect() as con:
+        back = {x['external_id']: x for x in connector.read_records(con, identifier)}
+    assert back['/listing/pizza-by-sea-gulf-place/']['cuisines'] == [] and back['/listing/caliza/']['regions'][0]['canonical_region_id'] == 'alys-beach'
+
+
+def test_the_api_pages_are_all_read_and_must_agree(tmp_path, api_fast):
+    full = api_json('vsw-restoran-api.json')
+    first = {**full, 'pages': 2, 'total': 6, 'data': full['data'][:4]}
+    second = {**full, 'pages': 2, 'total': 6, 'page': 2, 'data': full['data'][4:]}
+    mock = ApiMock(pages=[first, second])
+    assert len(run_mock(tmp_path, mock).records) == 6 and [q.url.params.get('page') for q in mock.seen[2:]] == ['1', '2']
+    with pytest.raises(SourceError, match='değişti'):
+        run_mock(tmp_path, ApiMock(pages=[first, {**second, 'total': 7}]))
+    with pytest.raises(SourceError, match='toplamla uyuşmuyor'):
+        run_mock(tmp_path, ApiMock(listings={**full, 'total': 9}))
+
+
+def test_the_api_answer_is_checked_before_anything_is_written(tmp_path, api_fast):
+    full = api_json('vsw-restoran-api.json')
+    def changed(index, **fields):
+        data = copy.deepcopy(full); data['data'][index].update(fields); return data
+    with pytest.raises(SourceError, match='Restaurants dışında'):
+        run_mock(tmp_path, ApiMock(changed(0, SubCategory=[{'object': {'permalink': 'catering', 'name': 'Catering'}}])))
+    with pytest.raises(SourceError, match='hedef mahallelerden'):
+        run_mock(tmp_path, ApiMock(changed(0, Neighborhood=[{'object': {'name': 'Miramar Beach'}}])))
+    with pytest.raises(SourceError, match='detay adresinin yapısı'):
+        run_mock(tmp_path, ApiMock(changed(0, uri='/listings/elsewhere/x/')))
+    data = copy.deepcopy(full); data['data'].append(copy.deepcopy(data['data'][0])); data['total'] += 1
+    with pytest.raises(SourceError, match='iki kez'):
+        run_mock(tmp_path, ApiMock(data))
+    nb = api_json('vsw-mahalle-api.json'); nb['data'] = [x for x in nb['data'] if x['name'] != 'Seagrove']
+    with pytest.raises(SourceError, match='Hedef mahalle sitenin mahalle listesinde bulunamadı: Seagrove'):
+        run_mock(tmp_path, ApiMock(neighborhoods=nb))
+    with pytest.raises(SourceError, match='beklenen biçimde değil'):
+        run_mock(tmp_path, ApiMock(listings={'errorCode': 500, 'data': None}))
+
+
+def test_the_api_amenities_say_only_what_the_listing_lists():
+    row = {'cuisines': None, 'mealTypes': None, 'amenities': [{'Outdoor Seating': 1}, {'View Menu': 'https://example.test/menu.pdf'},
+           {'Max Capacity': 34}, {'Cuisine': ['Seafood']}, {'Pet-Friendly': 0}]}
+    assert r.api_amenities(row) == (['Seafood'], [], ['Max Capacity: 34', 'Outdoor Seating', 'View Menu'])
+    assert r.api_amenities({'amenities': []}) == ([], [], [])

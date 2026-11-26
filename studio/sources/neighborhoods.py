@@ -3,6 +3,11 @@
 Only the 13 canonical 30A neighborhoods are stored. A source name is linked to a canonical region by
 exact name or by the explicit alias table in the 30A profile; addresses and coordinates are never used
 to infer a neighborhood. The coordinates are the source's representative point, not a neighborhood center.
+
+HEDEF-01 (26 Nov 2026): visitsouthwalton.com was rebuilt with Gatsby; the directory page has no embedded `locations` list any more.
+Its neighbourhoods come from the site's own public API (`/api/beach/neighborhood/all/`, the call the site's menu makes; the user
+approved reading it on 26 Nov 2026). On 27 Nov 2026 that answer carried no coordinates (no lat/lng field) and an empty `activity`
+list: the reader then stops with a clear error and keeps the raw answer; it never writes a coordinate the source does not give.
 """
 import hashlib
 import json
@@ -23,8 +28,11 @@ SOURCE_URL = "https://www.visitsouthwalton.com/neighborhoods/"
 HOSTS = frozenset({"www.visitsouthwalton.com", "visitsouthwalton.com"})
 SOURCE_HOST_ALIASES = {host: "visitsouthwalton.com" for host in HOSTS}
 SOURCE_IDENTITY = https_source_identity(SOURCE_URL, host_aliases=SOURCE_HOST_ALIASES)
-CONNECTOR_VERSION = "south-walton-neighborhoods/1"
+CONNECTOR_VERSION = "south-walton-neighborhoods/2"     # /2: the rebuilt site's API (HEDEF-01)
 MAX_BYTES, MAX_RECORDS = 5_000_000, 100
+API_URL = "https://www.visitsouthwalton.com/api/beach/neighborhood/all/?_sort=sort&_lang=en&_joinLang=en"
+API_GAP, MAX_API_BYTES = 8.0, 20_000_000
+GATSBY_MARK = re.compile(r'<div\s+id="___gatsby"')
 RETRY_SECONDS, REQUEST_GAP = 0.5, 0.1
 USER_AGENT = "30AStudio/0.7 (+https://github.com/bemonths/tatilya)"
 ID_PATTERN = re.compile(r"[0-9a-f]{24}")
@@ -139,6 +147,63 @@ def parse_index(content):
     return entries
 
 
+def html_text(value):
+    if not isinstance(value, str):
+        return None
+    if "<" in value:
+        value = Tree(value).root.text()
+    return clean(value) or None
+
+
+def parse_api(answer):
+    """The rebuilt site's neighbourhood list (HEDEF-01) as directory entries; a coordinate the answer lacks stays None."""
+    if (not isinstance(answer, dict) or answer.get("errorCode") or answer.get("errorMessage")
+            or not isinstance(answer.get("data"), list)):
+        raise SourceError("Sitenin mahalle API cevabı beklenen biçimde değil; site yapısı değişmiş olabilir.")
+    data = answer["data"]
+    if not data:
+        raise SourceError("Sitenin mahalle API'si boş liste döndürdü. Önceki kayıtlar korundu.")
+    if len(data) > MAX_RECORDS:
+        raise SourceError("Mahalle dizininde beklenenden fazla kayıt var; toplayıcı kontrol edilmeli.")
+    entries, ids, names = [], set(), set()
+    for item in data:
+        if not isinstance(item, dict):
+            raise SourceError("Mahalle dizininde beklenmeyen bir kayıt biçimi var.")
+        identifier, name, permalink = item.get("id"), item.get("name"), item.get("permalink")
+        if not isinstance(identifier, str) or not ID_PATTERN.fullmatch(identifier):
+            raise SourceError("Mahalle kaydında kaynak kimliği eksik veya geçersiz.")
+        if not isinstance(name, str) or not clean(name) or len(name) > 200:
+            raise SourceError("Mahalle kaydında ad eksik veya geçersiz.")
+        if not isinstance(permalink, str) or not SLUG_PATTERN.fullmatch(permalink):
+            raise SourceError("Mahalle kaydında sayfa bağlantısı (permalink) geçersiz.")
+        name = clean(name)
+        if identifier in ids or name in names:
+            raise SourceError("Mahalle dizininde yinelenen kaynak kimliği veya ad var. Önceki kayıtlar korundu.")
+        ids.add(identifier)
+        names.add(name)
+        activities = item.get("activity") or []
+        if not isinstance(activities, list):
+            raise SourceError("Mahalle kaydının etiket listesi okunamadı.")
+        tags = []
+        for activity in activities:
+            label = activity if isinstance(activity, str) else ((activity.get("object") or {}).get("name") if isinstance(activity, dict) else None)
+            if not isinstance(label, str) or not clean(label) or len(label) > 100:
+                raise SourceError("Mahalle kaydında geçersiz bir etiket var.")
+            tags.append(clean(label))
+        lat, lng = item.get("lat", item.get("latitude")), item.get("lng", item.get("longitude"))
+        modified = item.get("modified")
+        entries.append({
+            "external_id": identifier, "name": name, "permalink": permalink, "page_url": page_url(permalink),
+            "summary": html_text(item.get("description")),
+            "latitude": None if lat is None else coordinate(lat, LATITUDE_RANGE, "enlem"),
+            "longitude": None if lng is None else coordinate(lng, LONGITUDE_RANGE, "boylam"),
+            "tags": sorted(set(tags)), "source_modified": clean(modified) or None if isinstance(modified, str) else None,
+            # the neighbourhood page's intro is the record's own `introduction` field now (no page is read)
+            "page_intro": html_text(item.get("introduction")),
+        })
+    return entries
+
+
 def select_targets(entries, regions):
     """Link entries to canonical regions by exact name or explicit alias; everything else is out of scope."""
     canonical = {region["name"]: region for region in regions}
@@ -199,7 +264,7 @@ class Reader:
 
     def save(self, requested, response, body, kind, neighborhood):
         sequence = len(self.manifest["responses"]) + 1
-        relative = f"{'pages' if kind == 'page' else 'index'}/{sequence:04d}.html"
+        relative = f"api/{sequence:04d}.json" if kind == "api" else f"{'pages' if kind == 'page' else 'index'}/{sequence:04d}.html"
         target = self.path.parent / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(body)
@@ -215,20 +280,21 @@ class Reader:
         temporary.replace(self.path)
 
     def get(self, url, kind, neighborhood=None):
+        api = kind == "api"
         original = checked_url(url)
         for attempt in range(2):
             current = original
             try:
                 for hop in range(4):
                     check(self.canceled)
-                    pause(REQUEST_GAP, self.canceled)
+                    pause(API_GAP if api else REQUEST_GAP, self.canceled)
                     with self.client.stream("GET", current, follow_redirects=False,
-                                            headers={"User-Agent": USER_AGENT, "Accept": "text/html"}) as response:
+                                            headers={"User-Agent": USER_AGENT, "Accept": "application/json" if api else "text/html"}) as response:
                         chunks, size = [], 0
                         for part in response.iter_bytes():
                             check(self.canceled)
                             size += len(part)
-                            if size > MAX_BYTES:
+                            if size > (MAX_API_BYTES if api else MAX_BYTES):
                                 raise SourceError("Mahalle yanıtı boyut sınırını aştı.")
                             chunks.append(part)
                         body = b"".join(chunks)
@@ -247,6 +313,13 @@ class Reader:
                         if response.status_code != 200:
                             raise SourceError(f"Mahalle kaynağı okunamadı (HTTP {response.status_code}).")
                         content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+                        if api:
+                            if content_type != "application/json":
+                                raise SourceError("Sitenin mahalle API'si JSON döndürmedi; site yapısı değişmiş olabilir.")
+                            try:
+                                return json.loads(body.decode("utf-8-sig")), str(response.url)
+                            except (UnicodeError, ValueError) as exc:
+                                raise SourceError("Sitenin mahalle API cevabı JSON olarak okunamadı.") from exc
                         if content_type not in ("text/html", "application/xhtml+xml"):
                             raise SourceError("Mahalle kaynağı beklenen HTML içerik türünü döndürmedi.")
                         try:
@@ -274,9 +347,23 @@ def collect(raw_path, progress, canceled, *, client=None, regions=None):
         content, final = reader.get(SOURCE_URL, "index")
         if not same_path(final, SOURCE_URL):
             raise SourceError("Mahalle dizini başka bir sayfaya yönlendirildi.")
-        entries = parse_index(content)
+        rebuilt = "var locations" not in content and bool(GATSBY_MARK.search(content))
+        if rebuilt:          # HEDEF-01: the rebuilt site; its own neighbourhood API
+            progress(10, "Site yenilenmiş: sitenin kendi mahalle listesi okunuyor (API).")
+            answer, _ = reader.get(API_URL, "api")
+            entries = parse_api(answer)
+        else:
+            entries = parse_index(content)
         targets, excluded, unknown, aliases = select_targets(entries, regions)
         records = []
+        if rebuilt:
+            lacking = [entry["name"] for entry, _ in targets if entry["latitude"] is None or entry["longitude"] is None]
+            if lacking:
+                raise SourceError("Sitenin yeni mahalle verisinde koordinat (enlem/boylam) yok: " + ", ".join(lacking)
+                                  + ". Kaynağın vermediği koordinat yazılmaz; mahalle kayıtları güncellenmedi, önceki kayıtlar korundu. "
+                                  "Ham cevap çekim klasöründe saklandı.")
+            records = [{**entry, "canonical_region_id": region["id"]} for entry, region in targets]
+            targets = []
         for index, (entry, region) in enumerate(targets):
             check(canceled)
             progress(15 + int(75 * index / len(targets)), f"{entry['name']} sayfası okunuyor ({index + 1}/{len(targets)}).")
@@ -292,6 +379,8 @@ def collect(raw_path, progress, canceled, *, client=None, regions=None):
             "alias_matches": aliases, "tag_count": len({tag for record in records for tag in record["tags"]}),
             "page_intro_missing_count": sum(record["page_intro"] is None for record in records),
         }
+        if rebuilt:
+            metadata.update(kaynak_bicimi="beach-neighborhood-api", page_count=0)
         progress(95, f"{len(entries)} mahalle kaydı okundu; {len(records)} kanonik mahalle seçildi.")
         return CollectionResult(records, len(entries), len(entries) - len(records), max(modified) if modified else None, metadata)
     finally:
