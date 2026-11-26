@@ -574,7 +574,17 @@ class Scheduler:
         return commit, errors
 
     def run_lane_task(self, worker, task):
-        """A browser company's task in its lane: the company's own session and the old reading order (it may open the browser)."""
+        """A browser company's task in its lane; when the company is finished its browser is closed here, in the lane's own thread
+        (Playwright's sync API belongs to the thread that started it: the lane's next company starts its own; HEDEF-01 trial run,
+        26 Nov 2026: oversee.us failed with "Sync API inside the asyncio loop" while exclusive30a.com's browser was still open)."""
+        state, run = task.state, task.state.run
+        try:
+            self.lane_task(worker, task)
+        finally:
+            if state.finished or self.shared.canceled():
+                close_browser(run)
+
+    def lane_task(self, worker, task):
         from .agency_rates import CompanyDeferred, CompanyStopped
         state, run = task.state, task.state.run
         try:
@@ -637,6 +647,15 @@ class Scheduler:
                 "sirketler": {s.domain: {"cikislar": sorted(s.exits), "istek": sum(x.requests for x in s.sessions) + s.run.session.requests,
                                          "sira": s.lane} for s in self.states},
                 "olaylar": list(self.events)}
+
+
+def close_browser(run):
+    if run.browser is not None:
+        try:
+            run.browser.close()
+        except Exception:
+            log.exception("Şirketin tarayıcısı kapatılamadı.")
+        run.browser = None
 
 
 def lane_view(run):

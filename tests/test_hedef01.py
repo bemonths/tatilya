@@ -543,3 +543,36 @@ def test_the_rebuilt_visit_south_walton_site_gives_the_beach_accesses_from_its_s
     assert all(len(r["external_id"]) == 24 for r in batch.records)                                   # the same Simpleview ids as before
     assert sorted(p.name for p in tmp_path.glob("gatsby-*")) == ["gatsby-01-page-data.json", f"gatsby-02-{Path(asked[2]).name}",
                                                                  "gatsby-03-2083699297.json"]        # every answer kept beside the page
+
+
+def test_a_lane_closes_a_companys_browser_in_its_own_thread_before_the_next_company_opens_one(tmp_path):
+    """HEDEF-01 trial run (26 Nov 2026): exclusive30a.com's browser stayed open and oversee.us, next in the same lane, failed to start
+    its own (Playwright's sync API belongs to one thread at a time)."""
+    events = []
+
+    class Browser:
+        kind = "browser"
+        def __init__(self, domain):
+            self.domain = domain
+            events.append(("open", domain, threading.current_thread().name))
+        def send(self, method, url, **kwargs):
+            assert not [e for e in events if e[0] == "open" and e[1] != self.domain and ("close", e[1]) not in [(x[0], x[1]) for x in events]]
+            body = "<html>LISTING</html>" if "/rentals/" in url else "ok"
+            return 200, url, {"content-type": "text/html"}, body.encode()
+        def close(self):
+            events.append(("close", self.domain, threading.current_thread().name))
+
+    class Verifier:
+        methods, fallback = {}, None
+        def __call__(self, domain, url, canceled, timeout):
+            return Browser(domain)
+        def extension_ready(self):
+            return False
+    result = collect(tmp_path, Net(), [site("guard-a.test", protected=1), site("guard-b.test", protected=1)],
+                     listings_for("guard-a.test", 3) + listings_for("guard-b.test", 2, 10), verifier=Verifier())
+    assert {c["status"] for c in result.related["companies"]} == {"done"} and len(priced(result)) == 10
+    kinds = [(e[0], e[1]) for e in events]
+    first = kinds[0][1]
+    second = "guard-b.test" if first == "guard-a.test" else "guard-a.test"
+    assert kinds == [("open", first), ("close", first), ("open", second), ("close", second)]
+    assert {e[2] for e in events} == {"30a-isci-tarayıcı"}
