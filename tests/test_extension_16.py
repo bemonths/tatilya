@@ -163,6 +163,7 @@ def run_trial(client, monkeypatch, sites, pages=trial_pages):
         assert time.monotonic() < deadline
         time.sleep(0.05)
     fake.done.set()
+    fake.join(timeout=10)      # HEDEF-01: no request of the fake extension may be in flight when the client closes
     fake.join(5)
     return client.app.state.db.job(job["id"]), fake
 

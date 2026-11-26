@@ -154,6 +154,7 @@ def test_a_session_goes_page_by_page_through_the_extension(client):
     assert (status, body) == (200, b'{"ok": true}') and headers["content-type"] == "application/json"
     session.close()
     fake.done.set()
+    fake.join(timeout=10)      # HEDEF-01: no request of the fake extension may be in flight when the client closes
     fake.join(5)
     domains = {d for d, _, _ in fake.seen}
     assert domains == {"ornek.test"} and {gap for _, gap, _ in fake.seen} == {8}
@@ -179,6 +180,7 @@ def test_the_trial_reads_the_local_page_and_keeps_a_raw_copy(client):
     fake.start()
     result = client.post("/api/tarayici-eklentisi/deneme").json()
     fake.done.set()
+    fake.join(timeout=10)      # HEDEF-01: no request of the fake extension may be in flight when the client closes
     assert result["durum"] == "tamam" and result["yontem"] == "eklenti" and result["adres"].endswith("/eklenti-deneme")
     raw = client.data / result["dosya"]
     assert raw.read_bytes() == b"<p id='deneme-sonuc'>hazir</p>".replace(b"hazir", "hazır".encode("utf-8"))

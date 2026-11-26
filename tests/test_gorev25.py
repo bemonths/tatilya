@@ -151,6 +151,7 @@ def test_the_trial_sends_each_allowed_query_once_and_keeps_its_fields_and_answer
         assert time.monotonic() < deadline
         time.sleep(0.05)
     fake.done.set()
+    fake.join(timeout=10)      # HEDEF-01: no request of the fake extension may be in flight when the client closes
     fake.join(5)
     rows = client.app.state.db.job(job["id"])["result"]["siteler"]
     assert [r["durum"] for r in rows] == ["tamam", "tamam", "tamam", "reddedildi"]
