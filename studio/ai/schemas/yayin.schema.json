@@ -1,0 +1,115 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "yayin.json",
+ "description": "6 · Yayın paketi (HEDEF-04 A-6): bölüm başlıkları, açıklamanın ilk iki satırı, üç arama sorgusu, etiketler, kapak.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "surum",
+  "adim",
+  "bolumler",
+  "aciklama_ilk_iki_satir",
+  "arama_sorgulari",
+  "etiketler",
+  "kapak_yazisi",
+  "kapak_fikri",
+  "notlar"
+ ],
+ "properties": {
+  "surum": {
+   "const": 1
+  },
+  "adim": {
+   "const": "yayin"
+  },
+  "bolumler": {
+   "type": "array",
+   "minItems": 3,
+   "maxItems": 20,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "zaman",
+     "baslik_en",
+     "baslik_tr"
+    ],
+    "properties": {
+     "zaman": {
+      "type": "string",
+      "pattern": "^(\\d+:)?\\d{2}:\\d{2}$",
+      "description": "tahmini başlangıç, mm:ss"
+     },
+     "baslik_en": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+     },
+     "baslik_tr": {
+      "type": "string",
+      "minLength": 1
+     }
+    }
+   }
+  },
+  "aciklama_ilk_iki_satir": {
+   "type": "array",
+   "minItems": 2,
+   "maxItems": 2,
+   "items": {
+    "$ref": "#/$defs/ceviri"
+   }
+  },
+  "arama_sorgulari": {
+   "type": "array",
+   "minItems": 3,
+   "maxItems": 3,
+   "items": {
+    "$ref": "#/$defs/ceviri"
+   }
+  },
+  "etiketler": {
+   "type": "array",
+   "minItems": 5,
+   "maxItems": 30,
+   "items": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 60
+   }
+  },
+  "kapak_yazisi": {
+   "$ref": "#/$defs/ceviri"
+  },
+  "kapak_fikri": {
+   "type": "string",
+   "minLength": 1
+  },
+  "notlar": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  }
+ },
+ "$defs": {
+  "ceviri": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "en",
+    "tr"
+   ],
+   "properties": {
+    "en": {
+     "type": "string",
+     "minLength": 1
+    },
+    "tr": {
+     "type": "string",
+     "minLength": 1
+    }
+   }
+  }
+ }
+}

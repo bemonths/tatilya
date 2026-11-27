@@ -1876,3 +1876,15 @@ test('HEDEF-04: Veri Çekici section lists the browser sites, the last list and 
   assert.match(siteTable([]), /Tarayıcı isteyen site yok/);
   assert.match(importCard({...view.ice_aktarmalar[0], yeniden_kuruldu: '2026-11-28T02:00:00Z'}), /ham kopyadan yeniden kuruldu/);
 });
+
+import {publishCard, publishView} from '../studio/web/steps.js';
+test('HEDEF-04 A-6: 6 · Yayın paketi — one call above its button, the chapters marked as estimated', ()=>{
+  const card=publishCard({adim:{status:'ready'},eylemler:{run:true},is:null,yayin:null},{},'',false);
+  assert.match(card,/Yayın paketini çıkar/);assert.match(card,/1 çağrı/);assert.match(card,/tahminidir/);
+  const shown=publishView({durum_adi:'onay bekliyor',tahmini:'Zamanlar tahminidir.',zaman:{kelime:2300,sure_s:920},sorunlar:[],paket:{
+    bolumler:[{zaman:'00:00',baslik_en:'Intro',baslik_tr:'Giriş'},{zaman:'02:10',baslik_en:'Towns',baslik_tr:'Kasabalar'},{zaman:'05:00',baslik_en:'Months',baslik_tr:'Aylar'}],
+    aciklama_ilk_iki_satir:[{en:'a',tr:'b'},{en:'c',tr:'d'}],arama_sorgulari:[{en:'q1',tr:'s1'},{en:'q2',tr:'s2'},{en:'q3',tr:'s3'}],
+    etiketler:['30A'],kapak_yazisi:{en:'Which town?',tr:'Hangi kasaba?'},kapak_fikri:'Harita.',notlar:[]}});
+  assert.match(shown,/~00:00/);assert.match(shown,/zamanlar tahmini/);assert.match(shown,/15:20/);assert.match(shown,/Which town\?/);
+  assert.equal(publishView(null),'');
+});

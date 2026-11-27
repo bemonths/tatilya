@@ -9,6 +9,7 @@ chain's (`studio/text/engine.py`). This module only ties a decision to both:
 | 1 · Başlık ve vaat | adım onaylanır | adayın çalışması notla yeniden çalışır (Claude); video adayı bırakır | başlık seçimi kalkar, adım hazır |
 | 3 · Plan | plan onaylanır; yazım başlayabilir | plan notla yeniden yazılır (Claude) | adım hazır; plan onaysız |
 | 5 · Kontrol ve ton seçimi | seçilen ton videonun metni olur | not 4 · Yazım'a gider, o adım hazır olur; not yeniden yazımda Claude'a verilir | adım hazır |
+| 6 · Yayın paketi | paket onaylanır (kopyası `videolar/<video>/6_yayin/`) | paket notla ve önceki paketle yeniden yazılır (Claude, 1 çağrı) | adım hazır |
 
 The note of "Düzeltme iste" is given to Claude as material ("kullanıcının düzeltme notu"); no instruction file changes.
 Outputs are files and are never deleted: a step's "Sürümler" lists them (packs, plans, text versions; for the first and the fifth step the
@@ -18,7 +19,7 @@ import json
 from pathlib import Path
 
 from . import workflow
-from .ai import store as ai_store, tones as T
+from .ai import publish, store as ai_store, tones as T
 from .database import Conflict
 from .destinations import PROFILES
 from .text import store as text_store
@@ -132,6 +133,8 @@ class VideoFlow:
     def versions(self, video_id, step):
         """The "Sürümler" of a step: every output it has written, newest first; nothing is ever deleted."""
         video = self.video(video_id)
+        if step == "yayin":
+            return self.publish_versions(video_id)
         if step in ("baslik", "kontrol"):
             return self.file_versions(video_id, step)
         if step == "paket":
@@ -169,15 +172,16 @@ class VideoFlow:
                 "reject": approval and decided, "clear_stale": status == "stale",
                 "run": {"baslik": status in ("ready", "error"), "paket": status in ("ready", "done", "stale", "error"),
                         "plan": status in ("ready", "error", "awaiting_approval", "approved", "stale"),
-                        "yazim": status in ("ready", "done", "stale", "error"), "kontrol": False}.get(step, False),
+                        "yazim": status in ("ready", "done", "stale", "error"), "kontrol": False,
+                        "yayin": status in ("ready", "error", "awaiting_approval", "approved", "stale")}.get(step, False),
                 "resume": resumable, "reopen": step == "kontrol" and status == "ready" and bool(text_store.versions(self.db, video_id=video["id"]))}
 
     def job_of(self, video_id, step, row):
         """The job that works for the step now (its live spending and "İptal" are on the step's screen)."""
-        if step == "baslik":
+        if step in ("baslik", "yayin"):
             with self.db.connect() as con:
-                found = con.execute("SELECT job_id FROM claude_runs WHERE status='running' AND json_extract(params,'$.video_id')=?",
-                                    (video_id,)).fetchone()
+                found = con.execute("SELECT job_id FROM claude_runs WHERE status='running' AND json_extract(params,'$.video_id')=? "
+                                    "AND coalesce(json_extract(params,'$.video_adimi'),'baslik')=?", (video_id, step)).fetchone()
             return found[0] if found else None
         if step in ("plan", "yazim") and row["ref"]:
             run = text_store.run(self.db, row["ref"])
@@ -241,6 +245,8 @@ class VideoFlow:
                 versions, run_id = text_store.versions(self.db, video_id=video_id), None
             out.update({"calisma": run_id, "secim": self.text.selection(video_id),
                         "tonlar": [self.check_summary(v) for v in versions], "not": row["note"]})
+        elif step == "yayin":
+            out.update({"yayin": self.publish_view(row), "secim": self.text.selection(video_id)})
         return out
 
     def check_summary(self, version):
@@ -323,6 +329,62 @@ class VideoFlow:
         note = workflow.step(self.db, video_id, "yazim")["note"]
         return self.text.start_writing(video_id, tones, note)
 
+    # ------------------------------------------------------------------------------------------------------------- 6 · Yayın paketi
+
+    def publish_runs(self, video_id):
+        """The Claude runs of 6 · Yayın paketi for this video, newest first (they are not in the topic bank)."""
+        with self.db.connect() as con:
+            ids = [r[0] for r in con.execute("SELECT id FROM claude_runs WHERE step=? AND json_extract(params,'$.video_id')=? "
+                                             "ORDER BY created_at DESC, rowid DESC", (publish.STEP_KEY, video_id))]
+        return [ai_store.run(self.db, i) for i in ids]
+
+    def publish_view(self, row):
+        """The step's output: the package (`yayin.json`), its readable file, the program's check, the timing and the spending."""
+        from .ai.service import RUN_RECORD
+        record = ai_store.run(self.db, row["ref"]) if row["ref"] else None
+        if record is None:
+            return None
+        folder = self.data_dir / record["folder"]
+
+        def read(name, as_json=False):
+            try:
+                text = (folder / name).read_text(encoding="utf-8-sig")
+                return json.loads(text) if as_json else text
+            except (OSError, ValueError):
+                return None
+        saved = read(RUN_RECORD, True) or {}
+        return {"calisma": record["id"], "durum": record["status"], "durum_adi": record["status_label"], "hata": record.get("error"),
+                "paket": read(publish.OUTPUT, True), "markdown": read(publish.MARKDOWN), "zaman": read(publish.TIMING, True),
+                "sorunlar": record.get("problems") or [], "harcama": saved.get("harcama"), "tahmini": publish.ESTIMATED,
+                "duzeltme_notu": (record.get("params") or {}).get("duzeltme_notu"), "dosya": f"{record['folder']}/{publish.MARKDOWN}"}
+
+    def publish_versions(self, video_id):
+        runs = [{"id": r["id"], "zaman": r["created_at"], "baslik": f"Yayın paketi · {r['status_label']}",
+                 "ayrinti": f"Düzeltme notu: {(r.get('params') or {})['duzeltme_notu']}" if (r.get("params") or {}).get("duzeltme_notu") else None}
+                for r in self.publish_runs(video_id)]
+        return runs + self.file_versions(video_id, "yayin")
+
+    def publish_params(self, video_id):
+        video = self.video(video_id)
+        self.require(video_id, "yayin", ("ready", "error", "awaiting_approval", "approved", "stale"),
+                     "Önce 5 · Kontrol ve ton seçimi onaylanmalı: yayın paketi onaylı metinden yazılır.")
+        chosen = self.text.selection(video_id)
+        if not chosen:
+            raise Conflict("Önce 5 · Kontrol ve ton seçimi onaylanmalı: yayın paketi onaylı metinden yazılır.")
+        return video, {"video_id": video_id, "video_adimi": publish.STEP_KEY, "bolge": video.get("region_name") or "30A",
+                       "surum_id": chosen["version_id"]}
+
+    def estimate_publish(self, video_id):
+        """The estimate above "Yayın paketini çıkar" (one call; nothing is sent)."""
+        video, params = self.publish_params(video_id)
+        return self.claude.estimate(video["destination_id"], publish.STEP_KEY, params)
+
+    def start_publish(self, video_id):
+        video, params = self.publish_params(video_id)
+        started = self.claude.start(video["destination_id"], publish.STEP_KEY, params)          # sets the step running
+        workflow.log(self.db, video_id, "yayin", f"6 · Yayın paketi: Claude çalışması başladı ({started['id'][:8]}).")
+        return started
+
     def resume(self, video_id, step):
         row = workflow.step(self.db, video_id, step)
         if step not in ("plan", "yazim") or not row["ref"]:
@@ -373,6 +435,19 @@ class VideoFlow:
             self.text.set_plan_approval(run["id"], True)
             workflow.set_step(self.db, video_id, "plan", "approved", note=note or None, ref=run["id"], stale_from="yazim",
                               reason=workflow.REASONS["plan"], log=said)
+        elif step == "yayin":
+            record = ai_store.run(self.db, row["ref"]) if row["ref"] else None
+            if not record or record["status"] not in ("awaiting_approval", "approved"):
+                raise Conflict("Onaylanacak yayın paketi yok.")
+            errors = [p["metin"] for p in record.get("problems") or [] if p.get("seviye") == "hata"]
+            if errors:
+                raise Conflict("Yayın paketi programın denetiminden geçmedi: " + " ".join(errors[:3]) + " “Düzeltme iste” ile yeniden yazdırın.")
+            data = json.loads((self.data_dir / record["folder"] / publish.OUTPUT).read_text(encoding="utf-8-sig"))
+            ai_store.update_run(self.db, record["id"], status="approved", decision_note=note or None, decided_at=ai_store.now())
+            workflow.set_step(self.db, video_id, "yayin", "approved", note=note or None, ref=record["id"], log=said)
+            self.write_version(video_id, "yayin", "Onaylandı", {
+                "calisma": record["id"], "dosya": f"{record['folder']}/{publish.MARKDOWN}", "zamanlar": publish.ESTIMATED, "paket": data,
+                "not": note or None, "ozet": f"{len(data.get('bolumler') or [])} bölüm (tahmini zamanlar) · {len(data.get('etiketler') or [])} etiket"})
         else:
             if not version_id:
                 raise Conflict("Onaylarken hangi tonla devam edileceğini seçin.")
@@ -380,6 +455,7 @@ class VideoFlow:
             if version is None or version["video_id"] != video_id:
                 raise KeyError(version_id)
             self.text.select(version_id, note)
+            workflow.mark_stale(self.db, video_id, "yayin", workflow.REASONS["kontrol"])      # a package of the earlier tone is old
             self.write_version(video_id, "kontrol", f"Onaylandı: {version['tone_name']}", {
                 "ton": version["tone_name"], "surum": version["number"], "surum_kimligi": version_id, "kirmizi": version["red"],
                 "sari": version["yellow"], "not": note or None, "ozet": f"{version['number']}. sürüm · {version['red']} kırmızı · {version['yellow']} sarı"})
@@ -395,6 +471,8 @@ class VideoFlow:
             return self.claude.estimate_correction(video["run_id"], note)
         if step == "plan":
             return self.text.estimate_plan(video_id, note)
+        if step == "yayin":
+            return self.claude.estimate_correction(row["ref"], note)
         return None      # 5 · Kontrol: no Claude now; the cost is shown above "Yazımı başlat" in 4 · Yazım
 
     def correct(self, video_id, step, note):
@@ -418,6 +496,10 @@ class VideoFlow:
             workflow.log(self.db, video_id, "plan", said)
             workflow.mark_stale(self.db, video_id, "yazim", workflow.REASONS["plan"])
             return {**self.step_view(video_id, step), "baslayan": started["id"]}
+        if step == "yayin":
+            started = self.claude.correct(row["ref"], note, video_id=video_id)                     # sets the step running
+            workflow.log(self.db, video_id, "yayin", said)
+            return {**self.step_view(video_id, step), "baslayan": started["id"]}
         self.write_version(video_id, "kontrol", "Düzeltme istendi", {"not": note})
         workflow.set_step(self.db, video_id, "kontrol", "waiting", note=note, log=said)
         workflow.set_step(self.db, video_id, "yazim", "ready", note=note,
@@ -438,6 +520,12 @@ class VideoFlow:
             if row["ref"] and text_store.run(self.db, row["ref"]):
                 self.text.set_plan_approval(row["ref"], False)
             workflow.set_step(self.db, video_id, "plan", "ready", note=note or None, stale_from="yazim", reason=workflow.REASONS["plan"], log=said)
+        elif step == "yayin":
+            record = ai_store.run(self.db, row["ref"]) if row["ref"] else None
+            if record and record["status"] == "awaiting_approval":
+                ai_store.update_run(self.db, record["id"], status="rejected", decision_note=note or None, decided_at=ai_store.now())
+            self.write_version(video_id, "yayin", "Reddedildi", {"calisma": row["ref"], "not": note or None})
+            workflow.set_step(self.db, video_id, "yayin", "ready", note=note or None, log=said)
         else:
             self.write_version(video_id, "kontrol", "Reddedildi", {"not": note or None})
             workflow.set_step(self.db, video_id, "kontrol", "ready", note=note or None, log=said)

@@ -425,3 +425,7 @@ başlık listesi ve ayrıntı, video kaydı, Ayarlar → Claude). GÖREV-14: `te
 - Claude soru soramaz; çıktısı şemaya ve anlam denetimlerine uymazsa kullanıcı "Düzeltme iste" ile yeni bir çalışma açar.
 - Video metni GÖREV-15'te geldi (M17); metnin Kontrol adımı, Türkçe düzeltme ekranı ve yeni şablonlar sonraki görevlerdedir.
 - Kullanım yüzdesi Claude Code'un bildirdiğidir; ölçüm yalnız bir Claude çağrısından sonra güncellenir.
+
+## HEDEF-04 A-6: `yayin` (6 · Yayın paketi)
+
+Talimat `ortak.md` + `yayin.md`, şema `studio/ai/schemas/yayin.schema.json`, çıktı `yayin.json` (okunur `yayin.md`'yi program yazar). Tek çağrı, araçsız; girdi `yayin_secim.md` ve `seslendirme_zamanli.md` istemin içinde. Çıktı varsayımı 8 bin token; beklenen süre ilk çalışmada 4 dk. Ayrıntı: `docs/M21-IS-AKISI-KATMANLAR.md` sonundaki bölüm.

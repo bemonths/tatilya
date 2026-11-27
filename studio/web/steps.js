@@ -16,6 +16,7 @@ const DESCRIPTIONS={
   plan:"Videonun planı: bölümler, her bölümün tek fikri, kelime bütçesi ve kanıtları. Claude yazar ve eleştirir; plan onaylanmadan yazım başlamaz.",
   yazim:"İngilizce metin ve cümle cümle Türkçesi. Tonları burada seçersiniz; her ton onaylanan planla ayrı yazılır.",
   kontrol:"Programın denetimi, işletme adı denetimi ve tonların karşılaştırması. Onaylarken hangi tonla devam edileceğini seçersiniz.",
+  yayin:"YouTube'a yüklerken kullanılacak paket: bölüm başlıkları, açıklamanın ilk iki satırı, üç arama sorgusu, etiketler, kapak yazısı ve kapak fikri. Onaylı metinden tek Claude çağrısıyla yazılır.",
 };
 
 function lines(text) {return esc(text || "—");}
@@ -129,6 +130,38 @@ export function toneRadios(view, chosen) {
     <span><strong>${esc(t.tone_name)}</strong> <small>${t.number}. sürüm · ${t.red} kırmızı · ${t.yellow} sarı</small></span></label>`).join("")}</fieldset>`;
 }
 
+const clock=seconds=>{const s=Math.round(seconds || 0), m=Math.floor(s/60);return `${String(m).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;};
+
+/** The run card of 6 · Yayın paketi (HEDEF-04 A-6): one Claude call; the estimate above "Yayın paketini çıkar". */
+export function publishCard(view, cost, pending, busy) {
+  const step=view.adim, has=Boolean(view.yayin?.paket);
+  const label=has?"Yayın paketini yeniden çıkar":"Yayın paketini çıkar";
+  return `<section class="library run-card"><div class="library-title"><h2>${label}</h2><small>1 çağrı · onaylı metinden</small></div>
+    <div class="run-card-body"><p class="muted">Claude onaylı İngilizce metinden bölüm başlıklarını, açıklamanın ilk iki satırını, üç arama sorgusunu, etiketleri, kapak yazısını ve kapak fikrini yazar; program bölümleri denetler ve dosyaya yazar. Bölüm zamanları metnin kelime sayısından tahminidir (dakikada 150 kelime); ses gelince kesinleşecek.${has?" Yeniden çıkarırsanız eski paket Sürümler'de kalır.":""}</p>
+    <div class="run-card-foot">${costLine(cost)}<button type="button" class="${has?"":"primary"}" id="publish-start" ${view.eylemler.run && !busy && !view.is?"":"disabled"}>${label}</button></div>
+    ${step.status==="waiting"?'<p class="stage-note">Önce 5 · Kontrol ve ton seçimi onaylanmalı.</p>':""}${pending || ""}</div></section>`;
+}
+
+/** 6 · Yayın paketi: the package (English as it goes to YouTube, Turkish under it); the times are marked as estimates. */
+export function publishView(found) {
+  const data=found?.paket;
+  if(!data) return "";
+  const pair=item=>`${esc(item?.en || "")}<br><small class="muted">${esc(item?.tr || "")}</small>`;
+  const problems=(found.sorunlar || []).map(p=>`<li>${p.seviye==="hata"?"Hata":"Uyarı"}: ${esc(p.metin)}</li>`).join("");
+  const spent=found.harcama?.karsilastirma?.metin;
+  return `<section class="library publish-view"><div class="library-title"><h2>Yayın paketi</h2><small>${esc(found.durum_adi || "")} · <span class="tag warm">zamanlar tahmini</span></small></div>
+    ${found.duzeltme_notu?`<p class="stage-note correction-note"><span class="note-mark">✎</span><span><strong>Kullanıcının düzeltme notu</strong> (bu paket bu notla yazıldı): ${esc(found.duzeltme_notu)}</span></p>`:""}
+    <h3>Bölüm başlıkları</h3><p class="muted">${esc(found.tahmini || "")}${found.zaman?` Metin ${esc(found.zaman.kelime)} kelime, tahmini süre ${clock(found.zaman.sure_s)}.`:""}</p>
+    <table class="data-table"><thead><tr><th>Zaman (tahmini)</th><th>Bölüm</th></tr></thead><tbody>${(data.bolumler || []).map(c=>`<tr><td>~${esc(c.zaman)}</td><td>${pair({en:c.baslik_en,tr:c.baslik_tr})}</td></tr>`).join("")}</tbody></table>
+    <h3>Açıklamanın ilk iki satırı</h3><ol>${(data.aciklama_ilk_iki_satir || []).map(l=>`<li>${pair(l)}</li>`).join("")}</ol>
+    <h3>Hedeflenen arama sorguları</h3><ol>${(data.arama_sorgulari || []).map(q=>`<li>${pair(q)}</li>`).join("")}</ol>
+    <h3>Etiketler</h3><p>${(data.etiketler || []).map(t=>`<span class="tag">${esc(t)}</span>`).join(" ")}</p>
+    <h3>Kapak</h3><p><strong>Kapak yazısı:</strong> ${pair(data.kapak_yazisi)}</p><p><strong>Kapak fikri:</strong> ${esc(data.kapak_fikri || "")}</p>
+    ${problems?`<h3>Programın denetimi</h3><ul>${problems}</ul>`:'<p class="muted">Programın denetimi: bölümler uygun (ilki 00:00, en az 3, her biri en az 10 sn, artan sıra).</p>'}
+    ${(data.notlar || []).length?`<h3>Claude'un notları</h3><ul>${data.notlar.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`:""}
+    ${spent?`<p class="muted">Harcama: ${esc(spent)}</p>`:""}${found.dosya?`<p class="muted">Dosya: <code>${esc(found.dosya)}</code></p>`:""}</section>`;
+}
+
 export function plannedBody(view) {
   return `<section class="planned-hero"><span class="tag planned">Sonraki görevde gelecek</span><h2>${esc(view.adim.title)}</h2><p>${esc(view.aciklama || "")}</p>
     <p class="muted">Bu adım henüz kurulmadı; şimdilik yapılacak iş yok.</p></section>`;
@@ -176,11 +209,11 @@ export class StepScreen {
   /** The estimate above the start button of 3 · Plan and 4 · Yazım, asked as soon as the step can run. */
   async loadCost(ticket) {
     const {videoId, step}=this.ctx.route, view=this.view;
-    if(!view.eylemler.run || view.is || this.pending || !["plan","yazim"].includes(step) || view.adim.status==="waiting") return;
+    if(!view.eylemler.run || view.is || this.pending || !["plan","yazim","yayin"].includes(step) || view.adim.status==="waiting") return;
     if(step==="yazim" && !(this.chosen || []).length) {this.cost={hint:"Ton seçince hesaplanır."};this.paintCost();return;}
     this.cost={loading:true};this.paintCost();
     try {
-      const estimate=step==="plan"?await api(`videos/${encodeURIComponent(videoId)}/plan/tahmin`,{method:"POST",body:"{}"})
+      const estimate=step==="yayin"?await api(`videos/${encodeURIComponent(videoId)}/yayin/tahmin`,{method:"POST",body:"{}"}):step==="plan"?await api(`videos/${encodeURIComponent(videoId)}/plan/tahmin`,{method:"POST",body:"{}"})
         :await api(`videos/${encodeURIComponent(videoId)}/yazim/tahmin`,{method:"POST",body:JSON.stringify({tonlar:this.chosen})});
       if(ticket!==this.sequence) return;
       this.cost={estimate};
@@ -227,6 +260,11 @@ export class StepScreen {
       body=`${writingCard(view,this.chosen || [],this.cost,this.pendingBox(),this.busy)}${runningPanel(job)}
         ${run?`${chainTable(run.halkalar && {...run.halkalar,halkalar:run.halkalar.halkalar.filter(r=>r.grup!=="plan")},{title:"Yazımın halkaları"})}${spentLine(run.harcama)}`:""}
         ${versionList(view,id)}`;
+    } else if(step.id==="yayin") {
+      const found=view.yayin;
+      const decision=decisionCard(step,view.eylemler,{description:"Yayın paketi uygunsa onaylayın", note:this.note, pending:found?.paket?this.pendingBox():"", busy:this.busy,
+        help:"Düzeltme iste: notunuz ve bu paket Claude'a malzeme olarak verilerek paket yeniden yazılır (1 çağrı; tahmini önce gösterilir). Reddet: adım hazır durumuna döner; paket Sürümler'de kalır."});
+      body=`${publishCard(view,this.cost,found?.paket?"":this.pendingBox(),this.busy)}${runningPanel(job)}${publishView(found)}${decision}`;
     } else if(step.id==="kontrol") {
       let compare=null;
       if((view.tonlar || []).length) {
@@ -313,6 +351,10 @@ export class StepScreen {
           ()=>this.act(()=>api(`metin/calismalar/${encodeURIComponent(run)}/ton`,{method:"POST",body:JSON.stringify({ton})}),"Aynı planla bir ton daha yazılıyor."));
       });
     }
+    if(step==="yayin") root.querySelector("#publish-start")?.addEventListener("click",()=>{
+      if(this.view.yayin?.paket && globalThis.confirm && !globalThis.confirm("Yayın paketi yeniden çıkarılsın mı? Eski paket Sürümler'de kalır.")) return;
+      this.ask(()=>api(this.path("yayin/tahmin"),{method:"POST",body:"{}"}),"Yayın paketini çıkar: başlat",()=>this.call("yayin",{},"Yayın paketi yazılıyor; harcama aşağıda."));
+    });
     if(step==="kontrol") root.querySelector("#check-reopen")?.addEventListener("click",()=>this.call("kontrol/ac",{},"Kontrol yeniden açıldı."));
   }
 

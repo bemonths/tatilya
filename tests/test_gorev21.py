@@ -72,7 +72,7 @@ def test_no_video_no_steps_and_an_open_video_shows_only_its_eight_steps(text_env
                                                                       (5, "Kontrol ve ton seçimi"), (6, "Yayın paketi"), (7, "Seslendirme"),
                                                                       (8, "Kurgu paketi")]
         assert flow["video"]["display_name"] == "Kış videosu" and flow["steps"][0]["status"] == "ready"
-        assert [s["approval"] for s in flow["steps"]] == [True, False, True, False, True, False, False, False]
+        assert [s["approval"] for s in flow["steps"]] == [True, False, True, False, True, True, False, False]
         planned = step(client, "kurgu", video_id)
         assert planned["adim"]["label"] == "sonraki görevde gelecek" and "Kurgu Motoru" in planned["aciklama"] and not any(planned["eylemler"].values())
         assert client.post("/api/videolar/kapat").json() == {"acik": None}                # "Videoyu kapat": back to the project
@@ -329,7 +329,7 @@ def test_a_changed_approval_makes_later_steps_stale_and_bu_degisiklik_etkilemiyo
     assert decide(app, "kontrol", surum=view["surumler"][0]["id"]).status_code == 200
     assert app.post("/api/videos/v1/evidence-pack").status_code == 201                     # the pack is made again
     assert statuses(app) == {"baslik": "approved", "paket": "done", "plan": "stale", "yazim": "stale", "kontrol": "stale",
-                             "yayin": "waiting", "ses": "waiting", "kurgu": "waiting"}
+                             "yayin": "ready", "ses": "waiting", "kurgu": "waiting"}
     shown = step(app, "plan")
     assert shown["adim"]["stale_reason"] == "Veri paketi değişti." and shown["adim"]["status_before_stale"] == "approved"
     assert shown["eylemler"]["clear_stale"] and shown["calisma"]["plan"]                   # the output is not deleted
@@ -423,11 +423,11 @@ def test_canceling_the_writing_records_it_as_iptal_edildi_counts_what_it_spent_a
 def test_settings_name_every_claude_step_with_its_place_and_keep_no_content_setting(app):
     view = app.get("/api/settings/claude").json()
     rows = view["options"]["steps"]
-    assert [r["key"] for r in rows] == [key for key, _ in claude_settings.CLAUDE_STEPS] and len(rows) == 9
+    assert [r["key"] for r in rows] == [key for key, _ in claude_settings.CLAUDE_STEPS] and len(rows) == 10
     assert {r["key"]: r["place"] for r in rows} == {"baslik": "Proje · Konu bankası", "baslik_degerlendirme": "Proje · Konu bankası; 1 · Başlık ve vaat",
                                                     "metin_plan": "3 · Plan", "metin_plan_elestiri": "3 · Plan", "metin_bolum": "4 · Yazım",
                                                     "metin_birlestirme": "4 · Yazım", "metin_giris_kapanis": "4 · Yazım",
-                                                    "metin_son_okuma": "4 · Yazım", "metin_ceviri": "4 · Yazım"}
+                                                    "metin_son_okuma": "4 · Yazım", "metin_ceviri": "4 · Yazım", "yayin": "6 · Yayın paketi"}
     assert [r["screen"] for r in rows][:4] == ["Öneri al (başlık önerisi)", "Kendi başlığını değerlendirme", "Planlayıcı", "Plan eleştirmeni"]
     assert all(r["model_field"] in view["settings"] and r["effort_field"] in view["settings"] for r in rows)
     assert {"claude_call_limit", "claude_job_limit"} <= set(view["settings"]) and [f["field"] for f in view["options"]["limits"]] == [

@@ -304,6 +304,33 @@ def answer(text, session, prompt, *, step=None, scenario="ok"):
           "modelUsage": models, "permission_denials": []})
 
 
+def publish_session(given, prompt, scenario, session):
+    """HEDEF-04 A-6: 6 · Yayın paketi. Chapters from the narration's `[~mm:ss]` marks (at least 10 s apart, 10 s before the end);
+    FAKE_CLAUDE_SCENARIO=yayin_kotu starts the first chapter at 00:05 (the program's check must catch it)."""
+    import re as regex
+    narration = given.files.get("seslendirme_zamanli.md", "")
+    marks = sorted({int(m.group(1)) * 60 + int(m.group(2)) for m in regex.finditer(r"\[~(\d{2}):(\d{2})\]", narration)})
+    found = regex.search(r"\((\d+) sn\)", given.files.get("yayin_secim.md", ""))
+    total = int(found.group(1)) if found else (marks[-1] if marks else 0)
+    chosen = [0]
+    for moment in marks:
+        if moment - chosen[-1] >= 10 and total - moment >= 10:
+            chosen.append(moment)
+    if scenario == "yayin_kotu":
+        chosen[0] = 5
+    note = regex.search(r"--- not başı ---\n(.*?)\n--- not sonu ---", prompt, regex.S)
+    data = {"surum": 1, "adim": "yayin",
+            "bolumler": [{"zaman": f"{s // 60:02d}:{s % 60:02d}", "baslik_en": f"Chapter {n}", "baslik_tr": f"Bölüm {n}"}
+                         for n, s in enumerate(chosen[:6], 1)],
+            "aciklama_ilk_iki_satir": [{"en": "First line.", "tr": "İlk satır."}, {"en": "Second line.", "tr": "İkinci satır."}],
+            "arama_sorgulari": [{"en": f"30a query {n}", "tr": f"30a sorgu {n}"} for n in (1, 2, 3)],
+            "etiketler": ["30A", "South Walton", "Seaside", "Rosemary Beach", "Florida vacation"],
+            "kapak_yazisi": {"en": "Which town?", "tr": "Hangi kasaba?"}, "kapak_fikri": "Sahte kapak fikri.",
+            "notlar": [f"Düzeltme notu: {note.group(1)}"] if note else ["Sahte yayın paketi."]}
+    answer(json.dumps(data, ensure_ascii=False, indent=1), session, prompt, step="yayin", scenario=scenario)
+    return 0
+
+
 def main():
     sys.stdin.reconfigure(encoding="utf-8")      # the runner writes and reads UTF-8, as Claude Code does
     sys.stdout.reconfigure(encoding="utf-8")
@@ -372,6 +399,8 @@ def main():
         emit({"type": "result", "subtype": "error_max_turns", "is_error": True, "session_id": session, "num_turns": 2,
               "errors": ["Reached maximum number of turns"]})
         return 1
+    if "\nAdım: yayin\n" in prompt:
+        return publish_session(given, prompt, scenario, session)
     review = "Adım: baslik_degerlendirme" in prompt
     if scenario in ("invalid_json", "missing_file", "no_json"):
         text = "{}"                                          # the answer is replaced by the scenario anyway

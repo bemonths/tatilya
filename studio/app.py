@@ -1640,6 +1640,15 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     def plan_start(video_id: str, body: PlanInput):
         return text_or_404(lambda: flow().start_plan(video_id, body.not_))
 
+    @app.post("/api/videos/{video_id}/yayin/tahmin")
+    def publish_estimate(video_id: str):
+        """6 · Yayın paketi: the estimate above "Yayın paketini çıkar" (one Claude call)."""
+        return flow_or_404(lambda: flow().estimate_publish(video_id))
+
+    @app.post("/api/videos/{video_id}/yayin", status_code=201)
+    def publish_start(video_id: str):
+        return flow_or_404(lambda: flow().start_publish(video_id))
+
     @app.post("/api/videos/{video_id}/yazim/tahmin")
     def writing_estimate(video_id: str, body: TextRunInput):
         """4 · Yazım: the estimate above "Yazımı başlat" (every chosen tone with the approved plan)."""

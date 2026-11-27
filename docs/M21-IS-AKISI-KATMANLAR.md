@@ -216,3 +216,15 @@ Kalkanlar: `POST /api/videos/<video>/metin` (+`/tahmin`), `POST /api/metin/calis
 düğme, düzeltme notunun Claude'a giden malzemede bulunması, plan onaylanmadan yazımın başlamaması, eskime, maliyet, iptal, Ayarlar,
 taşıma) ve `tests/frontend.test.mjs` içindeki "GÖREV-21" testleri (menü, adresler, yönlendirme, ortak parçalar, adım ekranları, konu
 bankası, Videolar).
+
+## HEDEF-04 A-6: 6 · Yayın paketi (27.11.2026)
+
+Adım kuruldu (`studio/ai/publish.py`, kimlik `yayin`); "sonraki görevde gelecek" listesinde yalnız 7 · Seslendirme ve 8 · Kurgu paketi kaldı.
+
+- 5 · Kontrol ve ton seçimi onaylanınca 6 hazır olur (bu sürümden önce onaylanmış videolarda da: adım satırları okunurken).
+- Claude tek çağrıda JSON döndürür: bölüm başlıkları, açıklamanın ilk iki satırı, hedeflenen üç arama sorgusu, etiketler, kapak yazısı ve kapak fikri. Malzeme istemdedir: `yayin_secim.md` (başlık, vaat, kapak fikri, metnin bilgisi) ve `seslendirme_zamanli.md` (onaylı İngilizce metin, her paragrafın başında tahmini zamanı).
+- Zamanlar kelime sayısından tahminidir (dakikada 150 kelime); ekranda ve dosyada "tahmini" yazar, ses gelince kesinleşecek.
+- Program bölümleri denetler: ilki 00:00, en az 3, her biri en az 10 sn, artan sıra, son bölüm tahmini sürenin en az 10 sn öncesinde. Hata varsa paket onaylanamaz; "Düzeltme iste" ile yeniden yazdırılır.
+- Çıktı çalışma klasöründe `yayin.json` ve `yayin.md`; onay `videolar/<video>/6_yayin/surum-NNN.json`'a paketin kopyasını yazar. Ton seçimi değişirse onaylı paket eskir ("Ton seçimi değişti.").
+- Onay tek bileşen: Onayla / Düzeltme iste (not ve önceki paket Claude'a malzeme; 1 çağrı, tahmin önce) / Reddet. 6 onaylanınca 7 · Seslendirme kurulmadığı için bekler.
+- Modeli ve eforu Ayarlar → Claude'da öbür Claude adımlarıyla birlikte ("Yayın paketi", yer "6 · Yayın paketi"; varsayılan Opus · Orta). Uçlar: `POST /api/videos/{id}/yayin/tahmin`, `POST /api/videos/{id}/yayin`. Bu adımın çalışmaları konu bankasında görünmez.

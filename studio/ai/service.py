@@ -25,6 +25,7 @@ from .. import workflow
 from . import budget, claude_info, instructions, runner, settings as claude_settings, single, steps, store, usage
 from . import title  # noqa: F401  (registers the title step)
 from . import title_review  # noqa: F401  (registers the evaluation step, GÖREV-14)
+from . import publish  # noqa: F401  (registers 6 · Yayın paketi, HEDEF-04 A-6)
 from . import title_marks
 
 RUN_RECORD, STREAM, INSTRUCTIONS, TASK, RUN_SCHEMA = "calisma.json", "akis.jsonl", "talimat.md", "gorev.md", "sema.json"
@@ -32,7 +33,7 @@ JOB_KIND = "claude_run"
 MAX_NOTE = 4000
 # GÖREV-14 (Adım 4b): a Claude run's bar moves through stages: inputs 0–10 %, Claude 10–90 % (elapsed time over the median duration of
 # the step's earlier successful runs, or the step's default when there is none; never past 90 %), validation and Markdown 90–100 %.
-DEFAULT_SECONDS = {"baslik": 420, "baslik_degerlendirme": 300}
+DEFAULT_SECONDS = {"baslik": 420, "baslik_degerlendirme": 300, "yayin": 240}
 FALLBACK_SECONDS = 420
 MEDIAN_OF = 9
 DONE_STATUSES = ("awaiting_approval", "approved", "rejected")
@@ -152,7 +153,7 @@ class ClaudeService:
         run_id = store.new_id()
         scope_id = previous["scope_id"] if previous else run_id[:12]
         folder = Path("claude") / scope_id / step.key / run_id
-        label = params["bolge"] + (f" · {params['aile']}" if params.get("aile") not in (None, title.ALL_FAMILIES) else "")
+        label = params.get("bolge", step.title) + (f" · {params['aile']}" if params.get("aile") not in (None, title.ALL_FAMILIES) else "")
         with self.lock:
             if self.closing:
                 raise Conflict("Uygulama kapanıyor.")
@@ -171,18 +172,25 @@ class ClaudeService:
                 self.db.update_job(job_id, status="failed", message=str(exc))
                 raise
             (self.db.path.parent / folder).mkdir(parents=True, exist_ok=True)
-            self.video_step(params, "running")
+            self.video_step(params, "running", ref=run_id)
             self.executor.submit(self.work, run_id, destination, step, params, previous, note)
         return store.run(self.db, run_id)
 
-    def video_step(self, params, status, error=None):
+    def video_step(self, params, status, error=None, *, finished=False, ref=None):
         """GÖREV-21: a title run started from a video's first step (params["video_id"]) moves that step: running while Claude works,
         ready when the candidates are there to choose from (or the run was canceled), error when the run failed."""
         video_id = (params or {}).get("video_id")
         if not video_id:
             return
+        key = params.get("video_adimi") or "baslik"      # HEDEF-04 A-6: 6 · Yayın paketi runs here too ("video_adimi": "yayin")
+        values = {"error": error}
+        if key != "baslik":
+            if finished and status == "ready":
+                status = "awaiting_approval"           # its one output waits for the approval
+            if ref:
+                values["ref"] = ref
         try:
-            workflow.set_step(self.db, video_id, "baslik", status, error=error)
+            workflow.set_step(self.db, video_id, key, status, **values)
         except Exception:      # the step's status must never break a run
             pass
 
@@ -271,7 +279,8 @@ class ClaudeService:
         record = store.run(self.db, run_id)
         if record is None:
             raise KeyError(run_id)
-        params = {k: v for k, v in record["params"].items() if k not in ("duzeltme_notu", "baslik_eki", "video_id")}
+        dropped = ("duzeltme_notu", "baslik_eki") + (() if record["step"] == publish.STEP_KEY else ("video_id",))
+        params = {k: v for k, v in record["params"].items() if k not in dropped}
         return self.estimate(record["destination_id"], record["step"], params, correction_of=run_id, note=(note or "").strip())
 
     def estimate_translate(self, run_id, index, edited_tr):
@@ -548,7 +557,7 @@ class ClaudeService:
         problems = step.check(ctx, data)
         (folder / step.markdown).write_text(step.render(ctx, data, problems), encoding="utf-8")
         store.update_run(self.db, run_id, status="awaiting_approval", problems=problems)
-        self.video_step(ctx.params, "ready")
+        self.video_step(ctx.params, "ready", finished=True, ref=run_id)
         write_json(folder / RUN_RECORD, {**base, "durum": "awaiting_approval", "sorunlar": problems,
                                          "paketler": {name: record["id"] for name, record in ctx.packs.items()}})
         errors_count = sum(p["seviye"] == title.ERROR for p in problems)
@@ -557,6 +566,8 @@ class ClaudeService:
             filled = (data.get("doluluk") or {}).get("dolar_mi")
             message = (f"Değerlendirme hazır: fikir veriyle {'doluyor' if filled else 'dolmuyor'}; "
                        + (f"{count} aday onay bekliyor" if count else "başlık adayı yok"))
+        elif step.key == publish.STEP_KEY:
+            message = f"Yayın paketi hazır: {len(data.get('bolumler') or [])} bölüm (zamanlar tahmini), onay bekliyor"
         else:
             message = f"{count} başlık önerisi onay bekliyor"
         comparison = (spending or {}).get("karsilastirma")
@@ -652,7 +663,7 @@ class ClaudeService:
         return {**record, "adaysiz": empty, "bilgi": title_review.NO_CANDIDATES_TEXT if empty else None}
 
     def runs(self, destination_id):
-        return [self.with_outcome(r) for r in store.runs(self.db, destination_id)]
+        return [self.with_outcome(r) for r in store.runs(self.db, destination_id) if r["step"] != publish.STEP_KEY]   # not the bank's
 
     def brief_candidates(self, record, used):
         """A run's candidates for the topic bank's list (titles, family, region, whether a video uses it), read from its output."""

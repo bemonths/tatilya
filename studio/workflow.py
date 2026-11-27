@@ -10,7 +10,7 @@ bank, the channel's rules and the list of videos. The video layer holds one vide
 | 3 | plan | Plan | evet |
 | 4 | yazim | Yazım | hayır |
 | 5 | kontrol | Kontrol ve ton seçimi | evet |
-| 6 | yayin | Yayın paketi | henüz yok |
+| 6 | yayin | Yayın paketi | evet (HEDEF-04 A-6) |
 | 7 | ses | Seslendirme | henüz yok |
 | 8 | kurgu | Kurgu paketi | henüz yok |
 
@@ -25,7 +25,7 @@ Statuses (`video_steps.status`): waiting (bekliyor), ready (hazır), running (ç
 - A step that looks running while no work of it runs (the program closed half way) becomes error and can be resumed.
 Every change and every decision is a dated Turkish sentence in `video_step_log`.
 
-Steps 6–8 are not built yet: they stay waiting and their screens say "Sonraki görevde gelecek".
+Steps 7–8 are not built yet: they stay waiting and their screens say "Sonraki görevde gelecek".
 """
 import json
 from datetime import datetime, timezone
@@ -46,10 +46,9 @@ STEPS = (
 )
 KEYS = tuple(key for key, _ in STEPS)
 TITLES = dict(STEPS)
-APPROVAL = frozenset({"baslik", "plan", "kontrol"})
+APPROVAL = frozenset({"baslik", "plan", "kontrol", "yayin"})
 PLANNED_NOTE = "Sonraki görevde gelecek"
 PLANNED = {
-    "yayin": "Yayın paketi: videonun son başlığı, açıklaması, etiketleri ve sabit yorumu. Onaylanan metinden ve seçilen tondan üretilecek.",
     "ses": "Seslendirme: seçilen tonun İngilizce seslendirme metninden anlatım sesi ve zaman damgaları.",
     "kurgu": "Kurgu paketi: Kurgu Motoru'na gidecek paket (metin, cümle kimlikleri, ses ve veri kayıtları). Stok görüntü, animasyon ve "
              "kurgu bu programda değil, Kurgu Motoru'nda yapılır.",
@@ -58,7 +57,7 @@ WITH_OUTPUT = frozenset({"awaiting_approval", "approved", "done"})
 COMPLETE = frozenset({"approved", "done"})
 INTERRUPTED = "Program kapanırken yarıda kaldı; kaldığı yerden sürdürebilirsiniz."
 FIELDS = ("note", "error", "ref", "inputs")
-REASONS = {"baslik": "Başlık onayı değişti.", "paket": "Veri paketi değişti.", "plan": "Plan onayı değişti.", "yazim": "Yazım değişti.",
+REASONS = {"baslik": "Başlık onayı değişti.", "paket": "Veri paketi değişti.", "plan": "Plan onayı değişti.", "yazim": "Yazım değişti.", "kontrol": "Ton seçimi değişti.",
            "veri": "Veri paketten sonra yeniden çekildi."}
 
 
@@ -155,6 +154,11 @@ def ensure(con, video_id):
                     con.execute("INSERT INTO video_steps (video_id,step,status,updated_at) VALUES (?,?,?,?)", (video_id, key, "waiting", now()))
         else:
             seed(con, video_id)
+        rows = _rows(con, video_id)
+    if rows["kontrol"]["status"] in COMPLETE and rows["yayin"]["status"] == "waiting":
+        # HEDEF-04 A-6: 6 · Yayın paketi is built now; a video whose check was approved before waited there for good
+        _update(con, video_id, "yayin", status="ready")
+        _log(con, video_id, "yayin", f"{label('yayin')}: bekliyor → hazır (adım kuruldu; ton seçimi onaylı).")
         rows = _rows(con, video_id)
     return rows
 
@@ -288,9 +292,10 @@ def active_steps(db):
         for row in con.execute("SELECT video_id, state FROM text_runs WHERE status IN ('running','waiting_limit')"):
             approved = bool(json.loads(row["state"] or "{}").get("plan_onaylandi"))
             found.add((row["video_id"], "yazim" if approved else "plan"))
-        for row in con.execute("SELECT json_extract(params,'$.video_id') FROM claude_runs WHERE status='running'"):
+        for row in con.execute("SELECT json_extract(params,'$.video_id'), json_extract(params,'$.video_adimi') FROM claude_runs "
+                               "WHERE status='running'"):
             if row[0]:
-                found.add((row[0], "baslik"))
+                found.add((row[0], row[1] or "baslik"))
     return found
 
 
@@ -377,7 +382,13 @@ NEXT = {
     ("kontrol", "waiting"): "Önce 4 · Yazım adımı bitmeli.",
     ("kontrol", "ready"): "“Kontrolü yeniden aç” ile karşılaştırmaya dön ya da 4 · Yazım adımında metni yeniden yazdır.",
     ("kontrol", "awaiting_approval"): "Denetim bulgularına ve tonların karşılaştırmasına bak; devam edilecek tonu seçip “Onayla”.",
-    ("kontrol", "approved"): "Ton seçildi. Sonraki adımlar (6 · Yayın paketi, 7 · Seslendirme, 8 · Kurgu paketi) sonraki görevde gelecek.",
+    ("kontrol", "approved"): "Ton seçildi. Sonraki adım: 6 · Yayın paketi.",
+    ("yayin", "waiting"): "Önce 5 · Kontrol ve ton seçimi onaylanmalı; yayın paketi onaylı metinden yazılır.",
+    ("yayin", "ready"): "“Yayın paketini çıkar” düğmesine bas; tahmin düğmenin üstünde yazar.",
+    ("yayin", "running"): "Claude yayın paketini yazıyor; harcama ve “İptal” aşağıda.",
+    ("yayin", "awaiting_approval"): "Bölümleri, açıklamayı, sorguları, etiketleri ve kapağı oku; uygunsa “Onayla”. Bölüm zamanları tahminidir.",
+    ("yayin", "approved"): "Yayın paketi onaylandı. Sonraki adım: 7 · Seslendirme (sonraki görevde gelecek).",
+    ("yayin", "error"): "Yayın paketi çalışması hata verdi; sebebi aşağıda. “Yayın paketini çıkar” ile yeniden dene.",
 }
 STALE_NEXT = "Bu adım eskidi. Yeniden çalıştır ya da değişiklik bu adımı etkilemiyorsa “Bu değişiklik etkilemiyor” de."
 

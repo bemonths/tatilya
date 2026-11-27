@@ -45,7 +45,9 @@ CLAUDE_STEPS = (("baslik", "Konu ve başlık"), ("baslik_degerlendirme", "Başl�
                 ("metin_plan", "Video metni · plan"), ("metin_plan_elestiri", "Video metni · plan eleştirisi"),
                 ("metin_bolum", "Video metni · bölüm"), ("metin_birlestirme", "Video metni · birleştirme"),
                 ("metin_giris_kapanis", "Video metni · giriş ve kapanış"), ("metin_son_okuma", "Video metni · son okuma"),
-                ("metin_ceviri", "Video metni · çeviri"))
+                ("metin_ceviri", "Video metni · çeviri"),
+                # HEDEF-04 A-6: 6 · Yayın paketi (one call)
+                ("yayin", "Yayın paketi"))
 # GÖREV-21: the Settings table names every Claude step as its screen names it and says which step of a video (or which project screen)
 # it belongs to. The keys and the stored settings do not change.
 STEP_PLACES = {"baslik": ("Öneri al (başlık önerisi)", "Proje · Konu bankası"),
@@ -53,7 +55,7 @@ STEP_PLACES = {"baslik": ("Öneri al (başlık önerisi)", "Proje · Konu bankas
                "metin_plan": ("Planlayıcı", "3 · Plan"), "metin_plan_elestiri": ("Plan eleştirmeni", "3 · Plan"),
                "metin_bolum": ("Bölümler", "4 · Yazım"), "metin_birlestirme": ("Birleştirme", "4 · Yazım"),
                "metin_giris_kapanis": ("Giriş ve kapanış", "4 · Yazım"), "metin_son_okuma": ("Son okuma", "4 · Yazım"),
-               "metin_ceviri": ("Çeviri", "4 · Yazım")}
+               "metin_ceviri": ("Çeviri", "4 · Yazım"), "yayin": ("Yayın paketi", "6 · Yayın paketi")}
 # GÖREV-18: every step is one call without tools (`--tools ""`, `--max-turns 1`); the turn limit is no longer a setting (old
 # `claude_max_turns_<step>` keys in a settings file are ignored). Model and effort are as before (GÖREV-18 Adım 5 keeps them).
 STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high"},
@@ -64,7 +66,8 @@ STEP_DEFAULTS = {"baslik": {"model": "claude-opus-5-5", "effort": "high"},
                  "metin_birlestirme": {"model": "opus", "effort": "medium"},
                  "metin_giris_kapanis": {"model": "opus", "effort": "high"},
                  "metin_son_okuma": {"model": "opus", "effort": "medium"},
-                 "metin_ceviri": {"model": "sonnet", "effort": "medium"}}
+                 "metin_ceviri": {"model": "sonnet", "effort": "medium"},
+                 "yayin": {"model": "opus", "effort": "medium"}}
 # GÖREV-15 (Adım 5): the video text chain's own settings. Sessions at once (the section writers run side by side), the usage thresholds
 # at which no new session opens (5-hour and weekly window, percent). GÖREV-21: "Plandan sonra dur" is gone — the chain always stops after
 # the plan and writes only after the user approved it; an old `claude_stop_after_plan` in a settings file is ignored.
@@ -83,7 +86,7 @@ LIMIT_HELP = {"claude_call_limit": "Tek bir Claude çağrısının en çok okuyu
                                   "başlamaz; çalışırken gerçek toplam buraya gelirse zincir durur ve “Devam”ı bekler."}
 OUTPUT_GUESS_DEFAULTS = {"baslik": 60_000, "baslik_degerlendirme": 15_000, "metin_plan": 20_000, "metin_plan_elestiri": 6_000,
                          "metin_bolum": 8_000, "metin_birlestirme": 6_000, "metin_giris_kapanis": 6_000, "metin_son_okuma": 10_000,
-                         "metin_ceviri": 12_000}
+                         "metin_ceviri": 12_000, "yayin": 8_000}
 OUTPUT_GUESS_RANGE = (500, 128_000)
 OUTPUT_GUESS_HELP = ("Çıktı varsayımı: adımın daha önce hiç başarılı çalışması yokken tahminde kullanılan yazılan token (düşünme dahil). "
                      "Önceki çalışmalar varsa onların ortancası kullanılır.")
