@@ -3,12 +3,19 @@
 ## Stable durum
 
 ```text
-tag v0.27.0 -> HEDEF-01'in son commit'i (hedef-01)
+tag v0.28.0 -> HEDEF-02'nin son commit'i (hedef-02)
 main -> aynı commit
-app 0.27.0
+app 0.28.0
 schema 25
 eklenti 0.21.0
 ```
+
+27 Kasım 2026'da HEDEF-02 ile main `hedef-02`'ye fast-forward edildi; son commit'e açıklamalı `v0.28.0` etiketi kondu. HEDEF-02: gece
+kiralama çekiminin kaydetme hatası (RealJoy takvim cevaplarında `rule_source = "takvim"` → `sayfa`; kaydetmeden önce değer denetimi),
+kurtarma dosyası (`data/kurtarma/<iş>/`, İşler panelinde "Kurtarılan sonucu kaydet"), ham kopyadan yeniden kurma (`agency_replay`,
+"Ham kopyadan yeniden kur"; yönlendirme hedefi artık ham kopyada), denemenin kaydetme sınaması, mahalle koordinatları aynı kaynağın
+önceki kaydından. Gerçek veride gece çekimi kurtarıldı (2.384 ilan, 11.408 fiyat sorgusu, 97 ev, 28 şirket), kısa toplayıcılar tazelendi,
+ilk video açıldı (başlık onaylı, veri paketi tamam, plan hazır). Ayrıntı: `docs/gorevler/HEDEF-02/RAPOR.md`.
 
 26 Kasım 2026'da HEDEF-01 ile main önce `gorev-25-realjoy-sorgu`'ya (`f87582c..833382a`, etiket `v0.26.0`), sonra `hedef-01`'e
 fast-forward edildi; son commit'e açıklamalı `v0.27.0` etiketi kondu. HEDEF-01: işçiler (proxy listesi, site başına sınır, yavaşlama, canlı
