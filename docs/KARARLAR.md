@@ -15,3 +15,8 @@ Tarihli teknik kararlar; en yenisi en altta.
 - Bölüm zamanlarını Claude hesaplamaz: program her paragrafın tahmini başlangıcını (dakikada 150 kelime, `text/views.py` ile aynı) istemde `[~mm:ss]` olarak verir, Claude bunlardan seçer, program denetler. Zamanlar "tahmini"dir; 7 · Seslendirme gelince kesinleşecek.
 - Denetimden geçmeyen paket (00:00, ≥3 bölüm, ≥10 sn, artan sıra) onaylanamaz; sorun ekranda yazar, "Düzeltme iste" ile yeniden yazdırılır.
 - Ton seçimi yeniden onaylanınca onaylı yayın paketi eskir ("Ton seçimi değişti.").
+## 28.11.2026 — HEDEF-04 A-7: 7 · Seslendirme ElevenLabs'a bağlı değil
+
+Ses programın dışında üretilir: program onaylı metni sese uygun düz İngilizce parçalara yazar (≤ 4.500 karakter, cümle bölünmez),
+kullanıcı sesi mp3/wav olarak yükler (tek dosya ya da numaralı parçalar), eşleştirme Kurgu Motoru'nun kendi hizalama işçisiyle yapılır
+(yolu ayarda; motor yoksa açık hata). Adımda onay yok; eşleşince tamamlanır. Ses ve metin dosyaları videonun klasöründe kalır, silinmez.

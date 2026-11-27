@@ -34,7 +34,7 @@ def test_the_eight_steps_their_approvals_and_the_ones_not_built_yet():
     assert [title for _, title in workflow.STEPS] == ["Başlık ve vaat", "Veri paketi", "Plan", "Yazım", "Kontrol ve ton seçimi", "Yayın paketi",
                                                       "Seslendirme", "Kurgu paketi"]
     assert workflow.KEYS == ("baslik", "paket", "plan", "yazim", "kontrol", "yayin", "ses", "kurgu")
-    assert workflow.APPROVAL == {"baslik", "plan", "kontrol", "yayin"} and set(workflow.PLANNED) == {"ses", "kurgu"}
+    assert workflow.APPROVAL == {"baslik", "plan", "kontrol", "yayin"} and set(workflow.PLANNED) == {"kurgu"}
     assert set(workflow.STATUS_LABELS.values()) == {"bekliyor", "hazır", "çalışıyor", "onay bekliyor", "onaylandı", "tamamlandı", "hata", "eskidi"}
     assert workflow.label("plan") == "3 · Plan" and "Kurgu Motoru" in workflow.PLANNED["kurgu"]
     # "Veri", "Konu ve başlık", "Kontrol", "Görsel plan" and "Video üretimi" are no steps of a video any more
@@ -48,7 +48,7 @@ def test_the_first_step_starts_ready_and_the_others_wait(db):
     view = workflow.compute(db, "30a", "v1")
     assert view["video"]["display_name"] == "Deneme" and (view["completed"], view["total"]) == (0, 8)
     assert [(s["number"], s["id"], s["label"]) for s in view["steps"]][:2] == [(1, "baslik", "hazır"), (2, "paket", "bekliyor")]
-    assert [s["label"] for s in view["steps"]][5:] == ["bekliyor"] + ["sonraki görevde gelecek"] * 2 and all(s["planned"] for s in view["steps"][6:])
+    assert [s["label"] for s in view["steps"]][5:] == ["bekliyor"] * 2 + ["sonraki görevde gelecek"] and all(s["planned"] for s in view["steps"][7:])
     assert view["steps"][7]["next"].startswith("Sonraki görevde gelecek. Kurgu paketi: Kurgu Motoru'na gidecek paket")
     assert workflow.compute(db, "30a", None) == {"video": None, "steps": [], "completed": 0, "total": 8}       # no video: no steps
     assert workflow.compute(db, "30a", "yok")["video"] is None
@@ -82,7 +82,7 @@ def test_an_approval_makes_the_next_step_ready_and_leaving_it_takes_that_back(db
 def test_the_statuses_a_step_cannot_take(db):
     new_video(db)
     for step, status in (("paket", "approved"), ("yazim", "awaiting_approval"), ("baslik", "done"), ("plan", "done"), ("plan", "stale"),
-                         ("ses", "ready"), ("kurgu", "done"), ("plan", "bilinmeyen")):
+                         ("kurgu", "ready"), ("yayin", "awaiting_audio"), ("kurgu", "done"), ("plan", "bilinmeyen")):
         with pytest.raises(workflow.StateError):
             workflow.set_step(db, "v1", step, status)
     with pytest.raises(workflow.StateError):

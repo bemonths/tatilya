@@ -11,7 +11,7 @@ bank, the channel's rules and the list of videos. The video layer holds one vide
 | 4 | yazim | Yazım | hayır |
 | 5 | kontrol | Kontrol ve ton seçimi | evet |
 | 6 | yayin | Yayın paketi | evet (HEDEF-04 A-6) |
-| 7 | ses | Seslendirme | henüz yok |
+| 7 | ses | Seslendirme | hayır (HEDEF-04 A-7) |
 | 8 | kurgu | Kurgu paketi | henüz yok |
 
 Statuses (`video_steps.status`): waiting (bekliyor), ready (hazır), running (çalışıyor), awaiting_approval (onay bekliyor), approved
@@ -25,7 +25,7 @@ Statuses (`video_steps.status`): waiting (bekliyor), ready (hazır), running (ç
 - A step that looks running while no work of it runs (the program closed half way) becomes error and can be resumed.
 Every change and every decision is a dated Turkish sentence in `video_step_log`.
 
-Steps 7–8 are not built yet: they stay waiting and their screens say "Sonraki görevde gelecek".
+Step 8 is not built yet: it stays waiting and their screens say "Sonraki görevde gelecek".
 """
 import json
 from datetime import datetime, timezone
@@ -34,6 +34,8 @@ from .evidence.pack import latest_done_run, moment
 
 STATUS_LABELS = {"waiting": "bekliyor", "ready": "hazır", "running": "çalışıyor", "awaiting_approval": "onay bekliyor",
                  "approved": "onaylandı", "done": "tamamlandı", "error": "hata", "stale": "eskidi"}
+# 7 · Seslendirme's stages: stored as "ready" with the stage in `ref` (the table's CHECK keeps the eight statuses)
+VOICE = {"awaiting_audio": "ses bekliyor", "audio_ready": "ses yüklendi"}
 STEPS = (
     ("baslik", "Başlık ve vaat"),
     ("paket", "Veri paketi"),
@@ -49,7 +51,6 @@ TITLES = dict(STEPS)
 APPROVAL = frozenset({"baslik", "plan", "kontrol", "yayin"})
 PLANNED_NOTE = "Sonraki görevde gelecek"
 PLANNED = {
-    "ses": "Seslendirme: seçilen tonun İngilizce seslendirme metninden anlatım sesi ve zaman damgaları.",
     "kurgu": "Kurgu paketi: Kurgu Motoru'na gidecek paket (metin, cümle kimlikleri, ses ve veri kayıtları). Stok görüntü, animasyon ve "
              "kurgu bu programda değil, Kurgu Motoru'nda yapılır.",
 }
@@ -160,13 +161,22 @@ def ensure(con, video_id):
         _update(con, video_id, "yayin", status="ready")
         _log(con, video_id, "yayin", f"{label('yayin')}: bekliyor → hazır (adım kuruldu; ton seçimi onaylı).")
         rows = _rows(con, video_id)
+    if rows["yayin"]["status"] in COMPLETE and rows["ses"]["status"] == "waiting":
+        # HEDEF-04 A-7: 7 · Seslendirme is built now; a video whose publish package was approved before waited there for good
+        _update(con, video_id, "ses", status="ready")
+        _log(con, video_id, "ses", f"{label('ses')}: bekliyor → hazır (adım kuruldu; yayın paketi onaylı).")
+        rows = _rows(con, video_id)
     return rows
 
 
 def _check_set(step, status):
     check_step(step)
-    if status not in STATUS_LABELS:
+    if status not in STATUS_LABELS and status not in VOICE:
         raise StateError(f"Bilinmeyen adım durumu: {status}.")
+    if status in VOICE and step != "ses":
+        raise StateError(f"{label(step)} adımında ses yok; '{VOICE[status]}' durumuna geçemez.")
+    if status in VOICE:
+        return
     if status == "stale":
         raise StateError("Eskime yalnızca girdiler değişince işaretlenir.")
     if step in PLANNED and status != "waiting":
@@ -183,9 +193,15 @@ def _apply_set(con, video_id, step, status, values):
     fields = {k: v for k, v in values.items() if k in FIELDS}
     if status != "error" and "error" not in fields:
         fields["error"] = None
+    shown_old = voice_status(rows[step]) if step == "ses" else old
+    if status in VOICE:
+        fields["ref"], shown_new, status = status, VOICE[status], "ready"
+    else:
+        shown_new = STATUS_LABELS[status]
     _update(con, video_id, step, status=status, stale_reason=None, status_before_stale=None, **fields)
-    if old != status:
-        _log(con, video_id, step, f"{label(step)}: {STATUS_LABELS[old]} → {STATUS_LABELS[status]}.")
+    old_label = VOICE.get(shown_old) or STATUS_LABELS[shown_old]
+    if old_label != shown_new:
+        _log(con, video_id, step, f"{label(step)}: {old_label} → {shown_new}.")
     index = KEYS.index(step)
     if index + 1 < len(KEYS) and KEYS[index + 1] not in PLANNED:
         following = KEYS[index + 1]
@@ -203,7 +219,7 @@ def _apply_stale(con, video_id, step, reason, only=False):
     staled = []
     for later in ((step,) if only else KEYS[KEYS.index(step):]):
         row = rows[later]
-        if row["status"] in WITH_OUTPUT:
+        if row["status"] in WITH_OUTPUT or (later == "ses" and voice_status(row) in VOICE):
             _update(con, video_id, later, status="stale", status_before_stale=row["status"], stale_reason=reason)
             staled.append(label(later))
         elif row["status"] == "stale":
@@ -387,16 +403,27 @@ NEXT = {
     ("yayin", "ready"): "“Yayın paketini çıkar” düğmesine bas; tahmin düğmenin üstünde yazar.",
     ("yayin", "running"): "Claude yayın paketini yazıyor; harcama ve “İptal” aşağıda.",
     ("yayin", "awaiting_approval"): "Bölümleri, açıklamayı, sorguları, etiketleri ve kapağı oku; uygunsa “Onayla”. Bölüm zamanları tahminidir.",
-    ("yayin", "approved"): "Yayın paketi onaylandı. Sonraki adım: 7 · Seslendirme (sonraki görevde gelecek).",
+    ("yayin", "approved"): "Yayın paketi onaylandı. Sonraki adım: 7 · Seslendirme.",
     ("yayin", "error"): "Yayın paketi çalışması hata verdi; sebebi aşağıda. “Yayın paketini çıkar” ile yeniden dene.",
+    ("ses", "waiting"): "Önce 6 · Yayın paketi onaylanmalı; seslendirme metni onaylı metinden hazırlanır.",
+    ("ses", "ready"): "Seslendirme metni ekran açılınca hazırlanır.",
+    ("ses", "awaiting_audio"): "Metin dosyaları hazır. Sesi bu dosyalarla üretip “Sesi yükle” ile yükle (mp3 ya da wav; tek dosya ya da _01, _02… parçalar).",
+    ("ses", "audio_ready"): "Ses yüklendi. “Sesi cümlelerle eşleştir” düğmesine bas.",
+    ("ses", "done"): "Ses cümlelerle eşleşti. Sonraki adım: 8 · Kurgu paketi (sonraki görevde gelecek).",
+    ("ses", "error"): "Seslendirme hata verdi; sebebi aşağıda. “Metni yeniden hazırla” ile yeniden dene.",
 }
 STALE_NEXT = "Bu adım eskidi. Yeniden çalıştır ya da değişiklik bu adımı etkilemiyorsa “Bu değişiklik etkilemiyor” de."
+
+
+def voice_status(row):
+    """A row's status; for 7 · Seslendirme "ready" with a stage in `ref` is that stage (awaiting_audio, audio_ready)."""
+    return row["ref"] if row["step"] == "ses" and row["status"] == "ready" and row["ref"] in VOICE else row["status"]
 
 
 def step_view(row, number):
     key = row["step"]
     planned = key in PLANNED
-    status = row["status"]
+    status = voice_status(row)
     if planned:
         next_text = f"{PLANNED_NOTE}. {PLANNED[key]}"
     elif status == "stale":
@@ -404,7 +431,7 @@ def step_view(row, number):
     else:
         next_text = NEXT.get((key, status), "")
     return {"id": key, "number": number, "title": TITLES[key], "status": status,
-            "label": PLANNED_NOTE.lower() if planned else STATUS_LABELS[status], "next": next_text,
+            "label": PLANNED_NOTE.lower() if planned else STATUS_LABELS.get(status) or VOICE[status], "next": next_text,
             "detail": row["stale_reason"] if status == "stale" else row["error"] if status == "error" else None,
             "planned": planned, "approval": key in APPROVAL, "stale_reason": row["stale_reason"],
             "status_before_stale": row["status_before_stale"], "note": row["note"], "error": row["error"], "ref": row["ref"],

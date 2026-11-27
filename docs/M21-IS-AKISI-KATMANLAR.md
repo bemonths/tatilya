@@ -228,3 +228,19 @@ Adım kuruldu (`studio/ai/publish.py`, kimlik `yayin`); "sonraki görevde gelece
 - Çıktı çalışma klasöründe `yayin.json` ve `yayin.md`; onay `videolar/<video>/6_yayin/surum-NNN.json`'a paketin kopyasını yazar. Ton seçimi değişirse onaylı paket eskir ("Ton seçimi değişti.").
 - Onay tek bileşen: Onayla / Düzeltme iste (not ve önceki paket Claude'a malzeme; 1 çağrı, tahmin önce) / Reddet. 6 onaylanınca 7 · Seslendirme kurulmadığı için bekler.
 - Modeli ve eforu Ayarlar → Claude'da öbür Claude adımlarıyla birlikte ("Yayın paketi", yer "6 · Yayın paketi"; varsayılan Opus · Orta). Uçlar: `POST /api/videos/{id}/yayin/tahmin`, `POST /api/videos/{id}/yayin`. Bu adımın çalışmaları konu bankasında görünmez.
+## HEDEF-04 A-7: 7 · Seslendirme (28.11.2026)
+
+Adım kuruldu (`studio/voice.py`); "sonraki görevde gelecek" listesinde yalnız 8 · Kurgu paketi kaldı. Claude çağrısı yok.
+
+- 6 · Yayın paketi onaylanınca 7 metni yazar ve "ses bekliyor"da durur (önceden onaylanmış videolarda adım ekranı açılınca).
+  Durumlar: hazır → ses bekliyor (`awaiting_audio`) → ses yüklendi (`audio_ready`) → tamamlandı (eşleşti). Ton seçimi değişirse eskir.
+- Metin: onaylı metnin İngilizcesi, işaretsiz ve cümle numarasız, paragraflar boş satırla; parça başına en çok 4.500 karakter, cümle
+  ortasında bölünmez: `videolar/<video>/7_ses/metin/seslendirme_01.txt`, `_02`… ve `cumle_parca.json` (cümle no → parça). "Metni yeniden
+  hazırla" eski dosyaları `metin-eski/NNN/`'ye taşır.
+- "Sesi yükle": mp3/wav, tek dosya ya da `_01`, `_02`… (metin parçalarıyla aynı sayı ve sıra); dosyalar olduğu gibi `7_ses/ses/NNN/`'de;
+  süre ffprobe ile (PATH, yoksa `E:\KurguMotoru\tools\ffmpeg\bin\ffprobe.exe`; 7 · Seslendirme → Ses ayarları).
+- "Sesi cümlelerle eşleştir": Kurgu Motoru kopyasının `workers/hizala.py` işçisine (`transcribe`, stdin/stdout JSON) 16 kHz wav verilir;
+  kelimeler programda cümlelere eşlenir (yarısından azı bulunan cümle eşleşmemiş sayılır). Sonuç `7_ses/eslesme/eslesme.json`: cümle no →
+  başlangıç/bitiş (parçalar arka arkaya), eşleşmeyen cümle sayısı. Motor ya da Python'u yoksa açık hata (409).
+- Uçlar: `POST /api/videos/{id}/ses/metin`, `/ses/yukle?ad=&yeni=` (ham gövde), `/ses/eslestir`, `/ses/klasor`; `GET/PUT /api/settings/seslendirme`.
+  Testler: `tests/test_ses.py` (sahte ffprobe ve hizalama), `tests/frontend.test.mjs` "HEDEF-04 A-7".

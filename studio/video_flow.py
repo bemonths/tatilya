@@ -18,7 +18,7 @@ decisions' snapshots under `videolar/<video>/<step>/`).
 import json
 from pathlib import Path
 
-from . import workflow
+from . import voice as voice_mod, workflow
 from .ai import publish, store as ai_store, tones as T
 from .database import Conflict
 from .destinations import PROFILES
@@ -36,6 +36,7 @@ RULE_NAMES = {"isletme": "işletme adı", "kimlik": "kanıt kimliği", "dogrulan
 class VideoFlow:
     def __init__(self, db, data_dir, claude, text):
         self.db, self.data_dir, self.claude, self.text = db, Path(data_dir), claude, text
+        self.voice = voice_mod.VoiceStep(self)
 
     # ------------------------------------------------------------------------------------------------------------- the project's videos
 
@@ -135,7 +136,7 @@ class VideoFlow:
         video = self.video(video_id)
         if step == "yayin":
             return self.publish_versions(video_id)
-        if step in ("baslik", "kontrol"):
+        if step in ("baslik", "kontrol", "ses"):
             return self.file_versions(video_id, step)
         if step == "paket":
             packs = (next((v for v in ai_store.videos(self.db, video["destination_id"]) if v["id"] == video_id), None) or {}).get("packs") or []
@@ -173,7 +174,8 @@ class VideoFlow:
                 "run": {"baslik": status in ("ready", "error"), "paket": status in ("ready", "done", "stale", "error"),
                         "plan": status in ("ready", "error", "awaiting_approval", "approved", "stale"),
                         "yazim": status in ("ready", "done", "stale", "error"), "kontrol": False,
-                        "yayin": status in ("ready", "error", "awaiting_approval", "approved", "stale")}.get(step, False),
+                        "yayin": status in ("ready", "error", "awaiting_approval", "approved", "stale"),
+                        "ses": status in ("ready", "error", "stale", "awaiting_audio", "audio_ready", "done")}.get(step, False),
                 "resume": resumable, "reopen": step == "kontrol" and status == "ready" and bool(text_store.versions(self.db, video_id=video["id"]))}
 
     def job_of(self, video_id, step, row):
@@ -205,6 +207,8 @@ class VideoFlow:
     def step_view(self, video_id, step):
         workflow.check_step(step)
         video = self.video(video_id)
+        if step == "ses":
+            self.voice.auto(video_id)                     # 7 · Seslendirme writes its text when it opens
         flow = workflow.compute(self.db, video["destination_id"], video_id)
         view = next(s for s in flow["steps"] if s["id"] == step)
         row = workflow.step(self.db, video_id, step)
@@ -213,6 +217,8 @@ class VideoFlow:
                "gunluk": [h for h in workflow.history(self.db, video_id, 400) if h["step"] in (step, None)][:15]}
         if step in workflow.PLANNED:
             out["aciklama"] = workflow.PLANNED[step]
+        elif step == "ses":
+            out["ses"] = self.voice.view(video_id)
         elif step == "baslik":
             bank = self.claude.bank(video["destination_id"])
             own = [r for r in bank["calismalar"] if (r.get("params") or {}).get("video_id") == video_id]
@@ -448,6 +454,10 @@ class VideoFlow:
             self.write_version(video_id, "yayin", "Onaylandı", {
                 "calisma": record["id"], "dosya": f"{record['folder']}/{publish.MARKDOWN}", "zamanlar": publish.ESTIMATED, "paket": data,
                 "not": note or None, "ozet": f"{len(data.get('bolumler') or [])} bölüm (tahmini zamanlar) · {len(data.get('etiketler') or [])} etiket"})
+            try:
+                self.voice.prepare(video_id)                  # 7 · Seslendirme: the text files; then it waits for the audio
+            except Conflict as exc:
+                workflow.log(self.db, video_id, "ses", f"7 · Seslendirme: metin hazırlanamadı ({exc}).")
         else:
             if not version_id:
                 raise Conflict("Onaylarken hangi tonla devam edileceğini seçin.")

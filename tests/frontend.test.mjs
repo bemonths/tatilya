@@ -1888,3 +1888,15 @@ test('HEDEF-04 A-6: 6 · Yayın paketi — one call above its button, the chapte
   assert.match(shown,/~00:00/);assert.match(shown,/zamanlar tahmini/);assert.match(shown,/15:20/);assert.match(shown,/Which town\?/);
   assert.equal(publishView(null),'');
 });
+import {voiceView} from '../studio/web/steps.js';
+test('HEDEF-04 A-7: 7 · Seslendirme — the text files with their folder, "Sesi yükle" and "Sesi cümlelerle eşleştir"', ()=>{
+  const view={adim:{status:'audio_ready'},eylemler:{run:true},is:null,ses:{
+    metin:{parca_sayisi:2,cumle_sayisi:20,karakter:8000,klasor:'C:\\v\\7_ses\\metin',eslesme_dosyasi:'C:\\v\\7_ses\\metin\\cumle_parca.json',
+      dosyalar:[{yol:'C:\\v\\7_ses\\metin\\seslendirme_01.txt',karakter:4400,ilk:1,son:11},{yol:'C:\\v\\7_ses\\metin\\seslendirme_02.txt',karakter:3600,ilk:12,son:20}]},
+    ses:{klasor:'C:\\v\\7_ses\\ses\\001',dosyalar:[{ad:'ses_01.mp3',sure_s:300},{ad:'ses_02.mp3',sure_s:250}],toplam_s:550,sorunlar:[]},
+    eslesme:{cumle_sayisi:20,eslesen:19,eslesmeyen:1,kelime_sayisi:1300,dosya:'x.json',ilk_cumleler:[{no:1,baslangic:0.1,bitis:2.5}]},ayarlar:{settings:{},varsayilan:{}}}};
+  const shown=voiceView(view,false);
+  assert.match(shown,/seslendirme_01\.txt/);assert.match(shown,/Klasörü aç/);assert.match(shown,/Sesi yükle/);
+  assert.match(shown,/<button type="button" class="primary" id="voice-match" >Sesi cümlelerle eşleştir/);assert.match(shown,/19\/20 cümle eşleşti/);
+  assert.match(voiceView({...view,adim:{status:'awaiting_audio'},ses:{metin:view.ses.metin}},false),/id="voice-match" disabled/);
+});

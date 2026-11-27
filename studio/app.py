@@ -27,6 +27,7 @@ from .ai import settings as claude_settings
 from .ai.service import ClaudeService
 from .text.engine import TextService
 from .video_flow import VideoFlow
+from . import voice as voice_mod
 from .watchdog import Watchdog
 from . import extension as ext
 from . import proxy as proxy_mod
@@ -1648,6 +1649,33 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.post("/api/videos/{video_id}/yayin", status_code=201)
     def publish_start(video_id: str):
         return flow_or_404(lambda: flow().start_publish(video_id))
+
+    @app.post("/api/videos/{video_id}/ses/metin")
+    def voice_text(video_id: str):
+        """7 · Seslendirme: "Metni yeniden hazırla" (plain English parts; the earlier files stay aside)."""
+        return flow_or_404(lambda: flow().voice.prepare(video_id, by_user=True))
+
+    @app.post("/api/videos/{video_id}/ses/yukle")
+    async def voice_upload(video_id: str, request: Request, ad: str = "", yeni: bool = False):
+        """"Sesi yükle": one file a request (raw body); `yeni` starts a new set (the earlier set stays in its folder)."""
+        data = await request.body()
+        return flow_or_404(lambda: flow().voice.upload(video_id, ad, data, yeni))
+
+    @app.post("/api/videos/{video_id}/ses/eslestir")
+    def voice_match(video_id: str):
+        return flow_or_404(lambda: flow().voice.match(video_id))
+
+    @app.post("/api/videos/{video_id}/ses/klasor")
+    def voice_folder(video_id: str, hangi: str = "metin"):
+        return flow_or_404(lambda: flow().voice.open_folder(video_id, hangi))
+
+    @app.get("/api/settings/seslendirme")
+    def voice_settings():
+        return voice_mod.settings_view(flow().data_dir)
+
+    @app.put("/api/settings/seslendirme")
+    async def voice_settings_save(request: Request):
+        return voice_mod.save_settings(flow().data_dir, await request.json())
 
     @app.post("/api/videos/{video_id}/yazim/tahmin")
     def writing_estimate(video_id: str, body: TextRunInput):

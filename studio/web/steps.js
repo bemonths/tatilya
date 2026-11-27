@@ -17,6 +17,7 @@ const DESCRIPTIONS={
   yazim:"İngilizce metin ve cümle cümle Türkçesi. Tonları burada seçersiniz; her ton onaylanan planla ayrı yazılır.",
   kontrol:"Programın denetimi, işletme adı denetimi ve tonların karşılaştırması. Onaylarken hangi tonla devam edileceğini seçersiniz.",
   yayin:"YouTube'a yüklerken kullanılacak paket: bölüm başlıkları, açıklamanın ilk iki satırı, üç arama sorgusu, etiketler, kapak yazısı ve kapak fikri. Onaylı metinden tek Claude çağrısıyla yazılır.",
+  ses:"Seslendirme: onaylı metin sese uygun düz İngilizce dosyalara yazılır; sesi yükler, cümlelerle eşleştirirsiniz. Claude çağrısı yok.",
 };
 
 function lines(text) {return esc(text || "—");}
@@ -162,6 +163,34 @@ export function publishView(found) {
     ${spent?`<p class="muted">Harcama: ${esc(spent)}</p>`:""}${found.dosya?`<p class="muted">Dosya: <code>${esc(found.dosya)}</code></p>`:""}</section>`;
 }
 
+/** 7 · Seslendirme (HEDEF-04 A-7): the text files, "Sesi yükle", "Sesi cümlelerle eşleştir" and the paths' settings. */
+export function voiceView(view, busy) {
+  const s=view.ses || {}, m=s.metin, a=s.ses, e=s.eslesme, st=view.adim.status, free=!busy && !view.is;
+  const on=c=>c && free?"":"disabled";
+  const sec=n=>n==null?"—":`${Number(n).toFixed(1)} sn`;
+  const text=m?`<p>${m.parca_sayisi} parça · ${m.cumle_sayisi} cümle · ${m.karakter} karakter. Sesi bu dosyalarla, sırayla üretin.</p>
+    <p class="muted">Klasör: <code>${esc(m.klasor)}</code> <button type="button" data-voice-folder="metin">Klasörü aç</button></p>
+    <ul>${m.dosyalar.map(f=>`<li><code>${esc(f.yol)}</code> <small>${f.karakter} karakter · cümle ${f.ilk}–${f.son}</small></li>`).join("")}</ul>
+    <p class="muted">Cümle → parça eşlemesi: <code>${esc(m.eslesme_dosyasi)}</code></p>`:'<p class="muted">Metin henüz hazırlanmadı.</p>';
+  const audio=a?`<table class="data-table"><thead><tr><th>Dosya</th><th>Süre</th></tr></thead><tbody>${a.dosyalar.map(f=>`<tr><td>${esc(f.ad)}</td><td>${sec(f.sure_s)}</td></tr>`).join("")}</tbody></table>
+    <p class="muted">Toplam ${sec(a.toplam_s)} · klasör <code>${esc(a.klasor)}</code> <button type="button" data-voice-folder="ses">Klasörü aç</button></p>
+    ${(a.sorunlar || []).length?`<ul>${a.sorunlar.map(p=>`<li>Hata: ${esc(p)}</li>`).join("")}</ul>`:""}`:'<p class="muted">Ses henüz yüklenmedi.</p>';
+  const found=e?`<p><strong>${e.eslesen}/${e.cumle_sayisi} cümle eşleşti</strong> · eşleşmeyen ${e.eslesmeyen} cümle · ${e.kelime_sayisi} kelime</p>
+    <table class="data-table"><thead><tr><th>Cümle</th><th>Başlangıç</th><th>Bitiş</th></tr></thead><tbody>${(e.ilk_cumleler || []).map(c=>`<tr><td>${c.no}</td><td>${sec(c.baslangic)}</td><td>${sec(c.bitis)}</td></tr>`).join("")}</tbody></table>
+    <p class="muted">Bütün cümleler: <code>${esc(e.dosya)}</code></p>`:"";
+  const cfg=(s.ayarlar || {}).settings || {}, def=(s.ayarlar || {}).varsayilan || {};
+  const field=(k,t)=>`<label>${t} <input name="${k}" value="${esc(cfg[k] || "")}" placeholder="${esc(def[k] || "")}"></label>`;
+  return `<section class="library"><div class="library-title"><h2>Seslendirme metni</h2><small>düz İngilizce · parça başına en çok 4.500 karakter</small></div>${text}
+    ${view.eylemler.run && m?`<button type="button" id="voice-text" ${on(true)}>Metni yeniden hazırla</button>`:""}</section>
+    <section class="library"><div class="library-title"><h2>Ses</h2><small>mp3 ya da wav · tek dosya ya da _01, _02… parçalar</small></div>
+    <p class="muted">Birden çok parça yüklerseniz metin parçalarıyla aynı sayıda ve sırada olmalı (seslendirme_01 → ..._01).</p>
+    <label class="button-like">Sesi yükle <input type="file" id="voice-files" accept=".mp3,.wav,audio/mpeg,audio/wav" multiple ${on(m)}></label>${audio}</section>
+    <section class="library"><div class="library-title"><h2>Eşleştirme</h2><small>Kurgu Motoru'nun hizalaması</small></div>
+    <button type="button" class="primary" id="voice-match" ${on(st==="audio_ready" || st==="done")}>Sesi cümlelerle eşleştir</button>${found}</section>
+    <details class="library"><summary>Ses ayarları</summary><form id="voice-settings">${field("ffprobe_path","ffprobe yolu")}${field("kurgu_motoru_path","Kurgu Motoru klasörü")}${field("kurgu_python_path","Motorun Python'u")}
+    <button type="submit">Kaydet</button></form></details>`;
+}
+
 export function plannedBody(view) {
   return `<section class="planned-hero"><span class="tag planned">Sonraki görevde gelecek</span><h2>${esc(view.adim.title)}</h2><p>${esc(view.aciklama || "")}</p>
     <p class="muted">Bu adım henüz kurulmadı; şimdilik yapılacak iş yok.</p></section>`;
@@ -265,6 +294,8 @@ export class StepScreen {
       const decision=decisionCard(step,view.eylemler,{description:"Yayın paketi uygunsa onaylayın", note:this.note, pending:found?.paket?this.pendingBox():"", busy:this.busy,
         help:"Düzeltme iste: notunuz ve bu paket Claude'a malzeme olarak verilerek paket yeniden yazılır (1 çağrı; tahmini önce gösterilir). Reddet: adım hazır durumuna döner; paket Sürümler'de kalır."});
       body=`${publishCard(view,this.cost,found?.paket?"":this.pendingBox(),this.busy)}${runningPanel(job)}${publishView(found)}${decision}`;
+    } else if(step.id==="ses") {
+      body=voiceView(view,this.busy);
     } else if(step.id==="kontrol") {
       let compare=null;
       if((view.tonlar || []).length) {
@@ -355,6 +386,23 @@ export class StepScreen {
       if(this.view.yayin?.paket && globalThis.confirm && !globalThis.confirm("Yayın paketi yeniden çıkarılsın mı? Eski paket Sürümler'de kalır.")) return;
       this.ask(()=>api(this.path("yayin/tahmin"),{method:"POST",body:"{}"}),"Yayın paketini çıkar: başlat",()=>this.call("yayin",{},"Yayın paketi yazılıyor; harcama aşağıda."));
     });
+    if(step==="ses") {
+      root.querySelector("#voice-files")?.addEventListener("change",event=>{
+        const files=[...event.target.files].sort((x,y)=>x.name.localeCompare(y.name));
+        if(!files.length) return;
+        this.act(async()=>{for(const [i,f] of files.entries()) await api(`${this.path("ses/yukle")}?ad=${encodeURIComponent(f.name)}&yeni=${i===0?1:0}`,
+          {method:"POST",body:f,headers:{"Content-Type":"application/octet-stream"}});},`${files.length} ses dosyası yüklendi.`);
+      });
+      root.querySelector("#voice-match")?.addEventListener("click",()=>this.call("ses/eslestir",{},"Ses cümlelerle eşleştirildi."));
+      root.querySelector("#voice-text")?.addEventListener("click",()=>{
+        if(globalThis.confirm && !globalThis.confirm("Metin dosyaları yeniden hazırlansın mı? Eskiler klasörde kalır; ses yeniden yüklenmeli.")) return;
+        this.call("ses/metin",{},"Seslendirme metni yeniden hazırlandı.");
+      });
+      root.querySelectorAll("[data-voice-folder]").forEach(b=>b.addEventListener("click",()=>api(`${this.path("ses/klasor")}?hangi=${b.dataset.voiceFolder}`,{method:"POST",body:"{}"})
+        .catch(error=>{this.message=error.message;this.rerender();})));
+      root.querySelector("#voice-settings")?.addEventListener("submit",event=>{event.preventDefault();
+        this.act(()=>api("settings/seslendirme",{method:"PUT",body:JSON.stringify(Object.fromEntries(new FormData(event.target)))}),"Ses ayarları kaydedildi.");});
+    }
     if(step==="kontrol") root.querySelector("#check-reopen")?.addEventListener("click",()=>this.call("kontrol/ac",{},"Kontrol yeniden açıldı."));
   }
 

@@ -54,7 +54,7 @@ def test_publish_runs_one_call_writes_its_files_and_is_approved(app):
     assert "Adım: yayin" in prompt and "[~00:00]" in prompt
     approved = decide(app, "yayin", **{"not": "Uygun."})
     assert approved.status_code == 200, approved.json()
-    assert approved.json()["adim"]["status"] == "approved" and statuses(app)["ses"] == "waiting"
+    assert approved.json()["adim"]["status"] == "approved" and statuses(app)["ses"] == "awaiting_audio"
     assert any(v["baslik"] == "Onaylandı" for v in approved.json()["surumler"])
 
 
