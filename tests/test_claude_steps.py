@@ -53,7 +53,17 @@ def folder(client, view):
 
 
 def calls(client, view):
-    return [json.loads(line) for line in (folder(client, view) / ".fake_claude_calls.jsonl").read_text(encoding="utf-8").splitlines()]
+    """The fake claude's calls. HEDEF-03: the run can be read as finished while the fake process still writes its last line (CI, 27 Nov
+    2026: JSONDecodeError); a half-written file is read again for a few seconds."""
+    path = folder(client, view) / ".fake_claude_calls.jsonl"
+    end = time.monotonic() + 5
+    while True:
+        try:
+            return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+        except ValueError:
+            if time.monotonic() > end:
+                raise
+            time.sleep(0.1)
 
 
 def candidate_errors(view, index):

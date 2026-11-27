@@ -357,7 +357,7 @@ Her yedek program kapalıyken alındı; bayt sayıları kaynakla aynı.
   oturumu başına); GÖREV-25'in izinli liste testi (artık beş şirket).
 - Yerel tam takım (son kod): `.venv\Scripts\python.exe -m pytest -q` → **1309 geçti, 4 atlandı**; `node --test tests/frontend.test.mjs` →
   **146/146**.
-- GitHub CI: 45999725727 (`2d31815`, kod) ve 46052815261 (`8468cbc`, kod ve rapor) **başarılı**. Son commit yalnız bu satırı ekler; onun CI sonucu da main'e almadan önce beklendi.
+- GitHub CI: 45999725727 (`2d31815`, kod) ve 46052815261 (`8468cbc`, kod ve rapor) **başarılı**. Rapor satırını ekleyen commit'in CI'ı (46053670270, `8a151f4`) bu hedefin değiştirmediği bir testte düştü: `test_gorev18.py::test_a_cut_answer_is_its_own_case_and_is_not_used` (JSONDecodeError). Test, sahte Claude'un kayıt dosyasını dosyaya hâlâ yazılırken okuyabiliyordu (zamanlamaya bağlı yarış; yerelde 5/5 geçti). Yardımcı (`tests/test_claude_steps.py` `calls`) yarım yazılmış dosyayı birkaç saniye içinde yeniden okuyacak biçimde düzeltildi. Son commit'in CI'ı main'e almadan önce beklendi.
 
 ## 12. Uyulan kurallar
 
