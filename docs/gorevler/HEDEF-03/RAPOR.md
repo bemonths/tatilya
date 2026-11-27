@@ -357,7 +357,7 @@ Her yedek program kapalıyken alındı; bayt sayıları kaynakla aynı.
   oturumu başına); GÖREV-25'in izinli liste testi (artık beş şirket).
 - Yerel tam takım (son kod): `.venv\Scripts\python.exe -m pytest -q` → **1309 geçti, 4 atlandı**; `node --test tests/frontend.test.mjs` →
   **146/146**.
-- GitHub CI: {CI}
+- GitHub CI: 45999725727 (`2d31815`, kod) ve 46052815261 (`8468cbc`, kod ve rapor) **başarılı**. Son commit yalnız bu satırı ekler; onun CI sonucu da main'e almadan önce beklendi.
 
 ## 12. Uyulan kurallar
 
