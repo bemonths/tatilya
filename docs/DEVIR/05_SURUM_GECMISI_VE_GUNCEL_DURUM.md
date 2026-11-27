@@ -3,12 +3,20 @@
 ## Stable durum
 
 ```text
-tag v0.28.0 -> HEDEF-02'nin son commit'i (hedef-02)
+tag v0.29.0 -> HEDEF-03'ün son commit'i (hedef-03)
 main -> aynı commit
-app 0.28.0
-schema 25
-eklenti 0.21.0
+app 0.29.0
+schema 26
+eklenti 0.22.0
 ```
+
+27 Kasım 2026'da HEDEF-03 ile main `hedef-03`'e fast-forward edildi; son commit'e açıklamalı `v0.29.0` etiketi kondu. HEDEF-03: fiyatı eksik
+kalan yedi kiralama şirketi (30A Escapes, Ocean Reef Resorts, Panhandle Getaways — Track; Rosemary Beach® — Streamline, alanlar adreste;
+Alys Beach — sekmede gezinme; Vacasa — küçük harfli hata; RealJoy — eklentide yeniden doğrulama) okundu. Göç v26: dört şirketin izinli
+sorgusu ve şirket satırında `queried_on`/`carried_from`. Yeni: "Seçili şirketleri yeniden oku" (Sol menü → Veri → Toplama → Konaklama →
+"Konaklama fiyatları"); eklenti en çok 6 işi aynı anda, her birini kendi penceresinde okur. Gerçek veride yeni kiralama sürümü
+`8bc68fea…` (bağlanan 953 → 1.281, fiyatlı ilan 889 → 1.213; Alys Beach'te kendi listesinden 73 ev), yol ağı 27 Kasım girdileriyle,
+videonun veri paketi yeniden kuruldu. Ayrıntı: `docs/gorevler/HEDEF-03/RAPOR.md`.
 
 27 Kasım 2026'da HEDEF-02 ile main `hedef-02`'ye fast-forward edildi; son commit'e açıklamalı `v0.28.0` etiketi kondu. HEDEF-02: gece
 kiralama çekiminin kaydetme hatası (RealJoy takvim cevaplarında `rule_source = "takvim"` → `sayfa`; kaydetmeden önce değer denetimi),
