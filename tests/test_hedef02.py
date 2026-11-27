@@ -144,6 +144,9 @@ def test_a_failed_storing_step_keeps_the_result_and_saves_it_later_without_colle
         assert client.get("/api/agency-rate-runs").json() == []                 # nothing stored
         card = next(j for j in client.get("/api/jobs").json() if j["id"] == failed["id"])
         assert card["kurtarma"]["durum"] == "kaydet" and card["kurtarma"]["kayit"] == 8
+        assert "hata" not in card["kurtarma"] and "IntegrityError" not in json.dumps(card, ensure_ascii=False)   # the diagnostic stays inside
+        boot = next(j for j in client.get("/api/bootstrap").json()["jobs"] if j["id"] == failed["id"])        # the panel's first drawing
+        assert boot["kurtarma"]["durum"] == "kaydet"
         monkeypatch.setattr(ar.AgencyRatesConnector, "store_records", original)        # "the fix"
         ta.install(monkeypatch, lambda request: pytest.fail(f"a site was asked: {request.url}"))
         answer = client.post(f"/api/jobs/{failed['id']}/kurtarma/kaydet")

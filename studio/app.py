@@ -167,7 +167,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
                 "categories": CATEGORIES, "regions": [f"Tüm {destination['name']}",*[r['name'] for r in context.canonical_regions]], "methods": METHODS,
                 "cadences": CADENCES, "steps": [dict(id=id_, title=title, subtitle=f"{ready_count} kaynak hazır" if id_=="collect" else subtitle, state=state)
                                                for id_, title, subtitle, state in STEPS],
-                "sources": source_list, "jobs": db.jobs(destination_id), "data_path": str(db.path.parent),
+                "sources": source_list, "jobs": panel_jobs(destination_id), "data_path": str(db.path.parent),
                 "open_video_id": app.state.flow.opened(destination_id),       # GÖREV-21: the video that was open last time
                 "canonical_regions": context.canonical_regions,
                 "collections": db.collections(destination_id), "weather_runs": weather_runs(destination_id),
@@ -665,6 +665,10 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.get("/api/jobs")
     def jobs(destination_id: str = DEFAULT_DESTINATION_ID):
         selected(destination_id)
+        return panel_jobs(destination_id)
+
+    def panel_jobs(destination_id):
+        """The jobs as the panel draws them: a running rental job's workers, a failed collection's recovery (HEDEF-02)."""
         from .workers import BOARDS
         out = db.jobs(destination_id)
         queue = app.state.jobs
@@ -751,13 +755,13 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.post("/api/jobs/bitenleri-kaldir")
     def hide_finished_jobs(destination_id: str = DEFAULT_DESTINATION_ID):
         selected(destination_id)
-        return {"kaldirilan": db.hide_finished_jobs(destination_id), "jobs": db.jobs(destination_id), "gizlenen": db.hidden_jobs(destination_id)}
+        return {"kaldirilan": db.hide_finished_jobs(destination_id), "jobs": panel_jobs(destination_id), "gizlenen": db.hidden_jobs(destination_id)}
 
     def job_panel(identifier, done):
         if done is None:
             raise HTTPException(404, "İş bulunamadı.")
         destination_id = (db.job(identifier) or {}).get("destination_id") or DEFAULT_DESTINATION_ID
-        return {"jobs": db.jobs(destination_id), "gizlenen": db.hidden_jobs(destination_id)}
+        return {"jobs": panel_jobs(destination_id), "gizlenen": db.hidden_jobs(destination_id)}
 
     @app.post("/api/jobs/{identifier}/kaldir")
     def hide_job(identifier: str):
@@ -1692,7 +1696,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             guard.stream_opened()
             try:
                 while not stopping() and not await request.is_disconnected():
-                    data = json.dumps(await asyncio.to_thread(db.jobs,destination_id), ensure_ascii=False)
+                    # HEDEF-02: the same jobs as /api/jobs (a running rental job's workers, a failed collection's recovery)
+                    data = json.dumps(await asyncio.to_thread(panel_jobs,destination_id), ensure_ascii=False)
                     if data != previous:
                         yield f"event: jobs\ndata: {data}\n\n"
                         previous = data

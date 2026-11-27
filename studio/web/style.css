@@ -87,3 +87,5 @@
 .check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding:0 19px 16px}.check-card{border:1px solid var(--line);border-radius:9px;padding:13px 15px;background:var(--surface);font-size:12px}.check-card.chosen{box-shadow:inset 0 3px var(--green)}.check-card h3{font-size:14px;margin:0 0 6px}.check-card h3 small{color:var(--muted);font-weight:400}.check-card p{margin:0 0 8px}.finding-groups{margin:0;padding-left:16px;color:var(--text)}.finding-groups ul{padding-left:14px;margin:3px 0 8px;font-size:11px}
 .compare-wrap{padding:0 19px 16px}
 @media(max-width:700px){.video-open{display:none}.project-row{width:auto}}
+/* HEDEF-02: a failed job's recovery block (the comparison fits the jobs panel) */
+.job-recovery{margin:10px 0}.job-recovery table{font-size:10px;margin:6px 0;table-layout:fixed}.job-recovery th,.job-recovery td{padding:5px 6px;white-space:normal}.job-recovery td:not(:first-child),.job-recovery th:not(:first-child){text-align:right}
