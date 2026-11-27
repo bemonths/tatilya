@@ -219,6 +219,7 @@ class ExtensionVerifier:
         self.blocked_pattern = blocked_pattern
         self.handed = False
         self.methods = {}
+        self.errors = []            # HEDEF-03: first pages the tab could not read at the first try (domain, the extension's note)
 
     def __call__(self, domain, url, canceled, timeout):
         from .browser_verification import BLOCKED, RegionBlocked, SiteBlocked
@@ -228,6 +229,11 @@ class ExtensionVerifier:
         try:
             session = self.access.open(domain, purpose="kiralama şirketi")
             result = session.page(url, WAIT, canceled=canceled)
+            if result.get("durum") == "hata":
+                # HEDEF-03: the tab could not read the first page (a passing error of the browser while several windows open: the
+                # night of 27 November 2026, alysbeach.com); it is asked once more before the company is left for the end of the run
+                self.errors.append({"alan_adi": domain_of(domain), "not": result.get("not")})
+                result = session.page(url, WAIT, canceled=canceled)
         except HandedOver:
             self.handed = True
             return self.through_fallback(domain, url, canceled, timeout)

@@ -424,3 +424,21 @@ def test_the_trials_real_streamline_answers_through_the_extension_give_the_price
     assert (result["status"], result["rent"], result["total"]) == ("priced", 16912.0, 19044.04)
     assert {f["name"] for f in result["fees"]} == {"Damage Fee", "Reservation Fee"}
     assert any(e["name"] == "Travel Insurance" for e in result["excluded_items"])                      # optional, not in the total
+
+
+def test_a_first_page_the_tab_could_not_read_is_asked_once_more():
+    from studio.sources.extension_reader import ExtensionVerifier
+    answers = [{"durum": "hata", "not": "Frame was removed"}, {"durum": "tamam", "html": b"<html><title>Home</title>ok</html>", "son_adres": "https://alysbeach.com/"}]
+
+    class Access:
+        paired, connected = True, True
+
+        def open(self, domain, purpose=""):
+            session = QuerySession(page=lambda url: answers.pop(0))
+            session.domain = domain
+            return session
+    verifier = ExtensionVerifier(Access())
+    transport = verifier("alysbeach.com", "http://www.alysbeach.com", lambda: False, 60)
+    assert isinstance(transport, ExtensionTransport) and verifier.errors == [{"alan_adi": "alysbeach.com", "not": "Frame was removed"}]
+    answers[:] = [{"durum": "hata", "not": "x"}, {"durum": "hata", "not": "y"}]
+    assert verifier("alysbeach.com", "http://www.alysbeach.com", lambda: False, 60) is None      # twice: left for the end, the reason kept

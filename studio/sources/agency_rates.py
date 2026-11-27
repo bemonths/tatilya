@@ -744,7 +744,11 @@ def finish_deferred(shared, runs, deferred):
                 row.update({"page_status": "not_queried", "page_url": None, "http_status": None, "site_listing_id": None, "message": None,
                             "link_status": None, "match_method": None, "match_note": None})
             again = CompanyRun(shared, first.site, first.members, final_timeout=final_timeout)
-            if domain not in cleared:
+            failed = [e for e in getattr(shared.verifier, "errors", None) or () if e.get("alan_adi") == domain]
+            if domain not in cleared and failed:          # HEDEF-03: the extension could not read the first page (not a verification)
+                again.skip("verification_unavailable", "unavailable", f"Eklenti şirketin ilk sayfasını iki denemede de okuyamadı "
+                                                                        f"({(failed[-1].get('not') or 'hata')[:160]}); şirket atlandı.")
+            elif domain not in cleared:
                 again.skip("verification_timeout", "timeout", "Kullanıcı doğrulaması süresinde tamamlanmadı; şirket atlandı.")
             else:
                 again.run()
