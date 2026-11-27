@@ -345,7 +345,7 @@ Plan: 2 çağrı, yaklaşık 270 bin token · Araştırmacı dost: 10 çağrı, 
 - Yerel tam takım (son kod): `.venv\Scripts\python.exe -m pytest -q` → **1286 geçti, 3 atlandı, 1 düştü**; düşen
   `test_claude_steps::test_previous_proposals_are_given_and_a_repeated_title_is_refused` ("Bir Claude çalışması zaten sürüyor", önceki
   sahte çalışmanın bitişiyle yarış) tek başına geçti; bir önceki tam turda geçmişti. `node --test tests/frontend.test.mjs` → **143/143**.
-- GitHub CI: (teslimde eklenir)
+- GitHub CI: 45980849507 (`c45be1e`, kod ve rapor) **başarılı**. Son commit yalnız bu satırı ekler; onun CI sonucu da main'e almadan önce beklendi (başarılı olmasa main'e alınmazdı).
 
 ## 13. Uyulan kurallar
 
