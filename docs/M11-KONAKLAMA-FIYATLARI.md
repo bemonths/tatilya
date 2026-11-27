@@ -395,6 +395,49 @@ RealJoy (`realjoy`, `studio/sources/agency_adapters.py`) yalnız eklentiyle okun
 - **Bu gecenin sonucu:** 17.359 cevabın 17.354'ü kullanıldı; 2.384 ilan, 11.408 fiyat sorgusu, 97 ev, 28 şirket — günlük satırıyla aynı
   (ayrıntı `docs/gorevler/HEDEF-02/RAPOR.md`).
 
+## HEDEF-03: eksik yedi şirket ve "Seçili şirketleri yeniden oku" (27 Kasım 2026, şema 26, v0.29.0)
+
+**Kök nedenler** (26–27 Kasım gecesinin ham kopyası `data/raw/b8055d2a…`): 30aescapes.com, oceanreefresorts.com, panhandlegetaways.com
+(Track), rosemarybeach.com (Streamline), alysbeach.com ve vacation.alysbeach.com (VRP) artık doğrudan isteğe ve proxy'ye Cloudflare
+doğrulaması veriyor (Ekim'de doğrudan okunuyorlardı); hepsi eklentiyle okunur.
+- **Track (3 site).** Fiyat sorusu `POST /ajax/quote` izinli listede yoktu. Göç v26 ekledi; alanlar her sitenin kendi tarih formundan
+  (`#pdpDatesForm`) okundu ve farklı: 30aescapes.com RealJoy ile aynı (`checkin, checkout, propertyID, roomTypeID, propertyName, hash`);
+  oceanreefresorts.com'da `hash` yok; panhandlegetaways.com sona `numDaysForAvailailityData` ekliyor. Okuyucu (`Track.form_fields`)
+  formu sayfadaki sırayla okur ve tarihleri formun kendi alanlarına yazar (eski düzende sayfanın her yerinden ilk görünüşe göre
+  topluyordu). Form yoksa eski yol.
+- **Rosemary Beach® (Streamline, Track değil).** Sayfanın betiği fiyatı `POST /wp-admin/admin-ajax.php` ile alanları adreste göndererek
+  soruyor (`action`, `params`: yöntem ve parametreleri JSON, boşluksuz; gövde boş). İzinli kayıt `alanlar_yeri: adres`, `icerik_turu:
+  application/json` ve yöntem deseniyle (yalnız liste, müsaitlik, fiyat). Okuyucu JSON'u sayfanın betiği gibi boşluksuz yazar.
+- **Alys Beach.** Bağlantılar genel sayfaya gidiyor (`http://www.alysbeach.com`, `alysbeach.com/vacation-properties/` →
+  `vacation.alysbeach.com`); eklentinin `fetch`'i bunları kesti → 5 "bağlanılamadı" → şirket kendi listesine (Ekim'de 73 ev) hiç
+  gelmeden durdu. Artık böyle bir sayfa sekmede açılarak okunur (M16).
+- **Vacasa.** Site hata cevabını küçük harfle veriyor (`{"error": [{"message": "min-stay-not-met"}]}`); okuyucu yalnız `Error`
+  arıyordu, "en az kalış" cevabı "kira veya toplam yok" hatası sayıldı, 5 hatadan sonra şirket durdu. Artık iki yazım da kural cevabıdır
+  (`restricted`, `booked` → `unavailable`); fiyat uydurulmaz.
+- **RealJoy.** 30 dakika sorunsuz okunduktan sonra Cloudflare bir fiyat sorusuna yeniden doğrulama verdi; program bunu durdurma sebebi
+  sayıyordu. Artık sekme şirketin sayfasını yeniden açar, doğrulama geçilir, soru bir kez daha sorulur (M16 "Yeniden doğrulama"). 12 sn
+  aralık ve 429 kuralı aynen.
+- **Süre.** Eklenti tek pencereyle şirketleri sırayla okuyordu; bu yedi şirket ~12+ saat sürerdi. Eklenti sırası artık 6 şirketi aynı
+  anda okur (M16 "Aynı anda birden çok iş"); site başına tek pencere ve 8 sn kuralı aynen.
+
+**"Seçili şirketleri yeniden oku"** (Sol menü → Veri → Toplama → Konaklama → "Konaklama fiyatları" → "Seçili şirketleri yeniden oku").
+- Kutular son sürümün şirketleridir (durumu ve fiyatlı/sorulan sayısıyla); düğme `POST /api/jobs {kind: "source_collection", source_id,
+  sirketler: [alan adları]}` gönderir. İşin adı "… · Seçili şirketleri yeniden oku (N şirket)".
+- Taban sürüm: kaynağın son başarılı kiralama sürümü (`agency_rates.latest_version`). Book>Direct çekimi tabandan sonra yenilenmişse iş
+  başlamaz (ilanlar aynı olmalı; o durumda bütün çekim gerekir). Seçimdeki her alan adı yapılandırmada ve açık olmalı.
+- Yalnız seçilen şirketler sorulur; haftalar taban sürümün haftalarıdır (bütün şirketlerin haftaları aynı kalsın diye; geçmişe düşen
+  hafta `skipped_past`). Öbür her şirketin satırı, ilan satırları, fiyat cevapları, kendi envanteri ve yayımlanmış kiraları tabandan
+  **olduğu gibi** yeni sürüme taşınır (`agency_rates.carry_over`). Sonuç tek ve bütün bir sürümdür; taban sürüme dokunulmaz.
+- Şirket satırı kendi sorgu gününü taşır: `agency_rate_companies.queried_on` ve taşındıysa `carried_from` (taşındığı sürüm). Ekranda
+  "SORGU GÜNÜ" sütunu ("taşındı · <sürüm> sürümünden, değişmeden"). Sürümün `queried_on`'u yeni okumanın günüdür; metadata'da
+  `secili_okuma` (seçilenler, taban sürüm ve günü, taşınan şirket ve fiyat sayısı, taşınan şirketlerin istek sayısı). Sürümün
+  `request_count`'u yalnız bu çekimin istekleridir.
+- Kurtarma düzeni aynen çalışır: birleştirilmiş sonuç kaydetmeden önce hazırdır, kaydetme düşerse `data/kurtarma/<iş>/`'e yazılır.
+  Seçim ham kopyanın yanında `secim.json`'dadır (seçilenler ve taban sürüm); "Ham kopyadan yeniden kur" onu okur ve aynı tabanla kurar.
+- Göç v26: `queried_on`, `carried_from` sütunları; eski satırların `queried_on`'u kendi sürümünün günü.
+- Test: `tests/test_hedef03.py` (taşınan şirketin değişmemesi, yeniden okunanın değişmesi, sürümün bütün olması, veritabanı üzerinden
+  sakla → oku, taban sürümün değişmemesi, başka Book>Direct çekimi ya da bilinmeyen şirket reddi).
+
 ## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
 
 **Kural (bizim varsayımımız, kaynak gerçeği değil):** çekim ayından sonraki **12 ayın** her biri için ayın **15'ini içeren Cumartesi–Cumartesi haftası** (7 gece): hafta, 15'inden önceki ya da 15'i olan Cumartesi başlar, dolayısıyla her zaman ayın 9'u ile 22'si arasındadır. Başlangıcı çekim tarihine **21 günden yakın** olan pencere atlanır ve yerine 13. ay eklenir; her çekim aynı sayıda pencere sorar. Pencere anahtarı ayı adlandırır (`ay-2027-07`), etiket "Temmuz 2027 · 10–17 Temmuz". Kural destinasyon yapılandırmasındadır (`destination_lodging_sources.window_rule`, JSON: `kind, months, anchor_day, weekday, nights, min_lead_days`; 30A: `thirty_a.py` → `LODGING_WINDOW_RULE`); hesap `studio/sources/windows.py` içinde generic'tir. Book>Direct konaklama aramaları ve kiralama şirketi fiyatları aynı kuralı kullanır; her çekim kullandığı kuralı kaydına yazar (`metadata.window_rule`). Kural tanımlıyken eski sabit pencereler (`destination_lodging_windows`) kapalı kalır.

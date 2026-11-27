@@ -222,3 +222,45 @@ doğrulama sayfası eklendi: başlık "Quick security check", çerçeve `challen
 (`studio/sources/page_kinds.py`, `agency_rates.CHALLENGE`, `restaurant_sites.CHALLENGE`) ve eklentide (`eklenti/logic.js`) aynı metin;
 eklenti bu sayfada da kullanıcıyı bekler (en çok 15 dk). Başka değişiklik yok. Kullanıcı Chrome'da eklentiyi bir kez yeniler
 (`chrome://extensions` → "30A Studio Yardımcısı" → yenile düğmesi).
+
+## Eklenti 0.22.0 (HEDEF-03, 27 Kasım 2026)
+
+**Sayfanın kendi sorgusu: alanların yeri, içerik türü ve değer deseni.** İzinli listedeki bir kayıt artık şunları da söyleyebilir (iki
+tarafta aynı kural: `studio/extension_queries.py` `refusal`, `eklenti/logic.js` `queryRefusal`; listeler `PLACES`, `CONTENT_TYPES`):
+- `alanlar_yeri`: `govde` (form gövdesi; POST'un varsayılanı) ya da `adres` (adresin soru kısmı; GET'in varsayılanı). Streamline'ın
+  WordPress betiği (rpapi) fiyatı `POST /wp-admin/admin-ajax.php?action=streamlinecore-api-request&params={…}` ile, gövdesi boş
+  sorar; eklenti `adres` kaydını aynı biçimde gönderir (gövde boş). Kayıttaki yer ile sorgunun yeri uymazsa sorgu gönderilmez.
+- `icerik_turu`: sayfanın isteğinin taşıdığı Content-Type (`application/x-www-form-urlencoded; charset=UTF-8` ya da `application/json`).
+- `desenler`: alan adı → düzenli ifade (değerin tamamı uymalı). rosemarybeach.com için `action` yalnız `streamlinecore-api-request`,
+  `params` yalnız eklentinin liste, müsaitlik ve fiyat yöntemleri (`GetPropertyListWordPress`, `VerifyPropertyAvailability`,
+  `GetPreReservationPrice`); başka bir yöntem (ör. rezervasyon) gönderilmez.
+
+**Aynı anda birden çok iş.** Program, eklentinin sorusuna verdiği cevapta `en_cok` (şimdi 6, `studio/extension.py` `PARALLEL_SESSIONS`)
+söyler; eklenti o kadar işi aynı anda alır, her iş kendi penceresinde ve kendi sekmesinde okunur (GÖREV-17'nin "bir iş, bir pencere"
+düzeni iş başına sürer: bir programın işinin yan yana süren oturumlarına birer pencere; bir pencere işin sıradaki sitesi için yeniden
+kullanılır; iş bitince ya da iptal edilince pencereler kapanır). Bir sitede iki sayfa arası en az `aralik_saniye` kuralı bütün işler
+için tek sayaçtadır. Kiralama çekiminde eklenti sırası 6 işçidir (`agency_workers.EXTENSION_LANES`): bir şirket baştan sona tek
+işçiyle (tek pencereyle) okunur, şirketler yan yana okunur. Eski bir program `en_cok` göndermezse eklenti eskisi gibi tek iş alır.
+"Bu sayfayı atla" doğrulama bekleyen bütün sayfaları atlar.
+
+**fetch ile alınamayan sayfa.** Sekmenin kendi `fetch`'i başka bir alt alan adına yönlenen ya da https sayfadan istenen http adresini
+tarayıcı kuralı gereği kesiyor (alysbeach.com'un Book>Direct bağlantıları: `http://www.alysbeach.com` ve
+`alysbeach.com/vacation-properties/` → `vacation.alysbeach.com`). Program böyle bir sayfa isteğini (JSON değil, alan göndermeyen GET)
+sekmede açarak okur (`ExtensionTransport.navigate`): ziyaretçinin bağlantıya tıklamasıyla aynı gezinme; izin verilmemiş bir siteye
+gitmez.
+
+**Yeniden doğrulama.** Uzun bir okumada site doğrulamayı yeniden isteyebilir (RealJoy, 27 Kasım 00:03: Cloudflare 30 dk sonra bir fiyat
+sorusuna "Just a moment…" verdi). Eklentiyle okunan bir şirkette bu olursa sekme şirketin ilk sayfasını yeniden açar; doğrulamayı site
+kendisi ya da kullanıcı geçer (eklenti ilk sayfadaki gibi en çok 15 dk bekler); sonra soru bir kez daha sorulur. Şirket ve çekim başına
+en çok 12 kez (`agency_rates.REVERIFY_LIMIT`); sayfa yine doğrulamadaysa şirket eskisi gibi durur. Doğrulamayı program çözmez.
+
+**Sırası.** Bir kez doğrulama gösterdiği için "tarayıcı gerektiren" işaretli bir site (yapılandırmada korumalı değil), eklenti eşliyse
+eklenti sırasına gider (önce eklenti kuralı); yapılandırmada korumalı siteler (oversee.us, exclusive30a.com) programın tarayıcı
+sırasında kalır.
+
+**Sürüm.** Eklenti 0.22.0. Kullanıcı Chrome'da `chrome://extensions` → "30A Studio Yardımcısı" → yenile düğmesine bir kez basar.
+
+**Test.** `tests/test_hedef03.py` (kurallar, adres alanları, desenler, iki listenin eşitliği, sayfa gezintisi, yeniden doğrulama,
+eklenti sırasının işçileri), `tests/frontend.test.mjs` (`queryRequest` adres/gövde, desen reddi, `parallelOf`), uçtan uca
+`tests/test_extension_e2e.py::test_two_sessions_are_read_at_once_in_two_windows_and_a_query_may_carry_its_fields_in_the_address`
+(yerel sayfalar, Playwright Chromium, geçici profil: iki oturum aynı anda iki pencerede; alanları adreste giden POST'un gövdesi boş).

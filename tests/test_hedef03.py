@@ -403,3 +403,24 @@ def test_a_site_that_once_showed_a_verification_goes_to_the_extension_lane_when_
     assert AW.lane_of(run(0), extension_paired=False) == W.LANE_BROWSER
     assert AW.lane_of(run(1), extension_paired=True) == W.LANE_BROWSER             # oversee.us, exclusive30a.com: the configuration says so
     assert AW.lane_of(run(0, extension_only=True)) == W.LANE_EXTENSION
+
+
+# ---- the trial's real answers (data/deneme/20261127-151712, through the user's extension) ------------------------------------------
+
+def test_the_trials_real_track_answers_through_the_extension_give_the_price():
+    page = TRACK.parse_page(text("panhandle-sanibel.html.gz"), "https://www.panhandlegetaways.com/vacation-rentals/30a-beach-house-sanibel")
+    priced = TRACK.quote(Session(lambda *a: (200, text("panhandle-quote-deneme.html.gz"))), page, JAN)
+    assert (priced["status"], priced["rent"], priced["total"]) == ("priced", 4224.3, 5224.02)
+    assert [f["name"] for f in priced["fees"]] == ["Cleaning Fee"] and priced["taxes"] == 559.72
+    page = TRACK.parse_page(text("oceanreef-seabiscuit.html.gz"), "https://www.oceanreefresorts.com/vacation-rentals/seabiscuit/")
+    total_only = TRACK.quote(Session(lambda *a: (200, text("oceanreef-quote-deneme.html.gz"))), page, JAN)
+    assert (total_only["status"], total_only["rent"], total_only["total"]) == ("priced", None, 1941.59)     # the site shows the total only
+
+
+def test_the_trials_real_streamline_answers_through_the_extension_give_the_price():
+    info = STREAM.parse_page(text("rosemary-seaforth.html"), "https://rosemarybeach.com/rentals/availability/seaforth-cottage/")
+    answers = iter([text("rosemary-verify-deneme.json.gz"), text("rosemary-price-deneme.json.gz")])
+    result = STREAM.quote(Session(lambda *a: (200, next(answers))), info, JAN)
+    assert (result["status"], result["rent"], result["total"]) == ("priced", 16912.0, 19044.04)
+    assert {f["name"] for f in result["fees"]} == {"Damage Fee", "Reservation Fee"}
+    assert any(e["name"] == "Travel Insurance" for e in result["excluded_items"])                      # optional, not in the total

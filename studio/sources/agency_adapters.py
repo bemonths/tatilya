@@ -268,6 +268,10 @@ def included_optional(rent, fees, optional, subtotal):
     return matches[0] if len(matches) == 1 else []
 
 
+# HEDEF-03: a Track quote's own sum line ("Subtotal": rent and fees before taxes; panhandlegetaways.com, 27 Nov 2026) is not a fee.
+SUBTOTAL = re.compile(r"sub\s*-?\s*total", re.I)
+
+
 def _json_content(text):
     try:
         data = json.loads(text)
@@ -387,6 +391,8 @@ class Track:
         fees, taxes = [], []
         for item in items:
             if item["total"] or item["amount"] == rent and re.match(r"rent\b|lodging", item["name"] or "", re.I):
+                continue
+            if SUBTOTAL.fullmatch(item["name"] or ""):      # HEDEF-03: the site's own sum line (panhandlegetaways.com), not a fee
                 continue
             target = taxes if re.search(r"tax", item["name"] or "", re.I) else fees
             target.extend(item["parts"] or [{"name": item["name"], "amount": item["amount"]}])
@@ -1616,6 +1622,8 @@ class RealJoy:
                 target = taxes if re.search(r"\btax", label or "", re.I) else fees
                 target.extend({"name": name or label or "Fee", "amount": value} for name, value in parts if value is not None)
             elif amount is None:
+                continue
+            elif SUBTOTAL.fullmatch(label or ""):        # HEDEF-03: the site's own sum line, not a fee
                 continue
             elif "pdp-quote-total" in classes:
                 total = amount
