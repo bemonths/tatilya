@@ -145,7 +145,7 @@ def test_model_and_effort_are_unchanged_and_the_sessions_default_is_six(tmp_path
     assert {k: (values[f"claude_model_{k}"], values[f"claude_effort_{k}"]) for k, _ in claude_settings.CLAUDE_STEPS} == {
         "baslik": ("claude-opus-5-5", "high"), "baslik_degerlendirme": ("claude-opus-5-5", "high"), "metin_plan": ("opus", "high"),
         "metin_plan_elestiri": ("opus", "medium"), "metin_bolum": ("opus", "high"), "metin_birlestirme": ("opus", "medium"),
-        "metin_giris_kapanis": ("opus", "high"), "metin_son_okuma": ("opus", "medium"), "metin_ceviri": ("sonnet", "medium")}
+        "metin_giris_kapanis": ("opus", "high"), "metin_son_okuma": ("opus", "medium"), "metin_ceviri": ("sonnet", "medium"), "yayin": ("opus", "medium")}
     assert values["claude_max_sessions"] == 6 and claude_settings.TEXT_FIELDS["claude_max_sessions"][:2] == (1, 8)
     # a file saved before GÖREV-18 holds the old default 3 because save() wrote every field: the new default holds; any other value stays
     (tmp_path / "ayarlar.json").write_text(json.dumps({"claude": {"claude_max_sessions": 3, "claude_max_turns_baslik": 30}}), encoding="utf-8")
