@@ -5,7 +5,12 @@ rows with its value and the id of its pack. When the video's own pack is produce
 block and the reference row, or the statement itself) and its value: the same row with the same value gets its new K id beside it; a row whose
 value changed, or that the new pack does not hold, is said so plainly.
 """
+import re
+
 SAME, CHANGED, ABSENT = "ayni", "deger_farkli", "yok"
+# HEDEF-03: a statement names the day its data was asked and amounts read from it (a price's quartiles); after the data is collected again
+# the same source row says another day and other amounts. They are not what makes it the same row (the value is compared apart).
+VOLATILE = (re.compile(r"\d{4}-\d{2}-\d{2}"), re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?"))
 
 
 def value_shown(row):
@@ -21,7 +26,16 @@ def value_shown(row):
 def row_key(row):
     """What makes two rows of different packs the same source row: the block plus the reference row id, or the block plus the statement."""
     reference = (row.get("kaynak") or {}).get("referans") if isinstance(row.get("kaynak"), dict) else row.get("referans")
-    return row.get("blok"), reference or row.get("ifade")
+    return row.get("blok"), reference or statement_key(row.get("ifade"))
+
+
+def statement_key(text):
+    """The statement without the day its data was asked and the amounts in it (HEDEF-03: a re-collected price row is the same row,
+    "değeri farklı", not a row the new pack does not hold)."""
+    if not text:
+        return text
+    text = VOLATILE[0].sub("<gün>", text)
+    return VOLATILE[1].sub("$<tutar>", text)
 
 
 def cited(row, *, dosya, pack_id):

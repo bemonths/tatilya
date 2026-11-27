@@ -442,3 +442,17 @@ def test_a_first_page_the_tab_could_not_read_is_asked_once_more():
     assert isinstance(transport, ExtensionTransport) and verifier.errors == [{"alan_adi": "alysbeach.com", "not": "Frame was removed"}]
     answers[:] = [{"durum": "hata", "not": "x"}, {"durum": "hata", "not": "y"}]
     assert verifier("alysbeach.com", "http://www.alysbeach.com", lambda: False, 60) is None      # twice: left for the end, the reason kept
+
+
+def test_a_cited_price_row_is_the_same_row_after_the_prices_are_asked_again():
+    """HEDEF-03: the video's pack found none of the title evaluation's price rows after the re-read (the statement names the query day
+    and the quartiles), so the price block left the pack; now the row is matched and said to have another value."""
+    from studio.evidence import video as V
+    old = {"blok": "lodging_prices", "referans": None, "deger": 1711, "birim": "USD (7 gece)", "durum": "var",
+           "ifade": "Seagrove · Ocak 2027 · 9–16 Ocak: kiralama şirketlerinin sitelerinde 2026-11-26 tarihinde sorulan 7 gecelik toplam fiyatın ortancası (çeyrekler $1,292–$2,492)"}
+    new = {"id": "K0001", "blok": "lodging_prices", "kaynak": {"referans": None}, "deger": 1745, "birim": "USD (7 gece)", "durum": "var",
+           "ifade": "Seagrove · Ocak 2027 · 9–16 Ocak: kiralama şirketlerinin sitelerinde 2026-11-27 tarihinde sorulan 7 gecelik toplam fiyatın ortancası (çeyrekler $1,300.5–$2,610)"}
+    other = {**new, "id": "K0002", "ifade": new["ifade"].replace("Ocak 2027 · 9–16 Ocak", "Temmuz 2027 · 10–17 Temmuz")}
+    assert V.match(old, [other, new]) == (V.CHANGED, new)
+    assert V.match({**old, "deger": 1745}, [new]) == (V.SAME, new)
+    assert V.match(old, [other]) == (V.ABSENT, None)                                   # another week is another row
