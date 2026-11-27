@@ -94,7 +94,12 @@ def estimate(service, video, tones, *, plan=None, plan_done=False, note=None):
                                   extra={"video_title": title})
         else:
             critic = est.guessed("metin_plan_elestiri", base_files, single.tokens_of(PLAN_JSON_CHARS), extra={"video_title": title})
-        rows.append(line("Plan", [planner, critic], settings, "metin_plan"))
+        # HEDEF-04: the critic may send the plan back once (one more planner round with its notes and the plan);
+        # the estimate counts that round too and is shown as "en çok".
+        previous = json.dumps(plan, ensure_ascii=False, indent=1) + "\n" if plan else None
+        again = est.call("metin_plan", planner["okunan"] - planner["yan"] + (single.tokens_of(len(previous)) if previous else single.tokens_of(PLAN_JSON_CHARS)),
+                         "eleştirmen planı geri gönderirse ikinci planlayıcı turu: ilk turun istemi ve önceki plan")
+        rows.append({**line("Plan", [planner, critic, again], settings, "metin_plan"), "en_cok": True})
     head = (video.get("analysis") or {}).get("icerik_plani") or []
     sections = sorted(plan["bolumler"], key=lambda s: s["no"]) if plan else None
     count = len(sections) if sections else min(7, max(5, len(head))) if head else DEFAULT_SECTIONS

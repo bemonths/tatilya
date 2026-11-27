@@ -163,8 +163,8 @@ def test_two_tones_end_to_end_every_call_one_turn_without_tools_and_the_call_cou
     add_video(text_app)
     # GÖREV-21: the plan and the writing are two steps, each with its own estimate and its own job
     plan_estimate = text_app.post("/api/videos/v1/plan/tahmin", json={}).json()
-    assert [r["baslik"] for r in plan_estimate["satirlar"]] == ["Plan"] and plan_estimate["satirlar"][0]["cagri"] == 2
-    assert plan_estimate["metin"].startswith("Plan: 2 çağrı, yaklaşık ")
+    assert [r["baslik"] for r in plan_estimate["satirlar"]] == ["Plan"] and plan_estimate["satirlar"][0]["cagri"] == 3 and plan_estimate["satirlar"][0]["en_cok"]
+    assert plan_estimate["metin"].startswith("Plan: en çok 3 çağrı, en çok yaklaşık ")
     planned = start_plan(text_app)
     assert planned["status"] == "paused" and planned["reason"] == "plan_hazir"
     plan_job = text_job(text_app, settled=True)

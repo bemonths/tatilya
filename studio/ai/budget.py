@@ -109,7 +109,8 @@ def summary(rows, settings, *, retries=0):
                         f"{single.thousands(call_limit)}.")
     if total["toplam"] > job_limit:
         over.append(f"İşin toplam tahmini yaklaşık {single.thousands(total['toplam'])} token; iş başına sınır {single.thousands(job_limit)}.")
-    text = " · ".join(f"{r['baslik']}: {r['cagri']} çağrı, yaklaşık {single.thousands(r['toplam'])} token" for r in rows)
+    text = " · ".join(f"{r['baslik']}: en çok {r['cagri']} çağrı, en çok yaklaşık {single.thousands(r['toplam'])} token" if r.get("en_cok")
+                      else f"{r['baslik']}: {r['cagri']} çağrı, yaklaşık {single.thousands(r['toplam'])} token" for r in rows)
     if len(rows) > 1:
         text += f" · Toplam: yaklaşık {single.thousands(total['toplam'])} token"
     return {"satirlar": rows, "toplam": total, "sinirlar": {"cagri": call_limit, "is": job_limit}, "asiyor": over, "baslatilabilir": not over,

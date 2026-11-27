@@ -257,7 +257,7 @@ def test_plan_duzeltme_iste_writes_the_plan_again_with_the_note_and_the_old_plan
     add_video(app)
     first = start_plan(app)
     estimate = app.post("/api/videos/v1/adimlar/plan/duzeltme/tahmin", json={"not": NOTE}).json()["tahmin"]
-    assert estimate["satirlar"][0]["baslik"] == "Plan" and estimate["toplam"]["cagri"] == 2
+    assert estimate["satirlar"][0]["baslik"] == "Plan" and estimate["toplam"]["cagri"] == 3   # HEDEF-04: the critic's send-back round
     asked = decide(app, "plan", "duzeltme", **{"not": NOTE})
     assert asked.status_code == 201 and asked.json()["baslayan"] != first["id"]
     second = wait_run(app, asked.json()["baslayan"])
@@ -354,11 +354,11 @@ def test_the_estimate_the_spending_and_the_link_table_of_plan_and_writing(app):
     add_video(app)
     estimate = app.post("/api/videos/v1/plan/tahmin", json={}).json()
     line = estimate["satirlar"][0]
-    assert (line["baslik"], line["cagri"]) == ("Plan", 2) and line["okunan"] > 0 and line["yazilan"] > 0
+    assert (line["baslik"], line["cagri"], line["en_cok"]) == ("Plan", 3, True) and line["okunan"] > 0 and line["yazilan"] > 0
     assert [m["adim"] for m in line["modeller"]] == ["metin_plan", "metin_plan_elestiri"] and all(m["model_adi"] for m in line["modeller"])
     plan = start_plan(app)
     chain = plan["halkalar"]
-    assert [(r["baslik"], r["durum"], r["cagri"], r["tahmini_cagri"]) for r in chain["halkalar"]] == [("Planlayıcı", "done", 1, 1),
+    assert [(r["baslik"], r["durum"], r["cagri"], r["tahmini_cagri"]) for r in chain["halkalar"]] == [("Planlayıcı", "done", 1, 2),
                                                                                                     ("Plan eleştirmeni", "done", 1, 1)]
     assert all(r["gercek"] > 0 and r["tahmin"] > 0 and r["durum_adi"] == "Tamamlandı" for r in chain["halkalar"])
     assert chain["toplam"]["cagri"] == 2 and chain["toplam"]["gercek"] == sum(r["gercek"] for r in chain["halkalar"])
