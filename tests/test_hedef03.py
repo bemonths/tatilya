@@ -391,3 +391,15 @@ def test_the_stored_selected_version_is_whole_and_the_base_is_untouched(tmp_path
     assert len(new["quotes"]) == len(base["quotes"])
     days = {c["domain"]: (c["queried_on"], c["carried_from"]) for c in new["companies"]}
     assert days["track.example"] == ("2026-10-09", None) and days["rescms.example"] == (TODAY_ISO, "base-run")
+
+
+def test_a_site_that_once_showed_a_verification_goes_to_the_extension_lane_when_the_extension_is_paired():
+    from studio.sources import agency_workers as AW
+    from studio import workers as W
+
+    def run(protected_config, extension_only=False):
+        return type("R", (), {"extension_only": extension_only, "protected": 1, "site": {"protected_config": protected_config}})()
+    assert AW.lane_of(run(0), extension_paired=True) == W.LANE_EXTENSION          # 30aescapes.com and kin: marked browser hosts
+    assert AW.lane_of(run(0), extension_paired=False) == W.LANE_BROWSER
+    assert AW.lane_of(run(1), extension_paired=True) == W.LANE_BROWSER             # oversee.us, exclusive30a.com: the configuration says so
+    assert AW.lane_of(run(0, extension_only=True)) == W.LANE_EXTENSION

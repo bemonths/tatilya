@@ -84,12 +84,16 @@ class CompanyState:
         return self.run.region is not None
 
 
-def lane_of(run):
+def lane_of(run, extension_paired=False):
     """The lane of a company that is never split: extension only → "eklenti"; protected (or once showed a verification page) →
-    "tarayici"; else None."""
+    "tarayici"; else None. HEDEF-03: a company that is protected only because its site once showed a verification page (not by the
+    configuration) goes to the extension lane when the extension is paired: the extension is read first for it anyway (CLAUDE.md,
+    reading order), and the extension lane reads several companies at once."""
     if run.extension_only:
         return W.LANE_EXTENSION
     if run.protected:
+        if extension_paired and not run.site.get("protected_config"):
+            return W.LANE_EXTENSION
         return W.LANE_BROWSER
     return None
 
@@ -223,7 +227,7 @@ class Scheduler:
             run.session._base_gap = run.session.gap
             gate = W.SiteGate(run.site["domain"], site_limit, record=self.record)
             state = CompanyState(run, gate)
-            state.lane = lane_of(run)
+            state.lane = lane_of(run, extension_paired)
             run.session.on_event = (lambda kind, s=state: s.gate.event(kind, W.LANE_LABELS.get(s.lane, "tarayıcı")))
             gate.on_factor = (lambda factor, s=run.session: setattr(s, "gap", s._base_gap * factor))
             self.states.append(state)
