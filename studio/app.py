@@ -277,6 +277,12 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         bridge().renew()
         return bridge().status()
 
+    @app.put("/api/tarayici-eklentisi/yedek-yol")
+    def extension_fallback(payload: dict):
+        """HEDEF-04: the extension as the closed fallback way (Veri Çekici reads the sites that need a browser)."""
+        app.state.extension.set_fallback(bool(payload.get("acik")))
+        return app.state.extension.status()
+
     @app.put("/api/tarayici-eklentisi/ayarlar")
     async def extension_speed(request: Request):
         body = await json_body(request)
@@ -536,6 +542,63 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             raise Conflict("Bir veri toplama işi sürüyor; bitince deneme çekimini başlatın.")
         factory = getattr(app.state, "trial_region", None) or (lambda copy: region_reader.RegionAccess(copy, db.path.parent))
         return trial_run.start(db, extension=app.state.extension, region_factory=factory, destination_id=destination_id)
+
+    # --- HEDEF-04: Veri Çekici (Veri → Okuma denemeleri → "Veri Çekici ile okuma"; studio/veri_cekici.py) -----------------------------
+
+    @app.get("/api/veri-cekici")
+    def veri_cekici_view(destination_id: str = DEFAULT_DESTINATION_ID):
+        selected(destination_id)
+        from . import veri_cekici
+        with db.connect() as con:
+            sites = veri_cekici.tarayici_siteleri(con)
+        workers = 1 + len(proxy_list.usable(db.path.parent) or [])
+        return {**veri_cekici.gorunum(db.path.parent), "siteler": sites, "isci_sayisi": workers, "site_basina_isci": veri_cekici.SITE_BASINA_ISCI}
+
+    @app.post("/api/veri-cekici/liste", status_code=201)
+    def veri_cekici_list(payload: dict | None = None, destination_id: str = DEFAULT_DESTINATION_ID):
+        """The list of the sites that need a browser, for Veri Çekici (2–4 pages a site); split for at most four workers a site."""
+        selected(destination_id)
+        from . import veri_cekici
+        payload = payload or {}
+        try:
+            pages = int(payload.get("sayfa", 3))
+            workers = int(payload.get("isci_sayisi") or (1 + len(proxy_list.usable(db.path.parent) or [])))
+            return veri_cekici.liste_uret(db, db.path.parent, sayfa=pages, isci_sayisi=max(1, min(workers, 21)))
+        except (veri_cekici.VeriCekiciHatasi, ValueError) as exc:
+            raise HTTPException(400, str(exc))
+
+    @app.post("/api/veri-cekici/ice-aktar", status_code=201)
+    async def veri_cekici_import(request: Request, destination_id: str = DEFAULT_DESTINATION_ID):
+        """The result zip of Veri Çekici (the body is the zip itself): kept as it is as the raw copy, then read with 30A's readers."""
+        selected(destination_id)
+        from . import veri_cekici
+        from urllib.parse import unquote
+        body = await request.body()
+        if not body:
+            raise HTTPException(400, "Zip dosyası gelmedi.")
+        if len(body) > 512 * 1024 * 1024:
+            raise HTTPException(413, "Zip 512 MB'tan büyük.")
+        incoming = db.path.parent / veri_cekici.FOLDER / "gelen.zip.tmp"
+        incoming.parent.mkdir(parents=True, exist_ok=True)
+        incoming.write_bytes(body)
+        try:
+            return veri_cekici.ice_aktar(db.path.parent, incoming, unquote(request.headers.get("X-Dosya-Adi") or "veri_cekici_sonuclari.zip"))
+        except veri_cekici.VeriCekiciHatasi as exc:
+            raise HTTPException(400, str(exc))
+        finally:
+            incoming.unlink(missing_ok=True)
+
+    @app.post("/api/veri-cekici/ice-aktarma/{identifier}/yeniden-kur")
+    def veri_cekici_rebuild(identifier: str, destination_id: str = DEFAULT_DESTINATION_ID):
+        """"Ham kopyadan yeniden kur" for an imported Veri Çekici zip: the same reading again from the kept zip (no site is asked)."""
+        selected(destination_id)
+        from . import veri_cekici
+        try:
+            return veri_cekici.yeniden_kur(db.path.parent, identifier)
+        except FileNotFoundError:
+            raise HTTPException(404, "Bu içe aktarma bulunamadı.")
+        except veri_cekici.VeriCekiciHatasi as exc:
+            raise HTTPException(409, str(exc))
 
     # --- HEDEF-01: the proxy list (each working proxy is one worker of a rental price run) -----------------------------------------
 

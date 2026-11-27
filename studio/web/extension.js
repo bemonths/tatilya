@@ -137,6 +137,14 @@ export class ExtensionSettings extends ExtensionBase {
   draw() {
     this.container.innerHTML=extensionSection(this.view,{message:this.message});
     this.container.querySelector("#extension-renew").addEventListener("click",()=>this.renew());
+    const open=this.view?.yedek_yol!=="kapali";
+    this.container.insertAdjacentHTML("afterbegin",`<div class="decision-actions extension-fallback"><span class="tag ${open?"green":"warm"}">Yedek yol ${open?"açık":"kapalı"}</span><small class="muted">Tarayıcı isteyen siteler Veri Çekici ile okunur (Veri → Okuma denemeleri → Veri Çekici ile okuma); eklenti kapalı bir yedek yoldur.</small><button type="button" id="extension-fallback">${open?"Yedek yolu kapat":"Yedek yolu aç"}</button></div>`);
+    this.container.querySelector("#extension-fallback").addEventListener("click",()=>this.fallback(!open));
+  }
+  async fallback(open) {
+    try {this.view={...this.view,...await api("tarayici-eklentisi/yedek-yol",{method:"PUT",body:JSON.stringify({acik:open})})};this.message=open?"Eklenti yedek yol olarak açıldı.":"Eklenti yedek yol olarak kapatıldı.";}
+    catch(error) {if(error.stale) return;this.message=error.message;}
+    this.draw();
   }
   async renew() {
     if(!globalThis.confirm?.("Eşleşme kodu yenilensin mi? Eklentiye yeni kodu yeniden yazmanız gerekecek.")) return;

@@ -1855,3 +1855,24 @@ test('HEDEF-03: a query whose page puts the fields in the address, the value pat
   assert.equal(track.headers['Content-Type'],'application/x-www-form-urlencoded; charset=UTF-8');
   assert.equal(E.parallelOf(6),6);assert.equal(E.parallelOf(undefined),1);assert.equal(E.parallelOf(40),8);assert.equal(E.parallelOf(0),1);
 });
+
+import {veriCekiciSection, importCard, siteTable} from '../studio/web/vericekici.js';
+
+test('HEDEF-04: Veri Çekici section lists the browser sites, the last list and each import with its per-site table', () => {
+  const view = {siteler: [{site: 'realjoy.com', tur: 'kiralama', sebep: 'korumalı'}], isci_sayisi: 3, site_basina_isci: 4,
+    listeler: [{olusturuldu: '2026-11-28T00:00:00Z', satir: 104, site_sayisi: 36, isci_sayisi: 3, dosya: 'C:/x/liste.jsonl', isci_dosyalari: ['isci_01.jsonl', 'isci_02.jsonl'], uyarilar: []}],
+    ice_aktarmalar: [{kimlik: '20261128-010000', dosya: 'veri_cekici_sonuclari.zip', ice_alindi: '2026-11-28T01:00:00Z', okunan: 2, hata: 1, fiyatli: 1,
+      paket: {arac_surumu: '0.2.0', isciler: ['Doğrudan']}, siteler: [{site: '30aescapes.com', okunan: 2, hata: 0, sorgu: 2, fiyatli: 1, isciler: ['Doğrudan']}],
+      kayitlar: [{proje_site: '30aescapes.com', kimlik: 'L1', baslik: 'Wave <N> Sea', sayfa_durumu: 200, fiyatlar: [{durum: 'priced', toplam: 2650.5}]}],
+      hatalar: [{site: 'realjoy.com', kimlik: 'R1', sebep: 'Doğrulama'}]}]};
+  const html = veriCekiciSection(view);
+  assert.match(html, /Veri Çekici ile okuma/);
+  assert.match(html, /Veri Çekici listesini üret/);
+  assert.match(html, /Sonuç zip'ini içe aktar/);
+  assert.match(html, /104 sayfa, 36 site, 3 işçi/);
+  assert.match(html, /Ham kopyadan yeniden kur/);
+  assert.match(html, /2650.5 \$/);
+  assert.match(html, /Wave &lt;N&gt; Sea/);
+  assert.match(siteTable([]), /Tarayıcı isteyen site yok/);
+  assert.match(importCard({...view.ice_aktarmalar[0], yeniden_kuruldu: '2026-11-28T02:00:00Z'}), /ham kopyadan yeniden kuruldu/);
+});

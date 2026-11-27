@@ -340,9 +340,21 @@ class ExtensionBridge:
         return any(s.state == "calisiyor" and not (s.closed and not s.queue and not s.in_flight) for s in list(self.sessions.values()))
 
     @property
+    def fallback_open(self):
+        """HEDEF-04: tarayıcı isteyen siteler Veri Çekici ile okunur; eklenti yedek yoldur. "kapali" iken program eklentiye iş vermez
+        (bağlı sayılmaz); kaydı olmayan eski eşleşme dosyalarında açıktır."""
+        return self.config.get("yedek_yol") != "kapali"
+
+    def set_fallback(self, open_):
+        with self.lock:
+            self.config = {**self.config, "yedek_yol": "acik" if open_ else "kapali"}
+            self.save(self.config)
+        return self.fallback_open
+
+    @property
     def connected(self):
         limit = CONNECTED_BUSY_S if self.busy else CONNECTED_S
-        return self.paired and self.last_seen is not None and self.clock() - self.last_seen <= limit
+        return self.fallback_open and self.paired and self.last_seen is not None and self.clock() - self.last_seen <= limit
 
     def seen(self):
         """Every authorized call of the paired extension counts (GÖREV-16)."""
@@ -378,7 +390,7 @@ class ExtensionBridge:
         with self.lock:
             active = [s for s in self.sessions.values() if s.state in ("bekliyor", "calisiyor") and not s.closed]
             working = self.working() if self.connected else None
-            return {"eslesti": self.paired, "bagli": self.connected, "son_gorulme": datetime.fromtimestamp(self.last_seen, timezone.utc)
+            return {"yedek_yol": "acik" if self.fallback_open else "kapali", "eslesti": self.paired, "bagli": self.connected, "son_gorulme": datetime.fromtimestamp(self.last_seen, timezone.utc)
                     .isoformat(timespec="seconds") if self.last_seen else None, "surum": self.version, "kod": self.code(),
                     "beklenen_surum": EXPECTED_VERSION, "eski_surum": bool(self.version) and self.version != EXPECTED_VERSION,
                     "kod_olusturuldu": self.config.get("olusturuldu"), "eslesme_zamani": self.config.get("eslesti"),
