@@ -29,8 +29,9 @@ from .migration_v22 import upgrade_v22
 from .migration_v23 import upgrade_v23
 from .migration_v24 import upgrade_v24
 from .migration_v25 import upgrade_v25
+from .migration_v26 import upgrade_v26
 SEEDS = DEFAULT_PROFILE.SEEDS
-SCHEMA_VERSION = 25
+SCHEMA_VERSION = 26
 from .connector_defaults import reconcile_connector_defaults
 from .migrations import execute_schema, upgrade_v3, upgrade_v4, upgrade_v5
 
@@ -71,14 +72,14 @@ class Database:
                 con.execute("BEGIN IMMEDIATE")
                 reconcile_connector_defaults(con)
                 return
-            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24):
+            if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25):
                 backup_dir = self.path.parent / "backups"
                 backup_dir.mkdir(exist_ok=True)
                 with sqlite3.connect(backup_dir / f"{self.path.stem}-v{version}-{uuid.uuid4().hex}.sqlite3") as backup:
                     con.backup(backup)
             con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
-            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24):
+            if version in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25):
                 if version == 3:
                     upgrade_v4(con)
                 if version < 5:
@@ -121,7 +122,9 @@ class Database:
                     upgrade_v23(con)
                 if version < 24:
                     upgrade_v24(con)
-                upgrade_v25(con)
+                if version < 25:
+                    upgrade_v25(con)
+                upgrade_v26(con)
                 reconcile_connector_defaults(con)
                 return
             execute_schema(con, """
@@ -189,6 +192,7 @@ class Database:
             upgrade_v23(con)
             upgrade_v24(con)
             upgrade_v25(con)
+            upgrade_v26(con)
             reconcile_connector_defaults(con)
 
     def extension_queries(self):

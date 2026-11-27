@@ -505,7 +505,7 @@ def test_the_estimate_counts_the_new_companies_at_the_proxys_pace_and_the_own_ho
 def test_a_fresh_database_has_the_three_new_companies_of_schema_22(tmp_path):
     db = Database(tmp_path / "studio.sqlite3")
     db.initialize()
-    assert SCHEMA_VERSION == 25
+    assert SCHEMA_VERSION == 26
     agency = {s["domain"]: s for s in db.context("30a").agency["sites"]}
     assert [(d, agency[d]["company"], agency[d]["adapter"]) for d in ("360blue.com", "vacasa.com", "30a-beachgirls.com")] == list(thirty_a.AGENCY_SITES_V22)
     options = {domain: ar.site_options(agency[domain]) for domain in agency}
@@ -514,7 +514,7 @@ def test_a_fresh_database_has_the_three_new_companies_of_schema_22(tmp_path):
     assert own["site_region"] == "Emerald Coast - 30A" and options["30a-beachgirls.com"]["own_region_id"] is None
     assert own["quotes"] is True and OPTIONS["30a-beachgirls.com"]["inventory"]["own"]["quotes"] is False      # GÖREV-23 (schema 23) turned the rent on
     with db.connect() as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 25
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 26
         assert {r[0] for r in con.execute("SELECT id FROM regions")} >= set(own["regions"].values())
         assert [r["notnull"] for r in con.execute("PRAGMA table_info(agency_rate_own_listings)") if r["name"] == "region_id"] == [0]
         assert not con.execute("SELECT 1 FROM region_blocked_hosts WHERE host IN ('360blue.com','vacasa.com')").fetchone()     # the list is the user's data
@@ -544,7 +544,7 @@ def test_the_21_to_22_migration_keeps_every_row_and_adds_each_company_once(tmp_p
         assert [r[3] for r in con.execute("PRAGMA table_info(agency_rate_own_listings)") if r[1] == "region_id"] == [1]
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 25
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 26
         assert [r[3] for r in con.execute("PRAGMA table_info(agency_rate_own_listings)") if r[1] == "region_id"] == [0]
         assert con.execute("SELECT COUNT(*) FROM destination_agency_sites").fetchone()[0] == before + 2
         assert con.execute("SELECT company,enabled FROM destination_agency_sites WHERE domain='vacasa.com'").fetchall() == [("Elle eklendi", 0)]

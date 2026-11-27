@@ -26,6 +26,10 @@ job runs (20 s otherwise). A refusal nobody can pass ("erisim_reddedildi") and a
 page that went on to a site the extension may not open is "yonlendi" (or "bolge_engeli" for a geo-block address). "Bu sayfayı atla"
 (the extension's window or the job panel) skips a page waiting for verification ("atlandi").
 
+HEDEF-03: the extension works on up to PARALLEL_SESSIONS sessions at once ("en_cok" in the answer to its question), each in its own
+window; the sessions of one job that run side by side (the rental run's extension lane) get a window each, and a window is used
+again for the job's next site.
+
 GÖREV-17 (Adım 4): one window for a whole job. Every session names the window it belongs to ("pencere": the program's job, or the
 session itself for a Settings trial) and every answer to the extension's question lists the windows that must stay open
 ("acik_pencereler": the jobs still queued or running that used the extension). The extension keeps its window and tab from one site
@@ -48,7 +52,10 @@ from urllib.parse import urlsplit
 PAIRING_FILE = "eklenti.json"
 CONNECTED_S = 20.0
 CONNECTED_BUSY_S = 60.0            # while a job runs the extension may be busy with one page for a while; it reports every ≤5 s
-EXPECTED_VERSION = "0.21.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
+EXPECTED_VERSION = "0.22.0"        # the extension folder's manifest version (an older one in Chrome must be reloaded)
+# HEDEF-03: how many sessions the extension works on at once, each in its own window (the rental run's extension lane: one company
+# per session, so one site is never read by two windows; the pace on a site stays `aralik_saniye`)
+PARALLEL_SESSIONS = 6
 DEFAULT_GAP_S, MIN_GAP_S, MAX_GAP_S = 8, 3, 120
 VERIFY_WAIT_S = 15 * 60
 PAGE_TIMEOUT_S = VERIFY_WAIT_S + 240
@@ -157,12 +164,14 @@ class Session:
         return (int(result.get("http_durumu") or 0), result.get("son_adres") or url, result.get("basliklar") or {},
                 base64.b64decode(result.get("govde_base64") or ""))
 
-    def query(self, path, method, fields, *, page=None, canceled=lambda: False, timeout=REQUEST_TIMEOUT_S):
+    def query(self, path, method, fields, *, page=None, place=None, canceled=lambda: False, timeout=REQUEST_TIMEOUT_S):
         """GÖREV-25: the page's own query (a price question, the next part of a listing) from the session's tab on its site: only a
         query on the allowed list (studio.extension_queries), with exactly the given fields. Refused here before it reaches the
         extension, and again by the extension. Returns the result with "sorgu": {yontem, yol, alanlar, adres, zaman} and "govde" (bytes)."""
         from . import extension_queries as eq
         query = {"alan_adi": self.domain, "yol": path, "yontem": str(method).upper(), "alanlar": dict(fields)}
+        if place:               # HEDEF-03: "adres" when the page puts the fields in the address (Streamline's admin-ajax)
+            query["alanlar_yeri"] = place
         refused = eq.refusal(query, self.bridge.allowed_queries())
         if refused:
             raise QueryRefused(refused)
@@ -176,7 +185,7 @@ class Session:
             raise ExtensionError(result.get("not") or f"Eklenti sorguyu gönderemedi ({result.get('durum')}).")
         sent = result.get("gonderilen") if isinstance(result.get("gonderilen"), dict) else {}
         result["sorgu"] = {"yontem": query["yontem"], "yol": path, "alanlar": query["alanlar"], "adres": sent.get("adres") or item["adres"],
-                           "zaman": sent.get("zaman") or result.get("okundu")}
+                           "zaman": sent.get("zaman") or result.get("okundu"), **({"alanlar_yeri": place} if place else {})}
         result["govde"] = base64.b64decode(result.get("govde_base64") or "")
         return result
 

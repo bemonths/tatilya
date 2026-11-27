@@ -13,6 +13,8 @@ RealJoy 12 s), so a site sees at most `site_limit` requests per 8 s. A 429, a bl
 every worker of that site (twice the gap); a second one leaves the site one worker. These events go to the run's log and metadata.
 
 - Region-blocked companies (360 Blue, Vacasa, …) go to proxy workers only (a US exit; only the listed domains go through the proxy).
+- HEDEF-03: the extension lane has EXTENSION_LANES workers (the extension reads that many sessions at once, each in its own window);
+  a lane worker owns one company until it is finished, so a company is still read whole by one lane worker and a site by one window.
 - Browser companies are never split. Protected companies (oversee.us, exclusive30a.com) are read whole in the "tarayıcı" lane through the
   program's own browser; a company read only through the extension (RealJoy) whole in the "eklenti" lane; both lanes run side by side
   with the workers. A company that shows a verification page to a worker moves, with its tasks left, to the extension lane when the
@@ -39,6 +41,7 @@ POOL_REFRESH_S = 60.0
 STALL_S = 75 * 60          # longer than the longest 429 Retry-After wait (agency_rates.RETRY_AFTER_MAX, 1 h), so a waiting worker is not given up
 IDLE_WAIT_S = 0.5
 CONNECT_TIMEOUT = httpx.Timeout(45, connect=15)
+EXTENSION_LANES = 6        # = studio.extension.PARALLEL_SESSIONS
 
 
 class CompanyHalted(Exception):
@@ -67,6 +70,7 @@ class CompanyState:
         self.stage = "links"
         self.lane = None
         self.lane_started = False
+        self.lane_owner = None          # HEDEF-03: the lane worker reading this company (one company, one lane worker)
         self.finished = False
         self.units = None
         self.plan = None
@@ -329,7 +333,8 @@ class Scheduler:
                     self.advance(state)
         with self.cond:          # every first worker is on the list before any of them looks for work (the strand check counts them)
             created = [self.add_worker(exit_, start=False) for exit_ in self.initial_exits]
-            created += [self.add_worker(W.direct_exit(), lane=lane, start=False) for lane in (W.LANE_BROWSER, W.LANE_EXTENSION)]
+            created += [self.add_worker(W.direct_exit(), lane=W.LANE_BROWSER, start=False)]
+            created += [self.add_worker(W.direct_exit(), lane=W.LANE_EXTENSION, start=False) for _ in range(EXTENSION_LANES)]
         for worker in created:
             worker.thread.start()
         watcher = threading.Thread(target=self.watch, name="30a-isci-havuz", daemon=True)
@@ -337,13 +342,13 @@ class Scheduler:
 
     def advance(self, state):
         """The next stage of a company whose tasks are all done (called with the lock held)."""
-        from .agency_rates import FALLBACK_STATUSES, own_everywhere
+        from .agency_rates import FALLBACK_STATUSES, has_list, own_everywhere
         run, site = state.run, state.run.site
         while not state.pending and not state.inflight and not state.finished:
             if state.stage == "links":
                 state.stage = "inventory"
                 waiting = [r for r in run.members if r["page_status"] in FALLBACK_STATUSES]
-                if site["inventory"] and (waiting or site["own_region_id"] or own_everywhere(site)):
+                if has_list(site["inventory"]) and (waiting or site["own_region_id"] or own_everywhere(site)):
                     state.pending.append(Task(state, "inventory"))
             elif state.stage == "inventory":
                 state.stage = "fallback"
@@ -375,7 +380,7 @@ class Scheduler:
         if state.finished or not state.pending:
             return False
         if worker.lane:
-            return state.lane == worker.lane and (state.lane_started or not state.inflight)
+            return state.lane == worker.lane and state.lane_owner in (None, worker) and (state.lane_started or not state.inflight)
         if state.lane:
             return False
         if state.region:
@@ -410,6 +415,7 @@ class Scheduler:
                         if worker.lane:
                             worker.lane_state = best[1]
                             best[1].lane_started = True
+                            best[1].lane_owner = worker
                         return self.take(worker, best[1])
                 if self.finished():
                     return None

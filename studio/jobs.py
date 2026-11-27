@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 import threading
 
 from .database import Conflict, Database
@@ -16,6 +17,7 @@ class JobQueue:
         self.region = region                # GÖREV-16: () -> RegionAccess (the US proxy and the region-blocked list)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="30a-job")
         self.lock = threading.Lock()
+        self.selections = {}            # HEDEF-03: job id -> the chosen rental companies (until the job starts)
         self.closing = False
         self.registry = db.registry
 
@@ -58,7 +60,9 @@ class JobQueue:
         self.db.update_job(identifier, status="canceled", message="İş iptal edildi.")
         return self.db.job(identifier)
 
-    def submit_collection(self, source_id):
+    def submit_collection(self, source_id, companies=None):
+        """A collection job. HEDEF-03: `companies` (rental price collector only): "Seçili şirketleri yeniden oku" — only these companies
+        are asked; the new version carries every other company from the last successful version."""
         with self.lock:
             if self.closing:
                 raise Conflict("Uygulama kapanıyor.")
@@ -68,7 +72,25 @@ class JobQueue:
             connector = self.registry.for_source(source)
             if connector is None:
                 raise Conflict("Bu kaynak için henüz veri toplayıcı bağlanmadı.")
-            identifier = self.db.add_job("source_collection", f"{source['name']} · Verileri topla", source_id, connector, source["version"])
+            title = f"{source['name']} · Verileri topla"
+            if companies is not None:
+                if not getattr(connector, "selectable", False):
+                    raise Conflict("Bu veri toplayıcısında şirket seçilemez.")
+                companies = sorted({str(c).strip().lower() for c in companies if str(c).strip()})
+                if not companies:
+                    raise Conflict("Yeniden okunacak en az bir şirket seçin.")
+                configured = {s["domain"] for s in (self.db.context(source["destination_id"]).agency or {}).get("sites", []) if s.get("enabled", 1)}
+                unknown = [c for c in companies if c not in configured]
+                if unknown:
+                    raise Conflict(f"Yapılandırmada olmayan ya da kapalı şirket: {', '.join(unknown)}.")
+                with self.db.connect() as con:
+                    from .sources.agency_rates import latest_version
+                    if latest_version(con, source["destination_id"]) is None:
+                        raise Conflict("Önce bütün şirketlerle bir kiralama fiyat sürümü olmalı; seçili şirketler o sürümü tamamlar.")
+                title = f"{source['name']} · Seçili şirketleri yeniden oku ({len(companies)} şirket)"
+            identifier = self.db.add_job("source_collection", title, source_id, connector, source["version"])
+            if companies is not None:
+                self.selections[identifier] = companies
             try:
                 self.executor.submit(self._collect, identifier, source, connector)
             except Exception as exc:
@@ -91,6 +113,18 @@ class JobQueue:
                 if not self.db.update_job(identifier, progress=percent, message=message):
                     raise CollectionCanceled()
             context = self.db.context(source["destination_id"], inputs=getattr(connector, "inputs", ()))
+            chosen = self.selections.pop(identifier, None)
+            if chosen is not None:          # HEDEF-03: the chosen companies and the version they complete (written beside the raw copy)
+                from .sources.agency_rates import SELECTION_FILE, selection_context
+                import dataclasses
+                with self.db.connect() as con:
+                    context = dataclasses.replace(context, selected=selection_context(con, source["destination_id"], chosen))
+                raw_path.parent.mkdir(parents=True, exist_ok=True)
+                (raw_path.parent / SELECTION_FILE).write_text(json.dumps({"sirketler": context.selected["domains"],
+                                                                          "taban_surum": context.selected["base"]["run_id"]},
+                                                                         ensure_ascii=False, indent=1), encoding="utf-8")
+                self.db.update_job(identifier, message=f"Seçili şirketler: {', '.join(chosen)}; öbür şirketler "
+                                                       f"{context.selected['base']['run_id'][:8]} sürümünden olduğu gibi taşınacak.")
             extra = {}
             if getattr(connector, "uses_extension", False) and self.extension is not None:
                 from .extension import JobAccess

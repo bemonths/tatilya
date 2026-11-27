@@ -80,19 +80,19 @@ def test_the_extension_holds_the_same_lists_and_rules():
     assert js_list("QUERY_METHODS") == list(eq.METHODS)
     assert int(re.search(r"export const MAX_FIELDS = (\d+);", logic).group(1)) == eq.MAX_FIELDS
     manifest = json.loads((ROOT / "eklenti" / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == ext.EXPECTED_VERSION == "0.21.0"
+    assert manifest["version"] == ext.EXPECTED_VERSION == "0.22.0"
 
 
 def test_the_allowed_list_comes_from_the_configuration(tmp_path):
     from studio.database import Database
     db = Database(tmp_path / "studio.sqlite3")
     db.initialize()
-    found = db.extension_queries()
+    found = [q for q in db.extension_queries() if q["alan_adi"] == "realjoy.com"]       # HEDEF-03 adds four more companies' questions
     assert [(q["alan_adi"], q["yontem"], q["yol"]) for q in found] == [("realjoy.com", "POST", "/ajax/quote"), ("realjoy.com", "POST", "/ajax/results/scroll")]
     assert found[0]["alanlar"] == QUOTE_FIELDS
     with db.connect() as con:
         con.execute("UPDATE destination_agency_sites SET enabled=0 WHERE domain='realjoy.com'")
-    assert db.extension_queries() == []                                                  # a company switched off sends nothing
+    assert not [q for q in db.extension_queries() if q["alan_adi"] == "realjoy.com"]    # a company switched off sends nothing
 
 
 # ---- the program's side of a query --------------------------------------------------------------------------------------------

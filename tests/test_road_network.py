@@ -266,7 +266,7 @@ def test_fresh_database_has_the_v20_configuration_and_v19_upgrades_keep_every_ol
         con.execute("PRAGMA user_version=19")
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 25 and con.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 26 and con.execute("PRAGMA foreign_key_check").fetchall() == []
         after = {name: con.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
                  for (name,) in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
         assert after == before and {name: after[name] for name in V20_TABLES} == V20_TABLES

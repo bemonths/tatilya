@@ -332,3 +332,60 @@ def test_the_extension_sends_only_allowed_queries_with_exactly_the_given_fields(
         finally:
             context.close()
             site.shutdown()
+
+
+def test_two_sessions_are_read_at_once_in_two_windows_and_a_query_may_carry_its_fields_in_the_address(program, tmp_path):
+    """HEDEF-03: the extension takes as many sessions as the program says ("en_cok") and reads them side by side, each in its own
+    window; a query whose page puts its fields in the address (Streamline's admin-ajax) goes as POST with an empty body and the
+    entry's content type. Local pages only."""
+    from playwright.sync_api import sync_playwright
+    app, port = program
+    bridge, db = app.state.extension, app.state.db
+    seen = []
+    site = query_site(seen)
+    first_base = f"http://127.0.0.1:{site.server_address[1]}"
+    second_base = first_base           # the program's own local address (the only one the extension may open here)
+    bridge.queries = lambda: [{"alan_adi": "127.0.0.1", "yol": "/wp-admin/admin-ajax.php", "yontem": "POST", "alanlar": ["action", "params"],
+                               "alanlar_yeri": "adres", "icerik_turu": "application/json", "amac": "fiyat",
+                               "desenler": {"action": "streamlinecore-api-request", "params": r'\{"methodName":"GetPreReservationPrice".*'}}]
+    with sync_playwright() as playwright:
+        context = extension_context(playwright, tmp_path)
+        try:
+            popup = pair_extension(context, bridge, port)
+            before = set(window_ids(popup))
+            job = db.add_job("eklenti_deneme", "Paralel pencere denemesi")
+            db.update_job(job, status="running", message="başladı")
+            access = ext.JobAccess(bridge, db, job)
+            one, two = access.open("127.0.0.1", purpose="paralel"), access.open("127.0.0.1", purpose="paralel")
+            both, windows, results = [], set(), {}
+
+            def read(name, session, base):
+                results[name] = [session.page(f"{base}/ev-{n}", {"saniye": 2}) for n in range(3)]
+            threads = [threading.Thread(target=read, args=("bir", one, first_base)), threading.Thread(target=read, args=("iki", two, second_base))]
+            for thread in threads:
+                thread.start()
+            while any(t.is_alive() for t in threads):
+                with bridge.lock:
+                    both.append(sum(s.state == "calisiyor" for s in bridge.sessions.values()))
+                windows.update(set(window_ids(popup)) - before)
+                time.sleep(0.2)
+            for thread in threads:
+                thread.join()
+            fields = {"action": "streamlinecore-api-request", "params": '{"methodName":"GetPreReservationPrice","params":{"unit_id":1}}'}
+            answer = one.query("/wp-admin/admin-ajax.php", "POST", fields, place="adres")
+            one.close()
+            two.close()
+            assert all(r["durum"] == "tamam" for rs in results.values() for r in rs) and len(results) == 2
+            assert max(both) == 2 and len(windows) == 2                     # side by side, a window each
+            assert answer["durum"] == "tamam" and answer["sorgu"]["alanlar_yeri"] == "adres"
+            method, path, kind, xhr, body = seen[-1]
+            assert (method, body, kind) == ("POST", b"", "application/json")
+            assert path.startswith("/wp-admin/admin-ajax.php?action=streamlinecore-api-request&params=%7B%22methodName%22")
+            db.update_job(job, status="canceled", message="İş iptal edildi.")
+            deadline = time.monotonic() + 15
+            while set(window_ids(popup)) - before and time.monotonic() < deadline:
+                time.sleep(0.2)
+            assert not set(window_ids(popup)) - before                        # the job ended: both windows closed
+        finally:
+            context.close()
+            site.shutdown()

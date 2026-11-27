@@ -11,6 +11,8 @@
 // Sayfanın kendi sorgusu (GÖREV-25, kullanıcı kararı 17 Kasım 2026): programın izinli listesindeki bir sorguyu (fiyat sorusu, ev
 // listesinin devamı) o sitenin kendi sekmesinden, sayfanın betiği gibi ve yalnız verilen alanlarla gönderir; giriş, hesap, ödeme,
 // rezervasyon, sepet, iletişim ve kişisel bilgi adreslerini reddeder (logic.js queryRefusal).
+// Aynı anda birden çok iş (HEDEF-03): program izin verdiği kadar işi (ör. birkaç kiralama şirketi) aynı anda alır; her iş kendi
+// penceresinde ve kendi sekmesinde okunur (site başına yine tek sekme; bir sitede iki sayfa arası en az `aralik_saniye`).
 // Ne yapmaz: tıklamaz, yazı yazmaz, sayfadaki formu doldurmaz, çerez/geçmiş/yer imi/indirme okumaz, CDP (debugger) kullanmaz, proxy kullanmaz ve
 // Chrome'un proxy ayarına dokunmaz. İzin verilmemiş bir siteye gitmez; giriş ve ödeme sayfalarını okumadan atlar. Doğrulama sayfasında
 // pencereyi öne getirir, bildirim gösterir ve kullanıcıyı en çok 15 dk bekler (kullanıcı "Bu sayfayı atla" diyebilir); erişim reddedildi
@@ -22,7 +24,11 @@ const VERSION = chrome.runtime.getManifest().version;
 const LOOP_MS = 25000;            // a wake-up asks for work this long (the alarm wakes the worker every 30 s)
 const LOAD_TIMEOUT_MS = 60000;
 let looping = false;
-let current = null;               // the job at hand: {port, kod, jobId, job, stage: {asama, adres, bitis}, skip}
+// HEDEF-03: the jobs at hand, by the program's session id: {port, kod, jobId, job, stage: {asama, adres, bitis}, skip, started, win}
+const running = new Map();
+let parallel = 1;                 // how many jobs at once: the program's "en_cok" (an older program sends none: one at a time)
+const pacer = new L.Pacer(L.DEFAULT_GAP_S);      // one pace per domain for every job
+let windowLock = Promise.resolve();
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -36,42 +42,67 @@ function start() {
   loop();
 }
 
-// ---- The extension's one window (GÖREV-17) -----------------------------------------------------------------------------------
-// {id, tabId, key}: kept in session storage, so a service worker that was stopped and started again finds its window.
+// ---- The extension's windows (GÖREV-17; HEDEF-03: one per job at hand) ------------------------------------------------------
+// [{id, tabId, key}]: kept in session storage, so a service worker that was stopped and started again finds its windows. Window
+// changes go one at a time (windowLock), so two jobs never write the list over each other.
 
-async function storedWindow() {
-  const {pencere} = await chrome.storage.session.get("pencere");
-  if (!pencere) return null;
-  const tab = await chrome.tabs.get(pencere.tabId).catch(() => null);
-  if (!tab || tab.windowId !== pencere.id) { await chrome.storage.session.remove("pencere"); return null; }     // the user closed it
-  return pencere;
+function serially(work) {
+  const next = windowLock.then(work, work);
+  windowLock = next.catch(() => {});
+  return next;
 }
 
-/** The window for a job: the one already open is used again (the same tab goes to the next address); otherwise a new one is
- *  opened without taking the focus. `key` is the program's job (L.windowKey). */
-async function ensureWindow(key) {
-  const open = await storedWindow();
-  if (open) {
-    if (open.key !== key) await chrome.storage.session.set({pencere: {...open, key}});
-    return {...open, key};
+async function storedWindows() {
+  const {pencereler, pencere} = await chrome.storage.session.get(["pencereler", "pencere"]);
+  const list = [...(Array.isArray(pencereler) ? pencereler : []), ...(pencere ? [pencere] : [])];      // "pencere": an older single window
+  const alive = [];
+  for (const w of list) {
+    const tab = await chrome.tabs.get(w.tabId).catch(() => null);
+    if (tab && tab.windowId === w.id && !alive.some(a => a.id === w.id)) alive.push(w);        // a window the user closed is dropped
   }
-  const win = await chrome.windows.create({...L.WINDOW_OPTIONS});
-  const pencere = {id: win.id, tabId: win.tabs[0].id, key};
-  await chrome.storage.session.set({pencere});
-  return pencere;
+  await chrome.storage.session.set({pencereler: alive});
+  if (pencere) await chrome.storage.session.remove("pencere");
+  return alive;
+}
+
+/** The window of one job at hand: the one it already has, else an open window of the same program job (`key`, L.windowKey) that no
+ *  other job at hand uses (the same tab goes to the next address), else a new one opened without taking the focus. */
+function ensureWindow(ctx) {
+  const key = L.windowKey(ctx.job);
+  return serially(async () => {
+    const open = await storedWindows();
+    const mine = ctx.win && open.find(w => w.id === ctx.win.id);
+    if (mine) return mine;
+    const used = new Set([...running.values()].filter(c => c !== ctx && c.win).map(c => c.win.id));
+    let win = open.find(w => w.key === key && !used.has(w.id));
+    if (!win) {
+      const made = await chrome.windows.create({...L.WINDOW_OPTIONS});
+      win = {id: made.id, tabId: made.tabs[0].id, key};
+      await chrome.storage.session.set({pencereler: [...open, win]});
+    }
+    ctx.win = win;
+    return win;
+  });
+}
+
+function closeWindows(keep) {
+  return serially(async () => {
+    const open = await storedWindows();
+    const used = new Set([...running.values()].filter(c => c.win).map(c => c.win.id));
+    const stay = open.filter(w => used.has(w.id) || keep(w));
+    await chrome.storage.session.set({pencereler: stay});
+    for (const w of open) if (!stay.includes(w)) await chrome.windows.remove(w.id).catch(() => {});
+  });
+}
+
+/** After every answer of the program: a window stays only while the program still has work for it (L.keepWindow) or a job at hand
+ *  uses it. */
+async function syncWindow(openKeys) {
+  await closeWindows(w => L.keepWindow(w.key, openKeys));
 }
 
 async function closeWindow() {
-  const {pencere} = await chrome.storage.session.get("pencere");
-  if (!pencere) return;
-  await chrome.storage.session.remove("pencere");
-  await chrome.windows.remove(pencere.id).catch(() => {});
-}
-
-/** After every answer of the program: the window stays only while the program still has work for it (L.keepWindow). */
-async function syncWindow(openKeys) {
-  const {pencere} = await chrome.storage.session.get("pencere");
-  if (pencere && !L.keepWindow(pencere.key, openKeys)) await closeWindow();
+  await closeWindows(() => false);
 }
 
 async function settings() {
@@ -120,8 +151,10 @@ async function loop() {
   looping = true;
   try {
     const end = Date.now() + LOOP_MS;
-    while (Date.now() < end) {
-      const worked = await askOnce().catch(async error => { await note({program: "hata", mesaj: String(error.message || error)}); return false; });
+    while (Date.now() < end || running.size) {          // HEDEF-03: the worker stays while jobs are at hand
+      const worked = running.size < parallel
+        ? await askOnce().catch(async error => { await note({program: "hata", mesaj: String(error.message || error)}); return false; })
+        : false;
       if (!worked) await sleep(L.ASK_EVERY_MS);
     }
   } finally {
@@ -131,22 +164,24 @@ async function loop() {
 
 async function askOnce() {
   const {kod, port: remembered} = await settings();
-  if (!kod) { await closeWindow(); await note({program: "eslesmedi"}); return false; }
+  if (!kod) { if (!running.size) await closeWindow(); await note({program: "eslesmedi"}); return false; }
   const port = await findProgram(remembered);
-  if (!port) { await closeWindow(); await note({program: "bulunamadi"}); return false; }     // the program closed: so does the window
+  if (!port) { if (!running.size) await closeWindow(); await note({program: "bulunamadi"}); return false; }     // the program closed: so do the windows
   const origins = await grantedOrigins();
   const answer = await call(port, "/api/eklenti/sor", {surum: VERSION, izinli: L.permittedDomains(origins)}, kod);
   await chrome.storage.local.set({izinBekleyen: answer.izin_bekleyen || []});
   await note({program: "bagli", port});
+  parallel = L.parallelOf(answer.en_cok);
   if (!answer.is) { await syncWindow(answer.acik_pencereler); return false; }
-  await runJob(port, kod, answer.is);
+  if (running.has(answer.is.id)) return false;
+  runJob(port, kod, answer.is).catch(() => {});      // HEDEF-03: not awaited; the loop may take another job beside it
   return true;
 }
 
 /** Every few seconds while a job runs: alive, and what is being done. The answer may ask to skip the page ("Bu sayfayı atla"). */
-async function report() {
-  const job = current;
-  if (!job) return;
+async function report(ctx) {
+  const job = ctx;
+  if (!job || !running.has(job.jobId)) return;
   const stage = job.stage || {};
   const left = Number.isFinite(stage.bitis) ? Math.max(0, Math.round((stage.bitis - Date.now()) / 1000)) : null;
   try {
@@ -156,13 +191,13 @@ async function report() {
   await chrome.storage.local.set({canli: Date.now()}).catch(() => {});     // an extension call: the worker stays awake during the job
 }
 
-async function setStage(asama, adres, extra = {}) {
-  if (!current) return;
-  current.stage = {asama, adres, ...extra};
-  const job = current.job;
+async function setStage(ctx, asama, adres, extra = {}) {
+  if (!ctx) return;
+  ctx.stage = {asama, adres, ...extra};
+  const job = ctx.job;
   await chrome.storage.local.set({sonIs: {alan_adi: job.alan_adi, amac: job.amac, durum: "çalışıyor", asama, adres, bitis: extra.bitis ?? null,
-                                          zaman: current.started, ilerleme: Date.now()}});
-  report();
+                                          zaman: ctx.started, ilerleme: Date.now(), calisan: running.size}});
+  report(ctx);
 }
 
 async function runJob(port, kod, job) {
@@ -170,10 +205,11 @@ async function runJob(port, kod, job) {
     await call(port, `/api/eklenti/is/${job.id}/durum`, {izin_yok: job.alan_adi}, kod);
     return;
   }
-  current = {port, kod, jobId: job.id, job, stage: {asama: "aciliyor", adres: null}, skip: false, started: Date.now()};
-  await setStage("aciliyor", null);
-  const timer = setInterval(report, L.REPORT_EVERY_MS);
-  const pacer = new L.Pacer(job.aralik_saniye);
+  const ctx = {port, kod, jobId: job.id, job, stage: {asama: "aciliyor", adres: null}, skip: false, started: Date.now(), win: null};
+  running.set(job.id, ctx);
+  await setStage(ctx, "aciliyor", null);
+  const timer = setInterval(() => report(ctx), L.REPORT_EVERY_MS);
+  pacer.gapMs = Math.max(0, Number(job.aralik_saniye) || L.DEFAULT_GAP_S) * 1000;
   let failure = null;
   try {
     for (;;) {
@@ -181,12 +217,12 @@ async function runJob(port, kod, job) {
       if (next.bitti) break;
       if (next.bekle) { await sleep(1000); continue; }
       const item = next.oge;
-      current.skip = false;
+      ctx.skip = false;
       let result;
       try {
-        const win = await ensureWindow(L.windowKey(job));      // the same window and tab through the whole job; opened again only if the user closed it
-        result = item.tur === "sorgu" ? await doQuery(win.tabId, item, pacer, job)
-          : item.tur === "istek" ? await doRequest(win.tabId, item, pacer) : await doPage(port, kod, win.id, win.tabId, item, pacer, job);
+        const win = await ensureWindow(ctx);      // the same window and tab through the whole job; opened again only if the user closed it
+        result = item.tur === "sorgu" ? await doQuery(ctx, win.tabId, item, pacer, job)
+          : item.tur === "istek" ? await doRequest(ctx, win.tabId, item, pacer) : await doPage(ctx, port, kod, win.id, win.tabId, item, pacer, job);
       } catch (error) {
         result = {durum: "hata", not: String(error?.message || error).slice(0, 300)};
       }
@@ -197,7 +233,7 @@ async function runJob(port, kod, job) {
   } finally {
     clearInterval(timer);       // the window stays: the next answer of the program says whether its job still needs it (syncWindow)
   }
-  current = null;
+  running.delete(job.id);       // its window may serve the program job's next site (syncWindow keeps it while the job is listed)
   await call(port, `/api/eklenti/is/${job.id}/bitti`, failure ? {hata: failure} : {}, kod).catch(() => {});
   await chrome.storage.local.set({sonIs: {alan_adi: job.alan_adi, amac: job.amac, durum: failure ? "hata" : "bitti", zaman: Date.now()}});
 }
@@ -258,25 +294,25 @@ async function applyWait(tabId, wait) {
   if (rule.seconds) await sleep(rule.seconds * 1000);
 }
 
-async function pace(pacer, url) {
+async function pace(ctx, pacer, url) {
   const domain = L.domainOf(url);
   const delay = pacer.delayFor(domain);
   if (delay) {
-    await setStage("bekleme", url);
+    await setStage(ctx, "bekleme", url);
     await sleep(delay);
   }
   pacer.mark(domain);
 }
 
-async function doPage(port, kod, windowId, tabId, item, pacer, job) {
+async function doPage(ctx, port, kod, windowId, tabId, item, pacer, job) {
   const domain = L.domainOf(item.adres);
   if (!(await permitted(domain))) return L.pageResult("izin_yok", {url: item.adres}, `${domain} için izin yok.`);
-  await pace(pacer, item.adres);
-  await setStage("aciliyor", item.adres);
+  await pace(ctx, pacer, item.adres);
+  await setStage(ctx, "aciliyor", item.adres);
   await navigate(tabId, item.adres);
   const moved = await elsewhere(tabId, domain);
   if (moved) return moved;
-  await setStage("okunuyor", item.adres);
+  await setStage(ctx, "okunuyor", item.adres);
   let read = await readOrElsewhere(tabId, domain);
   if (read.moved) return read.moved;
   let page = read.page;
@@ -285,23 +321,23 @@ async function doPage(port, kod, windowId, tabId, item, pacer, job) {
     const waitMs = (job.dogrulama_bekleme_saniye || L.VERIFY_WAIT_S) * 1000;
     const deadline = Date.now() + waitMs;
     await call(port, `/api/eklenti/is/${job.id}/durum`, {dogrulama: page.url || item.adres}, kod).catch(() => {});
-    await setStage("dogrulama", page.url || item.adres, {bitis: deadline});
+    await setStage(ctx, "dogrulama", page.url || item.adres, {bitis: deadline});
     await chrome.windows.update(windowId, {focused: true, state: "normal"}).catch(() => {});
     chrome.notifications.create({type: "basic", iconUrl: "icons/128.png", title: "30A Studio: doğrulama bekleniyor",
       message: `${domain} sayfasında doğrulamayı siz tamamlayın ya da eklenti penceresinde “Bu sayfayı atla”ya basın (en çok ${Math.round(waitMs / 60000)} dk).`});
-    while (Date.now() < deadline && kind === "dogrulama" && !current?.skip) {
+    while (Date.now() < deadline && kind === "dogrulama" && !ctx.skip) {
       await sleep(3000);
       read = await readOrElsewhere(tabId, domain).catch(() => ({page}));
       if (read.moved) return read.moved;
       page = read.page;
       kind = L.classify(page);
     }
-    if (current?.skip) {
-      current.skip = false;
+    if (ctx.skip) {
+      ctx.skip = false;
       return L.pageResult("atlandi", page, "Kullanıcı bu sayfayı atladı (doğrulama beklenirken).");
     }
     if (kind === "dogrulama") return L.pageResult("dogrulama", page, "Doğrulama süresinde tamamlanmadı; sayfa atlandı.");
-    await setStage("okunuyor", page.url || item.adres);
+    await setStage(ctx, "okunuyor", page.url || item.adres);
   }
   if (kind === "erisim_reddedildi" || kind === "bolge_engeli") return L.pageResult(kind, page, L.stopNote(kind, page));
   if (kind === "giris") return L.pageResult("giris", page, "Sayfa giriş istiyor; okunmadı (giriş gerekiyor).");
@@ -316,7 +352,7 @@ async function doPage(port, kod, windowId, tabId, item, pacer, job) {
 }
 
 /** A request with the page's own fetch from the extension's tab on that site (the tab is first opened on the site if it is elsewhere). */
-async function doRequest(tabId, item, pacer) {
+async function doRequest(ctx, tabId, item, pacer) {
   const target = new URL(item.adres);
   // GÖREV-25: a plain request only reads (GET: a document, a JSON address); anything that sends fields is a query ("sorgu") and must
   // be on the program's allowed list.
@@ -326,11 +362,11 @@ async function doRequest(tabId, item, pacer) {
   let here = null;
   try { here = new URL(tab.url).origin; } catch { here = null; }
   if (here !== target.origin) {
-    await pace(pacer, target.origin);
-    await setStage("aciliyor", target.origin + "/");
+    await pace(ctx, pacer, target.origin);
+    await setStage(ctx, "aciliyor", target.origin + "/");
     await navigate(tabId, target.origin + "/");
   }
-  await setStage("okunuyor", item.adres);
+  await setStage(ctx, "okunuyor", item.adres);
   const [{result}] = await chrome.scripting.executeScript({target: {tabId}, world: "MAIN", args: [item.adres, item.yontem || "GET", item.basliklar || {}, item.govde ?? null],
     func: async (url, method, headers, body) => {
       const response = await fetch(url, {method, headers, body: body === null ? undefined : body, credentials: "include", redirect: "follow"});
@@ -345,8 +381,8 @@ async function doRequest(tabId, item, pacer) {
 /** GÖREV-25: the page's own query (a price question, the next part of a listing) sent with the page's fetch from the extension's tab on
  *  that site: only a query on the program's allowed list (job.izinli_sorgular), never a forbidden address, only the given fields,
  *  only to the tab's own origin. The tab is first opened on the site (item.sayfa, else the site's home page) if it is elsewhere. */
-async function doQuery(tabId, item, pacer, job) {
-  const query = {alan_adi: item.alan_adi, yol: item.yol, yontem: item.yontem, alanlar: item.alanlar};
+async function doQuery(ctx, tabId, item, pacer, job) {
+  const query = {alan_adi: item.alan_adi, yol: item.yol, yontem: item.yontem, alanlar: item.alanlar, alanlar_yeri: item.alanlar_yeri};
   const refused = L.queryRefusal(query, job.izinli_sorgular);
   if (refused) return {durum: "reddedildi", not: refused};
   const domain = L.domainOf(item.alan_adi);
@@ -354,17 +390,17 @@ async function doQuery(tabId, item, pacer, job) {
   let tab = await chrome.tabs.get(tabId);
   if (L.domainOf(tab.url || "") !== domain) {
     const start = item.sayfa && L.domainOf(item.sayfa) === domain ? item.sayfa : `https://${domain}/`;
-    await pace(pacer, start);
-    await setStage("aciliyor", start);
+    await pace(ctx, pacer, start);
+    await setStage(ctx, "aciliyor", start);
     await navigate(tabId, start);
     tab = await chrome.tabs.get(tabId);
   }
   let origin = "";
   try { origin = new URL(tab.url).origin; } catch { origin = ""; }
   if (L.domainOf(origin) !== domain) return {durum: "yonlendi", not: `Sekme ${L.domainOf(origin) || "başka bir adres"} adresinde; sorgu gönderilmedi.`};
-  const request = L.queryRequest(origin, query);
-  await pace(pacer, origin);
-  await setStage("okunuyor", request.url);
+  const request = L.queryRequest(origin, query, L.queryMatch(query, job.izinli_sorgular));
+  await pace(ctx, pacer, origin);
+  await setStage(ctx, "okunuyor", request.url);
   const sent = new Date().toISOString();
   const [{result}] = await chrome.scripting.executeScript({target: {tabId}, world: "MAIN", args: [request.url, request.method, request.headers, request.body],
     func: async (url, method, headers, body) => {
@@ -403,9 +439,9 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   }
   if (message?.tur === "sor") { loop(); reply({ok: true}); return false; }
   if (message?.tur === "atla") {
-    const waiting = current && current.stage?.asama === "dogrulama";
-    if (waiting) current.skip = true;
-    reply({ok: Boolean(waiting)});
+    const waiting = [...running.values()].filter(c => c.stage?.asama === "dogrulama");
+    for (const c of waiting) c.skip = true;
+    reply({ok: waiting.length > 0});
     return false;
   }
   return false;

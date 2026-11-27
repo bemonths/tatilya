@@ -464,7 +464,7 @@ def test_v20_to_v21_keeps_every_row_and_gives_existing_videos_their_steps(text_e
     Database(path).initialize()
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        assert con.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 25
+        assert con.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 26
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = counts(con)
         assert after == {**before, **V21_TABLES, "video_steps": 16, "video_step_log": 2}    # nothing lost; two videos × eight steps

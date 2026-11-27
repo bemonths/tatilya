@@ -140,6 +140,8 @@ class ExtensionTransport:
         self.session, self.canceled = session, canceled
 
     def send(self, method, url, *, params=None, data=None, json_body=None, headers=None):
+        if str(method).upper() != "GET" and params and data is None and json_body is None:
+            return self.query(method, url, dict(params), None, place="adres")      # HEDEF-03: the page puts the fields in the address
         if params:
             url = str(httpx.URL(url, params=params))
         headers = {k: v for k, v in (headers or {}).items() if k.lower() not in ("user-agent", "referer", "origin", "accept-language", "cookie", "host")}
@@ -155,9 +157,36 @@ class ExtensionTransport:
         try:
             return self.session.request(method, url, headers=headers, body=body, canceled=self.canceled)
         except ExtensionError as exc:
+            if body is None and not headers.get("X-Requested-With") and "json" not in str(headers.get("Accept") or ""):
+                return self.navigate(url, exc)
             raise httpx.NetworkError(str(exc)[:200]) from exc
 
-    def query(self, method, url, data, json_body):
+    def navigate(self, url, failure):
+        """HEDEF-03: a page the tab's own fetch could not get (it redirects to another subdomain, or an http address from an https page;
+        the browser stops such a fetch) is opened in the tab instead, as a visitor's click would, and read from there (alysbeach.com's
+        links go to vacation.alysbeach.com). A page that still cannot be read stays a connection error."""
+        try:
+            result = self.session.page(url, WAIT, canceled=self.canceled)
+        except ExtensionError as exc:
+            raise httpx.NetworkError(str(exc)[:200]) from exc
+        state = result.get("durum")
+        if state == "tamam":
+            return int(result.get("http_durumu") or 200), result.get("son_adres") or url, {"content-type": "text/html; charset=utf-8"}, result.get("html") or b""
+        if state == "dogrulama":
+            return 403, result.get("son_adres") or url, {"content-type": "text/html; charset=utf-8"}, result.get("html") or b""
+        raise httpx.NetworkError((result.get("not") or str(failure))[:200])
+
+    def reverify(self, url):
+        """HEDEF-03: the site asked again for its verification: the tab opens the company's page; True when it reads normally (the
+        extension waited for the user on a verification page, as on the first page)."""
+        from .browser_verification import BLOCKED
+        try:
+            result = self.session.page(url, WAIT, canceled=self.canceled)
+        except ExtensionError:
+            return False
+        return result.get("durum") == "tamam" and not BLOCKED.search(body_text(result))
+
+    def query(self, method, url, data, json_body, place=None):
         from ..extension import QueryRefused
         from .agency_adapters import AdapterError
         parts = httpx.URL(url)
@@ -165,7 +194,7 @@ class ExtensionTransport:
             raise AdapterError("Eklenti yalnız izinli sorguyu (sitenin kendi adresine, form alanlarıyla) gönderir; bu istek gönderilmedi.")
         fields = {str(k): str(v) for k, v in (data or {}).items()}
         try:
-            result = self.session.query(parts.path, method, fields, canceled=self.canceled)
+            result = self.session.query(parts.path, method, fields, place=place, canceled=self.canceled)
         except QueryRefused as exc:
             raise AdapterError(f"Sorgu gönderilmedi: {exc}") from exc
         except ExtensionError as exc:

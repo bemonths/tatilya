@@ -121,7 +121,7 @@ def test_v18_to_v19_adds_the_table_keeps_every_row_and_hides_nothing(tmp_path):
         before = {t: con.execute(f'SELECT * FROM "{t}" ORDER BY rowid').fetchall() for t in tables}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 25 == SCHEMA_VERSION
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 26 == SCHEMA_VERSION
         assert con.execute("PRAGMA foreign_key_check").fetchall() == [] and con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         after = {t: con.execute(f'SELECT * FROM "{t}" ORDER BY rowid').fetchall() for t in tables}
         assert after == before and con.execute("SELECT COUNT(*) FROM job_hidden").fetchone()[0] == 0
@@ -173,11 +173,12 @@ def test_the_extension_files_open_one_unfocused_window_and_never_close_it_per_si
     background = (ROOT / "eklenti" / "background.js").read_text(encoding="utf-8")
     logic = (ROOT / "eklenti" / "logic.js").read_text(encoding="utf-8")
     manifest = json.loads((ROOT / "eklenti" / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == ext.EXPECTED_VERSION == "0.21.0"
+    assert manifest["version"] == ext.EXPECTED_VERSION == "0.22.0"
     assert background.count("chrome.windows.create(") == 1 and "chrome.windows.create({...L.WINDOW_OPTIONS})" in background
     assert 'focused: false, type: "normal"' in logic and "minimized" not in logic.split("WINDOW_OPTIONS = ")[1].split("\n")[0]
     run_job = background.split("async function runJob")[1].split("/** Open an address")[0]
-    assert "chrome.windows.remove" not in run_job and "ensureWindow(L.windowKey(job))" in run_job    # no window per site
+    assert "chrome.windows.remove" not in run_job and "ensureWindow(ctx)" in run_job                # no window per site
+    assert "const key = L.windowKey(ctx.job);" in background            # HEDEF-03: a job at hand's window is its program job's window
     assert background.count("chrome.windows.remove(") == 1                                         # only closeWindow closes it
     assert "syncWindow(answer.acik_pencereler)" in background
     assert 'chrome.windows.update(windowId, {focused: true, state: "normal"})' in background           # forward only for a verification

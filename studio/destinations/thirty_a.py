@@ -300,6 +300,29 @@ AGENCY_SITE_OPTIONS_V24 = {
             {"yol": "/ajax/results/scroll", "yontem": "POST", "alanlar": REALJOY_SCROLL_FIELDS,
              "amac": "ev listesinin devamı (liste sayfasını kaydırınca)"}]}},
 }
+# Added by migration v26 (HEDEF-03, 27 November 2026): the page's own price question of four companies the extension reads (their sites
+# answered direct requests and the proxies with Cloudflare's verification page on 26–27 November 2026). Fields exactly as each page's
+# form or script sends them (read from the pages of that night's raw copy):
+# - Track (#pdpDatesForm posted to /ajax/quote): 30aescapes.com as realjoy.com; oceanreefresorts.com has no `hash`;
+#   panhandlegetaways.com adds `numDaysForAvailailityData`.
+# - rosemarybeach.com (Streamline, WordPress): the page's script (rpapi) posts to /wp-admin/admin-ajax.php with the fields in the
+#   address (`action`, `params`: the method and its parameters as JSON) and an empty body; only the plugin's list, availability and
+#   price methods may go.
+TRACK_QUOTE_PURPOSE = "fiyat sorusu (ev sayfasının tarih formu)"
+STREAMLINE_METHODS = ("VerifyPropertyAvailability", "GetPreReservationPrice", "GetPropertyListWordPress")
+AGENCY_SITE_QUERIES_V26 = {
+    "30aescapes.com": [{"yol": "/ajax/quote", "yontem": "POST", "amac": TRACK_QUOTE_PURPOSE,
+                        "alanlar": ["checkin", "checkout", "propertyID", "roomTypeID", "propertyName", "hash"]}],
+    "oceanreefresorts.com": [{"yol": "/ajax/quote", "yontem": "POST", "amac": TRACK_QUOTE_PURPOSE,
+                              "alanlar": ["checkin", "checkout", "propertyID", "roomTypeID", "propertyName"]}],
+    "panhandlegetaways.com": [{"yol": "/ajax/quote", "yontem": "POST", "amac": TRACK_QUOTE_PURPOSE,
+                               "alanlar": ["checkin", "checkout", "propertyID", "roomTypeID", "propertyName", "hash",
+                                           "numDaysForAvailailityData"]}],
+    "rosemarybeach.com": [{"yol": "/wp-admin/admin-ajax.php", "yontem": "POST", "alanlar_yeri": "adres", "icerik_turu": "application/json",
+                           "amac": "ev listesi, müsaitlik ve fiyat sorusu (sayfanın Streamline betiği)", "alanlar": ["action", "params"],
+                           "desenler": {"action": "streamlinecore-api-request",
+                                        "params": r'\{"methodName":"(?:' + "|".join(STREAMLINE_METHODS) + r')","params":\{.*\}\}'}}],
+}
 # Reviewed files read by the restaurant-sites collector (GÖREV-09): the official site found by a web search for restaurants whose
 # directory entry has no working website (accepted only when the site shows the same address or phone), and menu items read by a
 # person from image menus or text-less PDFs, each tied to the document's SHA-256.

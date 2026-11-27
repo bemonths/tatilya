@@ -19,4 +19,5 @@ class ConnectorContext:
     airfare: dict | None = None                # GÖREV-20: airports and number of quarters of the airport fare table
     trial: dict | None = None                  # HEDEF-01: the trial run's limits (studio/trial_run.py); None in every real run
     neighborhoods: dict | None = None          # HEDEF-02: for a job, the same source's latest records with coordinates (by name)
+    selected: dict | None = None               # HEDEF-03: "Seçili şirketleri yeniden oku": the chosen companies and the base version
 

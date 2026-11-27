@@ -61,6 +61,10 @@ WORKERS = 3                 # GÖREV-22 estimate only (the old three companies s
 RETRY_PAUSE = 5.0
 BLOCK_LIMIT = 3             # consecutive refusals (401/403/429, no verification page) that stop a company; see site_answers()
 ERROR_LIMIT = 5             # consecutive unreachable/failed requests that stop a company
+# HEDEF-03: inside the extension a site may ask again for its verification during a long read (RealJoy, 27 Nov 2026: Cloudflare after
+# 30 minutes). The extension's tab then opens the company's page again (the user passes the check there if it asks them; the extension
+# waits for them as on the first page) and the question is asked once more; at most this many times per company and run.
+REVERIFY_LIMIT = 12
 VERIFY_TIMEOUT = 15 * 60
 RETRY_AFTER_MAX = 60 * 60   # GÖREV-25: the longest Retry-After a 429 rule waits
 EXTENSION_ONLY_SKIP = ("Eklenti bağlı değil: bu şirket yalnız tarayıcı eklentisiyle (sitenin kendi sorgularıyla) okunur; programın kendi "
@@ -436,7 +440,7 @@ def new_site_estimate(sites, listings, read_domains, window_count, region_hosts=
         requests = count * pages + tied * (extra + window_count * per_window)
         homes = int(own.get("expected_homes") or 0) if own else 0
         requests += homes * (1 + extra + window_count * per_window)
-        if options["inventory"] and (count or homes):      # GÖREV-25: the company's own list read on the run (e.g. RealJoy's parts of 12)
+        if has_list(options["inventory"]) and (count or homes):      # GÖREV-25: the company's own list read on the run (e.g. RealJoy's parts of 12)
             requests += getattr(adapter, "inventory_requests", 0)
         region = any(host_key(h) in listed for h in hosts)
         gap = max(PROTECTED_GAP if options["protected"] else REQUEST_GAP, PROXY_GAP if region else 0,
@@ -515,8 +519,15 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     if not lodging or not lodging.get("listings"):
         raise SourceError("Önce konaklama aramaları toplanmalı: kiralama şirketi fiyatları son Book>Direct çekimindeki ilanlardan sorulur.")
     today = today or datetime.now(timezone.utc).date()
-    # the same window rule as the lodging collector (the windows of the run day); otherwise the configured fixed windows
-    windows = active_windows(monthly_windows(today, config["window_rule"]) if config.get("window_rule") else config["windows"], today)
+    selected = config.get("selected")          # HEDEF-03: "Seçili şirketleri yeniden oku" (the chosen companies and the base version)
+    if selected:
+        check_selection(selected, config, lodging)
+    # the same window rule as the lodging collector (the windows of the run day); otherwise the configured fixed windows. HEDEF-03: a
+    # selected-companies run asks the windows of the version it completes, so every company of the new version has the same weeks.
+    if selected:
+        windows = active_windows([{k: w[k] for k in ("window_key", "label", "checkin", "checkout")} for w in selected["base"]["windows"]], today)
+    else:
+        windows = active_windows(monthly_windows(today, config["window_rule"]) if config.get("window_rule") else config["windows"], today)
     active = [w for w in windows if w["status"] == "queried"]
     if not active:
         raise SourceError("Bütün tarih pencereleri geçmişte kaldı; yapılandırmaya yeni tarihler eklenmeli.")
@@ -526,7 +537,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
     sites = {site["domain"]: site_options(site) for site in config["sites"] if site["enabled"]}
     if trial:          # HEDEF-01: a few pages of a company's sitemap list
         for site in sites.values():
-            if site["inventory"]:
+            if has_list(site["inventory"]):
                 site["inventory"] = {**site["inventory"], "max_pages": int(trial.get("inventory_pages", 3))}
     browser_hosts = {host_key(h) for h in config.get("browser_hosts") or ()}
     for site in sites.values():
@@ -559,6 +570,8 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
         kept = {r["lodging_id"] for rows in groups.values() for r in rows}
         listings = {k: v for k, v in listings.items() if k in kept or v["domain"] is None}
     order = sorted((d for d in sites if groups[d] or sites[d]["own_region_id"] or own_everywhere(sites[d])), key=lambda d: (-len(groups[d]), d))
+    if selected:          # HEDEF-03: only the chosen companies are asked; the others are carried from the base version below
+        order = [d for d in order if d in set(selected["domains"])]
     store = store if store is not None else RawStore(raw_path)      # HEDEF-02: a replay's store writes nothing
     owns = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(45, connect=15), verify=True)
@@ -588,11 +601,15 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
         if deferred:
             runs = finish_deferred(shared, runs, deferred)
             store.flush()
-        companies = [run.result for run in runs]
+        companies = [{**run.result, "queried_on": today.isoformat(), "carried_from": None} for run in runs]
         quotes = [q for run in runs for q in run.quotes]
         own_rows = [r for run in runs for r in run.own_rows]
         own_quotes = [q for run in runs for q in run.own_quotes]
         published = [p for run in runs for p in run.published]
+        carried = None
+        if selected:
+            companies, quotes, own_rows, own_quotes, published, carried = carry_over(selected, listings, companies, quotes, own_rows,
+                                                                                    own_quotes, published)
         windows_rows = [{k: w[k] for k in ("window_key", "label", "checkin", "checkout", "nights", "status")} for w in windows]
         snapshot = {"lodging_run_id": lodging["run_id"], "queried_on": today.isoformat(), "request_count": store.count, "listing_count": len(listings)}
         statuses = {name: sum(r["page_status"] == name for r in listings.values()) for name in PAGE_STATUSES}
@@ -606,7 +623,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
                     "published_rents": len(published), "companies": companies, "scope": SCOPE,
                     "browser_hosts": sorted(shared.marks.values(), key=lambda m: m["host"]),
                     "okuma_yontemleri": dict(getattr(shared.verifier, "methods", None) or {}),
-                    "isciler": summary, "deneme": bool(trial)}
+                    "isciler": summary, "deneme": bool(trial), **({"secili_okuma": carried} if carried else {})}
         progress(97, f"{len(listings)} ilan, {len(quotes)} fiyat sorgusu, kendi envanterinden {len(own_rows)} ev ve {len(order)} şirket sonucu kaydediliyor.")
         related = {"snapshot": snapshot, "windows": windows_rows, "companies": companies, "quotes": quotes, "own_listings": own_rows,
                    "own_quotes": own_quotes, "published": published, "browser_hosts": metadata["browser_hosts"],
@@ -620,6 +637,89 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
             pass
         if owns:
             client.close()
+
+
+# --- HEDEF-03: "Seçili şirketleri yeniden oku" ----------------------------------------------------------------------------------
+# A rental price run may ask only the companies the user chose. The result is a new, whole version: the chosen companies as read now,
+# every other company exactly as in the base version (the last successful one): its company row (with its own query day and the version
+# it came from), its listings' rows, price answers, own-inventory homes and published rents, unchanged. The windows are the base
+# version's (the weeks of every company are the same). Nothing of the base version is changed.
+
+SELECTION_FILE = "secim.json"       # beside the run's raw copy: the chosen companies and the base version (a rebuild reads it)
+
+
+def latest_version(con, destination_id):
+    """The last successful rental price version of the destination (its run id), or None."""
+    row = con.execute("""SELECT r.id FROM source_runs r JOIN agency_rate_snapshots s ON s.run_id=r.id
+        WHERE r.status='done' AND r.destination_id=? ORDER BY r.finished_at DESC, r.id DESC LIMIT 1""", (destination_id,)).fetchone()
+    return row[0] if row else None
+
+
+def version_rows(con, run_id):
+    """Every row of one rental price version, as the store wrote it (decoded)."""
+    snapshot = con.execute("SELECT * FROM agency_rate_snapshots WHERE run_id=?", (run_id,)).fetchone()
+    if snapshot is None:
+        raise SourceError("Kiralama fiyat sürümü bulunamadı.")
+    snapshot = dict(snapshot)
+    companies = []
+    for row in con.execute("SELECT * FROM agency_rate_companies WHERE run_id=?", (run_id,)):
+        company = decode_company(row)
+        company["queried_on"] = company.get("queried_on") or snapshot["queried_on"]
+        companies.append(company)
+    return {"run_id": run_id, "snapshot": snapshot,
+            "windows": [dict(r) for r in con.execute("SELECT window_key,label,checkin,checkout,nights,status FROM agency_rate_windows WHERE run_id=? "
+                                                      "ORDER BY checkin, window_key", (run_id,))],
+            "companies": companies,
+            "listings": {r["lodging_id"]: decode_listing(r) for r in con.execute("SELECT * FROM agency_rate_listings WHERE run_id=?", (run_id,))},
+            "quotes": [decode_quote(r) for r in con.execute("SELECT * FROM agency_rate_quotes WHERE run_id=?", (run_id,))],
+            "own_listings": [dict(r) for r in con.execute("SELECT * FROM agency_rate_own_listings WHERE run_id=?", (run_id,))],
+            "own_quotes": [decode_quote(r) for r in con.execute("SELECT * FROM agency_rate_own_quotes WHERE run_id=?", (run_id,))],
+            "published": [decode_published(r) for r in con.execute("SELECT * FROM agency_rate_published WHERE run_id=?", (run_id,))]}
+
+
+def selection_context(con, destination_id, domains):
+    """{"domains": [...], "base": version_rows(...)} for a run of the chosen companies, completing the last successful version."""
+    base = latest_version(con, destination_id)
+    if base is None:
+        raise SourceError("Önce bir kiralama fiyat sürümü olmalı: seçili şirketler son başarılı sürümü tamamlar.")
+    return {"domains": sorted({str(d) for d in domains}), "base": version_rows(con, base)}
+
+
+def check_selection(selected, config, lodging):
+    chosen = selected.get("domains") or []
+    if not chosen:
+        raise SourceError("Yeniden okunacak şirket seçilmedi.")
+    enabled = {s["domain"] for s in config["sites"] if s.get("enabled", 1)}
+    unknown = sorted(set(chosen) - enabled)
+    if unknown:
+        raise SourceError(f"Seçilen şirket yapılandırmada yok ya da kapalı: {', '.join(unknown)}.")
+    base = selected["base"]
+    if base["snapshot"]["lodging_run_id"] != lodging["run_id"]:
+        raise SourceError("Son Book>Direct çekimi son kiralama fiyat sürümünden sonra yenilenmiş: seçili şirketler aynı ilanlarla "
+                          "okunamaz; bütün kiralama çekimi gerekir.")
+
+
+def carry_over(selected, listings, companies, quotes, own_rows, own_quotes, published):
+    """The whole version: the chosen companies as read now, every other company's rows from the base version unchanged. `listings` is
+    changed in place (a listing of a company not chosen gets its base row). Returns the merged lists and the note for the metadata."""
+    base, chosen = selected["base"], set(selected["domains"])
+    strip = lambda row: {k: v for k, v in row.items() if k != "run_id"}
+    for lodging_id, row in list(listings.items()):
+        old = base["listings"].get(lodging_id)
+        if row["domain"] not in chosen and old is not None:
+            listings[lodging_id] = strip(old)
+    kept = {lid for lid, row in base["listings"].items() if row["domain"] not in chosen}
+    carried_companies = [{**strip(c), "carried_from": c.get("carried_from") or base["run_id"]} for c in base["companies"] if c["domain"] not in chosen]
+    merged = sorted(carried_companies + companies, key=lambda c: (-int(c.get("listing_count") or 0), c["domain"]))
+    domains_of = {lid: row["domain"] for lid, row in base["listings"].items()}
+    carried_quotes = [{**strip(q), "domain": domains_of.get(q["lodging_id"])} for q in base["quotes"] if q["lodging_id"] in kept]
+    carried_own = [strip(o) for o in base["own_listings"] if o["domain"] not in chosen]
+    carried_own_quotes = [strip(q) for q in base["own_quotes"] if q["domain"] not in chosen]
+    carried_published = [strip(p) for p in base["published"] if p["lodging_id"] in kept]
+    note = {"sirketler": sorted(chosen), "taban_surum": base["run_id"], "taban_sorgu_gunu": base["snapshot"]["queried_on"],
+            "tasinan_sirket": len(carried_companies), "tasinan_fiyat": len(carried_quotes) + len(carried_own_quotes),
+            "tasinan_istek": sum(int(c.get("request_count") or 0) for c in carried_companies)}
+    return (merged, carried_quotes + quotes, carried_own + own_rows, carried_own_quotes + own_quotes, carried_published + published, note)
 
 
 def finish_deferred(shared, runs, deferred):
@@ -695,6 +795,7 @@ class CompanyRun:
                        "own_outside": None, "own_on_bookdirect": None}
         self.browser, self.pages, self.cache = None, {}, {}
         self.counts = {"blocked": 0, "errors": 0}     # HEDEF-01: shared by every worker's view of the company (consecutive refusals/errors)
+        self.reverify_lock = threading.Lock()
         self.quotes, self.own_rows, self.own_quotes, self.published = [], [], [], []
         self.facts = {f["lodging_id"]: f for f in shared.everyone}
 
@@ -752,7 +853,7 @@ class CompanyRun:
                 raise CompanyDeferred(url)
             self.result["verification"] = "timeout"
             raise CompanyStopped("verification_timeout", "Kullanıcı doğrulaması süresinde tamamlanmadı; şirket atlandı.")
-        self.browser = browser
+        self.browser, self.browser_url = browser, url
         self.session.transport = browser
 
     def ask(self, call):
@@ -761,10 +862,29 @@ class CompanyRun:
                 return call()
             except VerificationNeeded as need:
                 if self.browser is not None:
+                    if self.reverify():
+                        continue
                     raise CompanyStopped("stopped_blocked", "Doğrulamadan sonra site yine doğrulama ekranı gösterdi; şirket durduruldu.") from None
                 self.shared.marks[self.site["domain"]] = {"host": self.site["domain"], "url": need.url, "reason": "doğrulama sayfası"}
                 self.open_browser(need.url)
                 self.result["verification"] = "completed"
+
+    def reverify(self):
+        """HEDEF-03: the site asked again for its verification inside the extension: the extension's tab opens the company's page (the
+        first page of the run), the check is passed there (by the site itself or by the user; the extension waits as on the first page),
+        and the caller asks its question once more. False when the transport is not the extension, the limit is reached or the page
+        is still a verification page."""
+        again = getattr(self.browser, "reverify", None)
+        if again is None:
+            return False
+        with self.reverify_lock:
+            done = self.result.get("reverified", 0)
+            if done >= REVERIFY_LIMIT:
+                return False
+            self.result["reverified"] = done + 1
+            url = getattr(self, "browser_url", None) or self.first_url()
+            self.shared.tracker.step(0, f"{self.site['company']}: site doğrulamayı yeniden istedi; eklentinin sekmesinde yeniden açılıyor ({done + 1}. kez).")
+            return bool(again(url))
 
     # --- phases ------------------------------------------------------------------------------------------------------------
 
@@ -799,7 +919,7 @@ class CompanyRun:
                     shared.tracker.step(1, f"{site['company']}: {index + 1}/{len(members)} ilan.")
                 waiting_rows = [r for r in members if r["page_status"] in FALLBACK_STATUSES]
                 own = own_everywhere(site)
-                if site["inventory"] and (waiting_rows or site["own_region_id"] or own):
+                if has_list(site["inventory"]) and (waiting_rows or site["own_region_id"] or own):
                     units, hashes = read_inventory(self.session, self.adapter, site, self.ask)
                     self.result["inventory_count"], self.result["inventory_raw_sha256"] = len(units), hashes
                     shared.tracker.step(0, f"{site['company']}: şirketin listesinde {len(units)} ilan.")
@@ -1062,6 +1182,11 @@ def same_home(unit, listing):
     """The address rule between a company list entry and a Book>Direct listing (used so an own-inventory home is not counted twice)."""
     one, two = normalize_address(unit.get("address")), normalize_address(listing.get("address"))
     return one is not None and two is not None and one == two and same_rooms(unit.get("bedrooms"), listing.get("bedrooms"))
+
+
+def has_list(inventory):
+    """HEDEF-03: the company's own listing list is configured (a source); options with only the allowed queries are not a list."""
+    return bool((inventory or {}).get("source"))
 
 
 def read_inventory(session, adapter, site, ask):
@@ -1483,6 +1608,7 @@ class AgencyRatesConnector:
     uses_region = True          # GÖREV-16: region-blocked company sites only through the user's US proxy
 
     uses_workers = True         # HEDEF-01: the run is split among workers (the direct connection and the proxies of the list)
+    selectable = True           # HEDEF-03: "Seçili şirketleri yeniden oku"
 
     def collect(self, source, raw_path, progress, canceled, *, context, waiting=None, extension=None, region=None, board=None):
         lodging, agency = context.lodging, context.agency
@@ -1495,7 +1621,10 @@ class AgencyRatesConnector:
             from .extension_reader import ExtensionVerifier
             verifier = ExtensionVerifier(extension, fallback=verifier)
         pool = getattr(region, "pool", None)
-        return collect(raw_path, progress, canceled, config={**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts},
+        config = {**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts}
+        if getattr(context, "selected", None):
+            config["selected"] = context.selected         # HEDEF-03: "Seçili şirketleri yeniden oku"
+        return collect(raw_path, progress, canceled, config=config,
                        verifier=verifier, waiting=waiting, region=region, pool=pool, site_limit=pool.site_limit() if pool is not None else None,
                        board=board, trial=getattr(context, "trial", None))
 
@@ -1507,10 +1636,11 @@ class AgencyRatesConnector:
                         [(run_id, w["window_key"], w["label"], w["checkin"], w["checkout"], w["nights"], w["status"]) for w in related["windows"]])
         con.executemany("""INSERT INTO agency_rate_companies (run_id,domain,company,adapter,status,listing_count,matched_count,quote_count,priced_count,
             request_count,verification,message,protected,guest_rule,inventory_count,inventory_raw_sha256,own_count,own_outside,own_on_bookdirect,
-            match_counts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            match_counts,queried_on,carried_from) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, c["domain"], c["company"], c["adapter"], c["status"], c["listing_count"], c["matched_count"], c["quote_count"], c["priced_count"],
               c["request_count"], c["verification"], c["message"], c["protected"], c["guest_rule"], c["inventory_count"],
-              dumps(c["inventory_raw_sha256"]), c["own_count"], c["own_outside"], c["own_on_bookdirect"], dumps(c["match_counts"]))
+              dumps(c["inventory_raw_sha256"]), c["own_count"], c["own_outside"], c["own_on_bookdirect"], dumps(c["match_counts"]),
+              c.get("queried_on") or snapshot["queried_on"], c.get("carried_from"))
              for c in related["companies"]])
         con.executemany("""INSERT INTO agency_rate_listings (run_id,lodging_id,title,bedrooms,region_ids,listing_url,url_host,domain,page_status,page_url,
             http_status,site_listing_id,message,link_status,match_method,match_note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",

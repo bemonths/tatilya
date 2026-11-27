@@ -499,6 +499,15 @@ $("#main").addEventListener("click", async event=>{
         await api("jobs",{method:"POST",body:JSON.stringify({kind:"source_collection",source_id:source.id})});
         state.data.jobs=await api("jobs");renderJobs();toggleJobs(true);break;
       }
+      case "collect-agency-selected": {          // HEDEF-03: only the chosen companies; the others are carried unchanged
+        const chosen=[...document.querySelectorAll('input[name="agency-company"]:checked')].map(box=>box.value);
+        if(!chosen.length) throw new Error("Yeniden okunacak en az bir şirket seçin.");
+        const source=state.data.sources.find(source=>source.enabled && source.connector?.name===AGENCY_CONNECTOR);
+        if(!source) throw new Error("Veri kaynağı etkin değil.");
+        button.disabled=true;
+        await api("jobs",{method:"POST",body:JSON.stringify({kind:"source_collection",source_id:source.id,sirketler:chosen})});
+        state.data.jobs=await api("jobs");renderJobs();toggleJobs(true);break;
+      }
       case "refresh-start": {
         button.disabled=true;
         const batch=await api("refresh-batches",{method:"POST",body:JSON.stringify({destination_id:state.data.selected_destination.id})});

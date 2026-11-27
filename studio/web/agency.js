@@ -84,8 +84,24 @@ function companyList(company) {
   return `${company.inventory_count} ilan${own}`;
 }
 
+/** HEDEF-03: a company row's own query day; a row carried unchanged from an earlier version says which one. */
+export function companyDay(company) {
+  if(!company.queried_on) return '<span class="muted">—</span>';
+  return `${esc(company.queried_on)}${company.carried_from?`<small>taşındı · ${esc(company.carried_from.slice(0,8))} sürümünden, değişmeden</small>`:""}`;
+}
+
+/** HEDEF-03: "Seçili şirketleri yeniden oku": the companies of the latest version with a box each; only the chosen ones are asked,
+ *  the others are carried unchanged into the new version. */
+export function selectedReadForm(companies, busy, chosen=new Set(), open=false) {
+  if(!companies?.length) return "";
+  const rows=[...companies].sort((a,b)=>a.company.localeCompare(b.company,"tr"));
+  return `<details class="library climate-block agency-selected" ${open?"open":""}><summary><strong>Seçili şirketleri yeniden oku</strong> <small>Yalnız işaretlenen şirketlerin fiyatları yeniden sorulur; öbür şirketler son sürümden olduğu gibi yeni sürüme taşınır.</small></summary>
+    <ul class="agency-select-list">${rows.map(c=>`<li><label><input type="checkbox" name="agency-company" value="${esc(c.domain)}" ${chosen.has(c.domain)?"checked":""}> ${esc(c.company)} <small>${esc(c.domain)} · ${esc(COMPANY_LABELS[c.status] || c.status)} · fiyatlı ${c.priced_count}/${c.quote_count}</small></label></li>`).join("")}</ul>
+    <button class="primary" data-action="collect-agency-selected" ${busy?"disabled":""}>${busy?"Fiyatlar soruluyor…":"↻ Seçili şirketleri yeniden oku"}</button></details>`;
+}
+
 export class AgencyPrices {
-  constructor() {this.selectedRun=null;this.snapshot=null;this.selectedRegion=null;this.listings=null;this.selectedListing=null;this.sequence=0;}
+  constructor() {this.selectedRun=null;this.snapshot=null;this.selectedRegion=null;this.listings=null;this.selectedListing=null;this.sequence=0;this.chosen=new Set();this.selectOpen=false;}
   invalidate() {this.sequence++;}
   render(target,data) {
     if(!target) return;
@@ -95,6 +111,7 @@ export class AgencyPrices {
     const busy=data.jobs.some(j=>j.source_id===source?.id && active(j));
     if(!runs.some(r=>r.id===this.selectedRun)) {this.selectedRun=runs[0]?.id || null;this.snapshot=null;this.listings=null;}
     const run=runs.find(r=>r.id===this.selectedRun), sites=data.agency_connector?.sites || [];
+    this.latest=runs[0]?.id===run?.id;this.busy=busy;
     const sequence=++this.sequence;
     target.innerHTML=`<section class="connector-strip agency-strip"><div><span class="eyebrow">KİRALAMA ŞİRKETLERİNİN KENDİ SİTELERİ</span><h2>Konaklama fiyatları</h2>
       <p>${sites.filter(s=>s.enabled).length} şirket sitesi yapılandırılmış · ilan, Book>Direct'teki şirket bağlantısıyla bulunur; ad benzerliğiyle eşleme yapılmaz.</p></div>
@@ -127,11 +144,17 @@ export class AgencyPrices {
       <section class="library climate-block"><div class="library-title"><h2>Oda sayısına göre ortanca toplam</h2><small>${esc(snap.bedroom_note)}</small></div>
       <div class="table-scroll"><table class="lodging-table"><thead><tr><th>MAHALLE</th>${queried.map(w=>`<th>${windowHeader(w)}</th>`).join("")}</tr></thead>
       <tbody>${snap.regions.map(region=>`<tr><td>${esc(region.region_name)}</td>${queried.map(w=>`<td>${bedroomCell(cells[`${region.region_id}|${w.window_key}`])}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>
+      ${this.latest?selectedReadForm(snap.companies,this.busy,this.chosen,this.selectOpen):""}
       <section class="library climate-block"><div class="library-title"><h2>Şirket bazında sonuç</h2><small>Her şirket kendi sırasıyla sorulur; birinin hatası diğerlerini durdurmaz.</small></div>
-      <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ŞİRKET</th><th>ALTYAPI</th><th>İLAN</th><th>BULUNAN</th><th>FİYATLI SORGU</th><th>ŞİRKET LİSTESİ</th><th>İSTEK</th><th>DURUM</th></tr></thead>
-      <tbody>${snap.companies.map(c=>`<tr><td>${esc(c.company)}<small>${esc(c.domain)}</small></td><td>${esc(c.adapter)}${c.protected?'<small><span class="tag warm">korumalı site</span></small>':""}${c.guest_rule?`<small>${esc(GUEST_RULES[c.guest_rule] || c.guest_rule)}</small>`:""}</td><td>${c.listing_count}</td><td>${c.matched_count}${companyMethods(c)}</td><td>${c.priced_count}/${c.quote_count}</td><td>${companyList(c)}</td><td>${c.request_count}</td><td><span class="tag ${c.status==="done"?"green":"warm"}">${esc(COMPANY_LABELS[c.status] || c.status)}</span>${c.message?`<small>${esc(c.message)}</small>`:""}</td></tr>`).join("")}</tbody></table></div>
+      <div class="table-scroll"><table class="lodging-table"><thead><tr><th>ŞİRKET</th><th>ALTYAPI</th><th>İLAN</th><th>BULUNAN</th><th>FİYATLI SORGU</th><th>ŞİRKET LİSTESİ</th><th>İSTEK</th><th>SORGU GÜNÜ</th><th>DURUM</th></tr></thead>
+      <tbody>${snap.companies.map(c=>`<tr><td>${esc(c.company)}<small>${esc(c.domain)}</small></td><td>${esc(c.adapter)}${c.protected?'<small><span class="tag warm">korumalı site</span></small>':""}${c.guest_rule?`<small>${esc(GUEST_RULES[c.guest_rule] || c.guest_rule)}</small>`:""}</td><td>${c.listing_count}</td><td>${c.matched_count}${companyMethods(c)}</td><td>${c.priced_count}/${c.quote_count}</td><td>${companyList(c)}</td><td>${c.request_count}</td><td>${companyDay(c)}</td><td><span class="tag ${c.status==="done"?"green":"warm"}">${esc(COMPANY_LABELS[c.status] || c.status)}</span>${c.message?`<small>${esc(c.message)}</small>`:""}</td></tr>`).join("")}</tbody></table></div>
       <p class="source-stamp">Eşlenemeyen ilanlar: ${Object.entries(PAGE_LABELS).filter(([key])=>key!=="matched" && cov[key]).map(([key,label])=>`${esc(label)} ${cov[key]}`).join(" · ") || "yok"}.</p></section>
       <div id="agency-region"></div>`;
+    const form=body.querySelector(".agency-selected");      // HEDEF-03: the boxes and the open state survive a redraw
+    if(form) {
+      form.addEventListener("toggle",()=>{this.selectOpen=form.open;});
+      form.addEventListener("change",event=>{const box=event.target.closest('input[name="agency-company"]');if(box) {if(box.checked) this.chosen.add(box.value);else this.chosen.delete(box.value);}});
+    }
     body.querySelector(".agency-table").addEventListener("click",event=>{
       const button=event.target.closest("[data-agency-region]");
       if(button) {this.selectedRegion=button.dataset.agencyRegion;this.selectedListing=null;this.listings=null;this.draw(target);}

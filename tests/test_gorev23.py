@@ -217,7 +217,7 @@ def test_the_address_rule_ties_a_listing_by_its_address_and_never_by_a_name_alon
 def test_a_fresh_database_has_schema_23_and_asks_beach_girls_for_the_rent(tmp_path):
     db = Database(tmp_path / "studio.sqlite3")
     db.initialize()
-    assert SCHEMA_VERSION == 25
+    assert SCHEMA_VERSION == 26
     agency = {s["domain"]: ar.site_options(s) for s in db.context("30a").agency["sites"]}
     inventory = agency["30a-beachgirls.com"]["inventory"]
     assert inventory == V23["30a-beachgirls.com"]["inventory"] and inventory["channel"] == "BEACH_GIRLS"
@@ -237,7 +237,7 @@ def test_the_22_to_23_migration_changes_only_the_options_it_gave_and_keeps_every
                   for (name,) in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()}
     Database(path).initialize()
     with sqlite3.connect(path) as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 25 and con.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 26 and con.execute("PRAGMA foreign_key_check").fetchall() == []
         after = {name: con.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0] for name in counts}
         assert after == counts                                                               # no row added or lost
         girls = json.loads(con.execute("SELECT inventory FROM destination_agency_sites WHERE domain='30a-beachgirls.com'").fetchone()[0])

@@ -295,12 +295,14 @@ class Track:
     TAKEN = ("booked", "check-in")      # a night that starts someone else's stay; a check-out morning leaves the night free
 
     def parse_page(self, html, url):
-        fields = {}
-        for tag in re.findall(r"<input[^>]+>", html):
-            name = re.search(r'name="([^"]+)"', tag)
-            value = re.search(r'value="([^"]*)"', tag)
-            if name and name.group(1) in self.FIELDS and 'type="hidden"' in tag and name.group(1) not in fields:
-                fields[name.group(1)] = unescape(value.group(1)) if value else ""
+        fields = self.form_fields(html)
+        if fields is None:
+            fields = {}
+            for tag in re.findall(r"<input[^>]+>", html):
+                name = re.search(r'name="([^"]+)"', tag)
+                value = re.search(r'value="([^"]*)"', tag)
+                if name and name.group(1) in self.FIELDS and 'type="hidden"' in tag and name.group(1) not in fields:
+                    fields[name.group(1)] = unescape(value.group(1)) if value else ""
         if not re.fullmatch(r"\d+", fields.get("propertyID") or ""):
             return None
         folder = re.search(r"siteFolder\s*=\s*'([^']*)'", html)
@@ -311,6 +313,22 @@ class Track:
             calendar[f"{year}-{month}-{dom}"] = classes.split()
         return {"site_id": fields["propertyID"], "fields": fields, "page_url": url, "calendar": calendar,
                 "quote_url": urljoin(url, (folder.group(1) if folder else "/") + "ajax/quote" + (ending.group(1) if ending else ""))}
+
+    @staticmethod
+    def form_fields(html):
+        """HEDEF-03: the inputs of the page's dates form (#pdpDatesForm) in the page's order, the dates' own inputs included: what the
+        page posts to ajax/quote (the form differs by site: 30aescapes.com has `hash`, oceanreefresorts.com has none,
+        panhandlegetaways.com adds `numDaysForAvailailityData`). None when the page has no such form (the older layout)."""
+        form = re.search(r'<form[^>]*\bid="pdpDatesForm"[^>]*>(.*?)</form>', html, re.S | re.I)
+        if not form:
+            return None
+        fields = {}
+        for tag in re.findall(r"<input[^>]*>", form.group(1)):
+            name = re.search(r'\bname="([^"]+)"', tag)
+            value = re.search(r'\bvalue="([^"]*)"', tag)
+            if name and name.group(1) not in fields:
+                fields[name.group(1)] = unescape(value.group(1)) if value else ""
+        return fields
 
     def taken_nights(self, info, window):
         """Nights of the window the page calendar shows as taken, or None when the calendar does not cover every night."""
@@ -325,8 +343,9 @@ class Track:
         if taken:
             return {**outcome("unavailable", f"İlan sayfasının müsaitlik takvimi bu pencerenin {len(taken)} gecesini dolu gösteriyor "
                                              f"({taken[0]} …); fiyat sorulmadı.", available=0), "replies": []}
-        reply = session.request("POST", info["quote_url"], data={"checkin": us_date(window["checkin_date"]), "checkout": us_date(window["checkout_date"]),
-                                                                **info["fields"]},
+        fields = {"checkin": "", "checkout": "", **info["fields"]}      # the form's own order (the dates first in every form seen)
+        fields.update({"checkin": us_date(window["checkin_date"]), "checkout": us_date(window["checkout_date"])})
+        reply = session.request("POST", info["quote_url"], data=fields,
                                 headers={"X-Requested-With": "XMLHttpRequest", "Referer": info["page_url"]},
                                 note=f"track-quote-{info['site_id']}-{window['window_key']}")
         if reply.status != 200:
@@ -395,7 +414,8 @@ class Streamline:
 
     def call(self, session, info, method, params, note):
         reply = session.request("POST", info["ajax_url"], params={"action": "streamlinecore-api-request",
-                                                                 "params": json.dumps({"methodName": method, "params": params})},
+                                                                 "params": json.dumps({"methodName": method, "params": params},
+                                                                                      separators=(",", ":"))},      # as the page's script (Angular) writes it
                                 headers={"Content-Type": "application/json", "Referer": info["page_url"]}, note=note)
         if reply.status != 200:
             raise AdapterError(f"{method} HTTP {reply.status} döndü.")
@@ -1209,8 +1229,9 @@ class Vacasa:
             data = None
         if not isinstance(data, dict):
             raise AdapterError(f"Fiyat isteği HTTP {reply.status} döndü; yanıt JSON değil.")
-        if data.get("Error"):
-            first = data["Error"][0] if isinstance(data["Error"], list) and data["Error"] else data["Error"]
+        problem = data.get("Error") or data.get("error")      # HEDEF-03: the site answers {"error": [{"message": "min-stay-not-met"}]}
+        if problem:
+            first = problem[0] if isinstance(problem, list) and problem else problem
             code = str(first.get("message") if isinstance(first, dict) else first or "").strip()
             if code.replace("-", "_") == "booked":
                 return {**outcome("unavailable", "Home is booked for your selected dates (booked)", available=0), "replies": [reply]}

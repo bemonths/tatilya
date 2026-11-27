@@ -231,7 +231,8 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     async def extension_ask(request: Request):
         body = await json_body(request)
         bridge().touch(body.get("surum"), body.get("izinli"))
-        return {"is": bridge().take(), "aralik_saniye": bridge().gap(), "sorma_araligi_saniye": 3,
+        from .extension import PARALLEL_SESSIONS
+        return {"is": bridge().take(), "aralik_saniye": bridge().gap(), "sorma_araligi_saniye": 3, "en_cok": PARALLEL_SESSIONS,
                 "izin_bekleyen": sorted(bridge().pending), "acik_pencereler": bridge().open_windows()}      # GÖREV-17: one window per job
 
     @app.post("/api/eklenti/is/{session_id}/sonraki")
@@ -715,7 +716,7 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
             selected(source["destination_id"])
             if body.destination_id and body.destination_id != source["destination_id"]:
                 raise HTTPException(409,"Kaynak seçili destinasyona ait değil.")
-            return request.app.state.jobs.submit_collection(body.source_id)
+            return request.app.state.jobs.submit_collection(body.source_id, companies=body.sirketler)
         destination_id=body.destination_id or DEFAULT_DESTINATION_ID
         selected(destination_id)
         return request.app.state.jobs.submit_audit(destination_id)

@@ -51,6 +51,8 @@ class JobInput(BaseModel):
     kind: Literal["catalog_audit", "source_collection", "beach_collection"] = "catalog_audit"
     destination_id: str | None = None
     source_id: str | None = Field(default=None, min_length=1, max_length=64)
+    # HEDEF-03: "Seçili şirketleri yeniden oku" — the rental companies (domains) to ask again; the others are carried unchanged
+    sirketler: list[str] | None = Field(default=None, max_length=60)
 
 
 class EvidencePackInput(BaseModel):

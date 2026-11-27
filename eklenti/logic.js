@@ -180,6 +180,13 @@ export class Pacer {
 // would be read half drawn. It comes forward only for a verification the user has to pass.
 export const WINDOW_OPTIONS = Object.freeze({url: "about:blank", focused: false, type: "normal", width: 1280, height: 900});
 
+/** HEDEF-03: how many jobs the extension takes at once: the program's "en_cok" (1–8); an older program that says nothing: one. */
+export const MAX_PARALLEL = 8;
+export function parallelOf(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, MAX_PARALLEL) : 1;
+}
+
 /** Which window a piece of work belongs to: the program's job ("pencere"), else the work itself. */
 export function windowKey(job) {
   return String(job?.pencere || job?.id || "");
@@ -264,6 +271,10 @@ export const FORBIDDEN_HOST_LABELS = ["login", "auth", "account", "accounts", "c
   "my", "sso", "id"];
 export const MAX_FIELDS = 40;
 export const MAX_VALUE = 2000;
+// HEDEF-03: where the page puts a query's fields ("govde": the form body; "adres": the address's query part) and the content types a
+// query may carry; the same lists in studio/extension_queries.py.
+export const PLACES = ["govde", "adres"];
+export const CONTENT_TYPES = ["application/x-www-form-urlencoded; charset=UTF-8", "application/json"];
 
 /** "/ajax/addToCart" -> ["ajax", "add", "to", "cart"] (split at "/", "-", "_", "." and camelCase). */
 export function pathWords(path) {
@@ -301,7 +312,7 @@ export function queryRefusal(query, allowed) {
   if (forbiddenPath(path)) return `${path} yasak listede (giriş, hesap, ödeme, rezervasyon, sepet, iletişim ya da kişisel bilgi adresi); sorgu gönderilmedi.`;
   if (!fields || typeof fields !== "object" || Array.isArray(fields) || Object.keys(fields).length > MAX_FIELDS) return "Sorgunun alanları bir ad → değer listesi olmalı.";
   if (Object.values(fields).some(v => typeof v !== "string" || v.length > MAX_VALUE)) return "Sorgunun alan değerleri yazı olmalı.";
-  const match = (allowed || []).find(a => domainOf(a.alan_adi) === domain && a.yol === path && String(a.yontem).toUpperCase() === method);
+  const match = queryMatch(query, allowed);
   if (!match) return `${method} ${domain}${path} programın izinli sorgu listesinde değil; gönderilmedi.`;
   if (Array.isArray(match.alanlar)) {
     const names = Object.keys(fields);
@@ -310,7 +321,29 @@ export function queryRefusal(query, allowed) {
       return `Sorgunun alanları izinli listedekilerle aynı değil (${match.alanlar.join(", ")}); gönderilmedi.`;
     }
   }
+  const place = placeOf(match);
+  if ((query.alanlar_yeri || place) !== place) {
+    return `Sorgunun alanları sayfanın koyduğu yerde değil (${place === "adres" ? "adreste" : "gövdede"}); gönderilmedi.`;
+  }
+  for (const [name, pattern] of Object.entries(match.desenler || {})) {
+    if (name in fields && !new RegExp(`^(?:${pattern})$`, "s").test(fields[name])) {
+      return `Sorgunun ${name} alanının değeri sayfanın kendi sorgularından değil; gönderilmedi.`;
+    }
+  }
   return null;
+}
+
+/** The allowed-list entry of a query (domain, path, method), or undefined. */
+export function queryMatch(query, allowed) {
+  const domain = domainOf(query?.alan_adi || "");
+  const method = String(query?.yontem || "").toUpperCase();
+  return (allowed || []).find(a => domainOf(a.alan_adi) === domain && a.yol === String(query?.yol || "") && String(a.yontem).toUpperCase() === method);
+}
+
+/** HEDEF-03: where an entry's fields go: its `alanlar_yeri`, else the address for GET and the form body for POST. */
+export function placeOf(match) {
+  const place = match?.alanlar_yeri || (String(match?.yontem || "").toUpperCase() === "GET" ? "adres" : "govde");
+  return PLACES.includes(place) ? place : "govde";
 }
 
 /** The form body the page's own script sends (jQuery's serialize: name=value&..., in the given order). */
@@ -318,14 +351,18 @@ export function queryBody(fields) {
   return new URLSearchParams(Object.entries(fields || {})).toString();
 }
 
-/** The address and the fetch options of a query sent from the tab's origin; GET carries the fields in the address. */
-export function queryRequest(origin, query) {
+/** The address and the fetch options of a query sent from the tab's origin; GET carries the fields in the address. HEDEF-03: an entry
+ *  whose page puts its fields in the address (`alanlar_yeri` "adres") does so for POST too (the body stays empty), with the entry's
+ *  content type when it gives one. */
+export function queryRequest(origin, query, match = null) {
   const method = String(query.yontem).toUpperCase();
-  const body = queryBody(query.alanlar);
-  const url = origin + query.yol + (method === "GET" && body ? `?${body}` : "");
+  const encoded = queryBody(query.alanlar);
+  const inAddress = method === "GET" || placeOf(match || {yontem: method}) === "adres";
+  const url = origin + query.yol + (inAddress && encoded ? `?${encoded}` : "");
   const headers = {"Accept": "*/*", "X-Requested-With": "XMLHttpRequest"};
-  if (method === "POST") headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8";
-  return {url, method, headers, body: method === "POST" ? body : null};
+  const kind = match && CONTENT_TYPES.includes(match.icerik_turu) ? match.icerik_turu : null;
+  if (method === "POST") headers["Content-Type"] = kind || "application/x-www-form-urlencoded; charset=UTF-8";
+  return {url, method, headers, body: method === "POST" && !inAddress ? encoded : null};
 }
 
 export function bytesToBase64(bytes) {

@@ -390,6 +390,11 @@ def replay(db, job, source, connector, progress, canceled, raw_path=None):
     pool = ReplayPool(exits)
     region = ReplayRegion(hosts, proxy, pool)
     config = {**agency, "windows": lodging["windows"], "window_rule": lodging.get("window_rule"), "browser_hosts": context.browser_hosts}
+    chosen = raw_path.parent / ar.SELECTION_FILE
+    if chosen.is_file():           # HEDEF-03: a run of the chosen companies is rebuilt as one, on the same base version
+        note = json.loads(chosen.read_text(encoding="utf-8"))
+        with db.connect() as con:
+            config["selected"] = {"domains": note["sirketler"], "base": ar.version_rows(con, note["taban_surum"])}
     try:
         batch = ar.collect(raw_path, progress, canceled, config=config, client=client, verifier=ReplayVerifier(book, db.extension_queries()),
                            today=run_day(job), region=region, pool=pool, site_limit=4,

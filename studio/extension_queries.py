@@ -7,6 +7,11 @@ destination configuration: `extension_queries` of a company's options) are sent.
 and personal-data addresses are refused whatever the list says: the forbidden words and hosts below are checked on both sides (the
 extension's eklenti/logic.js holds the same lists; a test keeps them equal). The extension never clicks or types.
 
+HEDEF-03 (27 November 2026): an entry may say where the page puts its fields (`alanlar_yeri`: "govde", the form body, the default;
+or "adres", the address's query part, as a Streamline page's script does with POST admin-ajax.php?action=…&params=…), the content type
+the page's request carries (`icerik_turu`, one of CONTENT_TYPES), and a pattern a field's value must match in full (`desenler`: name →
+regular expression), so only the page's own kinds of question go (e.g. `methodName` of the Streamline price questions).
+
 Destination-independent: the rules know no site; which queries a site may send comes from the configuration.
 """
 import re
@@ -24,6 +29,8 @@ FORBIDDEN_HOSTS = ("paypal.com", "stripe.com", "squareup.com", "authorize.net", 
 FORBIDDEN_HOST_LABELS = ("login", "auth", "account", "accounts", "checkout", "pay", "payment", "payments", "secure", "book", "booking",
                          "my", "sso", "id")
 MAX_FIELDS, MAX_VALUE = 40, 2000
+PLACES = ("govde", "adres")
+CONTENT_TYPES = ("application/x-www-form-urlencoded; charset=UTF-8", "application/json")
 
 
 def domain_of(host):
@@ -53,10 +60,16 @@ def forbidden_host(host):
 
 
 def normalize(entry):
-    """An allowed-list entry {alan_adi, yol, yontem, alanlar: [names] | None, amac}."""
+    """An allowed-list entry {alan_adi, yol, yontem, alanlar: [names] | None, amac, alanlar_yeri, icerik_turu, desenler}."""
     names = entry.get("alanlar")
-    return {"alan_adi": domain_of(entry.get("alan_adi")), "yol": str(entry.get("yol") or ""), "yontem": str(entry.get("yontem") or "GET").upper(),
-            "alanlar": [str(n) for n in names] if isinstance(names, (list, tuple)) else None, "amac": str(entry.get("amac") or "")}
+    method = str(entry.get("yontem") or "GET").upper()
+    place = str(entry.get("alanlar_yeri") or ("adres" if method == "GET" else "govde"))
+    kind = entry.get("icerik_turu")
+    patterns = entry.get("desenler") if isinstance(entry.get("desenler"), dict) else {}
+    return {"alan_adi": domain_of(entry.get("alan_adi")), "yol": str(entry.get("yol") or ""), "yontem": method,
+            "alanlar": [str(n) for n in names] if isinstance(names, (list, tuple)) else None, "amac": str(entry.get("amac") or ""),
+            "alanlar_yeri": place if place in PLACES else "govde", "icerik_turu": kind if kind in CONTENT_TYPES else None,
+            "desenler": {str(k): str(v) for k, v in patterns.items()}}
 
 
 def allowed_from_sites(sites):
@@ -72,8 +85,15 @@ def allowed_from_sites(sites):
     return found
 
 
+def match_of(query, allowed):
+    """The allowed-list entry of a query (domain, path, method), or None."""
+    domain, path, method = domain_of(query.get("alan_adi")), str(query.get("yol") or ""), str(query.get("yontem") or "").upper()
+    return next((a for a in allowed or () if a["alan_adi"] == domain and a["yol"] == path and a["yontem"] == method), None)
+
+
 def refusal(query, allowed):
-    """None when the query may be sent, else the reason (Turkish). query: {alan_adi, yol, yontem, alanlar: {name: value}}."""
+    """None when the query may be sent, else the reason (Turkish). query: {alan_adi, yol, yontem, alanlar: {name: value},
+    alanlar_yeri: "govde" | "adres" (optional; the entry's place when not given)}."""
     domain, path = domain_of(query.get("alan_adi")), str(query.get("yol") or "")
     method = str(query.get("yontem") or "").upper()
     fields = query.get("alanlar")
@@ -91,9 +111,15 @@ def refusal(query, allowed):
         return "Sorgunun alanları bir ad → değer listesi olmalı."
     if any(not isinstance(k, str) or not isinstance(v, str) or len(v) > MAX_VALUE for k, v in fields.items()):
         return "Sorgunun alan değerleri yazı olmalı."
-    match = next((a for a in allowed or () if a["alan_adi"] == domain and a["yol"] == path and a["yontem"] == method), None)
+    match = match_of({"alan_adi": domain, "yol": path, "yontem": method}, allowed)
     if match is None:
         return f"{method} {domain}{path} programın izinli sorgu listesinde değil; gönderilmedi."
     if match["alanlar"] is not None and list(fields) != [n for n in match["alanlar"] if n in fields]:      # a name off the list, or another order
         return f"Sorgunun alanları izinli listedekilerle aynı değil ({', '.join(match['alanlar'])}); gönderilmedi."
+    place = query.get("alanlar_yeri") or match.get("alanlar_yeri") or "govde"
+    if place != (match.get("alanlar_yeri") or "govde"):
+        return f"Sorgunun alanları sayfanın koyduğu yerde değil ({'adreste' if match.get('alanlar_yeri') == 'adres' else 'gövdede'}); gönderilmedi."
+    for name, pattern in (match.get("desenler") or {}).items():
+        if name in fields and not re.fullmatch(pattern, fields[name], re.S):
+            return f"Sorgunun {name} alanının değeri sayfanın kendi sorgularından değil; gönderilmedi."
     return None

@@ -1820,3 +1820,38 @@ test('HEDEF-02: the trial names the storing check of the latest real run',()=>{
   assert.match(storeCheckLine({durum:'gecti',metin:'Kaydetme adımı 2384 kayıtla geçti',tarih:'2026-11-26T23:32:00+00:00'}),/tag green">Kaydetme adımı geçti<\/span> Kaydetme adımı 2384 kayıtla geçti · sınanan çekim:/);
   assert.match(storeCheckLine({durum:'dustu',metin:'IntegrityError: CHECK'}),/tag warm">Kaydetme adımı düştü<\/span> IntegrityError/);
 });
+
+import {companyDay, selectedReadForm} from '../studio/web/agency.js';
+test('HEDEF-03: a company row says its own query day, and a carried row where it came from',()=>{
+  assert.equal(companyDay({queried_on:'2026-11-27',carried_from:null}),'2026-11-27');
+  assert.match(companyDay({queried_on:'2026-11-26',carried_from:'7cba8d4cffbb4e0dbf076e66acba2c0f'}),/2026-11-26<small>taşındı · 7cba8d4c sürümünden, değişmeden<\/small>/);
+  assert.match(companyDay({}),/muted/);
+});
+test('HEDEF-03: "Seçili şirketleri yeniden oku" lists the companies with a box each and keeps the chosen ones',()=>{
+  const companies=[{domain:'vacasa.com',company:'Vacasa',status:'stopped_errors',priced_count:23,quote_count:28},
+                   {domain:'alysbeach.com',company:'Alys Beach Vacation Rentals',status:'stopped_errors',priced_count:0,quote_count:0}];
+  const html=selectedReadForm(companies,false,new Set(['vacasa.com']),true);
+  assert.match(html,/<details class="library climate-block agency-selected" open>/);
+  assert.match(html,/value="vacasa.com" checked> Vacasa/);assert.match(html,/value="alysbeach.com" > Alys Beach/);
+  assert.ok(html.indexOf('Alys Beach')<html.indexOf('Vacasa'));                           // alphabetical
+  assert.match(html,/data-action="collect-agency-selected" >↻ Seçili şirketleri yeniden oku/);
+  assert.match(selectedReadForm(companies,true),/disabled>Fiyatlar soruluyor…/);
+  assert.equal(selectedReadForm([],false),'');
+});
+test('HEDEF-03: a query whose page puts the fields in the address, the value patterns and the number of jobs at once',()=>{
+  const allowed=[{alan_adi:'rosemarybeach.com',yol:'/wp-admin/admin-ajax.php',yontem:'POST',alanlar:['action','params'],alanlar_yeri:'adres',
+                  icerik_turu:'application/json',desenler:{action:'streamlinecore-api-request',params:String.raw`\{"methodName":"(?:GetPreReservationPrice|VerifyPropertyAvailability)","params":\{.*\}\}`}}];
+  const fields={action:'streamlinecore-api-request',params:'{"methodName":"GetPreReservationPrice","params":{"unit_id":411533}}'};
+  const query={alan_adi:'rosemarybeach.com',yol:'/wp-admin/admin-ajax.php',yontem:'POST',alanlar:fields};
+  assert.equal(E.queryRefusal(query,allowed),null);
+  assert.equal(E.queryRefusal({...query,alanlar_yeri:'adres'},allowed),null);
+  assert.match(E.queryRefusal({...query,alanlar_yeri:'govde'},allowed),/yerde değil/);
+  assert.match(E.queryRefusal({...query,alanlar:{...fields,params:'{"methodName":"CreateReservation","params":{}}'}},allowed),/params alanının değeri/);
+  const request=E.queryRequest('https://rosemarybeach.com',query,E.queryMatch(query,allowed));
+  assert.equal(request.body,null);assert.equal(request.headers['Content-Type'],'application/json');
+  assert.ok(request.url.startsWith('https://rosemarybeach.com/wp-admin/admin-ajax.php?action=streamlinecore-api-request&params=%7B%22methodName'));
+  const track=E.queryRequest('https://www.30aescapes.com',{yol:'/ajax/quote',yontem:'POST',alanlar:{checkin:'01/09/2027',checkout:'01/16/2027'}});
+  assert.equal(track.url,'https://www.30aescapes.com/ajax/quote');assert.equal(track.body,'checkin=01%2F09%2F2027&checkout=01%2F16%2F2027');
+  assert.equal(track.headers['Content-Type'],'application/x-www-form-urlencoded; charset=UTF-8');
+  assert.equal(E.parallelOf(6),6);assert.equal(E.parallelOf(undefined),1);assert.equal(E.parallelOf(40),8);assert.equal(E.parallelOf(0),1);
+});
