@@ -535,6 +535,21 @@ $("#jobs-content").addEventListener("click",async event=>{
     try {await api(`tarayici-eklentisi/devret/${handover.dataset.handoverJob}`,{method:"POST"});state.data.jobs=await api("jobs");renderJobs();toast("İş programın kendi tarayıcısına devredildi.");}
     catch(error){toast(error.message);handover.disabled=false;}
   }
+  // HEDEF-02: a kept result saved without collecting again; a failed rental price run rebuilt from its raw copy
+  const saveRecovered=event.target.closest("[data-save-recovered]");
+  if(saveRecovered) {
+    saveRecovered.disabled=true;
+    try {await api(`jobs/${encodeURIComponent(saveRecovered.dataset.saveRecovered)}/kurtarma/kaydet`,{method:"POST"});state.data.jobs=await api("jobs");renderJobs();toast("Kurtarılan sonuç kaydediliyor; yeni bir iş olarak panelde görünür.");}
+    catch(error){toast(error.message);saveRecovered.disabled=false;}
+    return;
+  }
+  const rebuild=event.target.closest("[data-rebuild-job]");
+  if(rebuild) {
+    rebuild.disabled=true;
+    try {await api(`jobs/${encodeURIComponent(rebuild.dataset.rebuildJob)}/kurtarma/kur`,{method:"POST"});state.data.jobs=await api("jobs");renderJobs();toast("Çekim ham kopyasından yeniden kuruluyor; sitelere gidilmiyor.");}
+    catch(error){toast(error.message);rebuild.disabled=false;}
+    return;
+  }
   // GÖREV-17: taking finished jobs off the panel (hiding only) and bringing them back
   const hide=event.target.closest("[data-hide-job]");
   if(hide) {

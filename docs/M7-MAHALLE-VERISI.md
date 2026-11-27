@@ -48,6 +48,16 @@ Kimlik kaynak kimliğidir. Ad, permalink, sayfa adresi, kanonik bölge, kısa ta
 
 v6 → v7 mevcut kurallarla çalışır: açılışta `data/backups/` içine SQLite yedeği, tek transaction, `foreign_key_check`, hata halinde geri alma. Mevcut tablolar ve satırlar değişmez; 30A'da uyumlu bir mahalle kaynağı yoksa yalnız "South Walton · Mahalleler" kaynağı eklenir (kullanıcının eklediği veya arşivlediği uyumlu kaynak varsa ikinci kaynak eklenmez). Yeni kurulumda kaynak seed'den gelir.
 
+### Yeni API'de koordinat yok (HEDEF-02, yöneticinin kararı 27 Kasım 2026)
+
+Yenilenen sitenin mahalle API'si (`/api/beach/neighborhood/all/`) enlem/boylam vermiyor. 13 mahallenin koordinatı aynı kaynağın en son
+koordinatlı başarılı kaydından (Ekim 2026, eski dizinin kendi harita noktaları) mahalle adıyla eşleşerek alınır; ad tutmazsa eski kaydın
+aynı adla bağlandığı kanonik mahalle kullanılır (Watercolor/WaterColor gibi). Öbür alanlar (tanıtım, sayfa bağlantısı, değişiklik zamanı,
+etiketler) yeni API'dendir. Çalışmanın `metadata.koordinat_kaynagi` alanı kaynak çalışmayı, tarihini ve mahalle başına notu tutar; kayıt
+okunurken `koordinat_notu` "koordinat: aynı kaynağın <tarih> kaydından" olur, ekranda temsilî noktanın altında görünür. Önceki kaydı
+olmayan mahalle için koordinat uydurulmaz: çekim eskisi gibi açık hatayla durur. Bağlam girdisi `neighborhood_coordinates`
+(`Database.neighborhood_coordinates`).
+
 ### API ve ekran
 
 - `GET /api/neighborhood-runs`: yalnız başarılı mahalle sürümleri (destinasyona göre).

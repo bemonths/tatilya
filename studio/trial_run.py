@@ -13,6 +13,11 @@ How small (`LIMITS`):
 - restaurant sites (`restaurant-sites`): three restaurants;
 - the others (weather, climate, beaches, neighbourhoods, daily needs, roads, fares, the restaurant directory) are small already and
   run whole.
+The storing step at full size (HEDEF-02): a few listings reach only a few of the answer paths (on the night of 27 November 2026 the
+rental price run failed while storing a RealJoy answer the trial's one week never met). So after its small run, the rental price step
+also rebuilds the latest real rental price run from its raw copy (`agency_replay`: nothing is asked from the sites) and stores it on
+the copy with the real storing step (`complete_source_run`); the row says whether the storing passed and, if not, the error
+(`kaydetme_sinamasi`).
 Collectors that read another's records run before it (rental prices and restaurant sites first, on the copy's real inputs; Book>Direct
 last). The result per collector (and per rental company: read or not, through which worker, the error) is written to the job's result
 and to `sonuc.json` beside the copy. Of older trials only the last KEEP copies keep their database and raw files; `sonuc.json` stays.
@@ -219,6 +224,7 @@ class TrialRun:
         row.update({"durum": inner["status"], "durum_metni": LABELS.get(inner["status"], inner["status"]),
                     "kayit": run["record_count"] if run else None, "sure_s": int(time.monotonic() - started), "mesaj": inner["message"]})
         if connector.name == "agency-lodging-rates":
+            row["kaydetme_sinamasi"] = self.store_check(copy, source, connector)
             row["sirketler"] = company_rows(metadata)
             row["olaylar"] = ((metadata.get("isciler") or {}).get("olaylar") or [])[-30:]
             row["isciler"] = (metadata.get("isciler") or {}).get("isciler")
@@ -228,6 +234,40 @@ class TrialRun:
             row["bolge_engelli"] = [r[0] for r in con.execute("SELECT host FROM region_blocked_hosts ORDER BY host")]
         self.db.update_job(self.job_id, waiting_for="")
         return row
+
+    def store_check(self, copy, source, connector):
+        """The latest real run of this collector rebuilt from its raw copy and stored on the copy with the real storing step."""
+        if not hasattr(connector, "rebuild"):
+            return None
+        started = time.monotonic()
+        found = None
+        with self.db.connect() as con:
+            for run in con.execute("SELECT job_id FROM source_runs WHERE source_id=? AND connector_name=? AND status IN ('done','failed') "
+                                   "ORDER BY rowid DESC LIMIT 5", (source["id"], connector.name)):
+                raw = self.db.path.parent / "raw" / run["job_id"] / connector.raw_filename
+                if raw.is_file():
+                    found = (run["job_id"], raw)
+                    break
+        if found is None:
+            return {"durum": "yok", "metin": "Ham kopyası olan gerçek bir çekim yok; kaydetme adımı tam ölçekte sınanamadı."}
+        job = self.db.job(found[0])
+        out = {"is": job["id"], "tarih": job.get("created_at")}
+        self.db.update_job(self.job_id, message=f"{source['name']}: son gerçek çekimin kaydı sınanıyor (ham kopyadan; sitelere gidilmiyor).")
+        try:
+            from .sources import agency_replay
+            full = Database(copy.path, copy.registry)      # the copy without the trial's limits: the run as it was, every week
+            batch, report = agency_replay.replay(full, job, source, connector, lambda p, m: None, self.canceled, raw_path=found[1])
+            out["karsilastirma"] = agency_replay.compare(batch, agency_replay.summary_counts(job.get("log")))
+            out["kayit"] = len(batch.records)
+            identifier = copy.add_job("source_collection", f"{source['name']} · Deneme: kaydetme sınaması", source["id"], connector,
+                                      source["version"])
+            copy.update_job(identifier, status="running", message="Kaydetme sınaması.")
+            copy.complete_source_run(identifier, batch, connector)
+            out.update({"durum": "gecti", "metin": f"Kaydetme adımı {len(batch.records)} kayıtla geçti (son gerçek çekim, kopyada)."})
+        except Exception as exc:
+            out.update({"durum": "dustu", "metin": f"Kaydetme adımı düştü: {type(exc).__name__}: {str(exc)[:300]}"})
+        out["sure_s"] = int(time.monotonic() - started)
+        return out
 
     def result(self):
         return {"klasor": str(self.folder.relative_to(self.db.path.parent)).replace("\\", "/"), "baslangic": self.started_at,

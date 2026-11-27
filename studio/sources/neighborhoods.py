@@ -335,7 +335,27 @@ class Reader:
         raise SourceError("Mahalle isteği tamamlanamadı.")
 
 
-def collect(raw_path, progress, canceled, *, client=None, regions=None):
+def borrowed_coordinates(targets, previous):
+    """HEDEF-02 (the manager's decision, 27 November 2026): the rebuilt site's neighbourhood API gives no coordinates. A neighbourhood
+    whose record lacks them takes the coordinates of the same source's previous record with the same name (the old directory's own
+    map pins); every other field is the new API's. Returns {name: note} for the borrowed ones; a name with no previous record keeps
+    None (and the run stops as before)."""
+    notes = {}
+    if not previous or not previous.get("by_name"):
+        return notes
+    for entry, region in targets:
+        if entry["latitude"] is not None and entry["longitude"] is not None:
+            continue
+        # the same name; else the record the old directory tied to the same neighbourhood by its name (e.g. "Watercolor"/"WaterColor")
+        old = previous["by_name"].get(entry["name"]) or (previous.get("by_region") or {}).get(region["id"])
+        if old is None:
+            continue
+        entry["latitude"], entry["longitude"] = old["latitude"], old["longitude"]
+        notes[entry["name"]] = f"koordinat: aynı kaynağın {previous['date']} kaydından"
+    return notes
+
+
+def collect(raw_path, progress, canceled, *, client=None, regions=None, previous=None):
     regions = list(regions) if regions is not None else [{"id": identifier, "name": name} for identifier, name in REGIONS]
     if not regions:
         raise SourceError("Mahalle bölge yapılandırması boş.")
@@ -356,6 +376,7 @@ def collect(raw_path, progress, canceled, *, client=None, regions=None):
             entries = parse_index(content)
         targets, excluded, unknown, aliases = select_targets(entries, regions)
         records = []
+        borrowed = borrowed_coordinates(targets, previous) if rebuilt else {}
         if rebuilt:
             lacking = [entry["name"] for entry, _ in targets if entry["latitude"] is None or entry["longitude"] is None]
             if lacking:
@@ -381,6 +402,10 @@ def collect(raw_path, progress, canceled, *, client=None, regions=None):
         }
         if rebuilt:
             metadata.update(kaynak_bicimi="beach-neighborhood-api", page_count=0)
+        if borrowed:        # HEDEF-02: which records' coordinates came from the same source's earlier run
+            metadata["koordinat_kaynagi"] = {"run_id": previous["run_id"], "tarih": previous["date"], "notlar": borrowed,
+                                             "aciklama": "Sitenin yeni mahalle API'si koordinat vermiyor; bu mahallelerin enlem/boylamı aynı "
+                                                         "kaynağın önceki kaydından, mahalle adıyla eşleşerek alındı. Öbür alanlar yeni API'den."}
         progress(95, f"{len(entries)} mahalle kaydı okundu; {len(records)} kanonik mahalle seçildi.")
         return CollectionResult(records, len(entries), len(entries) - len(records), max(modified) if modified else None, metadata)
     finally:
@@ -400,8 +425,11 @@ class NeighborhoodsConnector:
         return (source.get("destination_id") == "30a"
                 and https_source_identity(source["url"], host_aliases=SOURCE_HOST_ALIASES) == SOURCE_IDENTITY)
 
+    inputs = ("neighborhood_coordinates",)       # HEDEF-02: the same source's previous coordinates (the new API has none)
+
     def collect(self, source, raw_path, progress, canceled, *, context):
-        return collect(raw_path, progress, canceled, regions=context.canonical_regions)
+        previous = (context.neighborhoods or {}).get("previous")
+        return collect(raw_path, progress, canceled, regions=context.canonical_regions, previous=previous)
 
     def store_records(self, con, run_id, records, related=None):
         for record in records:
@@ -411,11 +439,14 @@ class NeighborhoodsConnector:
                  json.dumps(record["tags"], ensure_ascii=False)))
 
     def read_records(self, con, run_id):
+        row = con.execute("SELECT metadata FROM source_runs WHERE id=?", (run_id,)).fetchone()
+        notes = ((json.loads(row["metadata"]) if row and row["metadata"] else {}).get("koordinat_kaynagi") or {}).get("notlar") or {}
         records = []
         for row in con.execute("""SELECT n.*, r.name AS canonical_region_name FROM neighborhood_records n
                 LEFT JOIN regions r ON r.id=n.canonical_region_id WHERE n.run_id=? ORDER BY n.longitude, n.name""", (run_id,)):
             record = dict(row)
             record["tags"] = json.loads(record["tags"])
+            record["koordinat_notu"] = notes.get(record["name"])          # HEDEF-02: None when the record's own source gave them
             records.append(record)
         return records
 

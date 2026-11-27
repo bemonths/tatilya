@@ -116,7 +116,7 @@ class JobQueue:
             else:
                 batch = connector.collect(source, raw_path, progress, canceled, context=context)
             self.db.record_raw_artifact(identifier, raw_path)
-            self.db.complete_source_run(identifier, batch, connector)
+            self.store(identifier, source, connector, batch)
         except CollectionCanceled:
             capture_raw()
             self.db.update_job(identifier, status="canceled", message="Veri toplama iptal edildi.")
@@ -127,10 +127,131 @@ class JobQueue:
         except Exception as exc:
             info = diagnostic(exc)
             info["raw_artifact_error"] = capture_raw()
-            self.db.update_job(identifier, status="failed", message="Veri toplama tamamlanamadı. Önceki başarılı sürümler korundu.", diagnostic=info)
+            message = "Veri toplama tamamlanamadı. Önceki başarılı sürümler korundu."
+            if getattr(exc, "recovery_saved", False):     # HEDEF-02: only the storing failed; the result waits in the recovery folder
+                info["recovery"] = True
+                message = ("Toplanan sonuç kaydedilemedi; önceki başarılı sürümler korundu. Sonuç kurtarma dosyasına yazıldı: düzeltmeden "
+                           "sonra İşler panelinde bu işin kartındaki \"Kurtarılan sonucu kaydet\" ile yeniden çekmeden kaydedilebilir.")
+            self.db.update_job(identifier, status="failed", message=message, diagnostic=info)
         finally:
             from .workers import BOARDS
             BOARDS.close(identifier)
+
+    def store(self, identifier, source, connector, batch):
+        """The storing step; when it fails the collected result is kept in the recovery folder (HEDEF-02, studio/recovery.py) and the
+        error goes on as before (the job fails, the earlier versions stay)."""
+        try:
+            self.db.complete_source_run(identifier, batch, connector)
+        except Exception as exc:
+            from . import recovery
+            try:
+                job = self.db.job(identifier) or {"id": identifier}
+                recovery.save(self.db.path.parent, job, source, connector, batch,
+                              error={"tur": type(exc).__name__, "metin": str(exc)[:500]})
+                exc.recovery_saved = True
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception("Kurtarma dosyası yazılamadı.")
+            raise
+
+    # --- HEDEF-02: a result that could not be stored -------------------------------------------------------------------
+
+    def recovery_info(self, job):
+        """What the Jobs panel offers on this job (studio/recovery.py): a stored result to save, a raw copy to rebuild, or nothing."""
+        from . import recovery
+        connector = None
+        if job.get("source_id"):
+            source = self.db.source(job["source_id"])
+            connector = self.registry.for_source(source) if source else None
+        return recovery.describe(self.db.path.parent, job, connector)
+
+    def _recovery_source(self, job_id):
+        job = self.db.job(job_id)
+        if not job:
+            raise Conflict("İş bulunamadı.")
+        source = self.db.source(job["source_id"]) if job.get("source_id") else None
+        connector = self.registry.for_source(source) if source else None
+        if not source or connector is None:
+            raise Conflict("Bu işin kaynağı ya da veri toplayıcısı artık yok.")
+        return job, source, connector
+
+    def submit_recovery_save(self, job_id):
+        """"Kurtarılan sonucu kaydet": the result in the job's recovery folder becomes a new version (a new job and run, the same
+        raw copy); nothing is collected."""
+        from . import recovery
+        with self.lock:
+            if self.closing:
+                raise Conflict("Uygulama kapanıyor.")
+            job, source, connector = self._recovery_source(job_id)
+            info = recovery.state(self.db.path.parent, job_id)
+            if not info:
+                raise Conflict("Bu işin kurtarma dosyası yok.")
+            if info.get("kaydedildi"):
+                raise Conflict("Bu sonuç zaten kaydedildi.")
+            if info.get("toplayici") != connector.name:
+                raise Conflict("Kurtarma dosyası başka bir veri toplayıcısına ait.")
+            identifier = self.db.add_job("source_collection", f"{source['name']} · Kurtarılan sonucu kaydet", source["id"], connector,
+                                         source["version"])
+            self.executor.submit(self._recovery_save, identifier, job_id, source, connector, info)
+            return self.db.job(identifier)
+
+    def _recovery_save(self, identifier, job_id, source, connector, info):
+        from . import recovery
+        try:
+            if not self.db.update_job(identifier, status="running", progress=10,
+                                      message="Kurtarma dosyası okunuyor (sitelere gidilmiyor)."):
+                return
+            batch = recovery.load(self.db.path.parent, job_id)
+            batch.metadata = {**batch.metadata, "kurtarma": {"kaynak_is": job_id, "nasil": info.get("nasil"), "dosya_yazildi": info.get("yazildi"),
+                                                             "toplayici_surumu": info.get("toplayici_surumu")}}
+            self.db.update_job(identifier, progress=50, message=f"{len(batch.records)} kayıt kaydediliyor.")
+            raw = self.db.path.parent / (info.get("ham_kopya") or f"raw/{job_id}/{connector.raw_filename}")
+            self.db.record_raw_artifact(identifier, raw)
+            if self.db.complete_source_run(identifier, batch, connector):
+                recovery.mark_saved(self.db.path.parent, job_id, identifier)
+        except Exception as exc:
+            self.db.update_job(identifier, status="failed", message="Kurtarılan sonuç kaydedilemedi; kurtarma dosyası yerinde duruyor.",
+                               diagnostic=diagnostic(exc))
+
+    def submit_rebuild(self, job_id):
+        """"Ham kopyadan yeniden kur": a failed run's result rebuilt from its own raw copy (the connector's `rebuild`); the result is
+        written to the recovery folder with the comparison, and saved only with "Kurtarılan sonucu kaydet"."""
+        with self.lock:
+            if self.closing:
+                raise Conflict("Uygulama kapanıyor.")
+            job, source, connector = self._recovery_source(job_id)
+            if not hasattr(connector, "rebuild"):
+                raise Conflict("Bu veri toplayıcısının sonucu ham kopyadan kurulamaz.")
+            info = self.recovery_info(job)
+            if not info or info["durum"] != "kur":
+                raise Conflict("Bu iş için ham kopyadan kurma yapılamaz (kurtarma dosyası zaten var ya da ham kopya yok).")
+            identifier = self.db.add_job("kurtarma", f"{source['name']} · Ham kopyadan yeniden kur", destination_id=source["destination_id"])
+            self.executor.submit(self._rebuild, identifier, job, source, connector)
+            return self.db.job(identifier)
+
+    def _rebuild(self, identifier, job, source, connector):
+        from . import recovery
+        try:
+            if not self.db.update_job(identifier, status="running", progress=1,
+                                      message="Çekim ham kopyasından yeniden kuruluyor (sitelere gidilmiyor)."):
+                return
+            def canceled():
+                return self.db.job(identifier)["status"] not in ("queued", "running")
+            def progress(percent, message):
+                if not self.db.update_job(identifier, progress=min(95, percent), message=message):
+                    raise CollectionCanceled()
+            batch, report, comparison = connector.rebuild(self.db, job, source, progress, canceled)
+            recovery.save(self.db.path.parent, job, source, connector, batch, rebuild={"rapor": report, "karsilastirma": comparison})
+            same = comparison.get("ayni")
+            message = (f"Ham kopyadan kuruldu: {len(batch.records)} kayıt; sayılar çekim kaydıyla {'aynı' if same else 'aynı değil'}. "
+                       "Kaydetmek için çekimin kartındaki \"Kurtarılan sonucu kaydet\"e basın.")
+            self.db.update_job(identifier, status="done", progress=100, message=message,
+                               result={"kaynak_is": job["id"], "rapor": {k: v for k, v in report.items() if not k.endswith("_ornek")},
+                                       "karsilastirma": comparison})
+        except CollectionCanceled:
+            self.db.update_job(identifier, status="canceled", message="Yeniden kurma iptal edildi.")
+        except Exception as exc:
+            self.db.update_job(identifier, status="failed", message=f"Ham kopyadan kurulamadı: {str(exc)[:200]}", diagnostic=diagnostic(exc))
 
     def shutdown(self):
         with self.lock:

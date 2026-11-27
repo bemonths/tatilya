@@ -1542,13 +1542,13 @@ class RealJoy:
         minimum = info.get("min_nights", {}).get(us_date(checkin))
         if any(night in taken for night in nights):
             return {**outcome("unavailable", "Sitenin takvimi bu tarihleri dolu gösteriyor; fiyat sorulmadı.", available=0, min_stay=minimum),
-                    "rule_source": "takvim"}
+                    "rule_source": "sayfa"}
         if us_date(checkin) in calendar["not-checkin-turndays"] or us_date(checkout) in calendar["not-checkout-turndays"]:
             return {**outcome("restricted", "Sitenin takvimi bu günde giriş ya da çıkışa izin vermiyor; fiyat sorulmadı.", min_stay=minimum),
-                    "rule_source": "takvim"}
+                    "rule_source": "sayfa"}
         if minimum and window["nights"] < minimum:
             return {**outcome("restricted", f"Sitenin takvimi bu giriş günü için en az {minimum} gece istiyor; fiyat sorulmadı.", min_stay=minimum),
-                    "rule_source": "takvim"}
+                    "rule_source": "sayfa"}       # HEDEF-02: the calendar is part of the listing page (was "takvim", outside the schema)
         return None
 
     def quote(self, session, info, window, guests=DEFAULT_GUESTS):

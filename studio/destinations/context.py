@@ -18,4 +18,5 @@ class ConnectorContext:
     road_network: dict | None = None           # GÖREV-20: road settings (area, speeds, access, extra points); for a job also its inputs
     airfare: dict | None = None                # GÖREV-20: airports and number of quarters of the airport fare table
     trial: dict | None = None                  # HEDEF-01: the trial run's limits (studio/trial_run.py); None in every real run
+    neighborhoods: dict | None = None          # HEDEF-02: for a job, the same source's latest records with coordinates (by name)
 

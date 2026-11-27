@@ -204,7 +204,7 @@ class RawStore:
         self.manifest = {"connector": CONNECTOR_VERSION, "responses": []}
         self.unsaved = 0
 
-    def save(self, *, company, transport, method, requested, status, final_url, headers, body, note, request_body):
+    def save(self, *, company, transport, method, requested, status, final_url, headers, body, note, request_body, location=None):
         digest = hashlib.sha256(body).hexdigest()
         with self.lock:
             sequence = len(self.manifest["responses"]) + 1
@@ -218,6 +218,8 @@ class RawStore:
                 "sequence": sequence, "company": company, "transport": transport, "note": note, "method": method, "requested_url": requested,
                 "request_body": request_body, "final_url": final_url, "status": status, "content_type": headers.get("content-type"),
                 "fetched_at": stamp, "raw_file": relative, "compression": "gzip", "raw_sha256": digest, "bytes": len(body)})
+            if location:
+                self.manifest["responses"][-1]["location"] = location     # HEDEF-02: a redirect's target (the replay follows it)
             if "proxy" in str(transport):
                 self.manifest["responses"][-1]["proxy"] = True        # GÖREV-16: read through the user's US proxy
             self.unsaved += 1
@@ -264,6 +266,13 @@ class SiteSession:
     def allows(self, url):
         return any(on_domain(url, domain) for domain in self.allowed)
 
+    def wait(self, seconds):
+        """The pacing and a 429's wait; a replay from the raw copy (HEDEF-02) goes to no site and does not wait."""
+        if getattr(self.store, "replay", False):
+            check(self.canceled)
+            return
+        pause(seconds, self.canceled)
+
     def request(self, method, url, *, note, params=None, data=None, json=None, headers=None):
         if not self.allows(url):
             raise AdapterError("Uyarlayıcı şirketin alan adı dışındaki bir adrese istek yapmak istedi; yapılmadı.")
@@ -272,7 +281,7 @@ class SiteSession:
             asked.append(str(httpx.URL(current, params=params)) if params else current)
             check(self.canceled)
             if self.last is not None:
-                pause(max(0.0, self.gap - (time.monotonic() - self.last)), self.canceled)
+                self.wait(max(0.0, self.gap - (time.monotonic() - self.last)))
             try:
                 status, final, response_headers, body = self.send(method, current, params=params, data=data, json_body=json, headers=headers)
             finally:
@@ -281,10 +290,12 @@ class SiteSession:
             if self.on_request is not None:
                 self.on_request()
             requested = str(httpx.URL(current, params=params)) if params else current
+            lowered = {k.lower(): v for k, v in response_headers.items()}
             digest, _ = self.store.save(company=self.domain, transport=self.transport.kind, method=method, requested=requested,
                                         status=status, final_url=final, headers=response_headers, body=body, note=note,
-                                        request_body=data if data is not None else json)
-            lowered = {k.lower(): v for k, v in response_headers.items()}
+                                        request_body=data if data is not None else json,
+                                        location=urljoin(final, lowered["location"]) if status in (301, 302, 303, 307, 308)
+                                        and lowered.get("location") else None)
             reply = Reply(status, final, lowered, body, digest)
             reply.hops = list(asked)
             if status in (301, 302, 303, 307, 308) and lowered.get("location"):
@@ -312,7 +323,7 @@ class SiteSession:
                 # that stops the company for this run (what it gave so far is kept)
                 if refused < int(self.retry_429.get("retries", 2)):
                     refused += 1
-                    pause(retry_after(lowered.get("retry-after"), float(self.retry_429.get("wait_s", 60))), self.canceled)
+                    self.wait(retry_after(lowered.get("retry-after"), float(self.retry_429.get("wait_s", 60))))
                     self.last = time.monotonic() - self.gap
                     continue
                 raise CompanyStopped("stopped_blocked", f"Site art arda {refused + 1} kez HTTP 429 (çok fazla istek) döndü; her seferinde "
@@ -331,7 +342,7 @@ class SiteSession:
             except httpx.TransportError as exc:
                 if attempt == 1 or self.protected:
                     raise AdapterError("Şirket sitesine bağlanılamadı veya zaman aşımı oluştu.") from exc
-                pause(RETRY_PAUSE, self.canceled)
+                self.wait(RETRY_PAUSE)
 
 
 def retry_after(value, least):
@@ -495,7 +506,7 @@ def worker_estimate(companies, exits, site_limit=4):
 
 
 def collect(raw_path, progress, canceled, *, config, client=None, verifier=None, waiting=None, today=None, region=None, pool=None,
-            site_limit=None, exit_client=None, board=None, trial=None):
+            site_limit=None, exit_client=None, board=None, trial=None, store=None):
     """Ask every configured company site the price of every future window for each listing tied to it (and for its own inventory).
     Companies whose site waits for a human verification are read last, after one shared wait (see the module text)."""
     if not config or not config.get("sites"):
@@ -548,7 +559,7 @@ def collect(raw_path, progress, canceled, *, config, client=None, verifier=None,
         kept = {r["lodging_id"] for rows in groups.values() for r in rows}
         listings = {k: v for k, v in listings.items() if k in kept or v["domain"] is None}
     order = sorted((d for d in sites if groups[d] or sites[d]["own_region_id"] or own_everywhere(sites[d])), key=lambda d: (-len(groups[d]), d))
-    store = RawStore(raw_path)
+    store = store if store is not None else RawStore(raw_path)      # HEDEF-02: a replay's store writes nothing
     owns = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(45, connect=15), verify=True)
     shared = Shared(store=store, client=client, canceled=canceled, verifier=verifier, waiting=waiting, active=active, everyone=everyone, region=region,
@@ -1432,6 +1443,21 @@ QUOTE_COLUMNS = ("status", "available", "nightly_rates", "rent", "cleaning_fee",
 JSON_QUOTE_COLUMNS = {"nightly_rates", "fees", "tax_items", "excluded_items", "checkin_days"}
 
 
+RULE_SOURCES = ("sayfa", "yanıt")      # where a stay rule was read: the listing page (its calendar too) or the price answer
+RULE_SOURCE_ALIASES = {"takvim": "sayfa"}   # HEDEF-02: RealJoy's calendar answers said "takvim" before the fix (a kept result may)
+
+
+def checked_quote(quote, where):
+    """A price answer ready for its row: a value the schema does not take stops the storing with the company, the listing and the
+    week named (HEDEF-02: the night of 27 November 2026 failed with only the constraint's text)."""
+    source = RULE_SOURCE_ALIASES.get(quote.get("rule_source"), quote.get("rule_source"))
+    if source is not None and source not in RULE_SOURCES:
+        raise SourceError(f"{where}: kural kaynağı \"{source}\" tanınmıyor (yalnız {', '.join(RULE_SOURCES)}); sonuç kaydedilmedi.")
+    if quote.get("status") not in QUOTE_STATUSES:
+        raise SourceError(f"{where}: fiyat cevabının durumu \"{quote.get('status')}\" tanınmıyor; sonuç kaydedilmedi.")
+    return {**quote, "rule_source": source} if source != quote.get("rule_source") else quote
+
+
 def quote_values(quote):
     return tuple(json.dumps(quote[c]) if c == "raw_sha256" else dumps(quote[c]) if c in JSON_QUOTE_COLUMNS else quote[c] for c in QUOTE_COLUMNS)
 
@@ -1492,20 +1518,30 @@ class AgencyRatesConnector:
               r["page_status"], r["page_url"], r["http_status"], r["site_listing_id"], r["message"], r["link_status"], r["match_method"],
               r["match_note"]) for r in records])
         con.executemany(f"INSERT INTO agency_rate_quotes (run_id,lodging_id,window_key,{','.join(QUOTE_COLUMNS)}) VALUES (?,?,?{',?' * len(QUOTE_COLUMNS)})",
-                        [(run_id, q["lodging_id"], q["window_key"], *quote_values(q)) for q in related["quotes"]])
+                        [(run_id, q["lodging_id"], q["window_key"],
+                          *quote_values(checked_quote(q, f"{q.get('domain') or 'ilan'} {q['lodging_id']} · {q['window_key']}")))
+                         for q in related["quotes"]])
         con.executemany("""INSERT INTO agency_rate_own_listings (run_id,domain,site_listing_id,title,page_url,address,city,region_id,bedrooms,bathrooms,
             sleeps,latitude,longitude,page_status,message) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, o["domain"], o["site_listing_id"], o["title"], o["page_url"], o["address"], o["city"], o["region_id"], o["bedrooms"],
               o["bathrooms"], o["sleeps"], o["latitude"], o["longitude"], o["page_status"], o["message"]) for o in related.get("own_listings", [])])
         con.executemany(f"INSERT INTO agency_rate_own_quotes (run_id,domain,site_listing_id,window_key,{','.join(QUOTE_COLUMNS)}) "
                         f"VALUES (?,?,?,?{',?' * len(QUOTE_COLUMNS)})",
-                        [(run_id, q["domain"], q["site_listing_id"], q["window_key"], *quote_values(q)) for q in related.get("own_quotes", [])])
+                        [(run_id, q["domain"], q["site_listing_id"], q["window_key"],
+                          *quote_values(checked_quote(q, f"{q['domain']} {q['site_listing_id']} · {q['window_key']}")))
+                         for q in related.get("own_quotes", [])])
         con.executemany("""INSERT INTO agency_rate_published (run_id,lodging_id,window_key,season_start,season_end,rate_text,rate_period,rent_low,rent_high,
             basis,source_url,raw_sha256) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             [(run_id, p["lodging_id"], p["window_key"], p["season_start"], p["season_end"], p["rate_text"], p["rate_period"], p["rent_low"],
               p["rent_high"], p["basis"], p["source_url"], json.dumps(p["raw_sha256"])) for p in related.get("published", [])])
         mark_hosts(con, related.get("browser_hosts", []), CONNECTOR_VERSION)
         record_methods(con, related.get("okuma_yontemleri"))
+
+    def rebuild(self, db, job, source, progress, canceled):
+        """HEDEF-02: the run of `job` rebuilt from its raw copy (studio/sources/agency_replay.py): (batch, report, comparison)."""
+        from . import agency_replay
+        batch, report = agency_replay.replay(db, job, source, self, progress, canceled)
+        return batch, report, agency_replay.compare(batch, agency_replay.summary_counts(job.get("log")))
 
     def read_records(self, con, run_id):
         return [decode_listing(r) for r in con.execute("SELECT * FROM agency_rate_listings WHERE run_id=? ORDER BY title, lodging_id", (run_id,))]

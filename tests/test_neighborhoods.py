@@ -87,9 +87,9 @@ def run_mock(tmp_path, handler=None, canceled=lambda: False, regions=CANONICAL):
 
 def install_mock(monkeypatch, handler):
     original = n.collect
-    def collect(path, progress, canceled, *, regions=None):
+    def collect(path, progress, canceled, *, regions=None, previous=None):
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-            return original(path, progress, canceled, client=client, regions=regions)
+            return original(path, progress, canceled, client=client, regions=regions, previous=previous)
     monkeypatch.setattr(n, 'collect', collect)
 
 
@@ -638,3 +638,43 @@ def test_the_rebuilt_sites_neighborhoods_are_used_when_the_api_gives_coordinates
     identifier = save_run(db, batch.records)
     with db.connect() as con:
         assert len(n.NeighborhoodsConnector().read_records(con, identifier)) == 13
+
+
+def test_hedef02_the_new_apis_neighborhoods_take_the_same_sources_earlier_coordinates_by_name(tmp_path, monkeypatch):
+    """The manager's decision (27 Nov 2026): the 13 neighbourhoods' coordinates come from the same source's earlier records, matched by
+    name, and the record says so ("koordinat: aynı kaynağın <tarih> kaydından"); every other field is the new API's."""
+    monkeypatch.setattr(n, 'API_GAP', 0)
+    db = Database(tmp_path / 'studio.sqlite3'); db.initialize()
+    old = run_mock(tmp_path / 'old').records                     # the old directory (its own map pins)
+    first = save_run(db, old)
+    with db.connect() as con:
+        con.execute("UPDATE source_runs SET fetched_at='2026-10-07T12:00:00+00:00' WHERE id=?", (first,))
+        previous = Database.neighborhood_coordinates(con, '30a')
+    assert previous['run_id'] == first and previous['date'] == '2026-10-07' and len(previous['by_name']) == len(old)
+    assert db.context('30a', inputs=n.NeighborhoodsConnector.inputs).neighborhoods['previous']['run_id'] == first
+    assert db.context('30a').neighborhoods is None
+    site = ApiSite()
+    with httpx.Client(transport=httpx.MockTransport(site)) as client:
+        batch = n.collect(tmp_path / 'manifest.json', lambda *a: None, lambda: False, client=client, regions=CANONICAL, previous=previous)
+    assert len(batch.records) == 13
+    by_name = {r['name']: r for r in old}
+    for record in batch.records:
+        before = by_name.get(record['name']) or next(r for r in old if r['canonical_region_id'] == record['canonical_region_id'])
+        assert (record['latitude'], record['longitude']) == (before['latitude'], before['longitude'])
+    api = {e['name']: e for e in n.parse_api(site.answer)}
+    assert all(r['summary'] == api[r['name']]['summary'] and r['page_url'] == api[r['name']]['page_url'] for r in batch.records)
+    source = batch.metadata['koordinat_kaynagi']
+    assert source['run_id'] == first and source['tarih'] == '2026-10-07' and len(source['notlar']) == 13
+    assert set(source['notlar'].values()) == {'koordinat: aynı kaynağın 2026-10-07 kaydından'}
+    connector = n.NeighborhoodsConnector()
+    src = next(s for s in db.sources() if s['url'] == n.SOURCE_URL)
+    second = db.add_job('source_collection', 'Neighborhoods', source_id=src['id'], connector=connector)
+    db.complete_source_run(second, batch, connector)
+    with db.connect() as con:
+        rows = connector.read_records(con, second)
+        assert len(rows) == 13 and {r['koordinat_notu'] for r in rows} == {'koordinat: aynı kaynağın 2026-10-07 kaydından'}
+        assert {r['koordinat_notu'] for r in connector.read_records(con, first)} == {None}       # the old records gave their own
+    lonely = {**previous, 'by_name': {}, 'by_region': {}}
+    with pytest.raises(SourceError, match='koordinat'):          # with no earlier record nothing is invented
+        with httpx.Client(transport=httpx.MockTransport(ApiSite())) as client:
+            n.collect(tmp_path / 'm2.json', lambda *a: None, lambda: False, client=client, regions=CANONICAL, previous=lonely)

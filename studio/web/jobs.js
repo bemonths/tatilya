@@ -42,6 +42,21 @@ export function workerBlock(job) {
   return `<details class="job-workers" open><summary>İşçiler (${esc(board.calisan)} çalışıyor)</summary><div class="table-scroll"><table class="reference-table"><thead><tr><th>ÇIKIŞ</th><th>ŞİRKET</th><th>BİTEN İŞ</th><th>HATA</th><th>DURUM</th></tr></thead><tbody>${rows}</tbody></table></div>${events?`<div class="job-worker-events">${events}</div>`:""}</details>`;
 }
 
+/** HEDEF-02: a collection whose storing step failed: the result kept in the recovery folder ("Kurtarılan sonucu kaydet"), or a
+ *  rental price run that can be rebuilt from its raw copy ("Ham kopyadan yeniden kur"), or the version it was saved as. */
+export function recoveryBlock(job) {
+  const info=job.kurtarma;
+  if(!info) return "";
+  if(info.durum==="kaydedildi") return `<p class="job-recovery"><span class="tag green">Kurtarıldı</span> ${esc(info.metin)}</p>`;
+  if(info.durum==="kur") return `<div class="job-recovery"><p><span class="tag warm">Kurtarılabilir</span> ${esc(info.metin)}</p><button type="button" data-rebuild-job="${esc(job.id)}">Ham kopyadan yeniden kur</button></div>`;
+  const cmp=info.karsilastirma;
+  const names={ilan:"ilan", fiyat_sorgusu:"fiyat sorgusu", kendi_evi:"kendi envanterinden ev", sirket:"şirket"};
+  const rows=cmp?.kurulan?Object.keys(names).map(key=>`<tr><td>${esc(names[key])}</td><td>${esc(cmp.beklenen?.[key] ?? "—")}</td><td>${esc(cmp.kurulan[key])}</td></tr>`).join(""):"";
+  const table=rows?`<table class="reference-table"><thead><tr><th></th><th>ÇEKİM KAYDI</th><th>KURULAN</th></tr></thead><tbody>${rows}</tbody></table><p class="muted">${cmp.ayni?"Sayılar çekim kaydıyla aynı.":"Sayılar çekim kaydıyla aynı değil; kaydetmeden önce raporu okuyun."}</p>`:"";
+  const raw=info.rapor?`<p class="muted">Ham kopyadaki ${esc(info.rapor.cevap)} cevabın ${esc(info.rapor.kullanilan)} tanesi kullanıldı; o gece cevabı alınamamış ${esc(info.rapor.eksik_istek)} istek yine başarısız sayıldı.</p>`:"";
+  return `<div class="job-recovery"><p><span class="tag warm">Kurtarma dosyası</span> ${esc(info.metin)}${info.kayit!=null?` (${esc(info.kayit)} kayıt)`:""}</p>${table}${raw}<button type="button" data-save-recovered="${esc(job.id)}">Kurtarılan sonucu kaydet</button></div>`;
+}
+
 export function panelHead(jobs) {
   const count=removableJobs(jobs).length;
   return `<div class="jobs-tools"><button type="button" class="quiet" data-hide-finished ${count?"":"disabled"} title="Tamamlanan, hata veren ve iptal edilen işleri panelden kaldırır. Kayıtları ve günlükleri silinmez.">Bitenleri kaldır${count?` (${count})`:""}</button></div>`;
@@ -58,7 +73,7 @@ export function jobCard(job, {resultLink=""}={}) {
   const buttons=running?`${handover}${skipButton(job)}<button class="quiet" data-cancel-job="${esc(job.id)}">İptal et</button>`
     :`<button class="quiet job-remove" data-hide-job="${esc(job.id)}" title="İşi panelden kaldırır; kaydı ve günlüğü silinmez.">Kaldır</button>`;
   return `<article class="job" data-job="${esc(job.id)}"><div class="job-meta"><span class="tag ${job.status==="done"?"green":"warm"}">${esc(STATUS_LABELS[job.status] || job.status)}</span>${job.awaiting_approval?'<span class="tag warm">Onay bekliyor</span>':""}<time>${esc(date(job.created_at))}</time></div>
-    <h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${bar}${spending}${waiting}${windows}${message}${workerBlock(job)}${buttons}
+    <h3>${esc(job.title)}</h3>${job.source_name?`<p>Kaynak: ${esc(job.source_name)}</p>`:""}${bar}${spending}${waiting}${windows}${message}${workerBlock(job)}${recoveryBlock(job)}${buttons}
     <details><summary>İş günlüğü (${job.log.length})</summary>${job.log.map(entry=>`<div class="log-line"><time>${esc(date(entry.at))}</time>${esc(entry.text)}</div>`).join("")}</details>${resultLink}</article>`;
 }
 

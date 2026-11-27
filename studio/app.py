@@ -667,11 +667,39 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
         selected(destination_id)
         from .workers import BOARDS
         out = db.jobs(destination_id)
+        queue = app.state.jobs
         for job in out:                 # HEDEF-01: the workers of a running rental price job
             board = BOARDS.get(job["id"]) if job.get("status") in ("queued", "running") else None
             if board:
                 job["isciler"] = board
+            if job.get("status") == "failed" and job.get("source_id"):      # HEDEF-02: a result kept after a failed storing step
+                try:
+                    info = queue.recovery_info(job)
+                except Exception:
+                    info = None
+                if info:
+                    job["kurtarma"] = info
         return out
+
+    # --- HEDEF-02: "Kurtarılan sonucu kaydet" and "Ham kopyadan yeniden kur" (studio/recovery.py) ---
+
+    @app.post("/api/jobs/{identifier}/kurtarma/kaydet", status_code=202)
+    def save_recovered(identifier: str, request: Request):
+        if not db.job(identifier):
+            raise HTTPException(404, "İş bulunamadı.")
+        try:
+            return request.app.state.jobs.submit_recovery_save(identifier)
+        except Conflict as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/jobs/{identifier}/kurtarma/kur", status_code=202)
+    def rebuild_from_raw(identifier: str, request: Request):
+        if not db.job(identifier):
+            raise HTTPException(404, "İş bulunamadı.")
+        try:
+            return request.app.state.jobs.submit_rebuild(identifier)
+        except Conflict as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.post("/api/jobs", status_code=202)
     def start_job(body: JobInput, request: Request):

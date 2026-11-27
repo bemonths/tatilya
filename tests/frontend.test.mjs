@@ -1796,3 +1796,27 @@ test('HEDEF-01 deneme çekimi: düğme, toplayıcı tablosu, şirketlerin işçi
   assert.match(html,/<td>2 \/ 2 \/ 2<\/td><td>doğrudan, proxy 1<\/td>/);assert.match(html,/doğrulama\/eklenti gerekti; atlandı.*Eklenti bağlı değil/s);
   assert.match(html,/Sitenin korunması ve işçi olayları/);assert.equal(companyTable([]),'');
 });
+
+import {recoveryBlock, jobCard as recoveryJobCard} from '../studio/web/jobs.js';
+import {storeCheckLine} from '../studio/web/trialrun.js';
+test('HEDEF-02: a failed job offers to rebuild from the raw copy, then to save the kept result, then says it was saved',()=>{
+  const base={id:'j1',status:'failed',title:'Kiralama · Verileri topla',progress:97,message:'kaydedilemedi',created_at:'2026-11-26T23:32:00+00:00',log:[]};
+  assert.equal(recoveryBlock(base),'');
+  const kur=recoveryJobCard({...base,kurtarma:{durum:'kur',metin:'Ham kopya duruyor.'}});
+  assert.match(kur,/data-rebuild-job="j1">Ham kopyadan yeniden kur/);
+  const kaydet=recoveryBlock({...base,kurtarma:{durum:'kaydet',metin:'Sonuç duruyor.',kayit:2384,
+    karsilastirma:{ayni:true,beklenen:{ilan:2384,fiyat_sorgusu:11408,kendi_evi:97,sirket:28},kurulan:{ilan:2384,fiyat_sorgusu:11408,kendi_evi:97,sirket:28}},
+    rapor:{cevap:17359,kullanilan:17354,eksik_istek:10}}});
+  assert.match(kaydet,/data-save-recovered="j1">Kurtarılan sonucu kaydet/);assert.match(kaydet,/\(2384 kayıt\)/);
+  assert.match(kaydet,/<td>fiyat sorgusu<\/td><td>11408<\/td><td>11408<\/td>/);assert.match(kaydet,/Sayılar çekim kaydıyla aynı\./);
+  assert.match(kaydet,/17359 cevabın 17354 tanesi kullanıldı/);
+  const differs=recoveryBlock({...base,kurtarma:{durum:'kaydet',metin:'x',karsilastirma:{ayni:false,beklenen:null,kurulan:{ilan:1,fiyat_sorgusu:2,kendi_evi:0,sirket:1}}}});
+  assert.match(differs,/aynı değil; kaydetmeden önce raporu okuyun/);assert.match(differs,/<td>ilan<\/td><td>—<\/td><td>1<\/td>/);
+  const done=recoveryBlock({...base,kurtarma:{durum:'kaydedildi',metin:'Kurtarılan sonuç yeni bir veri sürümü olarak kaydedildi.'}});
+  assert.match(done,/tag green">Kurtarıldı/);assert.doesNotMatch(done,/button/);
+});
+test('HEDEF-02: the trial names the storing check of the latest real run',()=>{
+  assert.equal(storeCheckLine(null),'');
+  assert.match(storeCheckLine({durum:'gecti',metin:'Kaydetme adımı 2384 kayıtla geçti',tarih:'2026-11-26T23:32:00+00:00'}),/tag green">Kaydetme adımı geçti<\/span> Kaydetme adımı 2384 kayıtla geçti · sınanan çekim:/);
+  assert.match(storeCheckLine({durum:'dustu',metin:'IntegrityError: CHECK'}),/tag warm">Kaydetme adımı düştü<\/span> IntegrityError/);
+});

@@ -249,7 +249,25 @@ class Database:
                 road_network["input"]=self.road_input(con,identifier)
             row=con.execute("SELECT airports,quarters FROM destination_airfare_sources WHERE destination_id=? AND enabled=1",(identifier,)).fetchone()
             airfare={"airports":json.loads(row["airports"]),"quarters":row["quarters"]} if row else None
-        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts,daily_needs,road_network,airfare)
+            neighborhoods={"previous":self.neighborhood_coordinates(con,identifier)} if "neighborhood_coordinates" in inputs else None
+        return ConnectorContext(destination,regions,anchors,stations,corridor,lodging,agency,restaurants,browser_hosts,daily_needs,road_network,airfare,
+                                neighborhoods=neighborhoods)
+
+    @staticmethod
+    def neighborhood_coordinates(con, destination_id):
+        """HEDEF-02 (the manager's decision of 27 November 2026): the latest successful neighbourhood run of the same source whose
+        records have coordinates: {run_id, date, by_name: {name: {latitude, longitude}}}; None without one."""
+        run=con.execute("""SELECT r.id, COALESCE(r.fetched_at, r.finished_at) AS at FROM source_runs r WHERE r.destination_id=?
+            AND r.connector_name='south-walton-neighborhoods' AND r.status='done'
+            AND EXISTS(SELECT 1 FROM neighborhood_records n WHERE n.run_id=r.id AND n.latitude IS NOT NULL AND n.longitude IS NOT NULL)
+            ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+        if not run:
+            return None
+        rows=con.execute("SELECT name,canonical_region_id,latitude,longitude FROM neighborhood_records WHERE run_id=? AND latitude IS NOT NULL AND longitude IS NOT NULL",
+                         (run["id"],)).fetchall()
+        return {"run_id":run["id"],"date":(run["at"] or "")[:10],
+                "by_name":{r["name"]:{"latitude":r["latitude"],"longitude":r["longitude"]} for r in rows},
+                "by_region":{r["canonical_region_id"]:{"latitude":r["latitude"],"longitude":r["longitude"],"name":r["name"]} for r in rows if r["canonical_region_id"]}}
 
     @staticmethod
     def road_input(con, destination_id):
@@ -280,11 +298,13 @@ class Database:
         return {"run_id":run["id"],"restaurants":rows}
 
     @staticmethod
-    def lodging_input(con, destination_id):
+    def lodging_input(con, destination_id, before=None):
         """Listings of the destination's latest successful Book>Direct run: id, title, company url, bedrooms, bathrooms, capacity,
-        street address, coordinates and the regions whose location filters showed it (any window). None when there is no such run."""
+        street address, coordinates and the regions whose location filters showed it (any window). None when there is no such run.
+        `before` (HEDEF-02, a replay): the latest run finished before that moment (the input the replayed run had)."""
         run=con.execute("""SELECT r.id, s.searched_on FROM source_runs r JOIN lodging_snapshots s ON s.run_id=r.id
-            WHERE r.destination_id=? AND r.status='done' ORDER BY r.rowid DESC LIMIT 1""",(destination_id,)).fetchone()
+            WHERE r.destination_id=? AND r.status='done' AND (? IS NULL OR r.finished_at<=?) ORDER BY r.rowid DESC LIMIT 1""",
+            (destination_id,before,before)).fetchone()
         if not run:
             return None
         regions={}

@@ -368,6 +368,33 @@ RealJoy (`realjoy`, `studio/sources/agency_adapters.py`) yalnız eklentiyle okun
   öbürleri tam. Sonuç tablosu (toplayıcı başına ve kiralama şirketi başına: okundu mu, hangi işçiden, hata) iş sonucuna ve
   `sonuc.json`'a yazılır; son 3 denemenin kopyası durur, eskilerinin yalnız `sonuc.json`'u kalır.
 
+## HEDEF-02: kaydetme hatası, kurtarma ve ham kopyadan yeniden kurma (27 Kasım 2026, v0.28.0; şema değişmedi)
+
+- **27 Kasım gecesi** kiralama çekimi 6 sa 11 dk çalıştı, bütün şirketleri okudu, kaydetme adımında düştü:
+  `CHECK constraint failed: rule_source IS NULL OR rule_source IN ('sayfa','yanıt')`. Kök neden: RealJoy okuyucusu (`calendar_answer`)
+  sayfanın takviminden verdiği cevaplarda (dolu hafta, giriş/çıkış günü kuralı, en az gece) `rule_source = "takvim"` yazıyordu. Takvim
+  (`#pdpStoredDates`, `min_night_…`) ilan sayfasının içindedir; değer artık `sayfa`. Şema değişmedi. Kaydetmeden önce
+  `agency_rates.checked_quote` her cevabı denetler: tanınmayan değer şirket, ilan ve haftayla birlikte söylenir; düzeltmeden önce
+  yazılmış bir kurtarma dosyasındaki `takvim` kaydetmede `sayfa`ya çevrilir.
+- **Deneme neden kaçırdı:** deneme kaydetme adımını zaten çalıştırıyordu, ama RealJoy'dan 1 ev × 1 hafta okudu ve o hafta takvimde açıktı;
+  takvim yoluna girilmedi. Artık deneme, kiralama adımında son gerçek kiralama çekimini ham kopyasından (sitelere gitmeden) yeniden kurar
+  ve kopyaya gerçek kaydetme adımıyla yazar ("kaydetme sınaması", sonuç tablosunun "Kiralama şirketleri" başlığı altında).
+- **Kurtarma dosyası** (`studio/recovery.py`): kaydetme düşerse toplanan sonuç `data/kurtarma/<iş>/sonuc.json` (kayıtlar, sayılar,
+  metadata, ilişkili satırlar; tarihler tarih olarak) ve `durum.json` (iş, kaynak, toplayıcı ve sürümü, ham kopya, hata, `kaydedildi`)
+  olarak yazılır. İşler panelinde işin kartında **"Kurtarılan sonucu kaydet"**: sonuç yeni bir iş ve sürüm olarak, aynı ham kopyayla,
+  yeniden çekmeden kaydedilir (`metadata.kurtarma`). Dosya silinmez; ikinci kez kaydedilmez.
+- **Ham kopyadan yeniden kurma** (`studio/sources/agency_replay.py`, İşler panelinde **"Ham kopyadan yeniden kur"**): kurtarma dosyası
+  olmayan, ham kopyası duran düşmüş bir kiralama çekimi aynı toplayıcı koduyla yeniden çalıştırılır; her istek ham kopyadaki cevapla
+  karşılanır (yöntem, adres, gönderilen alanlar ve yol — doğrudan/proxy, tarayıcı, eklenti — ile; her cevap bir kez). O gece cevabı
+  alınamamış istek yine bağlantı hatası sayılır; eklentinin izinli sorgu kuralı aynen uygulanır; bekleme yapılmaz; Book>Direct girdisi
+  çekimin başladığı andaki son Book>Direct çekimidir; pencereler çekimin günündendir. Sonuç kurtarma dosyasına yazılır ve sayılar çekimin
+  son günlük satırıyla ("N ilan, M fiyat sorgusu, kendi envanterinden K ev ve C şirket") karşılaştırılır; kaydetmek ayrı düğmedir.
+  HEDEF-02'den önce yönlendirmelerin hedefi saklanmıyordu: eski kopyalarda hedef, aynı şirketin aynı türden ve bir işçi aralığı (8 sn,
+  iki katı, dört katı) sonra gelen, kendi başına bir ilan bağlantısı olmayan ve başka bir yönlendirmenin hedefi olmayan isteğidir; birden
+  çoksa beklenen gecikmeye en yakın ve adresin son parçası en çok benzeyen. Artık hedef ham kopyaya yazılır (`location`).
+- **Bu gecenin sonucu:** 17.359 cevabın 17.354'ü kullanıldı; 2.384 ilan, 11.408 fiyat sorgusu, 97 ev, 28 şirket — günlük satırıyla aynı
+  (ayrıntı `docs/gorevler/HEDEF-02/RAPOR.md`).
+
 ## Aylık pencere kuralı, mevsim grupları ve aynı hafta karşılaştırması (GÖREV-10, şema 13)
 
 **Kural (bizim varsayımımız, kaynak gerçeği değil):** çekim ayından sonraki **12 ayın** her biri için ayın **15'ini içeren Cumartesi–Cumartesi haftası** (7 gece): hafta, 15'inden önceki ya da 15'i olan Cumartesi başlar, dolayısıyla her zaman ayın 9'u ile 22'si arasındadır. Başlangıcı çekim tarihine **21 günden yakın** olan pencere atlanır ve yerine 13. ay eklenir; her çekim aynı sayıda pencere sorar. Pencere anahtarı ayı adlandırır (`ay-2027-07`), etiket "Temmuz 2027 · 10–17 Temmuz". Kural destinasyon yapılandırmasındadır (`destination_lodging_sources.window_rule`, JSON: `kind, months, anchor_day, weekday, nights, min_lead_days`; 30A: `thirty_a.py` → `LODGING_WINDOW_RULE`); hesap `studio/sources/windows.py` içinde generic'tir. Book>Direct konaklama aramaları ve kiralama şirketi fiyatları aynı kuralı kullanır; her çekim kullandığı kuralı kaydına yazar (`metadata.window_rule`). Kural tanımlıyken eski sabit pencereler (`destination_lodging_windows`) kapalı kalır.

@@ -22,6 +22,15 @@ export function companyTable(rows) {
     </tbody></table></div>`;
 }
 
+/** HEDEF-02: the storing step at full size: the latest real rental price run rebuilt from its raw copy and stored on the copy. */
+export function storeCheckLine(check) {
+  if(!check) return "";
+  const tag=check.durum==="gecti"?"green":"warm";
+  const label={gecti:"Kaydetme adımı geçti", dustu:"Kaydetme adımı düştü", yok:"Sınanamadı"}[check.durum] || check.durum;
+  const when=check.tarih?` · sınanan çekim: ${esc(date(check.tarih))}`:"";
+  return `<p class="trial-store-check"><span class="tag ${tag}">${esc(label)}</span> ${esc(check.metin || "")}${when}</p>`;
+}
+
 /** The trial section: what it does, the button, the running job's line and the last result table. */
 export function trialSection(view, {message=""}={}) {
   const last=view?.son, running=view?.calisan;
@@ -32,10 +41,10 @@ export function trialSection(view, {message=""}={}) {
   const events=(agency?.olaylar||[]).map(e=>`<li>${esc(e.metin)}</li>`).join("");
   const table=last?`<h3>Son deneme çekimi</h3><p class="muted">${esc(date(last.baslangic))} – ${esc(date(last.bitis))} · kopya: data/${esc(last.klasor)}</p>
     <div class="table-scroll"><table class="reference-table trial-table"><thead><tr><th>TOPLAYICI</th><th>SONUÇ</th><th>KAYIT</th><th>SÜRE</th><th>NOT</th></tr></thead><tbody>${rows}</tbody></table></div>
-    ${agency?`<h3>Kiralama şirketleri</h3>${companyTable(agency.sirketler)}`:""}${events?`<details><summary>Sitenin korunması ve işçi olayları</summary><ul>${events}</ul></details>`:""}`
+    ${agency?`<h3>Kiralama şirketleri</h3>${storeCheckLine(agency.kaydetme_sinamasi)}${companyTable(agency.sirketler)}`:""}${events?`<details><summary>Sitenin korunması ve işçi olayları</summary><ul>${events}</ul></details>`:""}`
     :'<p class="muted">Henüz deneme çekimi yapılmadı.</p>';
   return `<section class="info-card trial-run" id="deneme-cekimi"><span class="eyebrow">DENEME ÇEKİMİ</span><h2 style="margin-top:12px">Deneme çekimi</h2>
-    <p>Bütün toplayıcıları gerçek sitelerde, işçilerle ve küçük ölçekte bir kez çalıştırır: her kiralama şirketinden ${esc(limits.listings ?? 2)} ilan ve tek hafta, Book>Direct'ten tek hafta ve ${esc(limits.calendars ?? 5)} fiyat takvimi, ${esc(limits.restaurants ?? 3)} restoranın sitesi; öbür toplayıcılar zaten küçüktür, tamamı çalışır. Çekim programın aldığı veritabanı kopyasında yapılır; sonuç gerçek veriye karışmaz. Uzun çekimden önce her parçanın çalıştığını gösterir.</p>
+    <p>Bütün toplayıcıları gerçek sitelerde, işçilerle ve küçük ölçekte bir kez çalıştırır: her kiralama şirketinden ${esc(limits.listings ?? 2)} ilan ve tek hafta, Book>Direct'ten tek hafta ve ${esc(limits.calendars ?? 5)} fiyat takvimi, ${esc(limits.restaurants ?? 3)} restoranın sitesi; öbür toplayıcılar zaten küçüktür, tamamı çalışır. Çekim programın aldığı veritabanı kopyasında yapılır; sonuç gerçek veriye karışmaz. Kiralama fiyatlarında ayrıca son gerçek çekim ham kopyasından (sitelere gitmeden) yeniden kurulur ve kopyaya gerçek kaydetme adımıyla yazılır; böylece kaydetme tam ölçekte sınanır. Uzun çekimden önce her parçanın çalıştığını gösterir.</p>
     <div class="decision-actions"><button type="button" class="primary" id="trial-run-start"${running?" disabled":""}>Deneme çekimini başlat</button>
     ${running?`<small class="muted">Sürüyor: ${esc(running.message || "")} (İşler panelinde)</small>`:'<small class="muted">Chrome ve eklenti açık olmalı; doğrulama çıkarsa en sonda 15 dakika beklenir.</small>'}</div>
     ${message?`<p class="stage-note" role="status">${esc(message)}</p>`:""}

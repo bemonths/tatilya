@@ -283,7 +283,7 @@ def test_the_quote_posts_the_pages_form_and_no_is_not_available_and_a_taken_week
     no = REALJOY.quote(session, info, APR)
     assert (no["status"], no["available"]) == ("unavailable", 0) and '"No"' in no["message"]
     taken = REALJOY.quote(session, info, JUN)                                          # 06/05-06/12/2027: the calendar shows it taken
-    assert (taken["status"], taken["available"], taken["rule_source"]) == ("unavailable", 0, "takvim") and len(session.asked) == 2
+    assert (taken["status"], taken["available"], taken["rule_source"]) == ("unavailable", 0, "sayfa") and len(session.asked) == 2   # HEDEF-02
     short = REALJOY.quote(session, info, {**JAN, "checkout_date": date(2027, 1, 11), "nights": 2})
     assert short["status"] == "restricted" and short["min_stay"] == 3 and len(session.asked) == 2
     with pytest.raises(AdapterError, match="beklenen biçimde değil"):
@@ -410,7 +410,7 @@ def test_realjoy_is_read_only_through_the_extension_from_its_list_page(tmp_path,
     assert rows[2]["page_status"] == "not_found" and "aday yok" in rows[2]["match_note"]          # the similar name is not tied
     quotes = {q["window_key"]: q for q in result.related["quotes"]}
     assert quotes["jan"]["status"] == "priced" and quotes["jan"]["total"] == 8759.05 and quotes["jan"]["adults"] is None
-    assert quotes["apr"]["status"] == "unavailable" and quotes["jun"]["rule_source"] == "takvim"
+    assert quotes["apr"]["status"] == "unavailable" and quotes["jun"]["rule_source"] == "sayfa"
     posts = [(url, fields) for method, url, fields in side.sent if method == "POST"]
     assert [u.rsplit("/", 1)[1] for u, _ in posts] == ["scroll", "quote", "quote"]                # June was not asked
     assert all(allowed_by_configuration(httpx.URL(u).path, f) is None for u, f in posts)
