@@ -480,33 +480,35 @@ class TextService(TextViews):
                 workflow.writing_done(self.db, run["video_id"], run_id)
             except Exception:
                 pass
+        # In every ending the job is ended before the run (HEDEF-04 A): whoever sees the run stopped (the screen, a test, "Devam")
+        # also sees its job ended, so a new job of the same kind is not refused with 409 while the old one is a moment from its end.
         except Stopped:
             closing = self.closing
             text = ("Program kapanırken yarıda kaldı; “Kaldığı yerden sürdür” kalan halkaları çalıştırır." if closing else
                     "İptal edildi; biten halkalar saklandı. “Kaldığı yerden sürdür” kalan halkaları çalıştırır.")
-            store.update_run(self.db, run_id, status="interrupted" if closing else "paused", reason="program_kapandi" if closing else "durduruldu",
-                             reason_text=text, wait_until=None)
             self.db.update_job(job_id, status="canceled", message=text,
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
+            store.update_run(self.db, run_id, status="interrupted" if closing else "paused", reason="program_kapandi" if closing else "durduruldu",
+                             reason_text=text, wait_until=None)
             self.mark(run["video_id"], phase, "error", error=text, ref=run_id)
         except Paused as exc:
-            store.update_run(self.db, run_id, status="paused", reason=exc.code, reason_text=exc.text, wait_until=None)
             self.db.update_job(job_id, status="failed" if exc.code != "plan_hazir" else "done", message=exc.text,
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
+            store.update_run(self.db, run_id, status="paused", reason=exc.code, reason_text=exc.text, wait_until=None)
             if exc.code == "plan_hazir":
                 self.mark(run["video_id"], "plan", "awaiting_approval", ref=run_id)
             else:
                 self.mark(run["video_id"], phase, "error", error=exc.text, ref=run_id)
         except Failed as exc:
-            store.update_run(self.db, run_id, status="error", reason=exc.code, reason_text=exc.text, wait_until=None)
             self.db.update_job(job_id, status="failed", message=exc.text,
                                result={"metin_calismasi": run_id, "video": run["video_id"], "harcama": self.close_spending(ctx)} if ctx else None)
+            store.update_run(self.db, run_id, status="error", reason=exc.code, reason_text=exc.text, wait_until=None)
             self.mark(run["video_id"], phase, "error", error=exc.text, ref=run_id)
         except Exception as exc:  # anything unexpected: the run pauses ("Devam" tries again), nothing is left running
             text = f"Beklenmedik hata: {exc}. Biten halkalar saklandı; “Kaldığı yerden sürdür” kalanları yeniden dener."
+            self.db.update_job(job_id, status="failed", message=text)
             store.update_run(self.db, run_id, status="paused", reason="beklenmedik", reason_text=text, wait_until=None,
                              state={**((ctx.state if ctx else run.get("state")) or {}), "son_hata": traceback.format_exc()[-4000:]})
-            self.db.update_job(job_id, status="failed", message=text)
             self.mark(run["video_id"], phase, "error", error=text, ref=run_id)
         finally:
             store.close_running(self.db, run_id, "canceled" if (ctx and ctx.stop.is_set()) or self.closing else "failed",
