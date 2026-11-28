@@ -328,9 +328,9 @@ def active_steps(db):
 
 def recover(db, video_id=None):
     """A step that looks running while none of its work runs becomes error (the program closed half way)."""
-    active = active_steps(db)
     with db.connect() as con:
         con.execute("BEGIN IMMEDIATE")
+        active = active_steps(db)      # read under the write lock: a run started just before it would look like a step with no work
         rows = con.execute("SELECT video_id, step FROM video_steps WHERE status='running' AND (? IS NULL OR video_id=?)",
                            (video_id, video_id)).fetchall()
         for row in rows:

@@ -556,8 +556,8 @@ class ClaudeService:
             return
         problems = step.check(ctx, data)
         (folder / step.markdown).write_text(step.render(ctx, data, problems), encoding="utf-8")
-        store.update_run(self.db, run_id, status="awaiting_approval", problems=problems)
-        self.video_step(ctx.params, "ready", finished=True, ref=run_id)
+        self.video_step(ctx.params, "ready", finished=True, ref=run_id)    # before the run stops 'running': a screen read in between
+        store.update_run(self.db, run_id, status="awaiting_approval", problems=problems)   # would see a running step with no work
         write_json(folder / RUN_RECORD, {**base, "durum": "awaiting_approval", "sorunlar": problems,
                                          "paketler": {name: record["id"] for name, record in ctx.packs.items()}})
         errors_count = sum(p["seviye"] == title.ERROR for p in problems)

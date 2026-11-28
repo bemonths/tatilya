@@ -72,3 +72,54 @@ def test_a_package_that_fails_the_check_cannot_be_approved(app, monkeypatch):
 def test_the_step_has_its_model_and_effort_in_settings():
     assert ("yayin", "Yayın paketi") in claude_settings.CLAUDE_STEPS
     assert claude_settings.STEP_PLACES["yayin"] == ("Yayın paketi", "6 · Yayın paketi") and "yayin" in claude_settings.STEP_DEFAULTS
+
+
+def test_a_screen_read_while_the_run_finishes_does_not_mark_the_step_interrupted(app, monkeypatch):
+    """P7: the step left 'running' after its run stopped 'running'; a sidebar read (workflow.recover) in that gap made it error."""
+    from studio import workflow
+    from studio.ai import service
+    seen, original = [], service.store.update_run
+
+    def update_run(db, run_id, **fields):
+        original(db, run_id, **fields)
+        if fields.get("status") == "awaiting_approval":
+            workflow.recover(db, "v1")                    # the screen reads the steps right then
+            with db.connect() as con:
+                seen.append(con.execute("SELECT status FROM video_steps WHERE video_id='v1' AND step='yayin'").fetchone()[0])
+
+    monkeypatch.setattr(service.store, "update_run", update_run)
+    approve_check(app)
+    assert app.post("/api/videos/v1/yayin").status_code == 201
+    settle(app, "v1", "yayin", {"awaiting_approval", "error"})
+    assert seen == ["awaiting_approval"] and statuses(app)["yayin"] == "awaiting_approval"
+
+
+def test_a_run_started_while_the_steps_are_read_is_not_marked_interrupted(app, monkeypatch):
+    """P7: workflow.recover read the running work before its write lock; a run started in between (its step set running) became error."""
+    import threading
+    from studio import workflow
+    from studio.ai import service, store
+    approve_check(app)
+    db = app.app.state.claude.db
+    destination = store.video(db, "v1")["destination_id"]
+    original, starts = workflow.active_steps, []
+
+    def start_now():                                       # what ClaudeService.start writes: a running run, then the step running
+        job = db.add_job(kind=service.JOB_KIND, title="Claude · Yayın paketi", destination_id=destination)
+        with db.connect() as con:
+            store.insert_run(con, run_id="r-p7", destination_id=destination, step="yayin", scope_id="r-p7", job_id=job,
+                             params={"video_id": "v1", "video_adimi": "yayin"}, folder="claude/r-p7", correction_of=None)
+        workflow.set_step(db, "v1", "yayin", "running", ref="r-p7")
+
+    def active_steps(given):
+        found = original(given)
+        if not starts:
+            starts.append(threading.Thread(target=start_now))
+            starts[0].start()
+            starts[0].join(timeout=1)                      # done at once unless recover already holds the write lock
+        return found
+
+    monkeypatch.setattr(workflow, "active_steps", active_steps)
+    workflow.recover(db, "v1")
+    starts[0].join()
+    assert statuses(app)["yayin"] == "running"
