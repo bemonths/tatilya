@@ -336,7 +336,8 @@ export class BankScreen {
   async decide(main, kind, confirmed=false) {
     const note=main.querySelector("#decision-note")?.value || "";
     const id=this.view.id;
-    if(kind==="correct" && !confirmed && note.trim()) {
+    if(kind==="correct" && !confirmed && !note.trim()) {this.message="“Düzeltme iste” için önce nota neyin değişmesini istediğinizi yazın.";return this.draw(main);}
+    if(kind==="correct" && !confirmed) {
       return this.confirm(main,()=>api(`claude/runs/${encodeURIComponent(id)}/correct/tahmin`,{method:"POST",body:JSON.stringify({not:note})}),
         ()=>{this.correctNote=note;return this.decide(main,"correct",true);},"run");
     }

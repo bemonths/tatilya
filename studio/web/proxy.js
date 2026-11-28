@@ -155,6 +155,7 @@ export class ProxyReading extends ProxyBase {
   }
   async add() {
     const host=this.container.querySelector("#region-host").value;
+    if(!host.trim()) {this.message="Bir alan adı yazın (ör. cvs.com).";return this.draw();}
     await this.call("abd-proxy/bolge-engelli",{method:"POST",body:JSON.stringify({alan_adi:host})},"Alan adı listeye eklendi.");
   }
   async remove(host) {
