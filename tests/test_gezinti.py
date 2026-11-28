@@ -129,6 +129,36 @@ def watch(page, base, errors):
     page.on("response", response)
     page.on("requestfailed", lambda r: r.url.startswith(base) and not quiet(r.url)
             and errors.append(f"istek düştü: {r.method} {r.url[len(base):]} ({r.failure})"))
+    track_in_flight(page, base, errors)
+
+
+IN_FLIGHT = {}          # page -> (the program's requests still under way, the error list)
+DRAIN_LIMIT_MS = 10000
+
+
+def track_in_flight(page, base, errors):
+    """Count the program's requests that are under way (not the heartbeat or the event stream, which never end),
+    so that the walk leaves a screen only after they are answered: a request cut off by leaving is the test's doing."""
+    pending = set()
+    IN_FLIGHT[page] = (pending, errors)
+    page.on("request", lambda r: r.url.startswith(base) and not quiet(r.url) and pending.add(r))
+    page.on("requestfinished", lambda r: pending.discard(r))
+    page.on("requestfailed", lambda r: pending.discard(r))
+
+
+def drain(page, limit_ms=DRAIN_LIMIT_MS):
+    """Wait until the requests under way are answered; past the limit the ones still waiting are a test error."""
+    pending, errors = IN_FLIGHT.get(page, (None, None))
+    if pending is None:
+        return
+    waited = 0
+    while pending and waited < limit_ms:
+        page.wait_for_timeout(50)
+        waited += 50
+    if pending:
+        errors.append(f"{limit_ms // 1000} sn içinde bitmeyen istekler: "
+                      + ", ".join(sorted(f"{r.method} {r.url}" for r in pending)))
+        pending.clear()
 
 
 HASHES_JS = """() => [...document.querySelectorAll('#navigation a[href^="#"], .nav-footer a[href^="#"], #main a[href^="#"]')]
@@ -141,7 +171,9 @@ CLOSE_JOBS_JS = "() => document.querySelector('#jobs-toggle[aria-expanded=true]'
 
 
 def settle(page, ms=200):
+    """Let the screen react, then wait for the requests it started: every leave, reload and click comes after this."""
     page.wait_for_timeout(ms)
+    drain(page)
 
 
 def walk(page, base, start, visited, report, errors):
@@ -272,7 +304,7 @@ def test_the_new_steps_main_buttons_are_pressed_in_the_interface(program, monkey
             page.locator("#step-estimate button:has-text('başlat')").first.click(timeout=10000)
             pressed.append("6 · tahmin → başlat")
             settle_step(api, "v1", "yayin", {"awaiting_approval", "error"}, limit=90)
-            assert statuses(api)["yayin"] == "awaiting_approval", step(api, "yayin")["adim"]
+            assert statuses(api)["yayin"] == "awaiting_approval", str(step(api, "yayin")["adim"])    # whole, not cut short
             try:
                 page.wait_for_selector("[data-decision=onayla]:enabled", timeout=20000)
             except Exception:
