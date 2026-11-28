@@ -17,6 +17,7 @@ export const SECTIONS=Object.freeze([
   {slug:"kullanim", title:"Claude kullanımı", icon:"◔", main:".usage-settings-text"},
   {slug:"eklenti", title:"Tarayıcı eklentisi", icon:"▣", main:"#extension-renew"},
   {slug:"proxy", title:"ABD proxy'si", icon:"⇄", main:"#proxy-form button[type=submit]"},
+  {slug:"kurgu", title:"Kurgu Motoru", icon:"▶", main:"#kurgu-settings button[type=submit]"},
   {slug:"hakkinda", title:"Hakkında", icon:"ⓘ", main:".about-version"},
 ].map(Object.freeze));
 
@@ -99,6 +100,16 @@ export function spendingTable(rows) {
     <p class="muted form-note">Bir başlık çalışması bir satırdır (geçersiz cevapta ikinci çağrısıyla birlikte); video metninde her oturum bir satırdır. Sayılar token'dır: okunan (önbellekten okunan dahil) ve yazılan (düşünme dahil) toplamı.</p>`;
 }
 
+/** HEDEF-04 A-8: Ayarlar → Kurgu Motoru — the motor copy's folder (the same setting 7 · Seslendirme uses), pnpm and the motor's channel. */
+export function kurguSettingsCard(view) {
+  const cfg=(view || {}).settings || {}, def=(view || {}).varsayilan || {};
+  const field=(k,t)=>`<label>${esc(t)} <input name="${k}" value="${esc(cfg[k] || "")}" placeholder="${esc(def[k] || "")}"></label>`;
+  return `<div class="info-card"><span class="eyebrow">KURGU MOTORU</span><h2 style="margin-top:12px">Kurgu Motoru bağlantısı</h2>
+    <p>8 · Kurgu paketi'ndeki “Kurguya gönder” paketi bu klasördeki Kurgu Motoru'na verir. Kartların görünüşü ve sesleri motorun kanal profilinden gelir; 30A Studio kart ya da geçiş sesi eklemez.</p>
+    <form id="kurgu-settings">${field("kurgu_motoru_path","Kurgu Motoru klasörü")}${field("pnpm_path","pnpm yolu")}${field("kurgu_kanali","Motordaki kanal kimliği")}
+    <button type="submit" class="primary">Kaydet</button></form></div>`;
+}
+
 export function usageCard(view) {
   if(!view) return '<div class="info-card"><span class="eyebrow">CLAUDE KULLANIMI</span><h2 style="margin-top:12px">Kullanım paneli</h2><p class="muted usage-settings-text">Yükleniyor…</p></div>';
   const effort=view.refresh.effort==="low"?"düşük":esc(view.refresh.effort);
@@ -114,6 +125,7 @@ export function settingsFrame(dataPath, version, current=null) {
     ${sectionCard("kullanim",`<div class="settings-slot" id="usage-settings-slot">${usageCard(null)}</div>`)}
     ${slot("eklenti","extension-slot","Tarayıcı eklentisi yükleniyor…")}
     ${slot("proxy","proxy-slot","ABD proxy'si yükleniyor…")}
+    ${slot("kurgu","kurgu-settings-slot","Kurgu Motoru ayarları yükleniyor…")}
     ${sectionCard("hakkinda",aboutCard(version))}</div>`;
 }
 

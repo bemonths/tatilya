@@ -12,7 +12,7 @@ bank, the channel's rules and the list of videos. The video layer holds one vide
 | 5 | kontrol | Kontrol ve ton seçimi | evet |
 | 6 | yayin | Yayın paketi | evet (HEDEF-04 A-6) |
 | 7 | ses | Seslendirme | hayır (HEDEF-04 A-7) |
-| 8 | kurgu | Kurgu paketi | henüz yok |
+| 8 | kurgu | Kurgu paketi | hayır (HEDEF-04 A-8) |
 
 Statuses (`video_steps.status`): waiting (bekliyor), ready (hazır), running (çalışıyor), awaiting_approval (onay bekliyor), approved
 (onaylandı), done (tamamlandı), error (hata), stale (eskidi). Rules:
@@ -25,7 +25,8 @@ Statuses (`video_steps.status`): waiting (bekliyor), ready (hazır), running (ç
 - A step that looks running while no work of it runs (the program closed half way) becomes error and can be resumed.
 Every change and every decision is a dated Turkish sentence in `video_step_log`.
 
-Step 8 is not built yet: it stays waiting and their screens say "Sonraki görevde gelecek".
+Every step is built (HEDEF-04 A-8). 8 · Kurgu paketi waits only for 6 · Yayın paketi (the package is built without audio too): it is
+ready when 6 is approved, whatever 7 · Seslendirme's stage; "Kurguya gönder" makes it done.
 """
 import json
 from datetime import datetime, timezone
@@ -50,10 +51,7 @@ KEYS = tuple(key for key, _ in STEPS)
 TITLES = dict(STEPS)
 APPROVAL = frozenset({"baslik", "plan", "kontrol", "yayin"})
 PLANNED_NOTE = "Sonraki görevde gelecek"
-PLANNED = {
-    "kurgu": "Kurgu paketi: Kurgu Motoru'na gidecek paket (metin, cümle kimlikleri, ses ve veri kayıtları). Stok görüntü, animasyon ve "
-             "kurgu bu programda değil, Kurgu Motoru'nda yapılır.",
-}
+PLANNED = {}                     # steps not built yet (none since HEDEF-04 A-8)
 WITH_OUTPUT = frozenset({"awaiting_approval", "approved", "done"})
 COMPLETE = frozenset({"approved", "done"})
 INTERRUPTED = "Program kapanırken yarıda kaldı; kaldığı yerden sürdürebilirsiniz."
@@ -166,6 +164,11 @@ def ensure(con, video_id):
         _update(con, video_id, "ses", status="ready")
         _log(con, video_id, "ses", f"{label('ses')}: bekliyor → hazır (adım kuruldu; yayın paketi onaylı).")
         rows = _rows(con, video_id)
+    if rows["yayin"]["status"] in COMPLETE and rows["kurgu"]["status"] == "waiting":
+        # HEDEF-04 A-8: 8 · Kurgu paketi needs only the approved publish package (it is built without audio too)
+        _update(con, video_id, "kurgu", status="ready")
+        _log(con, video_id, "kurgu", f"{label('kurgu')}: bekliyor → hazır (yayın paketi onaylı).")
+        rows = _rows(con, video_id)
     return rows
 
 
@@ -203,7 +206,15 @@ def _apply_set(con, video_id, step, status, values):
     if old_label != shown_new:
         _log(con, video_id, step, f"{label(step)}: {old_label} → {shown_new}.")
     index = KEYS.index(step)
-    if index + 1 < len(KEYS) and KEYS[index + 1] not in PLANNED:
+    if step == "yayin":                 # 8 · Kurgu paketi follows 6 (not 7): it is built without audio too
+        current = _rows(con, video_id)["kurgu"]["status"]
+        if status in COMPLETE and current == "waiting":
+            _update(con, video_id, "kurgu", status="ready")
+            _log(con, video_id, "kurgu", f"{label('kurgu')}: bekliyor → hazır.")
+        elif status not in COMPLETE and current == "ready":
+            _update(con, video_id, "kurgu", status="waiting")
+            _log(con, video_id, "kurgu", f"{label('kurgu')}: hazır → bekliyor.")
+    if index + 1 < len(KEYS) and KEYS[index + 1] not in PLANNED and step != "ses":
         following = KEYS[index + 1]
         current = rows[following]["status"]
         if status in COMPLETE and current == "waiting":
@@ -409,8 +420,12 @@ NEXT = {
     ("ses", "ready"): "Seslendirme metni ekran açılınca hazırlanır.",
     ("ses", "awaiting_audio"): "Metin dosyaları hazır. Sesi bu dosyalarla üretip “Sesi yükle” ile yükle (mp3 ya da wav; tek dosya ya da _01, _02… parçalar).",
     ("ses", "audio_ready"): "Ses yüklendi. “Sesi cümlelerle eşleştir” düğmesine bas.",
-    ("ses", "done"): "Ses cümlelerle eşleşti. Sonraki adım: 8 · Kurgu paketi (sonraki görevde gelecek).",
+    ("ses", "done"): "Ses cümlelerle eşleşti. Sonraki adım: 8 · Kurgu paketi (paketi yeniden kurun; zamanlar pakete girer).",
     ("ses", "error"): "Seslendirme hata verdi; sebebi aşağıda. “Metni yeniden hazırla” ile yeniden dene.",
+    ("kurgu", "waiting"): "Önce 6 · Yayın paketi onaylanmalı; kurgu paketi onaylı metinden kurulur.",
+    ("kurgu", "ready"): "Paket ekran açılınca kurulur (ses yoksa zamanlar boş). Uygunsa “Kurguya gönder” düğmesine bas.",
+    ("kurgu", "done"): "Paket Kurgu Motoru'na gönderildi; kurgu motorda yapılır. Ses ya da metin değişirse “Paketi yeniden kur” ve yeniden gönder.",
+    ("kurgu", "error"): "Kurguya gönderim hata verdi; motorun çıktısı aşağıda. Düzeltip “Kurguya gönder” ile yeniden dene.",
 }
 STALE_NEXT = "Bu adım eskidi. Yeniden çalıştır ya da değişiklik bu adımı etkilemiyorsa “Bu değişiklik etkilemiyor” de."
 

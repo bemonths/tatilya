@@ -167,6 +167,17 @@ def motor_command(cfg):
     return [str(python), str(worker)]
 
 
+def motor_cache_env(motor):
+    """The model caches the motor itself uses (`config/tools.json` → `cacheRoots.hf` / `.torch`, as its own `toolEnv`): the downloaded
+    models are found there and nothing is downloaded (or symlinked, which Windows refuses without the privilege) again (HEDEF-04 A-8)."""
+    try:
+        roots = (json.loads((Path(motor) / "config" / "tools.json").read_text(encoding="utf-8")) or {}).get("cacheRoots") or {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+    names = {"hf": "HF_HOME", "torch": "TORCH_HOME"}
+    return {names[k]: str(Path(v)) for k, v in roots.items() if k in names and isinstance(v, str) and v}
+
+
 def transcribe_part(command, audio, work_dir, cfg):
     """The recognized words of one audio file: converted to 16 kHz mono wav (the worker's input), then `transcribe`."""
     probe = Path(ffprobe_of(cfg))
@@ -182,7 +193,9 @@ def transcribe_part(command, audio, work_dir, cfg):
     if converted.returncode != 0:
         raise Conflict(f"Ses wav'a çevrilemedi: {converted.stderr.strip()[:300]}")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+    env.update(motor_cache_env(Path(command[1]).parents[1]))
     env.setdefault("HF_HOME", str(Path(command[1]).parents[1] / "cache" / "models"))
+    env.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
     done = subprocess.run(command, input=json.dumps({"command": "transcribe", "audio": str(wav), "language": "en", "model": "large-v3"}),
                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=7200, cwd=str(Path(command[1]).parents[1]),
                           env=env, creationflags=hidden)

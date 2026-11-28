@@ -25,7 +25,7 @@ import {TrialRunSection} from "./trialrun.js";
 import {VeriCekiciSection} from "./vericekici.js";
 import {ToneSettings} from "./tones.js";
 import {jobsPanel, active} from "./jobs.js";
-import {sectionOfHash, isSettingsHash, sectionId, settingsFrame, usageCard, SETTINGS_INTRO, channelFrame, channelSectionOfHash, CHANNEL_INTRO} from "./settings.js";
+import {sectionOfHash, isSettingsHash, sectionId, settingsFrame, usageCard, kurguSettingsCard, SETTINGS_INTRO, channelFrame, channelSectionOfHash, CHANNEL_INTRO} from "./settings.js";
 
 const $ = selector => document.querySelector(selector);
 const state = {data:null, page:"sources", route:null, selected:null, search:"", category:"", region:"", archived:false, editing:null, workflow:null, videoId:"", projectOpen:false, hiddenJobs:[], showHidden:false};
@@ -295,6 +295,17 @@ function renderSettings() {
     new ProxySettings($("#proxy-slot")).load(),
     renderClaudeSettings($("#claude-settings-slot")),
     api("claude/usage").then(view=>{const slot=$("#usage-settings-slot");if(slot) slot.innerHTML=usageCard(view);}).catch(()=>{}),
+    api("settings/kurgu").then(view=>{
+      const slot=$("#kurgu-settings-slot");if(!slot) return;
+      const draw=(shown,note)=>{
+        slot.innerHTML=kurguSettingsCard(shown)+(note || "");
+        slot.querySelector("#kurgu-settings")?.addEventListener("submit",event=>{event.preventDefault();
+          api("settings/kurgu",{method:"PUT",body:JSON.stringify(Object.fromEntries(new FormData(event.target)))})
+            .then(saved=>draw(saved,'<p class="muted">Kurgu Motoru ayarları kaydedildi.</p>'))
+            .catch(error=>draw(shown,`<p class="error">${esc(error.message)}</p>`));});
+      };
+      draw(view);
+    }).catch(()=>{}),
   ];
   goToSettingsSection(sectionOfHash(location.hash),{smooth:false});
   // the sections above the wanted one grow as they load: go to it again when they are all there

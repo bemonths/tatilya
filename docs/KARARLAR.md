@@ -20,3 +20,22 @@ Tarihli teknik kararlar; en yenisi en altta.
 Ses programın dışında üretilir: program onaylı metni sese uygun düz İngilizce parçalara yazar (≤ 4.500 karakter, cümle bölünmez),
 kullanıcı sesi mp3/wav olarak yükler (tek dosya ya da numaralı parçalar), eşleştirme Kurgu Motoru'nun kendi hizalama işçisiyle yapılır
 (yolu ayarda; motor yoksa açık hata). Adımda onay yok; eşleşince tamamlanır. Ses ve metin dosyaları videonun klasöründe kalır, silinmez.
+## 28.11.2026 — HEDEF-04 A-8: 8 · Kurgu paketi deterministik, 6'ya bağlı, kurguyu motor yapar
+
+- Paket (`kurgu-paket/1`) Claude çağrısı olmadan onaylı metinden, onaylı metnin kanıt paketinden ve 7 · Seslendirme'nin sonucundan kurulur.
+  Cümle kimliği `c<cümle no>` (yeniden kurulunca aynı kalır); kanıt satırı = veri kaydı (`id` K-kimliği, `kind` blok); kaynaklı rakam
+  `value` + `ref` (`K….deger` / çeyrekler); yer adları destinasyonun bölge adları ve kaynakların kapsamı.
+- 8 · Kurgu paketi 7'yi beklemez: 6 · Yayın paketi onaylanınca hazırdır. Ses yoksa paket sessiz kurulur, zamanlar boş kalır; ses eşleşip
+  bütün cümleler zaman alınca `audio/zamanlar.json` girer ve motor yeniden hizalamaz; bir kısmı eşleşmediyse yalnız ses dosyası girer
+  (motor kendi hizalar). Birden çok ses parçası ffmpeg ile tek wav'a birleştirilir.
+- `scenes.json` yalnız kart önerisidir (ilk kaynaklı rakam → `rakam-karti`, ilk yer adı → `alt-bant`, açılış → `baslik-karti`); süreler
+  yalnız zamanlar varken verilir. Hiçbir yerde ses efekti istenmez; kart/geçiş sesleri motorun kanal profilindedir (kopyada `_ornek`
+  sessizleştirildi; 30A kanal profili motor deposunun işi).
+- Motorun klasörü, pnpm ve motordaki kanal kimliği program ayarıdır: Ayarlar → Kurgu Motoru (motor klasörü 7'nin ayarıyla aynı değer).
+- "Kurguya gönder" paketi `<motor>/cache/30a-paketler/<video>-NNN/`'ye kopyalar, `pnpm -s kurgu paket dogrula` geçerse `paket ice-al`
+  (ikinci kez `--guncelle projects/<proje>`) çalıştırır; proje kimliği çıktıdaki "Proje: … →" satırından okunur. Render motorda yapılır.
+- Zamanlar varken kartlar sesi 0'dan sonuna kadar kaplar (motor görüntüsüz kareyi render'da durdurur): kartı olmayan bir cümlede önceki kart
+  12 sn'yi aşacaksa bölüm adıyla ara başlık kartı girer; kart en az 3 sn, en çok 12 sn (motorun kart sınırları); uzun bir cümlede kart yalnız
+  o cümlenin içinde sürer. V1'e stok görüntü motorda konunca bu kartlar yalnız katman olur.
+- 7 · Seslendirme'nin hizalama işçisi motorun kendi model önbelleğini (`config/tools.json` → `cacheRoots.hf/torch`) kullanır; yoksa modeli
+  motor klasörüne yeniden indirmeye çalışıyor ve Windows sembolik bağ izni yüzünden düşüyordu (HEDEF-04 A-8 denemesinde bulundu).

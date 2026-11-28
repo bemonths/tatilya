@@ -18,7 +18,7 @@ decisions' snapshots under `videolar/<video>/<step>/`).
 import json
 from pathlib import Path
 
-from . import voice as voice_mod, workflow
+from . import kurgu as kurgu_mod, voice as voice_mod, workflow
 from .ai import publish, store as ai_store, tones as T
 from .database import Conflict
 from .destinations import PROFILES
@@ -37,6 +37,7 @@ class VideoFlow:
     def __init__(self, db, data_dir, claude, text):
         self.db, self.data_dir, self.claude, self.text = db, Path(data_dir), claude, text
         self.voice = voice_mod.VoiceStep(self)
+        self.kurgu = kurgu_mod.KurguStep(self)
 
     # ------------------------------------------------------------------------------------------------------------- the project's videos
 
@@ -136,7 +137,7 @@ class VideoFlow:
         video = self.video(video_id)
         if step == "yayin":
             return self.publish_versions(video_id)
-        if step in ("baslik", "kontrol", "ses"):
+        if step in ("baslik", "kontrol", "ses", "kurgu"):
             return self.file_versions(video_id, step)
         if step == "paket":
             packs = (next((v for v in ai_store.videos(self.db, video["destination_id"]) if v["id"] == video_id), None) or {}).get("packs") or []
@@ -175,7 +176,8 @@ class VideoFlow:
                         "plan": status in ("ready", "error", "awaiting_approval", "approved", "stale"),
                         "yazim": status in ("ready", "done", "stale", "error"), "kontrol": False,
                         "yayin": status in ("ready", "error", "awaiting_approval", "approved", "stale"),
-                        "ses": status in ("ready", "error", "stale", "awaiting_audio", "audio_ready", "done")}.get(step, False),
+                        "ses": status in ("ready", "error", "stale", "awaiting_audio", "audio_ready", "done"),
+                        "kurgu": status in ("ready", "error", "stale", "done")}.get(step, False),
                 "resume": resumable, "reopen": step == "kontrol" and status == "ready" and bool(text_store.versions(self.db, video_id=video["id"]))}
 
     def job_of(self, video_id, step, row):
@@ -209,6 +211,8 @@ class VideoFlow:
         video = self.video(video_id)
         if step == "ses":
             self.voice.auto(video_id)                     # 7 · Seslendirme writes its text when it opens
+        if step == "kurgu":
+            self.kurgu.auto(video_id)                     # 8 · Kurgu paketi builds its package when it opens
         flow = workflow.compute(self.db, video["destination_id"], video_id)
         view = next(s for s in flow["steps"] if s["id"] == step)
         row = workflow.step(self.db, video_id, step)
@@ -219,6 +223,8 @@ class VideoFlow:
             out["aciklama"] = workflow.PLANNED[step]
         elif step == "ses":
             out["ses"] = self.voice.view(video_id)
+        elif step == "kurgu":
+            out["kurgu"] = self.kurgu.view(video_id)
         elif step == "baslik":
             bank = self.claude.bank(video["destination_id"])
             own = [r for r in bank["calismalar"] if (r.get("params") or {}).get("video_id") == video_id]

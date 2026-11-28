@@ -74,7 +74,8 @@ def test_no_video_no_steps_and_an_open_video_shows_only_its_eight_steps(text_env
         assert flow["video"]["display_name"] == "Kış videosu" and flow["steps"][0]["status"] == "ready"
         assert [s["approval"] for s in flow["steps"]] == [True, False, True, False, True, True, False, False]
         planned = step(client, "kurgu", video_id)
-        assert planned["adim"]["label"] == "sonraki görevde gelecek" and "Kurgu Motoru" in planned["aciklama"] and not any(planned["eylemler"].values())
+        assert planned["adim"]["label"] == "bekliyor" and not planned["adim"]["planned"] and not any(planned["eylemler"].values())   # HEDEF-04 A-8
+        assert planned["kurgu"]["paket"] is None and "6 · Yayın paketi" in planned["adim"]["next"]
         assert client.post("/api/videolar/kapat").json() == {"acik": None}                # "Videoyu kapat": back to the project
         assert client.get("/api/bootstrap").json()["open_video_id"] is None
         assert [v["id"] for v in client.get("/api/videolar").json()["videolar"]] == [video_id]       # the video is not deleted

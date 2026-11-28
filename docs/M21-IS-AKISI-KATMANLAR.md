@@ -101,7 +101,7 @@ Yönlendirme `studio/web/layers.js` → `redirectOf`; metinlerdeki "Ayarlar → 
 | 5 | Kontrol ve ton seçimi (`kontrol`) | Programın denetimi, işletme adı denetimi, tonların karşılaştırması; onayla birlikte ton seçilir | Evet |
 | 6 | Yayın paketi (`yayin`) | Henüz yok: "Sonraki görevde gelecek" | — |
 | 7 | Seslendirme (`ses`) | Henüz yok | — |
-| 8 | Kurgu paketi (`kurgu`) | Henüz yok; Kurgu Motoru'na gidecek paket | — |
+| 8 | Kurgu paketi (`kurgu`) | Kuruldu (HEDEF-04 A-8): Kurgu Motoru'na gidecek paket, "Kurguya gönder" | — |
 
 Eski "Veri" ve "Konu ve başlık" adımları proje katmanına taşındı; "Kontrol" 5. adımın içine girdi; "Görsel plan" ve "Video üretimi"
 kalktı (stok görüntü, animasyon ve kurgu ayrı bir proje olan Kurgu Motoru'nda yapılır).
@@ -244,3 +244,15 @@ Adım kuruldu (`studio/voice.py`); "sonraki görevde gelecek" listesinde yalnız
   başlangıç/bitiş (parçalar arka arkaya), eşleşmeyen cümle sayısı. Motor ya da Python'u yoksa açık hata (409).
 - Uçlar: `POST /api/videos/{id}/ses/metin`, `/ses/yukle?ad=&yeni=` (ham gövde), `/ses/eslestir`, `/ses/klasor`; `GET/PUT /api/settings/seslendirme`.
   Testler: `tests/test_ses.py` (sahte ffprobe ve hizalama), `tests/frontend.test.mjs` "HEDEF-04 A-7".
+## HEDEF-04 A-8: 8 · Kurgu paketi (28.11.2026)
+
+Adım kuruldu (`studio/kurgu.py`); "sonraki görevde gelecek" listesi boşaldı (`workflow.PLANNED == {}`). Claude çağrısı yok.
+
+- 6 · Yayın paketi onaylanınca hazır (7'nin aşamasından bağımsız); ekran açılınca paket kurulur. Durumlar: hazır → (Kurguya gönder)
+  tamamlandı; gönderim hata verirse hata. Ton seçimi değişirse eskir.
+- Paket `videolar/<video>/8_kurgu/paket/NNN/`: `package.json`, `script.json`, `data.json`, `scenes.json`, sesle `audio/anlatim.*` ve
+  (bütün cümleler eşleştiyse) `audio/zamanlar.json`. "Paketi yeniden kur" yeni bir NNN açar, eskiler kalır. Ses paketten sonra değişirse
+  ekran söyler.
+- "Kurguya gönder": motorun kopyasına kopyalar, `paket dogrula` + `paket ice-al`; komutların çıkış kodu ve çıktısı ekranda.
+- Uçlar: `POST /api/videos/{id}/kurgu/kur`, `/kurgu/gonder`, `/kurgu/klasor`; `GET/PUT /api/settings/kurgu` (Ayarlar → Kurgu Motoru).
+  Testler: `tests/test_hedef04_kurgu.py` (sahte motor), `tests/frontend.test.mjs` "HEDEF-04 A-8".

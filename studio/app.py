@@ -28,6 +28,7 @@ from .ai.service import ClaudeService
 from .text.engine import TextService
 from .video_flow import VideoFlow
 from . import voice as voice_mod
+from . import kurgu as kurgu_mod
 from .watchdog import Watchdog
 from . import extension as ext
 from . import proxy as proxy_mod
@@ -1668,6 +1669,28 @@ def create_app(data_dir: Path | None = None, registry=None, watchdog: Watchdog |
     @app.post("/api/videos/{video_id}/ses/klasor")
     def voice_folder(video_id: str, hangi: str = "metin"):
         return flow_or_404(lambda: flow().voice.open_folder(video_id, hangi))
+
+    @app.post("/api/videos/{video_id}/kurgu/kur")
+    def kurgu_build(video_id: str):
+        """8 · Kurgu paketi: "Paketi yeniden kur" (deterministic; the earlier packages stay in their folders)."""
+        return flow_or_404(lambda: flow().kurgu.build(video_id, by_user=True))
+
+    @app.post("/api/videos/{video_id}/kurgu/gonder")
+    def kurgu_send(video_id: str):
+        """"Kurguya gönder": the package into the Kurgu Motoru copy, `paket dogrula` and `paket ice-al`; the output on the screen."""
+        return flow_or_404(lambda: flow().kurgu.send(video_id))
+
+    @app.post("/api/videos/{video_id}/kurgu/klasor")
+    def kurgu_folder(video_id: str):
+        return flow_or_404(lambda: flow().kurgu.open_folder(video_id))
+
+    @app.get("/api/settings/kurgu")
+    def kurgu_settings():
+        return kurgu_mod.settings_view(flow().data_dir)
+
+    @app.put("/api/settings/kurgu")
+    async def kurgu_settings_save(request: Request):
+        return kurgu_mod.save_settings(flow().data_dir, await request.json())
 
     @app.get("/api/settings/seslendirme")
     def voice_settings():

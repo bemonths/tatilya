@@ -17,6 +17,7 @@ const DESCRIPTIONS={
   yazim:"İngilizce metin ve cümle cümle Türkçesi. Tonları burada seçersiniz; her ton onaylanan planla ayrı yazılır.",
   kontrol:"Programın denetimi, işletme adı denetimi ve tonların karşılaştırması. Onaylarken hangi tonla devam edileceğini seçersiniz.",
   yayin:"YouTube'a yüklerken kullanılacak paket: bölüm başlıkları, açıklamanın ilk iki satırı, üç arama sorgusu, etiketler, kapak yazısı ve kapak fikri. Onaylı metinden tek Claude çağrısıyla yazılır.",
+  kurgu:"Kurgu paketi: Kurgu Motoru'na verilecek paket (metin, cümle numaraları ve zamanları, yer adları, rakamlar, veri kartlarının değerleri). Ses olmadan da kurulur. Claude çağrısı yok.",
   ses:"Seslendirme: onaylı metin sese uygun düz İngilizce dosyalara yazılır; sesi yükler, cümlelerle eşleştirirsiniz. Claude çağrısı yok.",
 };
 
@@ -191,6 +192,29 @@ export function voiceView(view, busy) {
     <button type="submit">Kaydet</button></form></details>`;
 }
 
+/** 8 · Kurgu paketi (HEDEF-04 A-8): what the package holds, the card suggestions, "Kurguya gönder" and the motor's output. */
+export function kurguView(view, busy) {
+  const k=view.kurgu || {}, p=k.paket, g=k.gonderim, st=view.adim.status, free=!busy && !view.is;
+  const on=c=>c && free?"":"disabled";
+  const o=(p || {}).ozet || {};
+  const voice=o.zamanlar?"Ses ve cümle zamanları pakette.":o.ses?"Ses pakette; cümle zamanlarını Kurgu Motoru kendi hizalar (bütün cümleler eşleşmedi).":"Ses yok: paket sessiz kuruldu, zamanlar boş. Ses 7 · Seslendirme'de eşleşince “Paketi yeniden kur”.";
+  const pack=p?`<p><strong>${o.cumle} cümle</strong> · ${o.bolum} bölüm · ${o.kayit} veri kaydı (${o.kaynak} kaynak) · ${o.yer} yer adı · ${o.rakam} rakam (${o.kaynakli_rakam} kaynaklı) · ${o.sahne} kart önerisi</p>
+    <p>${esc(voice)}</p>${k.ses_degisti?'<p class="error">Ses paket kurulduktan sonra değişti; “Paketi yeniden kur”.</p>':""}
+    <p class="muted">Kanal (motorun stili): <code>${esc(o.kanal || "")}</code> · kart ve geçiş sesi eklenmez.</p>
+    <p class="muted">Klasör: <code>${esc(p.yol)}</code> <button type="button" id="kurgu-folder">Klasörü aç</button></p>
+    <p class="muted">Dosyalar: ${(p.dosyalar || []).map(f=>`<code>${esc(f)}</code>`).join(" ")}</p>
+    ${(p.kartlar || []).length?`<table class="data-table"><thead><tr><th>Cümle</th><th>Kart</th><th>Neden</th></tr></thead><tbody>${p.kartlar.map(c=>`<tr><td>${esc(c.cumle)} <small>${esc(c.metin)}</small></td><td>${esc(c.kart)}</td><td>${esc(c.gerekce || "")}</td></tr>`).join("")}</tbody></table>`:""}`
+    :'<p class="muted">Paket henüz kurulmadı.</p>';
+  const sent=g?`<p><strong>${g.basarili?"Gönderildi":"Gönderim hata verdi"}</strong> · ${esc(g.zaman || "")}${g.proje?` · proje <code>${esc(g.proje)}</code>`:""}</p>
+    ${g.proje_klasoru?`<p class="muted">Motordaki proje: <code>${esc(g.proje_klasoru)}</code></p>`:""}
+    ${(g.adimlar || []).map(a=>`<details ${a.kod?"open":""}><summary>${esc(a.komut)} · çıkış kodu ${a.kod}</summary><pre class="log">${esc(a.cikti || "")}</pre></details>`).join("")}`:"";
+  return `<section class="library"><div class="library-title"><h2>Kurgu paketi</h2><small>kurgu-paket/1 · ses olmadan da kurulur</small></div>${pack}
+    ${view.eylemler.run?`<button type="button" id="kurgu-build" ${on(true)}>Paketi yeniden kur</button>`:""}</section>
+    <section class="library"><div class="library-title"><h2>Kurguya gönder</h2><small>Kurgu Motoru: paket dogrula + ice-al</small></div>
+    <p class="muted">Paket motorun klasörüne kopyalanır, motor önce denetler, sonra projeyi kurar. Kurgu (stok görüntü, kartların yeri, altyazı) motorda yapılır. Motorun yeri: Ayarlar → Kurgu Motoru.</p>
+    <button type="button" class="primary" id="kurgu-send" ${on(p && st!=="waiting")}>Kurguya gönder</button>${sent}</section>`;
+}
+
 export function plannedBody(view) {
   return `<section class="planned-hero"><span class="tag planned">Sonraki görevde gelecek</span><h2>${esc(view.adim.title)}</h2><p>${esc(view.aciklama || "")}</p>
     <p class="muted">Bu adım henüz kurulmadı; şimdilik yapılacak iş yok.</p></section>`;
@@ -296,6 +320,8 @@ export class StepScreen {
       body=`${publishCard(view,this.cost,found?.paket?"":this.pendingBox(),this.busy)}${runningPanel(job)}${publishView(found)}${decision}`;
     } else if(step.id==="ses") {
       body=voiceView(view,this.busy);
+    } else if(step.id==="kurgu") {
+      body=kurguView(view,this.busy);
     } else if(step.id==="kontrol") {
       let compare=null;
       if((view.tonlar || []).length) {
@@ -402,6 +428,12 @@ export class StepScreen {
         .catch(error=>{this.message=error.message;this.rerender();})));
       root.querySelector("#voice-settings")?.addEventListener("submit",event=>{event.preventDefault();
         this.act(()=>api("settings/seslendirme",{method:"PUT",body:JSON.stringify(Object.fromEntries(new FormData(event.target)))}),"Ses ayarları kaydedildi.");});
+    }
+    if(step==="kurgu") {
+      root.querySelector("#kurgu-build")?.addEventListener("click",()=>this.call("kurgu/kur",{},"Kurgu paketi yeniden kuruldu."));
+      root.querySelector("#kurgu-send")?.addEventListener("click",()=>this.call("kurgu/gonder",{},"Kurguya gönderim bitti; sonuç aşağıda."));
+      root.querySelector("#kurgu-folder")?.addEventListener("click",()=>api(this.path("kurgu/klasor"),{method:"POST",body:"{}"})
+        .catch(error=>{this.message=error.message;this.rerender();}));
     }
     if(step==="kontrol") root.querySelector("#check-reopen")?.addEventListener("click",()=>this.call("kontrol/ac",{},"Kontrol yeniden açıldı."));
   }

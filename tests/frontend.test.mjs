@@ -1254,7 +1254,7 @@ test('GÖREV-16 Video metni: the usage text and the plan usage above the compari
 
 // ---- GÖREV-17: the job panel (hiding finished jobs), the Settings layout, one window for a job, the proxy words ----
 import {jobsPanel, jobCard, panelHead, hiddenSection, visibleJobs, removableJobs, windowLines, emptyPanel} from '../studio/web/jobs.js';
-import {SECTIONS, CHANNEL_SECTIONS, channelFrame, channelSectionOfHash, sectionOfHash, isSettingsHash, sectionId, settingsHref, settingsNav, sectionCard, settingsFrame, folderCard, aboutCard, usageCard, linkSettingsMentions} from '../studio/web/settings.js';
+import {kurguSettingsCard, SECTIONS, CHANNEL_SECTIONS, channelFrame, channelSectionOfHash, sectionOfHash, isSettingsHash, sectionId, settingsHref, settingsNav, sectionCard, settingsFrame, folderCard, aboutCard, usageCard, linkSettingsMentions} from '../studio/web/settings.js';
 import {kindText} from '../studio/web/extension.js';
 import {tonesHtml} from '../studio/web/tones.js';
 
@@ -1322,13 +1322,14 @@ const sectionHtml17={
   'kullanim':[usageCard(view17.usage),/usage-settings-text">Kullanım birkaç dakikada bir yenilenir\./],
   'eklenti':[extensionSection(view17.extension),/id="extension-renew" class="quiet">Kodu yenile</],
   'proxy':[proxySection(view17.proxy),/<button type="submit" class="primary">Kaydet<\/button>/],
+  'kurgu':[kurguSettingsCard({settings:{},varsayilan:{kurgu_kanali:'_ornek'}}),/id="kurgu-settings">[\s\S]*<button type="submit" class="primary">Kaydet<\/button>/],
   'hakkinda':[aboutCard('0.19.0'),/about-version">SÜRÜM 0\.19\.0</],
 };
 
 test('GÖREV-17 Ayarlar: a button for every section; the address names the section',()=>{
   // GÖREV-21: only the program's settings are left — no content rule of the channel, no data work
-  assert.deepEqual(SECTIONS.map(s=>s.slug),['klasor','claude','kullanim','eklenti','proxy','hakkinda']);
-  assert.deepEqual(SECTIONS.map(s=>s.title),['Kayıt klasörü','Claude','Claude kullanımı','Tarayıcı eklentisi',"ABD proxy'si",'Hakkında']);
+  assert.deepEqual(SECTIONS.map(s=>s.slug),['klasor','claude','kullanim','eklenti','proxy','kurgu','hakkinda']);
+  assert.deepEqual(SECTIONS.map(s=>s.title),['Kayıt klasörü','Claude','Claude kullanımı','Tarayıcı eklentisi',"ABD proxy'si",'Kurgu Motoru','Hakkında']);
   for(const moved of ['talimatlar','tonlar','uyari-ifadeleri','baslik-eki']) assert.equal(sectionOfHash(`#settings/${moved}`),null,moved);
   assert.deepEqual(Object.keys(sectionHtml17),SECTIONS.map(s=>s.slug));
   const nav=settingsNav('claude');
@@ -1362,7 +1363,7 @@ for(const section of SECTIONS) {
 
 test('GÖREV-17 Ayarlar: the frame keeps every slot the section modules draw into, in the order of the buttons',()=>{
   const frame=settingsFrame('C:/veri/30a','0.19.0');
-  const slots=['claude-settings-slot','usage-settings-slot','extension-slot','proxy-slot'];
+  const slots=['claude-settings-slot','usage-settings-slot','extension-slot','proxy-slot','kurgu-settings-slot'];
   for(const gone of ['suffix-settings-slot','instructions-slot','tones-slot','warnings-slot']) assert.ok(!frame.includes(`id="${gone}"`),gone);      // GÖREV-21: these are on the Kanal screen
   let last=-1;
   for(const slot of slots) {const at=frame.indexOf(`id="${slot}"`);assert.ok(at>last,slot);last=at;}
@@ -1899,4 +1900,20 @@ test('HEDEF-04 A-7: 7 · Seslendirme — the text files with their folder, "Sesi
   assert.match(shown,/seslendirme_01\.txt/);assert.match(shown,/Klasörü aç/);assert.match(shown,/Sesi yükle/);
   assert.match(shown,/<button type="button" class="primary" id="voice-match" >Sesi cümlelerle eşleştir/);assert.match(shown,/19\/20 cümle eşleşti/);
   assert.match(voiceView({...view,adim:{status:'awaiting_audio'},ses:{metin:view.ses.metin}},false),/id="voice-match" disabled/);
+});
+import {kurguView} from '../studio/web/steps.js';
+test('HEDEF-04 A-8: 8 · Kurgu paketi — what the package holds, the cards, "Paketi yeniden kur" and "Kurguya gönder" with the motor output', ()=>{
+  const paket={klasor:'001',yol:'C:/v/8_kurgu/paket/001',dosyalar:['package.json','script.json','data.json','scenes.json'],
+    ozet:{cumle:12,bolum:3,kayit:5,kaynak:2,yer:4,rakam:6,kaynakli_rakam:3,sahne:7,ses:false,zamanlar:false,kanal:'_ornek'},
+    kartlar:[{cumle:'c2',kart:'rakam-karti',gerekce:'Kaynaklı rakam ilk kez söyleniyor (K0001)',metin:'In Seagrove…'}]};
+  const view={adim:{status:'ready'},eylemler:{run:true},is:null,kurgu:{paket,gonderim:null,ses_degisti:false}};
+  const shown=kurguView(view,false);
+  assert.match(shown,/12 cümle/);assert.match(shown,/Ses yok: paket sessiz kuruldu, zamanlar boş/);assert.match(shown,/rakam-karti/);
+  assert.match(shown,/id="kurgu-build" >Paketi yeniden kur/);assert.match(shown,/class="primary" id="kurgu-send" >Kurguya gönder/);
+  assert.match(shown,/kart ve geçiş sesi eklenmez/);
+  assert.match(kurguView({...view,kurgu:{paket:null}},false),/id="kurgu-send" disabled>Kurguya gönder/);
+  const sent=kurguView({...view,adim:{status:'error'},kurgu:{paket:{...paket,ozet:{...paket.ozet,ses:true,zamanlar:true}},ses_degisti:true,
+    gonderim:{basarili:false,zaman:'2026-11-28',adimlar:[{komut:'paket dogrula',kod:1,cikti:'Hata: c9 <yok>'}]}}},false);
+  assert.match(sent,/Gönderim hata verdi/);assert.match(sent,/<details open><summary>paket dogrula · çıkış kodu 1/);assert.match(sent,/Hata: c9 &lt;yok&gt;/);
+  assert.match(sent,/Ses ve cümle zamanları pakette/);assert.match(sent,/Ses paket kurulduktan sonra değişti/);
 });
